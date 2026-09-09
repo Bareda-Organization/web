@@ -1,8 +1,6 @@
-// 자리표시 페이지 — 실제 로그인 폼은 F3(화면 구현)에서 `features/auth` 를 채운 뒤 만든다.
+import { LoginForm } from "@/features/auth";
+
+// UF-X-03 로그인. 자동 로그인(새로고침 후 세션 유지)은 AuthSessionProvider 의 부트스트랩이 담당한다.
 export default function LoginPage() {
-  return (
-    <main>
-      <h1>로그인</h1>
-    </main>
-  );
+  return <LoginForm />;
 }

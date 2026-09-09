@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { EmotionRegistry } from "@/shared/lib/EmotionRegistry";
+import { AuthSessionProvider } from "@/features/auth";
 import "./globals.css";
 
 // 폰트는 디자인 시스템 토큰(`design-system/tokens/fonts.css`)이 CDN `@import` 로 이미 실어 온다
@@ -13,7 +14,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko">
       <body>
-        <EmotionRegistry>{children}</EmotionRegistry>
+        <EmotionRegistry>
+          {/* 세션 부트스트랩은 트리 전체에서 한 번만 — (auth)·(staff)·(admin) 세 그룹이
+              전부 이 컨텍스트를 구독한다. */}
+          <AuthSessionProvider>{children}</AuthSessionProvider>
+        </EmotionRegistry>
       </body>
     </html>
   );
