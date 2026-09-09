@@ -1,9 +1,10 @@
 import { API_BASE_URL } from "./config";
 import { parseApiError } from "./apiError";
 import { setAccessToken } from "./accessTokenStore";
+import type { SuccessEnvelope } from "./envelope";
 
-type RefreshResponse = {
-  access_token: string;
+type RefreshResponseTypes = {
+  accessToken: string;
 };
 
 // 동시에 여러 요청이 401 을 맞아도 재발급 호출은 한 번만 나가야 한다 —
@@ -23,9 +24,11 @@ const requestRefresh = async (): Promise<string> => {
     throw await parseApiError(response);
   }
 
-  const data = (await response.json()) as RefreshResponse;
-  setAccessToken(data.access_token);
-  return data.access_token;
+  // §1.1.1 — 이 응답도 봉투에 싸여 온다. `data.access_token` 을 벗겨야 한다.
+  const envelope = (await response.json()) as SuccessEnvelope<{ access_token: string }>;
+  const responseTypes: RefreshResponseTypes = { accessToken: envelope.data.access_token };
+  setAccessToken(responseTypes.accessToken);
+  return responseTypes.accessToken;
 };
 
 // 재발급을 1회만 시도하게 하는 창구. 이미 진행 중인 재발급이 있으면 그 결과에 합류한다.

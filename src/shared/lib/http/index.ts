@@ -5,3 +5,6 @@ export { API_ERROR_CODES } from "./apiErrorCodes";
 export type { ApiErrorCode } from "./apiErrorCodes";
 export { createIdempotencyKey } from "./idempotencyKey";
 export { getAccessToken, setAccessToken } from "./accessTokenStore";
+export { refreshAccessToken } from "./refreshClient";
+export { registerAuthGateListener } from "./authGate";
+export type { AuthGateEvent } from "./authGate";

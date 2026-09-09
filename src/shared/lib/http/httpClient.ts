@@ -2,6 +2,8 @@ import { API_BASE_URL } from "./config";
 import { NetworkError, parseApiError } from "./apiError";
 import { getAccessToken } from "./accessTokenStore";
 import { refreshAccessToken } from "./refreshClient";
+import { notifyAuthGate } from "./authGate";
+import type { SuccessEnvelope } from "./envelope";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -62,9 +64,14 @@ const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Respons
   }
 };
 
-// API_SPEC §1 공통 규약(토큰 부착 · 401 재발급 · 클라이언트 타입 · 에러 변환)을
-// 한곳에서 처리하는 창구. 컴포넌트·기능 코드는 이 함수만 거쳐 서버를 호출한다 —
-// `frontend/CONVENTIONS.md` "API 호출은 기능 안에서만".
+// pending·rejected 계정이 허용 밖을 불러 받는 코드 (§1.4). 이 두 코드를 만나면
+// 화면이 아니라 이 계층에서 대기 화면 이동을 트리거한다 — BRIEF-web §3 "판정은
+// 한 곳에서, 화면은 결과만 받는다"를 만족하려면 http 계층이 이걸 알아야 한다.
+const isAccountGateCode = (code: string): boolean => code === "AUTH_PENDING" || code === "AUTH_REJECTED";
+
+// API_SPEC §1 공통 규약(토큰 부착 · 401 재발급 · 클라이언트 타입 · 에러 변환 ·
+// 성공 응답 봉투 벗기기)을 한곳에서 처리하는 창구. 컴포넌트·기능 코드는 이 함수만
+// 거쳐 서버를 호출한다 — `frontend/CONVENTIONS.md` "API 호출은 기능 안에서만".
 export const apiFetch = async <T = void>(path: string, options: ApiFetchOptions = {}): Promise<T> => {
   let response = await rawFetch(path, options);
 
@@ -73,7 +80,13 @@ export const apiFetch = async <T = void>(path: string, options: ApiFetchOptions 
     // TOKEN_EXPIRED 만 재발급 대상이다 — UNAUTHORIZED(토큰 자체가 없음)는
     // 재발급이 아니라 로그인부터 다시 해야 하는 자리라 여기서 갈린다 (§8.1).
     if (failure.code === "TOKEN_EXPIRED") {
-      await refreshAccessToken();
+      try {
+        await refreshAccessToken();
+      } catch (refreshFailure) {
+        // refresh 토큰까지 무효화된 것 — 재로그인이 필요하다는 것을 화면에 알린다.
+        notifyAuthGate({ type: "session-expired" });
+        throw refreshFailure;
+      }
       response = await rawFetch(path, options);
     } else {
       throw failure;
@@ -81,12 +94,19 @@ export const apiFetch = async <T = void>(path: string, options: ApiFetchOptions 
   }
 
   if (!response.ok) {
-    throw await parseApiError(response);
+    const failure = await parseApiError(response);
+    if (response.status === 403 && isAccountGateCode(failure.code)) {
+      notifyAuthGate({ type: "auth-pending" });
+    }
+    throw failure;
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  // §1.1.1 — 성공 응답은 항상 `{success,data,message}` 로 온다. API_SPEC 각 절이
+  // 서술하는 필드는 전부 `data` 안에 있다. 이 봉투를 벗기는 자리는 여기 한 곳뿐이다.
+  const envelope = (await response.json()) as SuccessEnvelope<T>;
+  return envelope.data;
 };
