@@ -1,0 +1,5 @@
+/* 디자인 토큰 원본 링크 — 복사본을 만들지 않는다.
+   `frontend/design-system/` 가 갱신되면 이 상대 경로 import 가 그대로 따라온다.
+   원본 자체가 fonts → colors → semantic → typography → space → shape → motion → base
+   순으로 @import 를 연쇄하므로 여기서는 진입점 하나만 가리키면 된다. */
+@import "../../../../../design-system/styles.css";

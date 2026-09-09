@@ -1,0 +1,8 @@
+/* 앱 전역 스타일 진입점. 실제 리셋·색·타이포는 디자인 시스템 원본이 갖고 있으므로
+   여기서는 그 원본을 링크만 한다 — `frontend/CONVENTIONS.md` "디자인 시스템 이식" 절. */
+@import "../shared/styles/tokens.css";
+
+html,
+body {
+  height: 100%;
+}
