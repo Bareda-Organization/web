@@ -32,9 +32,9 @@ type RawEmergencyItem = {
   elapsed_since_raised: number;
 };
 
-// 실제 응답(curl 확인)의 최상위 키는 `emergencies` 이고 `items` 가 아니다 — §6.11 문서와
-// 다르다. 문서를 그대로 믿었다면 목록이 항상 빈 배열로 보였을 것이다.
-type RawEmergenciesResponse = { emergencies: RawEmergencyItem[]; unacked_count: number };
+// BE-R1 목표 2 이전에는 실제 응답의 최상위 키가 `emergencies` 였다(§6.11 문서와 어긋났었다).
+// 서버가 §6.11·§5.16 대로 `items` 를 내려보내게 고쳐져 이 어댑터도 함께 맞춘다.
+type RawEmergenciesResponse = { items: RawEmergencyItem[]; unacked_count: number };
 
 const toAcademyRef = (raw: RawAcademyRef): EmergencyAcademyRefResponseTypes => ({
   id: raw.id,
@@ -78,7 +78,7 @@ export const getEmergencies = async (status?: string, academyId?: number): Promi
     query: { status, academy_id: academyId },
   });
   return {
-    emergencies: raw.emergencies.map(toEmergencyItem),
+    items: raw.items.map(toEmergencyItem),
     unackedCount: raw.unacked_count,
   };
 };

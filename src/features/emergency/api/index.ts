@@ -27,9 +27,10 @@ type RawEmergencyItem = {
   acked_by: { name: string } | null;
 };
 
-// §5.16 실측 봉투 — `items[]` 가 아니라 `emergencies[]` 다(types/index.ts 주석 참고).
+// BE-R1 목표 2 이전에는 실측 봉투가 `items[]` 가 아니라 `emergencies[]` 였다. 서버가 §5.16 대로
+// `items` 를 내려보내게 고쳐져 이 어댑터도 함께 맞춘다.
 type RawEmergencyListResponse = {
-  emergencies: RawEmergencyItem[];
+  items: RawEmergencyItem[];
   unacked_count: number;
 };
 
@@ -73,7 +74,7 @@ export const getEmergencies = async (
     query: { status: filters.status, date: filters.date },
   });
   return {
-    items: raw.emergencies.map(toItem),
+    items: raw.items.map(toItem),
     unackedCount: raw.unacked_count,
   };
 };

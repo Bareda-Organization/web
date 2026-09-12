@@ -13,14 +13,14 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
     vi.unstubAllGlobals();
   });
 
-  it("getEmergencies 는 emergencies[] 봉투를 items 로 옮기고 raisedBy·position·contacts 까지 camelCase 로 바꾼다", async () => {
+  it("getEmergencies 는 items[] 봉투를 옮기고 raisedBy·position·contacts 까지 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
         mockJsonResponse(200, {
           success: true,
           data: {
-            emergencies: [
+            items: [
               {
                 emergency_id: 1,
                 type: "VEHICLE_FAULT",

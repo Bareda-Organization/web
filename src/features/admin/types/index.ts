@@ -285,7 +285,7 @@ export type EmergencyItemResponseTypes = {
 };
 
 export type EmergenciesResponseTypes = {
-  emergencies: EmergencyItemResponseTypes[];
+  items: EmergencyItemResponseTypes[];
   unackedCount: number;
 };
 

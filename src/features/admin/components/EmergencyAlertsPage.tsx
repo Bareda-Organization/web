@@ -45,7 +45,7 @@ export const EmergencyAlertsPage = () => {
   const load = useCallback(async (currentStatus: string) => {
     try {
       const data = await getEmergencies(currentStatus);
-      setEmergencies(data.emergencies);
+      setEmergencies(data.items);
       setUnackedCount(data.unackedCount);
       setError(null);
     } catch (cause) {
