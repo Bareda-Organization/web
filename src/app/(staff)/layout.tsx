@@ -2,8 +2,7 @@
 // 권한 범위가 완전히 다르다(`frontend/IMPLEMENTATION_PLAN.md` §1).
 // 사이드바 248 · 헤더 56 골격을 F3 에서 이 자리에 채운다(`§8.1`). F3-W1 이 화면 4개를
 // 먼저 등재했고, F3-W2(이 라운드)가 학생·차량·매니저·노선·알림 로그·학원 설정·비상 알림·
-// 운행 리포트 화면을 만들며 이어 등재한다. 아직 안 만든 화면(운행 스케줄)은 등재하지
-// 않는다 — 죽은 링크를 만들지 않는다.
+// 운행 리포트·운행 스케줄 화면을 만들며 이어 등재했다 — F3-W2 담당 9개 전부 등재 완료.
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -26,6 +25,7 @@ const NAV_ITEMS = [
   { value: "bus", label: "차량 관리", icon: "bus-front" },
   { value: "manager", label: "매니저 관리", icon: "user-cog" },
   { value: "route", label: "고정 노선 편성", icon: "map" },
+  { value: "schedule", label: "운행 스케줄", icon: "calendar-clock" },
   { value: "notification", label: "알림 로그", icon: "bell" },
   { value: "academy-settings", label: "학원 설정", icon: "settings" },
   { value: "emergency", label: "비상 알림", icon: "siren" },
