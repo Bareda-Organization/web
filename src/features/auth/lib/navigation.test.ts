@@ -49,4 +49,40 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(baseSession("active", "staff"), "/academies")).toBe("/dashboard");
     expect(decideAuthRedirect(baseSession("active", "system_admin"), "/dashboard")).toBe("/academies");
   });
+
+  // BRIEF-a1.md §2 — "관계자가 주소를 직접 쳐서 (admin) 에 들어가는지" 가 가장 위험한 자리.
+  // `/academies` 하나만 걸러내던 옛 구현에서는 아래 7개가 전부 통과(null)됐다 — 8화면
+  // 전부를 개별로 확인해야 그 회귀가 다시 나도 잡힌다.
+  it("관계자(staff) 는 admin 화면 8개 전부에서 되돌려진다", () => {
+    const staff = baseSession("active", "staff");
+    const adminPaths = [
+      "/academies",
+      "/member-approvals",
+      "/member-accounts",
+      "/monitoring",
+      "/blocked-accounts",
+      "/emergency-alerts",
+      "/force-confirm",
+      "/audit-log",
+    ];
+    for (const path of adminPaths) {
+      expect(decideAuthRedirect(staff, path)).toBe("/dashboard");
+      // 하위 경로(예: /academies/[id])도 같은 그룹으로 걸려야 한다.
+      expect(decideAuthRedirect(staff, `${path}/sub`)).toBe("/dashboard");
+    }
+  });
+
+  it("admin 경로와 이름이 비슷할 뿐인 관계자 경로는 걸러내지 않는다 (오탐 방지)", () => {
+    const staff = baseSession("active", "staff");
+    // "/academies-report" 는 "/academies" 로 시작하지만 그 하위 경로가 아니다.
+    expect(decideAuthRedirect(staff, "/academies-report")).toBeNull();
+  });
+
+  it("역할을 알 수 없는 세션은 admin 화면에서 열리지 않고 닫힌다 (기본값은 거부)", () => {
+    // AccountRole 타입 밖의 값이 들어오는 방어적 상황을 가정한다 — 권한을 판정할 수
+    // 없을 때 열리는 쪽(null)이 아니라 닫히는 쪽(리다이렉트)이어야 한다.
+    const unknownRoleSession = baseSession("active", "unknown_role" as AuthSession["role"]);
+    expect(decideAuthRedirect(unknownRoleSession, "/academies")).not.toBeNull();
+    expect(decideAuthRedirect(unknownRoleSession, "/monitoring")).not.toBeNull();
+  });
 });
