@@ -1,8 +1,9 @@
 // 학원 관계자(A-01~17). (admin) 과 레이아웃·내비게이션을 공유하지 않는다 — 두 역할은
 // 권한 범위가 완전히 다르다(`frontend/IMPLEMENTATION_PLAN.md` §1).
-// 사이드바 248 · 헤더 56 골격을 F3 에서 이 자리에 채운다(`§8.1`). 내비게이션 항목은
-// 이번 라운드(F3-W1)가 만든 화면 4개만 등재한다 — 노선·학생·매니저·로그 화면은
-// 다른 라운드 몫이라 죽은 링크를 만들지 않는다.
+// 사이드바 248 · 헤더 56 골격을 F3 에서 이 자리에 채운다(`§8.1`). F3-W1 이 화면 4개를
+// 먼저 등재했고, F3-W2(이 라운드)가 학생·차량·매니저·노선 화면을 만들며 이어 등재한다.
+// 아직 안 만든 화면(알림 로그·비상 알림·리포트·학원 설정·운행 스케줄)은 등재하지 않는다
+// — 죽은 링크를 만들지 않는다.
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -21,6 +22,10 @@ const NAV_ITEMS = [
   { value: "today-run", label: "금일 운행 상세", icon: "bus" },
   { value: "signup-approval", label: "가입 승인", icon: "user-check" },
   { value: "change-approval", label: "구간 변경 승인", icon: "route" },
+  { value: "student", label: "학생 관리", icon: "users" },
+  { value: "bus", label: "차량 관리", icon: "bus-front" },
+  { value: "manager", label: "매니저 관리", icon: "user-cog" },
+  { value: "route", label: "고정 노선 편성", icon: "map" },
 ] as const;
 
 const resolveActiveValue = (pathname: string): string => {
