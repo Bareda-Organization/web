@@ -232,7 +232,15 @@ export type UnblockAccountResponseTypes = {
 };
 
 // ── §6.11 비상 알림 이력 (O-07) ───────────────────────────────────────────
-export type EmergencyType = "VEHICLE_FAULT" | "MEDICAL" | "ACCIDENT" | "OTHER" | (string & {});
+// A1 수정 라운드(조건 ③) — 이전 값(VEHICLE_FAULT · MEDICAL · ACCIDENT · OTHER)은 정본과
+// 대조하지 않고 적어 둔 것이었다. API_SPEC §5.16·§2306 이 정의하는 값은 소문자 스네이크
+// 케이스 4종(accident · vehicle_fault · student_emergency · etc)이고, MEDICAL·OTHER 는
+// 정본에 아예 없다. 실측(curl, 2026-09-12)으로는 백엔드가 여전히 대문자 Java enum 이름을
+// 그대로 내려 정본과 어긋나 있다 — DB 컬럼은 소문자로 저장되는데(LowerCaseEnumConverter)
+// JSON 직렬화만 원래 enum 이름을 쓴다. 이 라운드는 프런트 범위라 백엔드 직렬화는 고치지
+// 않고, 타입은 정본대로 맞춘 뒤 표시 쪽(EmergencyAlertsPage.tsx)에서 대소문자 무관하게
+// 조회하도록 흡수한다.
+export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc" | (string & {});
 
 export type EmergencyAcademyRefResponseTypes = {
   id: number;
@@ -252,8 +260,10 @@ export type EmergencyPositionResponseTypes = {
   recordedAt: string | null;
 } | null;
 
-// 실제 응답(2026-09-12 curl 확인)은 최상위가 `items` 가 아니라 `emergencies` 이고,
-// 문서(§6.11)에 없는 `unacked_count` 를 함께 준다 — 목록 헤더에 "미확인 N건" 으로 쓴다.
+// 실제 응답(2026-09-12 curl 재확인)은 최상위가 §5.16 문서의 `items` 가 아니라
+// `emergencies` 다 — 이 부분은 정본과 실제로 어긋난다. 반대로 `unacked_count` 는
+// 문서에 없는 것이 아니라 §5.16 이 이미 명시한 필드다(이전 코멘트의 오기, A1 수정
+// 라운드에서 §5.16 을 직접 대조해 정정) — 목록 헤더에 "미확인 N건" 으로 쓴다.
 export type EmergencyItemResponseTypes = {
   emergencyId: number;
   academy: EmergencyAcademyRefResponseTypes;

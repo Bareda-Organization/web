@@ -74,4 +74,24 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
       expect(screen.getByText("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.")).toBeInTheDocument(),
     );
   });
+
+  // A1 수정 라운드(조건 ③) — RUN_NOT_IDLE 과 달리 RUN_NOT_DUE 는 단위 검사가 하나도 없었다.
+  // 실제 백엔드(2026-09-12, schoolbus_a1 run id=1, confirm_at 이 아직 도래하지 않은 idle 회차)에
+  // curl 로 재현해 응답 형태(409 · code=RUN_NOT_DUE · message="아직 확정 시각이 되지 않았습니다")를
+  // 먼저 확인한 뒤 그 갈래에 맞춰 만들었다.
+  it("RUN_NOT_DUE 오류는 확정 시각 전이라는 문구로 보여준다", async () => {
+    mockForceConfirmRun.mockRejectedValue(new ApiError(409, "RUN_NOT_DUE", "아직 확정 시각이 되지 않았습니다"));
+    render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.")).toBeInTheDocument(),
+    );
+    // RUN_NOT_IDLE 문구와 다른 문구인지도 함께 본다 — 갈래가 실제로 갈렸는지 확인.
+    expect(
+      screen.queryByText("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요."),
+    ).not.toBeInTheDocument();
+  });
 });
