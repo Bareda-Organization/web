@@ -1,0 +1,182 @@
+import { apiFetch } from "@/shared/lib/http";
+import type {
+  RouteDetailResponseTypes,
+  RouteListResponseTypes,
+  RouteOptimizeRequestTypes,
+  RouteStop,
+  RouteUpsertRequestTypes,
+  RunDirection,
+  Weekday,
+  WaypointCreateRequestTypes,
+  WaypointResultResponseTypes,
+} from "../types";
+
+type RawRouteStop = { stop_id: number; seq: number; name: string; lat: number; lng: number };
+
+type RawRouteListItem = {
+  id: number;
+  bus_id: number;
+  bus_no: string;
+  weekday: Weekday;
+  direction: RunDirection;
+  name: string | null;
+  active: boolean;
+};
+
+type RawRouteListResponse = {
+  items: RawRouteListItem[];
+  page: number;
+  size: number;
+  total_count: number;
+  has_next: boolean;
+};
+
+type RawRouteDetail = RawRouteListItem & { stops: RawRouteStop[] };
+
+const toStop = (raw: RawRouteStop): RouteStop => ({
+  stopId: raw.stop_id,
+  seq: raw.seq,
+  name: raw.name,
+  lat: raw.lat,
+  lng: raw.lng,
+});
+
+const toListItem = (raw: RawRouteListItem) => ({
+  id: raw.id,
+  busId: raw.bus_id,
+  busNo: raw.bus_no,
+  weekday: raw.weekday,
+  direction: raw.direction,
+  name: raw.name,
+  active: raw.active,
+});
+
+const toDetail = (raw: RawRouteDetail): RouteDetailResponseTypes => ({
+  ...toListItem(raw),
+  stops: raw.stops.map(toStop),
+});
+
+// GET /staff/routes (RTE-01, §1.8 페이징) — 비활성 편성도 실린다(편성 이력 보존).
+export const getRoutes = async (page: number, size = 20): Promise<RouteListResponseTypes> => {
+  const raw = await apiFetch<RawRouteListResponse>("/staff/routes", { method: "GET", query: { page, size } });
+  return {
+    items: raw.items.map(toListItem),
+    page: raw.page,
+    size: raw.size,
+    totalCount: raw.total_count,
+    hasNext: raw.has_next,
+  };
+};
+
+// GET /staff/routes/{id} — 정차 순서를 seq 차례로 함께 싣는다.
+export const getRouteDetail = async (id: number): Promise<RouteDetailResponseTypes> => {
+  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}`, { method: "GET" });
+  return toDetail(raw);
+};
+
+const toBody = (request: RouteUpsertRequestTypes) => ({
+  bus_id: request.busId,
+  weekday: request.weekday,
+  direction: request.direction,
+  name: request.name,
+  active: request.active,
+  stop_ids: request.stopIds,
+});
+
+// POST /staff/routes — 201. stop_ids 를 생략하면 정차지 없이 시작한다.
+export const createRoute = async (request: RouteUpsertRequestTypes): Promise<RouteDetailResponseTypes> => {
+  const raw = await apiFetch<RawRouteDetail>("/staff/routes", { method: "POST", body: toBody(request) });
+  return toDetail(raw);
+};
+
+// PATCH /staff/routes/{id} — 보낸 필드만 고친다. stop_ids 를 보내면 전체 대체,
+// 생략하면 기존 순서를 그대로 둔다(§5.9 "부분 수정 경로를 두지 않는다").
+export const updateRoute = async (
+  id: number,
+  request: Partial<RouteUpsertRequestTypes>,
+): Promise<RouteDetailResponseTypes> => {
+  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}`, {
+    method: "PATCH",
+    body: toBody(request as RouteUpsertRequestTypes),
+  });
+  return toDetail(raw);
+};
+
+// DELETE /staff/routes/{id} — 행을 지운다(soft delete 부재). route_stop 은 FK CASCADE.
+export const deleteRoute = async (id: number): Promise<void> => {
+  await apiFetch<void>(`/staff/routes/${id}`, { method: "DELETE" });
+};
+
+// POST /staff/routes/{id}/optimize (RTE-09) — 미리보기 플래그가 없다. 호출 즉시
+// 기존 수동 순서를 버리고 커밋한다(§2 판단 근거 — 그래서 화면에 확인 단계를 둔다).
+export const optimizeRoute = async (
+  id: number,
+  request: RouteOptimizeRequestTypes,
+): Promise<RouteDetailResponseTypes> => {
+  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}/optimize`, {
+    method: "POST",
+    body: request,
+  });
+  return toDetail(raw);
+};
+
+type RawWaypointResult = {
+  waypoint_id: number;
+  route_preview: {
+    stops_before: RawRouteStop[];
+    stops_after: RawRouteStop[];
+    reordered: RawRouteStop[];
+  };
+  est_time_before: number;
+  est_time_after: number;
+  est_distance_before: number;
+  est_distance_after: number;
+  applied: boolean;
+};
+
+const toWaypointResult = (raw: RawWaypointResult): WaypointResultResponseTypes => ({
+  waypointId: raw.waypoint_id,
+  routePreview: {
+    stopsBefore: raw.route_preview.stops_before.map(toStop),
+    stopsAfter: raw.route_preview.stops_after.map(toStop),
+    reordered: raw.route_preview.reordered.map(toStop),
+  },
+  estTimeBefore: raw.est_time_before,
+  estTimeAfter: raw.est_time_after,
+  estDistanceBefore: raw.est_distance_before,
+  estDistanceAfter: raw.est_distance_after,
+  applied: raw.applied,
+});
+
+// POST /staff/runs/{runId}/waypoints (RTE-10, §5.15) — apply=false 는 미리보기(확정
+// 노선 불변), apply=true 는 배포(기사·동승자 푸시). 운행 시작 후 403 CHANGE_WINDOW_CLOSED.
+export const addRunWaypoint = async (
+  runId: number,
+  request: WaypointCreateRequestTypes,
+): Promise<WaypointResultResponseTypes> => {
+  const raw = await apiFetch<RawWaypointResult>(`/staff/runs/${runId}/waypoints`, {
+    method: "POST",
+    body: {
+      address: request.address,
+      lat: request.lat,
+      lng: request.lng,
+      label: request.label,
+      note: request.note,
+      apply: request.apply,
+    },
+  });
+  return toWaypointResult(raw);
+};
+
+// DELETE /staff/runs/{runId}/waypoints/{waypointId}?apply= — 배포된 경유 지점만 대상.
+export const removeRunWaypoint = async (
+  runId: number,
+  waypointId: number,
+  apply: boolean,
+): Promise<WaypointResultResponseTypes> => {
+  const raw = await apiFetch<RawWaypointResult>(`/staff/runs/${runId}/waypoints/${waypointId}`, {
+    method: "DELETE",
+    query: { apply },
+  });
+  return toWaypointResult(raw);
+};

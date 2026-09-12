@@ -19,12 +19,14 @@ const SOURCE_LABEL: Record<ChangeApprovalSummaryResponseTypes["source"], string>
   change_request: "구간 변경 신청",
 };
 
-// §5.5 는 `status` 값을 열거하지 않는데, 실제 백엔드가 rejected·auto_rejected·all 에서
-// 500 을 낸다(changeApprovals.ts 주석, 2026-09-12 curl 확인) — 그래서 화면 필터는
-// pending·approved 둘만 제공해 이 결함 경로를 아예 밟지 않는다(판단 근거, 보고서 §1).
+// §9.6 ChangeRequest.status 4종 전부를 필터로 연다. rejected·auto_rejected 조회가 500
+// 을 내던 서버 결함은 병합 `ab51f8f`(Ruling 264)로 해소됐다 — 2026-09-12 이 좌석이 자기
+// 포트(8081)로 네 값 전부 200 을 재확인했다(보고서 §3). UI 로 가려 두는 이전 판단을 되돌린다.
 const STATUS_OPTIONS = [
   { value: "pending", label: "처리 대기" },
   { value: "approved", label: "승인 완료" },
+  { value: "rejected", label: "거절" },
+  { value: "auto_rejected", label: "자동 거절" },
 ];
 
 // §5.5 GET /staff/approvals(A-05) 목록 — ②구간 변경 승인 화면(UF-M-02).

@@ -22,4 +22,7 @@ export type { SearchFieldProps } from "./SearchField";
 export { CodeInput } from "./CodeInput";
 export type { CodeInputProps } from "./CodeInput";
 
+export { PhotoUploadField } from "./PhotoUploadField";
+export type { PhotoUploadFieldProps } from "./PhotoUploadField";
+
 export type { SegmentedOption, SelectOption } from "./types";

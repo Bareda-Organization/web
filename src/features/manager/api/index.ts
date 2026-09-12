@@ -1,0 +1,73 @@
+import { apiFetch } from "@/shared/lib/http";
+import type {
+  ManagerItemResponseTypes,
+  ManagerListResponseTypes,
+  ManagerUpsertRequestTypes,
+  WorkHours,
+} from "../types";
+
+type RawManager = {
+  id: number;
+  name: string;
+  phone: string;
+  role: "driver" | "escort";
+  work_hours: WorkHours | null;
+};
+
+type RawManagerListResponse = {
+  items: RawManager[];
+  page: number;
+  size: number;
+  total_count: number;
+  has_next: boolean;
+};
+
+const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
+  id: raw.id,
+  name: raw.name,
+  phone: raw.phone,
+  role: raw.role,
+  workHours: raw.work_hours,
+});
+
+// GET /staff/managers?q= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
+export const getManagers = async (page: number, size = 20, q?: string): Promise<ManagerListResponseTypes> => {
+  const raw = await apiFetch<RawManagerListResponse>("/staff/managers", {
+    method: "GET",
+    query: { page, size, q: q || undefined },
+  });
+  return {
+    items: raw.items.map(toManager),
+    page: raw.page,
+    size: raw.size,
+    totalCount: raw.total_count,
+    hasNext: raw.has_next,
+  };
+};
+
+const toRawUpsert = (request: ManagerUpsertRequestTypes) => ({
+  name: request.name,
+  phone: request.phone,
+  role: request.role,
+  work_hours: request.workHours,
+});
+
+// POST /staff/managers (MGR-02) — 등록.
+export const createManager = async (request: ManagerUpsertRequestTypes): Promise<ManagerItemResponseTypes> => {
+  const raw = await apiFetch<RawManager>("/staff/managers", { method: "POST", body: toRawUpsert(request) });
+  return toManager(raw);
+};
+
+// PATCH /staff/managers/{id} (MGR-03) — 상세 GET 이 사양에 없어 목록 행 데이터로 폼을 채운다.
+export const updateManager = async (
+  id: number,
+  request: ManagerUpsertRequestTypes,
+): Promise<ManagerItemResponseTypes> => {
+  const raw = await apiFetch<RawManager>(`/staff/managers/${id}`, { method: "PATCH", body: toRawUpsert(request) });
+  return toManager(raw);
+};
+
+// DELETE /staff/managers/{id} (MGR-04) — 배치 중이면 409 MANAGER_ASSIGNED. 화면이 그 경계를 그대로 안내한다.
+export const deleteManager = async (id: number): Promise<void> => {
+  await apiFetch<void>(`/staff/managers/${id}`, { method: "DELETE" });
+};
