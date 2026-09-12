@@ -43,9 +43,8 @@ const toSummary = (raw: RawChangeApprovalSummary): ChangeApprovalSummaryResponse
 });
 
 // GET /staff/approvals (§5.5 목록, A-05) — 요약만 준다. `status` 기본값은 pending.
-// ⚠ 실제 백엔드는 status=rejected·auto_rejected·all 에서 500 INTERNAL_ERROR 를 낸다
-// (2026-09-12 curl 확인, pending·approved 는 정상) — 백엔드 결함으로 판단해 보고서에
-// 남기고, 화면은 pending·approved 두 값만 필터로 제공한다.
+// rejected·auto_rejected 조회가 500 을 내던 결함은 병합 `ab51f8f` 로 해소됐다(Ruling 264,
+// 2026-09-12 이 좌석이 8081 에서 재확인) — §9.6 4종을 전부 화면 필터로 연다.
 export const getChangeApprovals = async (status?: string): Promise<ChangeApprovalsResponseTypes> => {
   const raw = await apiFetch<RawChangeApprovalsResponse>("/staff/approvals", {
     method: "GET",
