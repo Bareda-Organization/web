@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { Icon } from "../core/Icon";
 import { Button } from "../core/Button";
 import { StyledHelperText, StyledHiddenInput, StyledLabel, StyledPreview, StyledRow, StyledWrap } from "./PhotoUploadField.styled";
@@ -62,7 +63,13 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
       <StyledLabel>{label}</StyledLabel>
       <StyledRow>
         <StyledPreview>
-          {previewUrl ? <img src={previewUrl} alt="" /> : <Icon name="user" size={24} />}
+          {previewUrl ? (
+            // blob: URL(선택 직후 미리보기)까지 받아야 해서 next/image 최적화 대상 밖 —
+            // unoptimized 로 그대로 그린다.
+            <Image src={previewUrl} alt="" width={64} height={64} unoptimized />
+          ) : (
+            <Icon name="user" size={24} />
+          )}
         </StyledPreview>
         <Button type="button" variant="secondary" size="sm" onClick={() => inputRef.current?.click()}>
           사진 선택
