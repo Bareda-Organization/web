@@ -15,10 +15,10 @@ const STATUS_OPTIONS: { value: EmergencyStatus; label: string }[] = [
 ];
 
 const TYPE_LABEL: Record<EmergencyItemResponseTypes["type"], string> = {
-  ACCIDENT: "사고",
-  VEHICLE_FAULT: "차량 고장",
-  STUDENT_EMERGENCY: "학생 응급상황",
-  ETC: "기타",
+  accident: "사고",
+  vehicle_fault: "차량 고장",
+  student_emergency: "학생 응급상황",
+  etc: "기타",
 };
 
 const ROLE_LABEL: Record<"driver" | "escort", string> = { driver: "기사", escort: "동승자" };

@@ -16,7 +16,7 @@ const mockAck = vi.mocked(ackEmergency);
 
 const ITEM = {
   emergencyId: 1,
-  type: "ACCIDENT" as const,
+  type: "accident" as const,
   memo: null,
   raisedBy: { name: "이기사", role: "driver" as const, phone: "010-1111-2222" },
   runId: 10,

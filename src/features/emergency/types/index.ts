@@ -1,9 +1,9 @@
 // features/emergency 가 다루는 타입 전부 — 비상 알림 수신·확인(§5.16, EXC-04, A-16).
 
-// ⚠ §5.16 표는 소문자(`accident` 등)로 적었지만, 실측(curl, staffA 로그인,
-// GET /staff/emergencies)은 매번 대문자 스네이크(`VEHICLE_FAULT`)였다(§2 확신
-// 없는 지점 · 사양-실제 불일치). 화면은 실측을 따른다.
-export type EmergencyType = "ACCIDENT" | "VEHICLE_FAULT" | "STUDENT_EMERGENCY" | "ETC";
+// §5.16 표는 소문자 스네이크(`accident` 등)를 요구한다. 서버가 role·direction 은
+// 이미 소문자로 내리면서 type 만 대문자(`VEHICLE_FAULT`)로 냈던 사양-실제 불일치는
+// 서버 직렬화 정정(BE-R1 목표 3)으로 해소됐다.
+export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc";
 
 export type EmergencyStatus = "open" | "acked" | "canceled";
 

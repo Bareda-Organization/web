@@ -234,13 +234,10 @@ export type UnblockAccountResponseTypes = {
 // ── §6.11 비상 알림 이력 (O-07) ───────────────────────────────────────────
 // A1 수정 라운드(조건 ③) — 이전 값(VEHICLE_FAULT · MEDICAL · ACCIDENT · OTHER)은 정본과
 // 대조하지 않고 적어 둔 것이었다. API_SPEC §5.16·§2306 이 정의하는 값은 소문자 스네이크
-// 케이스 4종(accident · vehicle_fault · student_emergency · etc)이고, MEDICAL·OTHER 는
-// 정본에 아예 없다. 실측(curl, 2026-09-12)으로는 백엔드가 여전히 대문자 Java enum 이름을
-// 그대로 내려 정본과 어긋나 있다 — DB 컬럼은 소문자로 저장되는데(LowerCaseEnumConverter)
-// JSON 직렬화만 원래 enum 이름을 쓴다. 이 라운드는 프런트 범위라 백엔드 직렬화는 고치지
-// 않고, 타입은 정본대로 맞춘 뒤 표시 쪽(EmergencyAlertsPage.tsx)에서 대소문자 무관하게
-// 조회하도록 흡수한다.
-export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc" | (string & {});
+// 케이스 4종(accident · vehicle_fault · student_emergency · etc)이다. 당시 백엔드가
+// 대문자 Java enum 이름을 그대로 내려 정본과 어긋나 있던 것은 서버 직렬화 정정(BE-R1
+// 목표 3)으로 해소돼, 대소문자 흡수용 `(string & {})` 를 걷어냈다.
+export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc";
 
 export type EmergencyAcademyRefResponseTypes = {
   id: number;

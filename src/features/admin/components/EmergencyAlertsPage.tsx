@@ -16,10 +16,8 @@ const STATUS_FILTER_OPTIONS = [
   { value: "canceled", label: "취소됨" },
 ];
 
-// §5.16 이 정의한 실제 type 값(소문자 스네이크케이스). types/index.ts 의 EmergencyType 은
-// A1 수정 라운드에서 정본에 맞춰 고쳤지만, 실제 백엔드(2026-09-12 curl 확인)는 아직
-// 대문자 Java enum 이름을 그대로 내려 정본과 어긋나 있다 — 백엔드 수정은 이번 라운드
-// 범위 밖이라, 여기서는 대소문자 어느 쪽이 와도 라벨이 뜨도록 소문자로 정규화해 조회한다.
+// §5.16 이 정의한 실제 type 값(소문자 스네이크케이스). 서버 직렬화 정정(BE-R1 목표 3)
+// 이후로는 항상 이 형태로 내려오므로 소문자 정규화 없이 그대로 조회한다.
 const TYPE_LABEL: Record<string, string> = {
   accident: "사고",
   vehicle_fault: "차량 고장",
@@ -27,7 +25,7 @@ const TYPE_LABEL: Record<string, string> = {
   etc: "기타",
 };
 
-const toTypeLabel = (type: EmergencyType) => TYPE_LABEL[type.toLowerCase()] ?? type;
+const toTypeLabel = (type: EmergencyType) => TYPE_LABEL[type] ?? type;
 
 // 비상 알림은 지연 인지 자체가 위험이라(§6.11) 다른 화면보다 짧은 5초로 폴링한다.
 const EMERGENCY_POLL_INTERVAL_MS = 5000;

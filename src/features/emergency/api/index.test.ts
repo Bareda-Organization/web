@@ -23,7 +23,7 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
             items: [
               {
                 emergency_id: 1,
-                type: "VEHICLE_FAULT",
+                type: "vehicle_fault",
                 memo: "타이어 펑크",
                 raised_by: { name: "이기사", role: "driver", phone: "010-1111-2222" },
                 run_id: 7,
@@ -50,7 +50,7 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
     expect(result.items).toEqual([
       {
         emergencyId: 1,
-        type: "VEHICLE_FAULT",
+        type: "vehicle_fault",
         memo: "타이어 펑크",
         raisedBy: { name: "이기사", role: "driver", phone: "010-1111-2222" },
         runId: 7,
