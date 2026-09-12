@@ -18,7 +18,7 @@ describe("NotificationList — 조회 갈래", () => {
   });
 
   it("빈 목록이면 총 0건을 보여주고 표에 행이 없다", async () => {
-    mockGet.mockResolvedValue({ items: [], totalCount: 0, hasNext: false, unackedCount: 0 });
+    mockGet.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false, unackedCount: 0 });
 
     const { container } = render(<NotificationList />);
 
