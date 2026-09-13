@@ -235,9 +235,11 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
     render(<MonitoringPage />);
 
     // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이
-    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다.
-    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
+    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다. 이 표식을 먼저 기다려
+    // runs 가 채워진 뒤의 상태에서 배너를 확인한다 — 그러지 않으면 마운트
+    // 직후(runs 가 아직 빈 배열인 순간)의 배너만 우연히 잡고 넘어간다.
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
+    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
   });
 });
