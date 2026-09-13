@@ -1,2 +1,3 @@
-// 여러 기능이 공유하는 훅을 이 폴더에 둔다. 아직 없음 — F3 화면 구현에서 채운다.
-export {};
+// 여러 기능이 공유하는 훅을 이 폴더에 둔다.
+export { useRealtimeChannel } from "./useRealtimeChannel";
+export type { UseRealtimeChannelResult } from "./useRealtimeChannel";
