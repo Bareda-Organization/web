@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Icon } from "../core/Icon";
 import { Button } from "../core/Button";
@@ -22,8 +22,21 @@ export type PhotoUploadFieldProps = {
 /** 학생 사진 업로드 — 클라이언트에서 먼저 3종·5MB 를 걸러 서버 뒷막이(8MB)까지 가지 않게 한다. */
 export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange, error }: PhotoUploadFieldProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  // 우리가 createObjectURL 로 만든 blob: URL만 추적한다 — existingPhotoUrl(서버 URL)은
+  // 우리가 만든 것이 아니라 해제 대상이 아니다.
+  const objectUrlRef = useRef<string | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(existingPhotoUrl);
   const [localError, setLocalError] = useState<string | undefined>(undefined);
+
+  // 언마운트 갈래 — 마지막으로 만든 blob: URL 을 해제한다. 안 하면 화면을 오래 쓸수록
+  // 미리보기용 객체 URL 이 메모리에 쌓인다.
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,12 +55,23 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
       return;
     }
 
+    // 파일 교체 갈래 — 새 blob: URL 을 만들기 전에 직전 것을 해제한다.
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    const nextUrl = URL.createObjectURL(file);
+    objectUrlRef.current = nextUrl;
+
     setLocalError(undefined);
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewUrl(nextUrl);
     onChange(file);
   };
 
   const handleRemove = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = undefined;
+    }
     setLocalError(undefined);
     setPreviewUrl(undefined);
     onChange(null);
