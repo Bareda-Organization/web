@@ -2,6 +2,10 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { createStompClient, type StompFrameLike } from "./stompClient";
 import { academyLiveDestination, adminLiveDestination } from "./wsChannel";
+import {
+  requireRealBackendApiBaseUrl,
+  requireRealBackendWsUrl,
+} from "@/shared/testing/realBackendTarget";
 
 // 실제 백엔드로 STOMP CONNECT·SUBSCRIBE 인가 경계를 확인하는 계약 시험 —
 // `frontend/apps/parent-app/test/integration/real_backend_p3_test.dart` 와
@@ -23,13 +27,8 @@ import { academyLiveDestination, adminLiveDestination } from "./wsChannel";
 // 한 시험 파일 안에서 로그인 4~5회를 서로 다른 계정으로 연달아 부르면 나중
 // 로그인이 앞 로그인의 토큰을 덮어써 버린다 — 그 공유 슬롯을 아예 건드리지
 // 않는 것이 가장 단순한 회피다 — 판단 근거.
-const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-const API_BASE_URL = `${API_HOST}/api/v1`;
-const WS_BASE_URL = (() => {
-  const scheme = API_HOST.startsWith("https://") ? "wss://" : "ws://";
-  const host = API_HOST.replace(/^https?:\/\//, "");
-  return `${scheme}${host}/ws/location`;
-})();
+const API_BASE_URL = requireRealBackendApiBaseUrl();
+const WS_BASE_URL = requireRealBackendWsUrl();
 
 let backendReachable = false;
 
