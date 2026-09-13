@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
@@ -14,6 +14,7 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
+import { MapSurface, type MapCamera, type MapMarker } from "@/features/map";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import {
@@ -30,6 +31,10 @@ import {
 
 // §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다(판단 근거, 보고서 §1).
 const LIVE_POLL_INTERVAL_MS = 7000;
+
+// MonitoringPage.tsx 와 같은 기본 좌표(서울 시청) — 위치 수신 전에도 지도가 빈 화면이
+// 아니게 한다.
+const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
 const RUN_STATUS_LABEL: Record<RunStatus, string> = {
   idle: "대기",
@@ -51,8 +56,8 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 };
 
 // §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-04) — 관계자 웹
-// 운행 관리 첫 화면(UF-M-05). 지도는 F4 범위라 실시간 카드 안은 빈 표면만 두고
-// 명단·진행률·지연은 전부 그린다.
+// 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
+// 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
 export const DashboardPage = () => {
   const router = useRouter();
   const { session } = useAuthSession();
@@ -62,6 +67,23 @@ export const DashboardPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const mapMarkers: MapMarker[] = useMemo(
+    () =>
+      liveRuns
+        .filter((run) => run.position != null)
+        .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
+    [liveRuns],
+  );
+  const mapCamera: MapCamera = useMemo(() => {
+    if (mapMarkers.length === 0) return DEFAULT_CAMERA;
+    const sum = mapMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
+      lat: 0,
+      lng: 0,
+    });
+    return { lat: sum.lat / mapMarkers.length, lng: sum.lng / mapMarkers.length, zoom: DEFAULT_CAMERA.zoom };
+  }, [mapMarkers]);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -221,8 +243,16 @@ export const DashboardPage = () => {
         <StyledLiveCard>
           <Card>
             <p>실시간 위치</p>
-            {/* F4 에서 지도가 들어갈 자리 */}
-            <StyledMapSurface aria-hidden="true" />
+            <StyledMapSurface>
+              <MapSurface
+                camera={mapCamera}
+                markers={mapMarkers}
+                onAuthFailed={(exception) =>
+                  setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+                }
+              />
+            </StyledMapSurface>
+            {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
             {wsIsLost ? (
               <AlertBanner
                 tone="missed"

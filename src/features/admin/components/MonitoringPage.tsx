@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import {
   adminLiveDestination,
@@ -11,6 +11,7 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
+import { MapSurface, type MapCamera, type MapMarker } from "@/features/map";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { RunRosterDialog } from "./RunRosterDialog";
@@ -18,6 +19,10 @@ import { StyledFilterRow, StyledMapSurface, StyledMonitoringLayout } from "./Mon
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
 const LIVE_POLL_INTERVAL_MS = 7000;
+
+// 위치 수신 전(모든 회차가 `position: null`)에도 지도가 빈 화면이 아니라 서울 시청
+// 좌표를 보여주도록 한다 — 네이버 지도 SDK 의 `MapOptions.center` 기본값과 같은 지점이다.
+const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
 const RUN_STATUS_LABEL: Record<RunStatus, string> = {
   idle: "대기",
@@ -50,6 +55,26 @@ export const MonitoringPage = () => {
   const [loadingRuns, setLoadingRuns] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  // 실시간 회차의 좌표를 지도 마커로 옮긴다 — 위치를 아직 못 받은 회차(`position: null`)는
+  // 마커를 만들지 않는다. 마커가 하나라도 있으면 그 평균 좌표를 카메라 중심으로 삼아
+  // 지금 보이는 회차들이 화면 안에 들어오게 하고, 하나도 없으면 기본 좌표를 쓴다.
+  const mapMarkers: MapMarker[] = useMemo(
+    () =>
+      runs
+        .filter((run) => run.position != null)
+        .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
+    [runs],
+  );
+  const mapCamera: MapCamera = useMemo(() => {
+    if (mapMarkers.length === 0) return DEFAULT_CAMERA;
+    const sum = mapMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
+      lat: 0,
+      lng: 0,
+    });
+    return { lat: sum.lat / mapMarkers.length, lng: sum.lng / mapMarkers.length, zoom: DEFAULT_CAMERA.zoom };
+  }, [mapMarkers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +222,8 @@ export const MonitoringPage = () => {
 
       {liveAlert ? <AlertBanner tone="missed" title={liveAlert} /> : null}
 
+      {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
+
       {wsIsLost ? (
         <AlertBanner
           tone="missed"
@@ -219,8 +246,15 @@ export const MonitoringPage = () => {
         />
       </StyledFilterRow>
 
-      {/* F4 에서 지도가 들어갈 자리 — 위치 좌표는 표로만 노출한다 */}
-      <StyledMapSurface aria-hidden="true" />
+      <StyledMapSurface>
+        <MapSurface
+          camera={mapCamera}
+          markers={mapMarkers}
+          onAuthFailed={(exception) =>
+            setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+          }
+        />
+      </StyledMapSurface>
 
       <Card padding={0} aria-busy={loadingRuns}>
         {!loadingAcademies && !error && academies.length === 0 ? (

@@ -26,11 +26,12 @@ export const StyledLiveCard = styled.div`
   gap: 12px;
 `;
 
+// F4 — 자리표시(점선 테두리)를 걷어내고 실제 `MapSurface` 를 담는 크기 지정 컨테이너로 바꾼다.
 export const StyledMapSurface = styled.div`
   height: 160px;
   border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  border: 1px dashed var(--border-default);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
 `;
 
 export const StyledLiveEmpty = styled.p`

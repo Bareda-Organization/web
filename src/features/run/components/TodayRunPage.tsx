@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
+import { MapSurface, type MapCamera } from "@/features/map";
 import { getDashboard, getRunRoster } from "../api";
 import type { DashboardRunResponseTypes, RosterItemResponseTypes, RosterStatus } from "../types";
 import { ForcedAddDialog } from "./ForcedAddDialog";
@@ -19,6 +20,12 @@ import {
   StyledCrewRow,
   StyledCrewLabel,
 } from "./TodayRunPage.styled";
+
+// DashboardPage.tsx·MonitoringPage.tsx 와 같은 기본 좌표(서울 시청). 이 화면이 쓰는
+// `DashboardRunResponseTypes`·`RosterItemResponseTypes` 는 둘 다 좌표 필드가 없어
+// (승하차지는 `stopName` 문자열만 응답에 실린다 — `run/types/index.ts`) 노선 지도는
+// 마커 없이 기본 위치만 보여준다(판단 근거, 보고서 §1).
+const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
 // §5.4 응답의 `absent` 는 매니저 앱과 반대로 계속 빨간색(missed)으로 유지해야 한다
 // (API_SPEC §5.4) — 공용 StudentRow 의 RIDE_META 는 absent 를 idle 로 다뤄서 여기선
@@ -58,6 +65,7 @@ export const TodayRunPage = () => {
   const [loading, setLoading] = useState(true);
   const [forcedAddOpen, setForcedAddOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
@@ -168,8 +176,16 @@ export const TodayRunPage = () => {
         <StyledSidePanel>
           <Card>
             <p>노선</p>
-            {/* F4 에서 지도가 들어갈 자리 */}
-            <StyledMapSurface aria-hidden="true" />
+            <StyledMapSurface>
+              <MapSurface
+                camera={DEFAULT_CAMERA}
+                markers={[]}
+                onAuthFailed={(exception) =>
+                  setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+                }
+              />
+            </StyledMapSurface>
+            {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
             <StyledCrewRow>
               <StyledCrewLabel>기사</StyledCrewLabel>
               <span>{selectedRun?.driverName ?? "미배치"}</span>
