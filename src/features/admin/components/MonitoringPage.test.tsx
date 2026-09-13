@@ -223,4 +223,21 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
     expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
     expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
   });
+
+  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 배너(wsIsLost)와 빈 목록 EmptyState
+  // (runs.length === 0)가 같은 조건 하나로 묶여도 기존 시험은 전부 runs 가 빈
+  // 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해
+  // 두 조건이 서로 무관함을 고정한다.
+  it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, EmptyState 는 뜨지 않는다", async () => {
+    mockConnectionState = "gaveUp";
+    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+    render(<MonitoringPage />);
+
+    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이
+    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다.
+    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
+    expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
+    expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
+  });
 });

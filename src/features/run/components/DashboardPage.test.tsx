@@ -333,4 +333,24 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
     expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
     expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
   });
+
+  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 배너(wsIsLost)와 빈 목록 문구
+  // (liveRuns.length === 0)가 같은 조건 하나로 묶여도 기존 시험은 전부
+  // liveRuns 가 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이
+  // 끊긴 경우를 더해 두 조건이 서로 무관함을 고정한다.
+  it("목록에 항목이 있어도(liveRuns 비어있지 않음) 연결이 끊기면 배너가 뜨고, 빈 목록 문구는 뜨지 않는다", async () => {
+    mockUseAuthSession.mockReturnValue({
+      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
+    });
+    mockConnectionState = "gaveUp";
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+    render(<DashboardPage />);
+
+    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이
+    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다("1호차"는 대시보드 표에도 있어 유일하지 않다).
+    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
+    expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
+    expect(screen.queryByText("지금 이동 중인 버스가 없습니다")).not.toBeInTheDocument();
+  });
 });
