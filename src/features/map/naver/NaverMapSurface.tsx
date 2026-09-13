@@ -8,6 +8,8 @@ import { useEffect, useRef } from "react";
 import type { MapCamera, MapMarker, MapMarkerKind } from "../types";
 import { getNaverMapClientId } from "./naverMapConfig";
 import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
+import { MarkerAnimationController } from "./markerAnimationController";
+import type { LatLng } from "./markerInterpolation";
 
 export type NaverMapSurfaceProps = {
   camera: MapCamera;
@@ -29,6 +31,26 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markerRefs = useRef<Map<string, naver.maps.Marker>>(new Map());
+  // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
+  // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
+  const displayedPositions = useRef<Map<string, LatLng>>(new Map());
+  // 보간 스케줄링 — SDK 를 모르는 순수 컨트롤러라 여기서만 `naver.maps.LatLng` 로
+  // 감싸 실제 마커에 반영한다. 마커를 움직이는 것이지 카메라를 움직이는 것이
+  // 아니다 — 카메라는 아래 별도 useEffect 가 즉시(보간 없이) 갱신한다.
+  const animationControllerRef = useRef<MarkerAnimationController | null>(null);
+  if (animationControllerRef.current == null) {
+    animationControllerRef.current = new MarkerAnimationController({
+      applyPosition: (id, position) => {
+        displayedPositions.current.set(id, position);
+        const marker = markerRefs.current.get(id);
+        const naverMaps = window.naver?.maps;
+        if (marker && naverMaps) {
+          marker.setPosition(new naverMaps.LatLng(position.lat, position.lng));
+        }
+      },
+      getCurrentPosition: (id) => displayedPositions.current.get(id),
+    });
+  }
 
   // SDK 적재 + 지도 생성 — 마운트 시 한 번만.
   useEffect(() => {
@@ -63,6 +85,10 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
     return () => {
       cancelled = true;
       unsubscribeAuthFailure();
+      // ⚠ 화면이 사라질 때 보간 프레임 루프를 반드시 멈춘다 — 안 멈추면 언마운트된
+      // 컴포넌트를 향해 계속 `requestAnimationFrame` 이 도는 누수가 된다.
+      animationControllerRef.current?.dispose();
+      displayedPositions.current.clear();
       markerRefs.current.forEach((marker) => marker.setMap(null));
       markerRefs.current.clear();
       mapRef.current = null;
@@ -78,7 +104,8 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
     map.setZoom(camera.zoom);
   }, [camera.lat, camera.lng, camera.zoom]);
 
-  // 마커 갱신 — id 기준으로 추가·이동·제거한다.
+  // 마커 갱신 — id 기준으로 추가·제거하고, 기존 마커의 좌표 변경은 보간
+  // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다 — COMMON-B2 §2).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.naver) return;
@@ -90,24 +117,37 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
       if (!nextIds.has(id)) {
         marker.setMap(null);
         existing.delete(id);
+        displayedPositions.current.delete(id);
+        animationControllerRef.current?.forget(id);
       }
     }
 
     for (const markerData of markers) {
-      const position = new naverMaps.LatLng(markerData.lat, markerData.lng);
       const found = existing.get(markerData.id);
-      if (found) {
-        found.setPosition(position);
+      if (!found) {
+        // 새로 나타난 마커 — 보간 없이 바로 그 자리에 놓는다. "받은 간격만큼
+        // 편다"는 *갱신*에만 해당하고, 첫 등장은 보간할 이전 위치가 없다.
+        const position = new naverMaps.LatLng(markerData.lat, markerData.lng);
+        const created = new naverMaps.Marker({
+          map,
+          position,
+          icon: {
+            content: `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${MARKER_COLOR[markerData.kind]};border:2px solid #fff;"></span>`,
+          },
+        });
+        existing.set(markerData.id, created);
+        displayedPositions.current.set(markerData.id, { lat: markerData.lat, lng: markerData.lng });
         continue;
       }
-      const created = new naverMaps.Marker({
-        map,
-        position,
-        icon: {
-          content: `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${MARKER_COLOR[markerData.kind]};border:2px solid #fff;"></span>`,
-        },
-      });
-      existing.set(markerData.id, created);
+      // 버스만 보간 대상이다 — 정류장·학생 마커는 이 화면에서 좌표가 바뀌지
+      // 않지만(현재는 항상 kind: "bus" 만 갱신됨), 앞으로 다른 종류가 움직이게
+      // 되더라도 목표 5는 "버스 마커 보간" 이므로 범위를 명확히 해 둔다.
+      if (markerData.kind === "bus") {
+        animationControllerRef.current?.receive(markerData.id, { lat: markerData.lat, lng: markerData.lng });
+      } else {
+        found.setPosition(new naverMaps.LatLng(markerData.lat, markerData.lng));
+        displayedPositions.current.set(markerData.id, { lat: markerData.lat, lng: markerData.lng });
+      }
     }
   }, [markers]);
 
