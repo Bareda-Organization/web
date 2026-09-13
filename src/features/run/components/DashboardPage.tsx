@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
+import {
+  academyLiveDestination,
+  parseWsEmergencyRaisedPayload,
+  parseWsApprovalRequestedPayload,
+  parseWsPositionPayload,
+  type WebSocketEnvelope,
+} from "@/shared/lib/ws";
+import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getDashboard, getRunsLive } from "../api";
@@ -46,11 +55,13 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 // 명단·진행률·지연은 전부 그린다.
 export const DashboardPage = () => {
   const router = useRouter();
+  const { session } = useAuthSession();
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getDashboard>>["metrics"] | null>(null);
   const [runs, setRuns] = useState<DashboardRunResponseTypes[]>([]);
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveAlert, setLiveAlert] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -73,6 +84,64 @@ export const DashboardPage = () => {
       // 실시간 카드는 보조 정보라 실패해도 본문 오류로 승격하지 않는다 — 다음 폴링에서 회복.
     }
   }, []);
+
+  // Goal 7 — `/topic/academy/{academyId}/live` 구독. `position` 은 payload 가
+  // 화면에 필요한 필드(lat·lng·currentStopName)를 전부 담고 있어 `liveRuns` 를
+  // 직접 갱신하고, 나머지 회차 상태 변화(`stop_arrived`·`rider_changed`·
+  // `run_started`·`run_ended`) 는 payload 가 `progress`·`nextStop` 같은 화면
+  // 필드를 안 담고 있어 `loadLive()` 재조회로 반영한다 — 7초 폴링보다 먼저
+  // 최신값을 받는 효과만 노리고, payload 조각으로 상태를 억지로 재구성하지
+  // 않는다(판단 근거, 보고서 §1). `AuthGateGuard` 가 관계자 role 에서만 이
+  // 화면을 그리므로 `session.academy` 는 항상 값이 있다고 본다(서버 불변식).
+  const handleEnvelope = useCallback(
+    (envelope: WebSocketEnvelope) => {
+      switch (envelope.event) {
+        case "position": {
+          const payload = parseWsPositionPayload(envelope.payload);
+          setLiveRuns((prev) =>
+            prev.map((run) =>
+              String(run.runId) === envelope.runId
+                ? {
+                    ...run,
+                    position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt },
+                    currentStop: payload.currentStopName ?? run.currentStop,
+                  }
+                : run,
+            ),
+          );
+          return;
+        }
+        case "stop_arrived":
+        case "rider_changed":
+        case "run_started":
+        case "run_ended":
+          loadLive();
+          return;
+        case "emergency_raised": {
+          const payload = parseWsEmergencyRaisedPayload(envelope.payload);
+          setLiveAlert(`비상 상황 발생 — ${payload.busNo} 호차 (${payload.type})`);
+          return;
+        }
+        case "approval_requested": {
+          const payload = parseWsApprovalRequestedPayload(envelope.payload);
+          setLiveAlert(`탑승 승인 요청 — ${payload.studentName} (${payload.stopName})`);
+          return;
+        }
+        default:
+          // 미지 이벤트(`eventWireValue` 로 원문 보존) — 이 화면은 무시한다.
+          return;
+      }
+    },
+    [loadLive],
+  );
+  const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+  // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `liveRuns` 는
+  // REST 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록을
+  // 대체하지 않고 그 위에 별도로 얹는다 — WS 가 끊겨도 REST 로 받은 "지금
+  // 이동 중인 버스가 없습니다"는 여전히 사실이라 숨기면 오히려 잘못된 정보다
+  // (판단 근거, 보고서 §1).
+  const wsIsLost = connectionState === "gaveUp" || connectionState === "forbidden";
+  const wsIsReconnecting = connectionState === "reconnecting";
 
   useEffect(() => {
     let cancelled = false;
@@ -122,6 +191,8 @@ export const DashboardPage = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
+      {liveAlert ? <AlertBanner tone="missed" title={liveAlert} /> : null}
+
       {noShowRuns.length > 0 ? (
         <AlertBanner
           tone="missed"
@@ -152,6 +223,17 @@ export const DashboardPage = () => {
             <p>실시간 위치</p>
             {/* F4 에서 지도가 들어갈 자리 */}
             <StyledMapSurface aria-hidden="true" />
+            {wsIsLost ? (
+              <AlertBanner
+                tone="missed"
+                title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
+              >
+                {connectionState === "forbidden"
+                  ? "이 학원의 실시간 갱신을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
+                  : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
+              </AlertBanner>
+            ) : null}
+            {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
             {liveRuns.length === 0 ? (
               <StyledLiveEmpty>지금 이동 중인 버스가 없습니다</StyledLiveEmpty>
             ) : (
