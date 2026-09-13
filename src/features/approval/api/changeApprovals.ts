@@ -71,19 +71,25 @@ type RawChangeApprovalDetail = RawChangeApprovalSummary & {
     stops_after: RawRouteStop[];
     reordered: string[];
     removed: string[];
-  };
-  est_time_before: string;
-  est_time_after: string;
-  est_distance_before: number;
-  est_distance_after: number;
+  } | null;
+  est_time_before: string | null;
+  est_time_after: string | null;
+  est_distance_before: number | null;
+  est_distance_after: number | null;
   affected_students: { student_id: number; name: string }[];
   capacity: { student_capacity: number; assigned: number };
-  preview_token: string;
+  preview_token: string | null;
   preview_stale: boolean;
 };
 
-// GET /staff/approvals/{id} (§5.5 상세, A-05) — 조회 시점에 재최적화를 정확히 1회
-// 실행한다. 이 학원 시드 데이터는 고정 노선이 없어 422 ROUTE_NOT_CONFIGURED_FOR_RUN 가
+// GET /staff/approvals/{id} (§5.5 상세, A-05) — 대기 건은 조회 시점에 재최적화를 정확히
+// 1회 실행하지만, 이미 결정된 건(approved·rejected·auto_rejected)은 재최적화를 하지 않고
+// `route_preview`·`est_time_*`·`est_distance_*`·`preview_token` 을 전부 null 로 돌려준다
+// (백엔드 `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`).
+// 이 null 을 그대로 뚫고 지나가 `stops_before` 접근에서 TypeError 로 죽던 결함을
+// 2026-09-14 F5-W1 실서버 계약 시험(approval_id=2)이 잡아 여기서 null 을 명시적으로 다룬다.
+//
+// 이 학원 시드 데이터는 대기 건에 한해 고정 노선이 없어 422 ROUTE_NOT_CONFIGURED_FOR_RUN 가
 // 나는데, 이 코드는 apiErrorCodes.ts 정본 목록에도 API_SPEC §5.5 에도 없다
 // (2026-09-12 확인 — 백엔드 ErrorCode.java:203 에는 실재, HTTP 422). 정본 목록을
 // 임의로 늘리지 말라는 그 파일의 지시를 존중해 여기서 코드를 추가하지 않고,
@@ -92,12 +98,14 @@ export const getChangeApprovalDetail = async (approvalId: number): Promise<Chang
   const raw = await apiFetch<RawChangeApprovalDetail>(`/staff/approvals/${approvalId}`, { method: "GET" });
   return {
     ...toSummary(raw),
-    routePreview: {
-      stopsBefore: raw.route_preview.stops_before.map(toRouteStop),
-      stopsAfter: raw.route_preview.stops_after.map(toRouteStop),
-      reordered: raw.route_preview.reordered,
-      removed: raw.route_preview.removed,
-    },
+    routePreview: raw.route_preview
+      ? {
+          stopsBefore: raw.route_preview.stops_before.map(toRouteStop),
+          stopsAfter: raw.route_preview.stops_after.map(toRouteStop),
+          reordered: raw.route_preview.reordered,
+          removed: raw.route_preview.removed,
+        }
+      : null,
     estTimeBefore: raw.est_time_before,
     estTimeAfter: raw.est_time_after,
     estDistanceBefore: raw.est_distance_before,

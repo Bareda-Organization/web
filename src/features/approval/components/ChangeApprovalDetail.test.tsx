@@ -92,4 +92,23 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     expect(await screen.findByText("미리보기가 만료됐습니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
   });
+
+  // 이미 결정된 건(routePreview 등이 전부 null) — 실서버 계약 시험이 잡은 결함(보고서 §1·§2)의
+  // 고정 시험. 이 널을 못 다루면 `stopsBefore` 접근에서 TypeError 로 렌더가 죽는다.
+  it("이미 결정된 건(routePreview 가 null)은 노선 비교 대신 안내 문구를 보여주고 승인/거절 버튼을 감춘다", async () => {
+    mockGetDetail.mockResolvedValue({
+      ...baseDetail,
+      routePreview: null,
+      estTimeBefore: null,
+      estTimeAfter: null,
+      estDistanceBefore: null,
+      estDistanceAfter: null,
+      previewToken: null,
+    });
+    render(<ChangeApprovalDetail approvalId={5} />);
+
+    expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "거절" })).not.toBeInTheDocument();
+  });
 });

@@ -63,7 +63,9 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   }, [loadDetail]);
 
   const handleApprove = async () => {
-    if (!detail) return;
+    // previewToken 이 null 이면 이미 결정된 건이라(아래 isAlreadyDecided 주석 참고)
+    // 승인 버튼 자체를 안 보여주지만, 방어적으로 한 번 더 막는다.
+    if (!detail || !detail.previewToken) return;
     setSubmitting(true);
     setDecideError(null);
     try {
@@ -112,6 +114,12 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     );
   }
 
+  // 이미 결정된 건(approved·rejected·auto_rejected)은 백엔드가 재최적화를 하지 않고
+  // routePreview·previewToken 등을 전부 null 로 돌려준다(api/changeApprovals.ts 주석 —
+  // 2026-09-14 F5-W1 실서버 계약 시험에서 처음 드러난 계약). routePreview 유무로
+  // "이미 결정됐는가"를 판정해 노선 비교·승인/거절 조작을 감춘다.
+  const isAlreadyDecided = detail.routePreview === null;
+
   return (
     <StyledDetailLayout>
       <PageHeader
@@ -148,7 +156,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         <StyledInfoRow>
           <StyledInfoLabel>예상 소요</StyledInfoLabel>
           <span>
-            {detail.estTimeBefore} → {detail.estTimeAfter}
+            {detail.estTimeBefore ?? "-"} → {detail.estTimeAfter ?? "-"}
           </span>
         </StyledInfoRow>
         <StyledInfoRow>
@@ -159,47 +167,53 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
 
       <Card>
         <p>노선 비교</p>
-        <StyledRouteGrid>
-          <StyledRouteColumn>
-            <p>변경 전</p>
-            {detail.routePreview.stopsBefore.map(renderStop)}
-          </StyledRouteColumn>
-          <StyledRouteColumn>
-            <p>변경 후</p>
-            {detail.routePreview.stopsAfter.map(renderStop)}
-          </StyledRouteColumn>
-        </StyledRouteGrid>
-      </Card>
-
-      <Card>
-        {mode === "reject" ? (
-          <>
-            <Textarea
-              label="거절 사유"
-              required
-              value={rejectReason}
-              onChange={(event) => setRejectReason(event.target.value)}
-            />
-            <StyledActionRow>
-              <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
-                뒤로
-              </Button>
-              <Button variant="danger" onClick={handleReject} disabled={submitting || !rejectReason.trim()}>
-                {submitting ? "처리 중..." : "거절 확정"}
-              </Button>
-            </StyledActionRow>
-          </>
+        {detail.routePreview ? (
+          <StyledRouteGrid>
+            <StyledRouteColumn>
+              <p>변경 전</p>
+              {detail.routePreview.stopsBefore.map(renderStop)}
+            </StyledRouteColumn>
+            <StyledRouteColumn>
+              <p>변경 후</p>
+              {detail.routePreview.stopsAfter.map(renderStop)}
+            </StyledRouteColumn>
+          </StyledRouteGrid>
         ) : (
-          <StyledActionRow>
-            <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting}>
-              거절
-            </Button>
-            <Button variant="primary" onClick={handleApprove} disabled={submitting}>
-              {submitting ? "처리 중..." : "승인"}
-            </Button>
-          </StyledActionRow>
+          <p>이미 결정된 건이라 노선 재계산 결과가 없습니다.</p>
         )}
       </Card>
+
+      {isAlreadyDecided ? null : (
+        <Card>
+          {mode === "reject" ? (
+            <>
+              <Textarea
+                label="거절 사유"
+                required
+                value={rejectReason}
+                onChange={(event) => setRejectReason(event.target.value)}
+              />
+              <StyledActionRow>
+                <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
+                  뒤로
+                </Button>
+                <Button variant="danger" onClick={handleReject} disabled={submitting || !rejectReason.trim()}>
+                  {submitting ? "처리 중..." : "거절 확정"}
+                </Button>
+              </StyledActionRow>
+            </>
+          ) : (
+            <StyledActionRow>
+              <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting}>
+                거절
+              </Button>
+              <Button variant="primary" onClick={handleApprove} disabled={submitting}>
+                {submitting ? "처리 중..." : "승인"}
+              </Button>
+            </StyledActionRow>
+          )}
+        </Card>
+      )}
     </StyledDetailLayout>
   );
 };
