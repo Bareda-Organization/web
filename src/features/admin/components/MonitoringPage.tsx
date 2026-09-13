@@ -150,9 +150,9 @@ export const MonitoringPage = () => {
       <StyledMapSurface aria-hidden="true" />
 
       <Card padding={0} aria-busy={loadingRuns}>
-        {!loadingAcademies && academies.length === 0 ? (
+        {!loadingAcademies && !error && academies.length === 0 ? (
           <EmptyState icon="building" title="등록된 학원이 없습니다" />
-        ) : runs.length === 0 && !loadingRuns ? (
+        ) : !error && runs.length === 0 && !loadingRuns ? (
           <EmptyState icon="bus" title="지금 운행 중인 회차가 없습니다" />
         ) : (
           <RosterTable columns={columns} rows={runs} getRowKey={(row) => row.runId} />

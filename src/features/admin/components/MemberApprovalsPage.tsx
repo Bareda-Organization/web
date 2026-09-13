@@ -61,7 +61,7 @@ export const MemberApprovalsPage = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        {!loading && requests.length === 0 ? (
+        {!loading && !error && requests.length === 0 ? (
           <EmptyState icon="user-check" title="처리할 가입 요청이 없습니다" />
         ) : (
           <RosterTable columns={columns} rows={requests} getRowKey={(row) => row.requestId} />
