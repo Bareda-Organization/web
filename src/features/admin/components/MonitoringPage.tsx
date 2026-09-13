@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
+import {
+  adminLiveDestination,
+  parseWsEmergencyRaisedPayload,
+  parseWsPositionPayload,
+  type WebSocketEnvelope,
+} from "@/shared/lib/ws";
+import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademies, getAcademyRunsLive } from "../api";
@@ -42,6 +49,7 @@ export const MonitoringPage = () => {
   const [loadingAcademies, setLoadingAcademies] = useState(true);
   const [loadingRuns, setLoadingRuns] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveAlert, setLiveAlert] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +90,57 @@ export const MonitoringPage = () => {
       setLoadingRuns(false);
     }
   }, []);
+
+  // Goal 8 — `/topic/admin/live` 구독. 이 채널은 학원 경계를 넘어 전체를
+  // 방송하므로(BRIEF-a1.md §2) `runs` 는 화면이 지금 선택한 학원 하나만 들고
+  // 있다 — 봉투에는 어느 학원 소속인지 알려주는 필드가 없어(§7 공통 봉투),
+  // `runId` 가 지금 목록에 있는 회차와 일치할 때만 직접 갱신하고(`position`),
+  // 새 회차 시작·종료처럼 `runs` 자체의 구성이 바뀔 수 있는 이벤트는 지금
+  // 선택된 학원으로 `loadRuns` 를 재조회해 반영한다 — DashboardPage 와 같은
+  // 판단(payload 조각으로 목록 구조를 재구성하지 않는다, 보고서 §1).
+  // `emergency_raised` 는 학원 필터와 무관하게 항상 띄운다 — Goal 8 이 요구하는
+  // "모든 학원의 실시간 갱신"의 일부다.
+  const handleEnvelope = useCallback(
+    (envelope: WebSocketEnvelope) => {
+      switch (envelope.event) {
+        case "position": {
+          const payload = parseWsPositionPayload(envelope.payload);
+          setRuns((prev) =>
+            prev.map((run) =>
+              String(run.runId) === envelope.runId
+                ? { ...run, position: { lat: payload.lat, lng: payload.lng, receivedAt: payload.receivedAt } }
+                : run,
+            ),
+          );
+          return;
+        }
+        case "stop_arrived":
+        case "rider_changed":
+        case "run_started":
+        case "run_ended":
+          if (academyId != null) {
+            loadRuns(academyId);
+          }
+          return;
+        case "emergency_raised": {
+          const payload = parseWsEmergencyRaisedPayload(envelope.payload);
+          setLiveAlert(`비상 상황 발생 — ${payload.busNo} 호차 (${payload.type})`);
+          return;
+        }
+        default:
+          // `approval_requested` 는 관리자 채널에 안 오고(`docs/API_SPEC.md §7`
+          // 채널 표), 그 밖의 미지 이벤트는 이 화면이 무시한다.
+          return;
+      }
+    },
+    [academyId, loadRuns],
+  );
+  const { connectionState } = useRealtimeChannel(adminLiveDestination(), handleEnvelope);
+  // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `runs` 는 REST
+  // 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록·EmptyState 를
+  // 대체하지 않고 그 위에 별도로 얹는다(DashboardPage.tsx 와 동일 판단).
+  const wsIsLost = connectionState === "gaveUp" || connectionState === "forbidden";
+  const wsIsReconnecting = connectionState === "reconnecting";
 
   useEffect(() => {
     if (academyId == null) {
@@ -135,6 +194,20 @@ export const MonitoringPage = () => {
       <PageHeader title="전체 관제" description="학원별 실시간 회차 현황을 확인합니다" />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+
+      {liveAlert ? <AlertBanner tone="missed" title={liveAlert} /> : null}
+
+      {wsIsLost ? (
+        <AlertBanner
+          tone="missed"
+          title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
+        >
+          {connectionState === "forbidden"
+            ? "전체 관제 채널을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
+            : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
+        </AlertBanner>
+      ) : null}
+      {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
 
       <StyledFilterRow>
         <Select
