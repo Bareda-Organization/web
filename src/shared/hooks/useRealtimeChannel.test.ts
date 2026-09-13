@@ -55,7 +55,10 @@ vi.mock("../lib/ws", () => {
       return () => this.listeners.delete(listener);
     }
 
-    subscribe(destination: string, _onEnvelope: (envelope: WebSocketEnvelope) => void): () => void {
+    // 두 번째 인자(`onEnvelope`)는 실제 구현의 호출 형태를 맞추기 위한 자리이지만
+    // 이 가짜 구현은 구독 호출 사실만 기록하면 충분해 받지 않는다 — 초과 인자는
+    // JS 호출 관례상 무시되므로 `useRealtimeChannel.ts` 쪽 호출부는 그대로 둔다.
+    subscribe(destination: string): () => void {
       this.instance.subscribeCalls.push({ destination });
       return () => {
         this.instance.unsubscribeCalls += 1;

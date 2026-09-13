@@ -37,8 +37,20 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
   // 보간 스케줄링 — SDK 를 모르는 순수 컨트롤러라 여기서만 `naver.maps.LatLng` 로
   // 감싸 실제 마커에 반영한다. 마커를 움직이는 것이지 카메라를 움직이는 것이
   // 아니다 — 카메라는 아래 별도 useEffect 가 즉시(보간 없이) 갱신한다.
+  // react.dev 가 명시적으로 허용하는 "비용이 드는 객체를 ref 에 지연 생성" 관용구
+  // (https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents)
+  // — `if (ref.current === null)` 로 감싸 마운트당 정확히 한 번만 만들고, 그 뒤
+  // 어떤 렌더에서도 다시 실행되지 않는다. `useState` 지연 초기화로 바꿔 봤으나
+  // 그 초기화 함수 안에서 다른 ref(`displayedPositions`·`markerRefs`)를 읽는
+  // 클로저를 만든다는 이유로 `react-hooks/refs` 가 여전히 같은 성질의 오류를
+  // 냈다(클로저 정의 시점과 호출 시점을 정적으로 구분하지 못함) — 즉 이 검사
+  // 규칙이 애초에 "마운트 시 1회, 그 뒤 불변"이라는 이 패턴 자체를 지원하지
+  // 않는다. 동작을 바꾸는 대안(매 렌더 재생성 등)은 목표 5의 "동작 변경 없음"
+  // 을 어기므로, 원래 형태를 유지하고 이 한 줄만 억제한다(보고서 §1).
   const animationControllerRef = useRef<MarkerAnimationController | null>(null);
   if (animationControllerRef.current == null) {
+    // 지연 초기화라 안전하다(위 주석 참고). react.dev 문서가 이 형태를 직접 예시로 든다.
+    // eslint-disable-next-line react-hooks/refs -- 마운트당 1회만 도는 안전한 지연 초기화
     animationControllerRef.current = new MarkerAnimationController({
       applyPosition: (id, position) => {
         displayedPositions.current.set(id, position);
@@ -82,15 +94,24 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
         if (!cancelled) onAuthFailed?.(error);
       });
 
+    // cleanup 시점에 `.current` 를 다시 읽지 않고 이 순간(effect 실행 시점, 곧
+    // 마운트 시점)의 참조를 캡처해 둔다 — 이 두 ref 는 코드 전체에서
+    // `.current = new Map()` 로 재대입되는 곳이 없고 내용만 바뀌므로, 마운트
+    // 때 잡은 참조가 언마운트 때까지 항상 같은 객체를 가리킨다. `.current` 를
+    // 직접 참조하는 클린업에 대한 `react-hooks/exhaustive-deps` 경고("클린업이
+    // 돌 때는 다른 값일 수 있다")는 이 지역 변수 캡처로 해소된다(동작 변경 없음).
+    const displayedPositionsAtMount = displayedPositions.current;
+    const markerRefsAtMount = markerRefs.current;
+
     return () => {
       cancelled = true;
       unsubscribeAuthFailure();
       // ⚠ 화면이 사라질 때 보간 프레임 루프를 반드시 멈춘다 — 안 멈추면 언마운트된
       // 컴포넌트를 향해 계속 `requestAnimationFrame` 이 도는 누수가 된다.
       animationControllerRef.current?.dispose();
-      displayedPositions.current.clear();
-      markerRefs.current.forEach((marker) => marker.setMap(null));
-      markerRefs.current.clear();
+      displayedPositionsAtMount.clear();
+      markerRefsAtMount.forEach((marker) => marker.setMap(null));
+      markerRefsAtMount.clear();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

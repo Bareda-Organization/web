@@ -64,11 +64,23 @@ export const useRealtimeChannel = (
   // 화면이 렌더될 때마다 새 함수 참조를 넘겨도(인라인 화살표 함수 등) 매번
   // 재구독하지 않게 하기 위함이다.
   const onEnvelopeRef = useRef(onEnvelope);
-  onEnvelopeRef.current = onEnvelope;
+  // 렌더 중 ref 를 직접 쓰지 않는다(`react-hooks/refs`) — 대신 매 렌더 뒤에 도는
+  // effect 로 옮긴다. 이 값은 아래 두 번째 effect 가 만드는 구독 콜백(WebSocket
+  // 메시지 수신 시에만, 비동기로 호출됨) 안에서만 읽으므로, 같은 커밋의 effect
+  // 들이 전부 끝난 뒤에 갱신돼도 동작이 달라지지 않는다(판단 근거, 보고서 §1).
+  useEffect(() => {
+    onEnvelopeRef.current = onEnvelope;
+  });
 
   useEffect(() => {
     const client = acquireClient();
     clientRef.current = client;
+    // effect 본문에서 setState 를 직접 부르지 말라는 새 정적 검사
+    // (`react-hooks/set-state-in-effect`)를 여기서는 따를 수 없다 — 위 주석이
+    // 설명하듯 SSR 안전성 때문에 일부러 `useSyncExternalStore` 를 쓰지 않는
+    // 설계이고, 이 줄이 하는 일이 바로 "외부 저장소(WebSocket 클라이언트)의
+    // 지금 상태를 최초 동기화"라 미룰 대상이 없다(보고서 §1).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 최초 연결 상태 동기화, 위 주석 참고
     setConnectionState(client.getSnapshot());
     const unsubscribeState = client.onConnectionStateChange(() => {
       setConnectionState(client.getSnapshot());
