@@ -171,13 +171,14 @@ describe("admin api — 실서버 계약", () => {
     expect(result.items.length).toBeGreaterThan(0);
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) 재현 — auth 쪽 시험(features/auth/api/realBackend.test.ts)이
-  // 기록한 대로, 로그인 실패 5회 누적으로 새 계정을 실제 차단 상태로 만드는
-  // 경로는 백엔드 카운터 결함 때문에 막혀 있다. 그래서 이미 그 상태로 고정된
-  // 시드 계정 driverBlocked(account_id=15, failed_attempts=5)로 AUTH_ACCOUNT_BLOCKED
-  // 를 재현하고, 같은 계정으로 unblockAccount(§6.12)까지 한 시험에서 확인한다 —
-  // 브리프가 제안한 "차단 후 즉시 해제" 조합을 시드 계정으로 대체한 것이
-  // 이 시험의 판단 근거다(보고서 §1).
+  // AUTH_ACCOUNT_BLOCKED(목표 14) 재현 — 2026-09-14 Ruling 282 수정 병합 후
+  // auth 쪽 시험(features/auth/api/realBackend.test.ts)은 새로 만든 계정으로
+  // 실패 5회 누적 차단을 직접 재현한다. 이 시험이 굳이 시드 계정
+  // driverBlocked(account_id=15, failed_attempts=5)를 쓰는 이유는 그것과
+  // 별개다 — 재차단(reblock) API 가 없어, unblockAccount(§6.12)로 해제한 계정을
+  // 이 시험 안에서 다시 차단 상태로 되돌릴 수단이 부재하다. 그래서 이미
+  // 차단 상태로 고정된 시드 계정을 그대로 재사용해 AUTH_ACCOUNT_BLOCKED 재현과
+  // unblockAccount(§6.12) 확인을 한 시험에서 같이 다룬다(판단 근거, 보고서 §1).
   //
   // unblockAccount 는 멱등이 아니고 재차단 API 도 없어, 이 시드 계정은 전체
   // 실행에서 딱 한 번만 "차단 → 해제"를 겪을 수 있다. 재실행마다 실패 0·건너뜀 0

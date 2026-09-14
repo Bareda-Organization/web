@@ -263,17 +263,12 @@ describe("auth api — 실서버 계약", () => {
     expect(logoutResponse.status).toBe(204);
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) — 브리프가 지시한 "로그인 실패 5회 누적"을
-  // 그대로 재현했더니 백엔드 결함이 드러났다(보고서 §2). 실패마다 응답의
-  // remaining_attempts 가 4 로 고정돼 감소하지 않는다(2026-09-14 curl 실측,
-  // BusinessException 발생 시 실패 카운트 증가까지 트랜잭션과 함께 롤백되는
-  // 것으로 추정). 그 결과 6번째 시도(올바른 비밀번호)도 200 으로 성공해
-  // AUTH_ACCOUNT_BLOCKED 가 이 경로로는 재현되지 않는다. 그래서 이 시험은
-  // "결함이 없다는 가정하의 RED" 가 아니라 **현재 관측된 동작을 그대로 기록**한다.
-  // AUTH_ACCOUNT_BLOCKED 자체의 재현은 이미 그 상태로 고정된 시드 계정
-  // (driverBlocked)을 관리자 API 로 확인하는 방식으로 admin/api/realBackend.test.ts
-  // 의 unblockAccount 시험과 함께 다룬다(판단 근거, 보고서 §1).
-  it("[백엔드 결함 기록] 로그인 실패가 5회 누적돼도 카운터가 증가하지 않아 계정이 차단되지 않는다(§1.4·§8)", async ({
+  // AUTH_ACCOUNT_BLOCKED(목표 14) — 2026-09-14 Ruling 282(로그인 실패 차단) 수정이
+  // 병합되어 사양(§1.4) 그대로 재현된다. 실패 1~4회는 401 INVALID_CREDENTIALS 와 함께
+  // remaining_attempts 가 4·3·2·1 로 줄고, 5회째부터는 계정이 차단돼 403
+  // AUTH_ACCOUNT_BLOCKED 를 반환한다 — 그 뒤 올바른 비밀번호로 시도해도 이미
+  // 차단된 상태라 마찬가지로 403 이다(조율자 실측, BE-A 병합 커밋 기준).
+  it("로그인 실패가 5회 누적되면 계정이 차단돼 403 AUTH_ACCOUNT_BLOCKED 를 반환한다(§1.4·§8)", async ({
     skip,
   }) => {
     if (!backendReachable) skip();
@@ -288,7 +283,7 @@ describe("auth api — 실서버 계약", () => {
       academyId: "1",
     });
 
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Client-Type": "web" },
@@ -299,17 +294,28 @@ describe("auth api — 실서버 계약", () => {
       };
       expect(response.status).toBe(401);
       expect(json.error?.code).toBe("INVALID_CREDENTIALS");
-      // 실측(2026-09-14): 5회 내내 remaining_attempts 가 4 로 고정 — 감소하지 않는다.
-      expect(json.error?.details?.remaining_attempts).toBe(4);
+      // 실측(2026-09-14, BE-A 병합 후): 실패 1~4회는 remaining_attempts 가 4·3·2·1 로 줄어든다.
+      expect(json.error?.details?.remaining_attempts).toBe(5 - attempt);
     }
+
+    const fifthAttemptResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Client-Type": "web" },
+      body: JSON.stringify({ login_id: blockLoginId, password: "wrong-password" }),
+    });
+    const fifthAttemptJson = (await fifthAttemptResponse.json()) as { error?: { code?: string } };
+    // 5회째 실패로 계정이 차단된다.
+    expect(fifthAttemptResponse.status).toBe(403);
+    expect(fifthAttemptJson.error?.code).toBe("AUTH_ACCOUNT_BLOCKED");
 
     const finalLoginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Client-Type": "web" },
       body: JSON.stringify({ login_id: blockLoginId, password: "password" }),
     });
-    // 사양(§1.4)대로라면 이 시점에 403 AUTH_ACCOUNT_BLOCKED 여야 하나, 위
-    // 카운터 결함 때문에 정상 로그인이 성공한다 — 현재 관측된 동작을 그대로 기록한다.
-    expect(finalLoginResponse.status).toBe(200);
+    const finalLoginJson = (await finalLoginResponse.json()) as { error?: { code?: string } };
+    // 사양(§1.4)대로 이미 차단된 계정은 올바른 비밀번호로도 403 AUTH_ACCOUNT_BLOCKED 다.
+    expect(finalLoginResponse.status).toBe(403);
+    expect(finalLoginJson.error?.code).toBe("AUTH_ACCOUNT_BLOCKED");
   });
 });
