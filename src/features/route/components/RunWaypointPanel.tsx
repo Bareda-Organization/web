@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getRuns } from "@/features/schedule";
+import type { RunItemResponseTypes } from "@/features/schedule";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Card, Input, SegmentedControl } from "@/shared/ui";
+import { AlertBanner, Button, Card, Input, SegmentedControl, Select } from "@/shared/ui";
 import { addRunWaypoint, removeRunWaypoint } from "../api";
-import type { WaypointResultResponseTypes } from "../types";
+import type { RunDirection, WaypointResultResponseTypes } from "../types";
 import {
   StyledWaypointActionsRow,
   StyledWaypointCompare,
@@ -16,17 +18,34 @@ import {
 
 type AddressMode = "address" | "coords";
 
+type RunWaypointPanelProps = {
+  busId: number;
+  direction: RunDirection;
+};
+
 // §5.15 POST·DELETE /staff/runs/{runId}/waypoints(RTE-10, A-15) — 확정 노선에 강제
 // 경유지를 지정한다. §5.9 의 정차지 관리와 달리 이쪽은 apply=false(미리보기)→
 // apply=true(배포) 2단계가 API 자체에 있어, 그 구조를 그대로 화면 흐름으로 옮긴다
 // (ForcedAddDialog 의 "확인용 재진술" 확인창과 다르다 — 여기 미리보기는 서버가 실제로
 // 계산한 전후 비교다).
 //
-// runId 를 직접 입력받는다 — 오늘 회차를 조회하는 카탈로그가 이 화면에 없다(§2 확신
-// 없는 지점, RouteStopsPanel 의 stop_id 입력과 같은 성격의 사양 공백).
-// 배포된 waypoint_id 목록도 서버 조회 수단이 없어(목록 엔드포인트 부재) 이 화면에서
-// 배포에 성공한 것만 세션 동안 기억해 제거 입력칸에 이어 쓴다.
-export const RunWaypointPanel = () => {
+// FE-R3 W3 목표 9 판정 ① — 사양 공백이 아니라 화면 설계 문제였다. GET
+// /staff/runs?service_date=(SCH-02, §5.10) 가 이미 있고 생략하면 오늘 날짜를 준다.
+// 부모(RouteDetail)가 이미 들고 있는 busId·direction 을 받아 오늘 회차 중 이 노선과
+// 같은 호차·방향만 골라 드롭다운으로 준다 — 손으로 run_id 를 치던 것을 없앤다.
+// (RouteStopsPanel 의 stop_id 입력은 같은 형태지만 이 라운드의 판정 대상이 아니다 — 목
+// 록 조회 엔드포인트가 사양에 없어 그대로 둔다.)
+//
+// 목표 9 판정 ② — 이쪽은 진짜 사양 공백이다. 배포된 경유 지점(waypoint_id)을 조회하는
+// 엔드포인트가 API_SPEC 어디에도 없다(§5.19 GET .../route 의 stops[].stop_id 는
+// run_stop.id 이고 waypoint.id 와 다른 값이다, ERD.md waypoint·run_stop 테이블 확인).
+// POST·DELETE 응답이 그 값을 그때만 돌려주므로, 이 화면에서 배포에 성공한 것만 세션
+// 동안 기억해 제거 입력칸에 이어 쓰는 지금 방식이 이 라운드에서 고를 수 있는 최선이다
+// — 새 엔드포인트를 만들지 않는다(브리프 지시). 조율자에게 목록 엔드포인트 신설을
+// 올린다(보고서 §1 참고).
+export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) => {
+  const [runs, setRuns] = useState<RunItemResponseTypes[]>([]);
+  const [runsError, setRunsError] = useState<string | null>(null);
   const [runIdInput, setRunIdInput] = useState("");
   const [mode, setMode] = useState<AddressMode>("address");
   const [address, setAddress] = useState("");
@@ -44,6 +63,27 @@ export const RunWaypointPanel = () => {
   const [removePreview, setRemovePreview] = useState<WaypointResultResponseTypes | null>(null);
   const [removeSubmitting, setRemoveSubmitting] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await getRuns();
+        setRuns(
+          result.items.filter(
+            (run) => run.busId === busId && run.direction === direction && run.canceledAt === null,
+          ),
+        );
+        setRunsError(null);
+      } catch (cause) {
+        setRunsError(cause instanceof ApiError ? cause.message : "오늘 회차 목록을 불러오지 못했습니다");
+      }
+    })();
+  }, [busId, direction]);
+
+  const runOptions = [
+    { value: "", label: runs.length > 0 ? "회차를 선택하세요" : "오늘 회차 없음" },
+    ...runs.map((run) => ({ value: String(run.id), label: `#${run.id} · ${run.departTime} · ${run.status}` })),
+  ];
 
   const runId = Number(runIdInput);
   const canPreview =
@@ -128,12 +168,13 @@ export const RunWaypointPanel = () => {
       <Card padding={16}>
         <StyledWaypointPanel>
           <p>운행 회차 경유 지점 추가</p>
+          {runsError ? <AlertBanner tone="missed" title={runsError} /> : null}
           <StyledWaypointInputRow>
-            <Input
-              label="회차 ID"
+            <Select
+              label="회차"
               value={runIdInput}
               onChange={(event) => setRunIdInput(event.target.value)}
-              placeholder="run_id"
+              options={runOptions}
             />
             <Input label="표시명" value={label} onChange={(event) => setLabel(event.target.value)} />
             <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} />
@@ -199,7 +240,12 @@ export const RunWaypointPanel = () => {
             <p>목록 조회 수단이 없어(§2 확신 없는 지점) 이 화면에서 배포한 것만 기억합니다.</p>
           )}
           <StyledWaypointInputRow>
-            <Input label="회차 ID" value={removeRunId} onChange={(event) => setRemoveRunId(event.target.value)} />
+            <Select
+              label="회차"
+              value={removeRunId}
+              onChange={(event) => setRemoveRunId(event.target.value)}
+              options={runOptions}
+            />
             <Input
               label="경유 지점 ID"
               value={removeWaypointId}

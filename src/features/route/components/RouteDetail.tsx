@@ -76,7 +76,7 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
 
       <RouteStopsPanel routeId={routeId} />
 
-      <RunWaypointPanel />
+      <RunWaypointPanel busId={route.busId} direction={route.direction} />
 
       {editing ? (
         <RouteForm
