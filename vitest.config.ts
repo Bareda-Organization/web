@@ -11,6 +11,13 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // FE-R3 W3 목표 10 — `globalSetup` 이 실행 1회당 한 번 `POST /dev/reset` 조건부
+    // 호출을 시도한다(`vitest.globalSetup.ts`). 그 초기화(Flyway clean+migrate, 순간적이지
+    // 않다)가 도는 동안 다른 실서버 계약 시험 파일이 같은 스키마를 동시에 읽으면 전이
+    // 상태(테이블 없음·부분 시드)를 코드 결함과 구별할 수 없이 관측한다 — Dart 쪽
+    // `dart_test.yaml` 의 `concurrency: 1` 과 같은 이유로 파일 실행을 직렬로 강제한다.
+    globalSetup: ["./vitest.globalSetup.ts"],
+    fileParallelism: false,
   },
   resolve: {
     alias: {
