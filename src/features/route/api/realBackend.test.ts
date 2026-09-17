@@ -122,7 +122,8 @@ describe("route api — 실서버 계약", () => {
       direction: "to_academy",
       name: "실서버계약시험용-최적화",
       active: true,
-      stopIds: [1, 2, 3],
+      stopIds: [3, 1, 2], // 일부러 뒤섞은 순서 — 최적화가 실제로 다시 정렬하는지 판별하려면
+      // 입력이 이미 최적 순서면 안 바뀌어도 통과해 버려 구별이 안 된다.
     });
 
     try {
@@ -130,10 +131,13 @@ describe("route api — 실서버 계약", () => {
         origin: { lat: 37.497942, lng: 127.027621 }, // academy_id=1 좌표
         destination: { lat: 37.5695, lng: 126.981 }, // stop_id=4 좌표
       });
+      const orderedIds = optimized.stops.map((s) => s.stopId);
 
       expect(optimized.id).toBe(created.id);
-      expect(optimized.stops.length).toBe(3);
-      expect(optimized.stops.map((s) => s.stopId).sort()).toEqual([1, 2, 3]);
+      expect(orderedIds.length).toBe(3);
+      expect([...orderedIds].sort()).toEqual([1, 2, 3]);
+      // 입력 그대로면 엔진을 통과하지 않고 되돌려준 것과 구별이 안 된다 — 실제로 재정렬됐는지 확인.
+      expect(orderedIds).not.toEqual([3, 1, 2]);
     } finally {
       await deleteRoute(created.id);
     }
