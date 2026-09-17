@@ -17,11 +17,13 @@ type ApiFetchOptions = {
 };
 
 // §5.11 학생 사진 업로드 전용 — 문서 40행 "이 엔드포인트만 multipart/form-data"
-// (JSON 파트 + 파일 파트). JSON 을 감싸는 필드 이름이 정본에 없어, 각 필드를
-// 개별 form 필드로 그대로 보낸다(`fields` 는 이미 snake_case 로 변환된 값).
+// (JSON 파트 + 파일 파트). 백엔드가 JSON 을 감싸는 파트 이름을 "data" 로 고정해
+// 요구한다(`StaffStudentController` `@RequestPart("data")`) — `data` 는 JSON
+// 문자열 파트로, `file` 은 별도 파일 파트로 보낸다(`data` 는 이미 snake_case 로
+// 변환된 값 — 백엔드가 전역 SNAKE_CASE 네이밍 전략을 쓴다).
 type ApiFetchMultipartOptions = {
   method?: Extract<HttpMethod, "POST" | "PATCH">;
-  fields?: Record<string, string | number | boolean | undefined>;
+  data?: Record<string, string | number | boolean | undefined>;
   file?: { field: string; value: File };
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
@@ -142,10 +144,8 @@ const buildMultipartHeaders = (): HeadersInit => {
 
 const buildFormData = (options: ApiFetchMultipartOptions): FormData => {
   const form = new FormData();
-  for (const [key, value] of Object.entries(options.fields ?? {})) {
-    if (value !== undefined) {
-      form.set(key, String(value));
-    }
+  if (options.data) {
+    form.set("data", new Blob([JSON.stringify(options.data)], { type: "application/json" }));
   }
   if (options.file) {
     form.set(options.file.field, options.file.value);

@@ -102,7 +102,7 @@ const toFields = (request: StudentUpsertRequestTypes) => ({
 export const createStudent = async (request: StudentUpsertRequestTypes): Promise<StudentDetailResponseTypes> => {
   const raw = await apiFetchMultipart<RawStudentDetail>("/staff/students", {
     method: "POST",
-    fields: toFields(request),
+    data: toFields(request),
     file: request.photo ? { field: "photo", value: request.photo } : undefined,
   });
   return toDetail(raw);
@@ -116,7 +116,7 @@ export const updateStudent = async (
 ): Promise<StudentDetailResponseTypes> => {
   const raw = await apiFetchMultipart<RawStudentDetail>(`/staff/students/${studentId}`, {
     method: "PATCH",
-    fields: toFields(request),
+    data: toFields(request),
     file: request.photo ? { field: "photo", value: request.photo } : undefined,
   });
   return toDetail(raw);
