@@ -81,4 +81,15 @@ describe("approval api — 실서버 계약", () => {
       return true;
     });
   });
+
+  // r7-t2 목표 5 — PREVIEW_STALE 재현 시도, 이 시드에서는 불가능으로 판정(보고서
+  // §2). `ApprovalQueryService.detail()` 은 PENDING 건마다 ①run.status==IDLE 이면
+  // RUN_NOT_CONFIRMED 로 막고 ②그 외엔 (academy, bus, weekday, direction) 4중
+  // 일치하는 `route` 행을 요구하는데(ROUTE_NOT_CONFIGURED_FOR_RUN), 이 시드 DB
+  // 전체에 `route` 행이 단 1개(academy 1·bus 1·thu·to_academy)뿐이고 그 조합과
+  // 일치하는 비-IDLE run 이 전 학원 통틀어 0건이다(psql 로 직접 대조 확인 —
+  // `run WHERE status != 'idle'` 5건 전부 direction·weekday·academy 중 하나 이상이
+  // 어긋난다). 즉 어떤 PENDING 승인 건의 상세 조회도 seed 상태로는 preview_token
+  // 을 받을 수 없다 — 시드의 CR#1(run_id=2)도 예외가 아니다. §3.8 로 새 CR 을
+  // 만들어도 같은 run 을 참조하는 한 같은 이유로 막힌다.
 });

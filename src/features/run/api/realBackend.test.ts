@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { getDashboard, getManagers, getRunRoster, getRunsLive } from "./index";
+import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
+import { getDashboard, getManagers, getRunRoster, getRunsLive, postForcedAdd } from "./index";
 
 // 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06)이 부르는
 // 엔드포인트를 실제 F5-W1 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
@@ -83,4 +84,52 @@ describe("run api — 실서버 계약", () => {
       return true;
     });
   });
+
+  // r7-t2 목표 4 — CAPACITY_EXCEEDED 실제 재현. run_id=6(R6)은 idle·출발 4시간 전
+  // 전용 ①구간 시나리오로 시드에 마련돼 있다(V2__seed_data.sql 주석 — R1 과 같은
+  // 학원·버스·방향이라 같은 고정 노선(route 1)이 매칭된다). bus 1 의
+  // student_capacity=14, route 1 이 매칭하는 승하차지(stop 1·2)를 쓰는 학생은
+  // student 1·2 뿐이라 projected=2. `projected + staged + 1 > 14` 이므로 12번
+  // 성공(staged=12, 2+12+1=15>14 성립 직전) 뒤 13번째에서 막힌다. 주소는 실
+  // 지오코딩이 통과하는 것으로 이미 확인된 값(`NaverGeocodingClientLiveTest`
+  // 의 `SEOUL_CITY_HALL`)을 그대로 쓴다 — `ForcedAdditionStore` 는 주소·학생명
+  // 중복을 막지 않으므로 재사용해도 안전하다(서버 코드 확인).
+  it("postForcedAdd 를 반복하면 정원을 넘겨 409 CAPACITY_EXCEEDED 로 거부된다(run_id=6)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const REAL_ADDRESS = "서울특별시 중구 세종대로 110";
+    for (let i = 0; i < 12; i += 1) {
+      const result = await postForcedAdd(6, {
+        newStudentName: `r7t2-정원초과검증-${i}`,
+        address: REAL_ADDRESS,
+        note: "r7-t2 CAPACITY_EXCEEDED 재현용 — 이 파일의 afterAll 에서 시드로 되돌림",
+      });
+      expect(result.status).toBe("staged");
+    }
+
+    await expect(
+      postForcedAdd(6, {
+        newStudentName: "r7t2-정원초과검증-13",
+        address: REAL_ADDRESS,
+        note: "r7-t2 CAPACITY_EXCEEDED 재현용",
+      }),
+    ).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.status).toBe(409);
+      expect(apiError.code).toBe("CAPACITY_EXCEEDED");
+      return true;
+    });
+  });
+});
+
+// r7-t2 목표 6 — 위 강제 추가 12건은 되돌릴 API 가 없다(§5.7 은 저장만 하고 끝나며
+// 취소 엔드포인트가 부재). 유일한 되돌림 수단은 시드 전체 재구성(`POST /dev/reset`)
+// 뿐이라 이 파일이 끝난 뒤 무조건 돌린다 — `resetRealBackendSeedIfConfigured` 는
+// 이미 있는 헬퍼를 그대로 재사용한 것(새 되돌림 장치를 만들지 않음). 이 파일은
+// 이 강제 추가 시나리오 때문에 항상 상태를 남기므로 "값싸게 먼저 확인" 분기를
+// 두지 않고 매번 돈다 — 판단 근거는 보고서 §1.
+afterAll(async () => {
+  await resetRealBackendSeedIfConfigured();
 });
