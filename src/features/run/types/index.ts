@@ -41,7 +41,7 @@ export type DashboardResponseTypes = {
 };
 
 // §5.18 GET /staff/runs/live — 5~10초 주기로 폴링하는 실시간 위치 초기 스냅샷.
-// 지도는 F4 범위라 좌표(lat·lng)는 그대로 보관만 하고 화면에는 쓰지 않는다.
+// lat·lng 는 DashboardPage·TodayRunPage 의 버스 마커 좌표로 쓰인다.
 export type RunLivePositionResponseTypes = {
   lat: number;
   lng: number;
