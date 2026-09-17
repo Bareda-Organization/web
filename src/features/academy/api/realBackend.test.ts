@@ -41,10 +41,12 @@ describe("academy api — 실서버 계약", () => {
     const original = await getAcademySettings();
     expect(original.noShowWaitMinutes).toBe(3);
 
-    const changed = await updateAcademySettings({ noShowWaitMinutes: 5 });
-    expect(changed.noShowWaitMinutes).toBe(5);
-
-    const restored = await updateAcademySettings({ noShowWaitMinutes: 3 });
-    expect(restored.noShowWaitMinutes).toBe(3);
+    try {
+      const changed = await updateAcademySettings({ noShowWaitMinutes: 5 });
+      expect(changed.noShowWaitMinutes).toBe(5);
+    } finally {
+      const restored = await updateAcademySettings({ noShowWaitMinutes: 3 });
+      expect(restored.noShowWaitMinutes).toBe(3);
+    }
   });
 });

@@ -75,9 +75,11 @@ describe("route api — 실서버 계약", () => {
       name: "실서버계약시험용",
       active: true,
     });
-    expect(created.id).toBeGreaterThan(0);
-
-    await deleteRoute(created.id);
+    try {
+      expect(created.id).toBeGreaterThan(0);
+    } finally {
+      await deleteRoute(created.id);
+    }
 
     const afterDelete = await getRoutes(0);
     expect(afterDelete.items.some((r) => r.id === created.id)).toBe(false);
