@@ -1,14 +1,12 @@
 // @vitest-environment node
 import { beforeAll, describe, expect, it } from "vitest";
-import { setAccessToken } from "@/shared/lib/http";
+import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { getEmergencies } from "./index";
+import { ackEmergency, getEmergencies } from "./index";
 
 // 비상 신고 조회 화면(§5.16, EXC-04, A-16)이 부르는 엔드포인트를 실제 F5-W1
-// 전용 백엔드에 붙여 확인한다. ackEmergency 는 되돌릴 방법(unack 엔드포인트)이
-// 없는 비가역 상태 변경이라, 시드에 남은 유일한 미확인 건(emergency_id=1)을
-// 이 계약 시험에서 소진하지 않기 위해 다루지 않는다.
+// 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
 let backendReachable = false;
@@ -38,5 +36,50 @@ describe("emergency api — 실서버 계약", () => {
     expect(result.items.length).toBeGreaterThan(0);
     expect(typeof result.unackedCount).toBe("number");
     expect(typeof result.items[0].emergencyId).toBe("number");
+  });
+
+  // r12-t1 목표1① — ackEmergency(§5.16, EXC-04, A-16) 실제 재현. emergency_id=1 은
+  // 되돌릴 API(unack)가 없는 편도 전이다(ErrorCode.ALREADY_ACKED, api/index.ts 주석).
+  // ⚠ vitest.globalSetup.ts 의 `/dev/reset` 은 매 `vitest run` 실행마다 무조건
+  // 불려 DB 를 시드로 되돌린다(DevResetController "DB 를 시드 상태로 되돌리고" —
+  // cleared_position_keys 만 보여 캐시 정리로 오인하기 쉽지만 실제로는 Flyway
+  // clean+migrate 전체 재시드다, 실측 확인). 즉 "이전 회차에서 확인해 뒀다" 는
+  // 상태는 다음 실행에서 항상 사라진다 — 회차를 걸친 상태-먼저-확인 분기(approval
+  // 계약 시험의 decideSignupRequest 패턴)는 이 엔드포인트에 적용할 수 없다.
+  // 그래서 두 분기(성공·409)를 한 시험 안에서 연달아 실행해 자체 완결시킨다 —
+  // 첫 호출이 확인 처리하고, 그 직후 같은 실행 안에서 두 번째 호출이 정확히
+  // 409 ALREADY_ACKED 로 막히는지를 같은 시험이 직접 만든다.
+  it("ackEmergency 는 미확인 신고를 확인 처리하고, 이미 확인된 건은 다시 불러도 409 로 막는다(emergency_id=1)", async ({
+    skip,
+  }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const before = await getEmergencies();
+    const target = before.items.find((item) => item.emergencyId === 1);
+
+    // 리셋이 비활성화된 환경(§ 위 주석 "실패해도 조용히 넘어간다")에서 이미 확인된
+    // 채로 시작할 수도 있다 — 그때만 최초 확인 호출을 건너뛴다.
+    if (target && !target.acked) {
+      const result = await ackEmergency(1);
+      expect(result.emergencyId).toBe(1);
+      expect(typeof result.ackedAt).toBe("string");
+
+      // 기본 조회(status 미지정)는 open 만 돌려줘 확인 처리한 건이 빠진다(실측 확인)
+      // — status="acked" 로 다시 물어야 방금 확인한 건이 보인다.
+      const after = await getEmergencies({ status: "acked" });
+      const updated = after.items.find((item) => item.emergencyId === 1);
+      expect(updated?.acked).toBe(true);
+    }
+
+    // 같은 실행 안에서 곧바로 다시 부른다 — 방금(또는 이전에) 확인된 건이라
+    // 정확히 409 ALREADY_ACKED 로 막혀야 한다.
+    await expect(ackEmergency(1)).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.status).toBe(409);
+      expect(apiError.code).toBe("ALREADY_ACKED");
+      return true;
+    });
   });
 });
