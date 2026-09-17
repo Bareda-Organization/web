@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { createBus, getBuses } from "./index";
+import { createBus, getBuses, updateBus } from "./index";
 
 // 차량 관리 화면(§5.12, BUS-01·02, A-11)이 부르는 엔드포인트를 실제 F5-W1
 // 전용 백엔드에 붙여 확인한다.
@@ -49,5 +49,22 @@ describe("bus api — 실서버 계약", () => {
       expect(apiError.code).toBe("DUPLICATE_BUS_NO");
       return true;
     });
+  });
+
+  // 왕복(round-trip) — "2호차"(id=2, capacity=4)의 정원을 바꿨다가 되돌린다.
+  // 삭제·차단 같은 비가역 자원이 아니라 같은 값으로 복원되므로 반복 실행에 안전하다.
+  it("updateBus 는 정원을 바꾼 응답을 돌려주고, 그대로 되돌릴 수 있다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const original = { busNo: "2호차", plateNo: "12가5678", capacity: 4, operable: true };
+    try {
+      const updated = await updateBus(2, { ...original, capacity: 5 });
+      expect(updated.capacity).toBe(5);
+      expect(updated.busNo).toBe("2호차");
+    } finally {
+      const restored = await updateBus(2, original);
+      expect(restored.capacity).toBe(4);
+    }
   });
 });
