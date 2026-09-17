@@ -69,10 +69,12 @@ describe("schedule api — 실서버 계약", () => {
       originName: "실서버계약시험출발",
       destinationName: "실서버계약시험도착",
     });
-    expect(created.scheduleId).toBeNull();
-    expect(created.status).toBe("idle");
-
-    await cancelRun(created.id);
+    try {
+      expect(created.scheduleId).toBeNull();
+      expect(created.status).toBe("idle");
+    } finally {
+      await cancelRun(created.id);
+    }
 
     const afterCancel = await getRuns("2099-01-01");
     const canceled = afterCancel.items.find((r) => r.id === created.id);
@@ -99,15 +101,17 @@ describe("schedule api — 실서버 계약", () => {
       originName: "실서버계약시험집결지",
       destinationName: "바래다학원 A",
     });
-    expect(created.busId).toBe(1);
-    expect(created.weekday).toBe(tomorrow);
-    expect(created.active).toBe(true);
+    try {
+      expect(created.busId).toBe(1);
+      expect(created.weekday).toBe(tomorrow);
+      expect(created.active).toBe(true);
 
-    const updated = await updateSchedule(created.id, { departTime: "07:45", active: false });
-    expect(updated.departTime).toMatch(/^07:45/);
-    expect(updated.active).toBe(false);
-
-    await deleteSchedule(created.id);
+      const updated = await updateSchedule(created.id, { departTime: "07:45", active: false });
+      expect(updated.departTime).toMatch(/^07:45/);
+      expect(updated.active).toBe(false);
+    } finally {
+      await deleteSchedule(created.id);
+    }
 
     const after = await getSchedules(0, 100);
     expect(after.items.some((item) => item.id === created.id)).toBe(false);

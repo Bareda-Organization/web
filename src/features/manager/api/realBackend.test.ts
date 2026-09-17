@@ -44,19 +44,51 @@ describe("manager api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const created = await createManager({ name: "실서버계약시험", phone: "010-9999-0000", role: "driver" });
-    expect(created.id).toBeGreaterThan(0);
+    try {
+      expect(created.id).toBeGreaterThan(0);
 
-    const updated = await updateManager(created.id, {
-      name: "실서버계약시험-수정",
-      phone: "010-9999-0001",
-      role: "escort",
-    });
-    expect(updated.name).toBe("실서버계약시험-수정");
-    expect(updated.role).toBe("escort");
-
-    await deleteManager(created.id);
+      const updated = await updateManager(created.id, {
+        name: "실서버계약시험-수정",
+        phone: "010-9999-0001",
+        role: "escort",
+      });
+      expect(updated.name).toBe("실서버계약시험-수정");
+      expect(updated.role).toBe("escort");
+    } finally {
+      await deleteManager(created.id);
+    }
 
     const afterDelete = await getManagers(0);
     expect(afterDelete.items.some((m) => m.id === created.id)).toBe(false);
+  });
+
+  // r12-t1 목표4 — 왕복 검사의 try/finally 가 "중간 단언 실패에도 정리가 실행되는가"를
+  // 실제로 고정한다. globalSetup 은 npm test 실행 1회의 맨 처음에만 리셋을 돈다
+  // (vitest.globalSetup.ts 확인) — fileParallelism:false 라 같은 실행 안에서 앞 파일이
+  // 고아 행을 남기면 뒤 파일이 그 상태를 그대로 본다. 그래서 "다음 실행이 리셋해 주니
+  // 괜찮다"는 추론은 파일 간에는 성립하지 않고, 정리는 try/finally 로 직접 보장해야
+  // 한다 — 이 시험이 그 보장을 실제 API 호출로 검증한다(중간 단언을 일부러 실패시켜
+  // finally 의 deleteManager 가 여전히 실행되는지 확인).
+  it("왕복 검사 중간에 단언이 실패해도 finally 의 정리는 실행된다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const created = await createManager({ name: "실서버계약시험-정리검증", phone: "010-9999-0002", role: "driver" });
+    let cleanupRan = false;
+
+    await expect(
+      (async () => {
+        try {
+          expect(created.id).toBe(-1); // 의도적으로 실패시켜 finally 진입을 강제한다
+        } finally {
+          cleanupRan = true;
+          await deleteManager(created.id);
+        }
+      })(),
+    ).rejects.toThrow();
+
+    expect(cleanupRan).toBe(true);
+    const afterCleanup = await getManagers(0);
+    expect(afterCleanup.items.some((m) => m.id === created.id)).toBe(false);
   });
 });

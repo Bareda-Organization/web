@@ -57,19 +57,21 @@ describe("student api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const created = await createStudent({ name: "실서버계약시험", canGoAlone: true });
-    expect(created.studentId).toBeTruthy();
-    expect(created.canGoAlone).toBe(true);
+    try {
+      expect(created.studentId).toBeTruthy();
+      expect(created.canGoAlone).toBe(true);
 
-    const updated = await updateStudent(created.studentId, {
-      name: "실서버계약시험-수정",
-      canGoAlone: false,
-      grade: "6",
-    });
-    expect(updated.name).toBe("실서버계약시험-수정");
-    expect(updated.canGoAlone).toBe(false);
-    expect(updated.grade).toBe("6");
-
-    await deleteStudent(created.studentId);
+      const updated = await updateStudent(created.studentId, {
+        name: "실서버계약시험-수정",
+        canGoAlone: false,
+        grade: "6",
+      });
+      expect(updated.name).toBe("실서버계약시험-수정");
+      expect(updated.canGoAlone).toBe(false);
+      expect(updated.grade).toBe("6");
+    } finally {
+      await deleteStudent(created.studentId);
+    }
 
     const afterDelete = await getStudents(0, 50);
     expect(afterDelete.items.some((s) => s.studentId === created.studentId)).toBe(false);
