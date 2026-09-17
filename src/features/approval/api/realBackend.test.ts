@@ -92,13 +92,14 @@ describe("approval api — 실서버 계약", () => {
   // 돌려준다). PREVIEW_STALE 자체는 그 뒤에 위조 토큰으로 decide 를 불러
   // 재현한다 — 진짜 토큰과 다르면 백엔드가 "미리보기 이후 변경됨"으로 판정한다.
   //
-  // previewStale 값 자체는 여기서 단언하지 않는다 — `ApprovalPreviewResolver
-  // .resolvePreview()`(백엔드, 읽기 전용 확인) 가 approvalId 별 지문(fingerprint)
-  // 캐시를 앱 인스턴스 생존 기간 동안 들고 있어서, 이 값은 "이 건을 몇 번째로
-  // 조회하는가" 에 달려 있다 — 같은 realBackend 스위트 안의 `run/api` 파일이
-  // 끝에서 `POST /dev/reset`(DB 만 재구성, 앱은 재기동하지 않음)을 부르면 캐시가
-  // DB 보다 낡아 다음 조회가 stale=true 를 돌려준다. 이 시험의 목적(대기 건이
-  // ROUTE_NOT_CONFIGURED_FOR_RUN 없이 preview_token 을 받는가)에는 무관하다.
+  // previewStale 값도 이제 단언한다(r9-t1, 목표 4) — r8-t1 은 "실행 순서에
+  // 좌우된다" 며 포기했으나, 원인은 `DevResetService.reset()` 이 인메모리 미리보기
+  // 캐시를 안 비운 것이었다(r9-t1 목표 1·2 로 고침, `DevResetServiceTest` 가
+  // 고정). 지금은 `vitest.globalSetup.ts` 의 실행당 1회 리셋이 캐시까지 비우고,
+  // 이 스위트 안에서 run_id=2(CR#1 이 속한 회차)의 명단·노선을 바꾸는 시험이
+  // 없어(`run/api` 는 run_id=6 만 바꾼다) approval_id=1 의 지문(fingerprint)이
+  // 이 실행 내내 변하지 않는다 — 몇 번째 조회든 첫 조회이거나 지문이 같아
+  // `stale=false` 로 고정된다(`ApprovalPreviewResolver.resolvePreview` 참고).
   it("getChangeApprovalDetail(1) 은 대기 중인 건의 상세를 preview_token 과 함께 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -107,6 +108,7 @@ describe("approval api — 실서버 계약", () => {
 
     expect(result.approvalId).toBe(1);
     expect(result.previewToken).not.toBeNull();
+    expect(result.previewStale).toBe(false);
   });
 
   it("PREVIEW_STALE — 위조된 preview_token 으로 결정하면 409 로 거부된다", async ({ skip }) => {
