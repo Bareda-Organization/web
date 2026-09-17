@@ -82,14 +82,45 @@ describe("approval api — 실서버 계약", () => {
     });
   });
 
-  // r7-t2 목표 5 — PREVIEW_STALE 재현 시도, 이 시드에서는 불가능으로 판정(보고서
-  // §2). `ApprovalQueryService.detail()` 은 PENDING 건마다 ①run.status==IDLE 이면
-  // RUN_NOT_CONFIRMED 로 막고 ②그 외엔 (academy, bus, weekday, direction) 4중
-  // 일치하는 `route` 행을 요구하는데(ROUTE_NOT_CONFIGURED_FOR_RUN), 이 시드 DB
-  // 전체에 `route` 행이 단 1개(academy 1·bus 1·thu·to_academy)뿐이고 그 조합과
-  // 일치하는 비-IDLE run 이 전 학원 통틀어 0건이다(psql 로 직접 대조 확인 —
-  // `run WHERE status != 'idle'` 5건 전부 direction·weekday·academy 중 하나 이상이
-  // 어긋난다). 즉 어떤 PENDING 승인 건의 상세 조회도 seed 상태로는 preview_token
-  // 을 받을 수 없다 — 시드의 CR#1(run_id=2)도 예외가 아니다. §3.8 로 새 CR 을
-  // 만들어도 같은 run 을 참조하는 한 같은 이유로 막힌다.
+  // PREVIEW_STALE 실제 재현(Ruling 299 → V12 마이그레이션). r7-t2 는 이 시드에서
+  // 불가능하다고 판정했다 — `route` 행이 direction='to_academy' 하나뿐이라 대기
+  // 중인 CR#1(run_id=2, direction='from_academy')이 (academy, bus, weekday,
+  // direction) 4중 일치 관문(`ApprovalQueryService.detail()`)을 못 넘어
+  // ROUTE_NOT_CONFIGURED_FOR_RUN(422)으로 막혔다. `db/migration-local/V12`가
+  // 같은 run 의 weekday·direction 에 맞는 route+route_stop 을 더해 이 관문을
+  // 열었다(curl 실측, 2026-09-17: GET 이 이제 preview_token 을 담은 200 을
+  // 돌려준다). PREVIEW_STALE 자체는 그 뒤에 위조 토큰으로 decide 를 불러
+  // 재현한다 — 진짜 토큰과 다르면 백엔드가 "미리보기 이후 변경됨"으로 판정한다.
+  //
+  // previewStale 값 자체는 여기서 단언하지 않는다 — `ApprovalPreviewResolver
+  // .resolvePreview()`(백엔드, 읽기 전용 확인) 가 approvalId 별 지문(fingerprint)
+  // 캐시를 앱 인스턴스 생존 기간 동안 들고 있어서, 이 값은 "이 건을 몇 번째로
+  // 조회하는가" 에 달려 있다 — 같은 realBackend 스위트 안의 `run/api` 파일이
+  // 끝에서 `POST /dev/reset`(DB 만 재구성, 앱은 재기동하지 않음)을 부르면 캐시가
+  // DB 보다 낡아 다음 조회가 stale=true 를 돌려준다. 이 시험의 목적(대기 건이
+  // ROUTE_NOT_CONFIGURED_FOR_RUN 없이 preview_token 을 받는가)에는 무관하다.
+  it("getChangeApprovalDetail(1) 은 대기 중인 건의 상세를 preview_token 과 함께 돌려준다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const result = await getChangeApprovalDetail(1);
+
+    expect(result.approvalId).toBe(1);
+    expect(result.previewToken).not.toBeNull();
+  });
+
+  it("PREVIEW_STALE — 위조된 preview_token 으로 결정하면 409 로 거부된다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    await expect(
+      decideChangeApproval(1, { approve: true, previewToken: "00000000-0000-0000-0000-000000000000" }),
+    ).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.status).toBe(409);
+      expect(apiError.code).toBe("PREVIEW_STALE");
+      return true;
+    });
+  });
 });
