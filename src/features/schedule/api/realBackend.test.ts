@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { cancelRun, createRun, getRuns, getSchedules } from "./index";
+import { cancelRun, createRun, createSchedule, deleteSchedule, getRuns, getSchedules, updateSchedule } from "./index";
+import type { ScheduleWeekday } from "../types";
 
 // 운행 스케줄·일일 회차 화면(§5.10, SCH-01~03, A-09)이 부르는 엔드포인트를
 // 실제 F5-W1 전용 백엔드에 붙여 확인한다.
@@ -76,5 +77,39 @@ describe("schedule api — 실서버 계약", () => {
     const afterCancel = await getRuns("2099-01-01");
     const canceled = afterCancel.items.find((r) => r.id === created.id);
     expect(canceled?.canceledAt).not.toBeNull();
+  });
+
+  // r11-t1 — createSchedule→updateSchedule→deleteSchedule(§5.10, SCH-01) 왕복.
+  // 시드는 "오늘 요일" 로만 스케줄을 채우므로(V2__seed_data.sql — extract(dow from now())),
+  // weekday 를 내일 요일로 잡으면 (bus_id, weekday, direction) 조합이 시드와 절대 겹치지
+  // 않는다 — 위 createRun/cancelRun 과 같은 자기완결형 왕복(자기가 만든 행을 자기가
+  // 끝에서 지운다)이라 4번 연속 실행해도 DUPLICATE_SCHEDULE 이 나지 않는다.
+  it("createSchedule 으로 만든 스케줄을 updateSchedule 로 고치고 deleteSchedule 로 지운다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const WEEKDAYS_BY_GETDAY: ScheduleWeekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const tomorrow = WEEKDAYS_BY_GETDAY[(new Date().getDay() + 1) % 7];
+
+    const created = await createSchedule({
+      busId: 1,
+      weekday: tomorrow,
+      direction: "to_academy",
+      departTime: "07:30",
+      originName: "실서버계약시험집결지",
+      destinationName: "바래다학원 A",
+    });
+    expect(created.busId).toBe(1);
+    expect(created.weekday).toBe(tomorrow);
+    expect(created.active).toBe(true);
+
+    const updated = await updateSchedule(created.id, { departTime: "07:45", active: false });
+    expect(updated.departTime).toMatch(/^07:45/);
+    expect(updated.active).toBe(false);
+
+    await deleteSchedule(created.id);
+
+    const after = await getSchedules(0, 100);
+    expect(after.items.some((item) => item.id === created.id)).toBe(false);
   });
 });

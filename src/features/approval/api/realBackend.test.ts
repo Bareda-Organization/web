@@ -3,7 +3,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { decideChangeApproval, getChangeApprovalDetail, getChangeApprovals, getSignupRequests } from "./index";
+import {
+  decideChangeApproval,
+  decideSignupRequest,
+  getChangeApprovalDetail,
+  getChangeApprovals,
+  getSignupRequests,
+} from "./index";
 
 // 가입 승인(§5.1·§5.2, A-02)·구간 변경 승인(§5.5·§5.6, A-05) 화면이 부르는
 // 엔드포인트를 실제 F5-W1 전용 백엔드에 붙여 확인한다.
@@ -29,6 +35,47 @@ describe("approval api — 실서버 계약", () => {
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(typeof result.pendingCount).toBe("number");
+  });
+
+  // r11-t1 — decideSignupRequest(§5.2, A-02) 실제 재현. request_id=2(role=parent,
+  // academy_id=1)가 시드에서 유일하게 관계자가 결정할 수 있는 pending 건이다
+  // (curl 실측). 승인은 학생 연결(link.studentIds)이 필요해 대상을 특정해야
+  // 하므로, 거절(§5.2 의 다른 분기)로 결정한다 — 사유만 있으면 되고 학생 연결
+  // 관문(LINK_REQUIRED)을 타지 않아 더 단순하다.
+  //
+  // 되돌릴 API 가 없는 편도 전이다(`SignupDecision.close` → `assertPending`).
+  // 그래서 상태를 먼저 물어 분기한다 — 이번이 처음 실행이면 pending 이라 거절이
+  // 성공하고, 이미 이전 회차에서 거절했다면 다시 호출했을 때 정확히
+  // `409 APPROVAL_ALREADY_DECIDED` 로 막히는지를 확인한다(같은 오류 코드를
+  // change-approval 쪽 시험이 이미 검증해 둔 것과 동일 — `SignupDecision` 이
+  // 두 승인 축이 공유하는 클래스라 코드도 같다). 두 분기 모두 4번 연속 실행에서
+  // 0 실패를 유지한다 — 1회차는 A, 2~4회차는 B 를 탄다.
+  it("decideSignupRequest 는 pending 요청을 거절하거나, 이미 거절된 건은 409 로 막는다(request_id=2)", async ({
+    skip,
+  }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const pending = await getSignupRequests("pending");
+    const stillPending = pending.items.some((item) => item.requestId === 2);
+
+    if (stillPending) {
+      const result = await decideSignupRequest(2, {
+        accept: false,
+        rejectReason: "r11-t1 실서버 계약 시험 — 되돌릴 API 가 없어 거절로 소진",
+      });
+      expect(result.accountStatus).toBe("rejected");
+    } else {
+      await expect(
+        decideSignupRequest(2, { accept: false, rejectReason: "r11-t1 실서버 계약 시험 재실행" }),
+      ).rejects.toSatisfy((error: unknown) => {
+        expect(error).toBeInstanceOf(ApiError);
+        const apiError = error as ApiError;
+        expect(apiError.status).toBe(409);
+        expect(apiError.code).toBe("APPROVAL_ALREADY_DECIDED");
+        return true;
+      });
+    }
   });
 
   it("getChangeApprovals 는 상태별 구간 변경 승인 목록을 돌려준다(approved 필터)", async ({ skip }) => {

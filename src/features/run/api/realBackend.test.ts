@@ -4,7 +4,7 @@ import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
-import { getDashboard, getManagers, getRunRoster, getRunsLive, postForcedAdd } from "./index";
+import { getDashboard, getManagers, getRunRoster, getRunsLive, patchRunAssignment, postForcedAdd } from "./index";
 
 // 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06)이 부르는
 // 엔드포인트를 실제 F5-W1 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
@@ -83,6 +83,28 @@ describe("run api — 실서버 계약", () => {
       expect(apiError.code).toBe("ACADEMY_SCOPE_VIOLATION");
       return true;
     });
+  });
+
+  // r11-t1 — patchRunAssignment(§5.14, A-06) 실제 재현. run_id=6(R6)은 idle·미배치
+  // (V2__seed_data.sql 시드 기준, curl 실측). 배치 해제 API 가 부재해(되돌릴 수단이
+  // 없는 편도 전이 — `AssignmentCommandService.place`), 이미 채워진 자리는 REPLACE
+  // 만 가능하다. 하지만 <b>같은 managerId 로 다시 보내는 것은 멱등</b>이다(`reassign`
+  // 이 같은 값으로 다시 저장할 뿐 새 행도 충돌도 만들지 않음, 서버 코드 확인) —
+  // 그래서 반복 실행에도 항상 같은 응답을 낸다. 또한 이 파일 끝의 afterAll 이 이
+  // run_id=6 을 포함해 전체를 시드로 되돌리므로(위 postForcedAdd 때문에 이미
+  // 걸려 있음), 다음 라운드에서도 "미배치" 상태로 다시 시작한다 — 새 되돌림 장치를
+  // 만들지 않고 이미 있는 것을 그대로 쓴 것.
+  it("patchRunAssignment 는 기사·동승자를 배치하고 배치 결과를 돌려준다(run_id=6)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const result = await patchRunAssignment(6, { driverManagerId: 1, escortManagerId: 3 });
+
+    expect(result.runId).toBe(6);
+    const driver = result.assignments.find((a) => a.role === "driver");
+    const escort = result.assignments.find((a) => a.role === "escort");
+    expect(driver?.managerId).toBe(1);
+    expect(escort?.managerId).toBe(3);
   });
 
   // r7-t2 목표 4 — CAPACITY_EXCEEDED 실제 재현. run_id=6(R6)은 idle·출발 4시간 전
