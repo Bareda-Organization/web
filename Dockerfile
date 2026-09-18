@@ -23,6 +23,13 @@ COPY apps/academy-web ./apps/academy-web
 COPY design-system ./design-system
 WORKDIR /repo/apps/academy-web
 ENV NEXT_TELEMETRY_DISABLED=1
+# ⚠ `NEXT_PUBLIC_*` 는 런타임 환경변수가 아니라 **빌드 시점에 번들에 박힌다** —
+#   compose 의 `environment:` 로 주면 브라우저 번들에는 반영되지 않는다. 그래서 build arg 로 받는다.
+#   값의 기준은 **브라우저가 보는 주소**이지 컨테이너 네트워크 이름이 아니다(브라우저는 호스트에서 돈다).
+#   컨테이너로 띄울 때는 프록시(:80)가 유일한 진입점이므로 `http://localhost` 다.
+#   ⚠ 스킴을 빼지 마라 — `shared/lib/ws/wsUrl.ts` 가 `http://`→`ws://` 로 바꿔 WS 주소를 만든다.
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN npm run build
 
 # ---- runner: standalone 산출물만 담은 최소 실행 이미지 ----
