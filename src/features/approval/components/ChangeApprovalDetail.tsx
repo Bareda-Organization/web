@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapPolyline } from "@/features/map";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type {
   ChangeApprovalDetailResponseTypes,
@@ -26,12 +27,17 @@ type ChangeApprovalDetailProps = {
   approvalId: number;
 };
 
+// `R20-B2` 목표 1(사용자 지적) — 실제 응답은 이 값을 풀 ISO(초·밀리초·날짜 포함)로 준다
+// (같은 날 같은 회차의 정차지 시각이라 시:분이면 충분하다). 타입은 `string` 이지만 실측상
+// 결정 전 정류장은 `null` 로 오기도 해(백엔드 계약과 타입이 어긋난 지점, 보고서 §2) —
+// `formatClockTime` 에 그대로 넘기면 `Date(null)` 이 자정으로 파싱돼 없는 값을 있는
+// 것처럼 보여준다. 값이 없을 때는 "-" 로 명시한다.
 const renderStop = (stop: RouteStopPreviewResponseTypes) => (
   <StyledRouteStopRow key={`${stop.seq}-${stop.stopName}`}>
     <span>
       {stop.seq}. {stop.stopName}
     </span>
-    <span>{stop.eta}</span>
+    <span>{stop.eta ? formatClockTime(stop.eta) : "-"}</span>
   </StyledRouteStopRow>
 );
 
@@ -49,9 +55,6 @@ const DURATION_MISSING_REASON = "- (예전 확정 노선이라 소요시간 정�
 const DEPART_TIME_MISSING_REASON = "- (출발 시각 정보가 아직 없습니다)";
 const ARRIVAL_TIME_MISSING_REASON = "- (출발 또는 소요 정보가 없어 계산할 수 없습니다)";
 
-const formatClockTime = (iso: string): string =>
-  new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
-
 // 전체 소요시간 — "변경 전" 열은 값만, "변경 후" 열은 증감 부호를 덧붙인다(목표 4, 증감 유지).
 const formatTotalDuration = (minutes: number | null, deltaBase?: number | null): string => {
   if (minutes === null) return DURATION_MISSING_REASON;
@@ -62,7 +65,9 @@ const formatTotalDuration = (minutes: number | null, deltaBase?: number | null):
 };
 
 // 출발시간 — 재최적화가 출발 시각 자체를 옮기지 않으므로 전/후 두 열에 같은 값이 들어간다
-// (조율자 결정 — "변경해도 출발 시각은 그대로"가 관리자에게 유용한 정보다).
+// (조율자 결정 — "변경해도 출발 시각은 그대로"가 관리자에게 유용한 정보다). `R20-B2`
+// 목표 2 — 값만 같으면 사람은 버그로 읽는다(사용자 신고). 렌더 쪽에서 "전후 동일"
+// 배지를 나란히 붙여 의도된 동일값임을 밝힌다(아래 return 문).
 const formatDepartTime = (departTime: string | null): string =>
   departTime === null ? DEPART_TIME_MISSING_REASON : formatClockTime(departTime);
 
@@ -243,7 +248,9 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>출발시간</StyledInfoLabel>
-                <span>{formatDepartTime(detail.departTime)}</span>
+                <span>
+                  <span>{formatDepartTime(detail.departTime)}</span> <Badge tone="neutral">전후 동일</Badge>
+                </span>
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>도착시간</StyledInfoLabel>
@@ -258,7 +265,9 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>출발시간</StyledInfoLabel>
-                <span>{formatDepartTime(detail.departTime)}</span>
+                <span>
+                  <span>{formatDepartTime(detail.departTime)}</span> <Badge tone="neutral">전후 동일</Badge>
+                </span>
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>도착시간</StyledInfoLabel>

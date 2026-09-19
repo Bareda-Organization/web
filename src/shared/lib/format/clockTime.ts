@@ -1,0 +1,13 @@
+// `R20-B2` — 이 앱에서 사람에게 보여주는 시각은 전부 이 함수 하나를 거친다. 초·밀리초·
+// 날짜를 버리고 "시:분"만 남긴다(사용자 지시 — "시간은 전체 소요시간·출발시간·도착시간만
+// 표기해달라"는 그 화면의 시간 표기 전체에 대한 것이었다). 자리마다 따로 포맷하면 다음
+// 사람이 하나만 고친다 — `durationDelta.ts`(R18-C 산출물) 옆에 둔다.
+//
+// 입력이 "이미 짧은 시각 문자열"(예: "08:10")이면 `Date` 파싱이 실패(Invalid Date)하므로
+// 원본을 그대로 돌려준다 — 실제 백엔드는 `timestamptz` 를 전체 ISO 로 주지만, 시험
+// 픽스처나 앞으로 백엔드가 짧은 형태로 바꾸는 경우까지 함께 견딘다.
+export const formatClockTime = (raw: string): string => {
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return parsed.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+};

@@ -152,8 +152,10 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       expect(await screen.findByText("38분 (+6분)")).toBeInTheDocument();
 
       // 출발시간 — 재최적화가 출발 시각을 옮기지 않으므로 두 열에 같은 값이 나온다.
+      // `R20-B2` 목표 2 — 같은 값이 버그로 읽히지 않도록 "전후 동일" 배지를 함께 낸다.
       const departLabel = formatClock(departTime);
       expect(await screen.findAllByText(departLabel)).toHaveLength(2);
+      expect(await screen.findAllByText("전후 동일")).toHaveLength(2);
 
       // 도착시간 — 출발시간 + 전체 소요시간(분)의 파생값이라 전/후가 다르다.
       const arrivalBefore = new Date(departTime);
@@ -206,6 +208,36 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
       expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
       expect(screen.queryByText("소요 시간")).not.toBeInTheDocument();
+    });
+  });
+
+  // `R20-B2` 목표 1(사용자 지적) — "노선 비교" 정류장 목록의 도착예정시각도 이 화면의
+  // 시간 표기다. 실제 응답은 초·밀리초·날짜까지 포함한 풀 ISO 를 주므로 시:분으로 줄인다.
+  describe("노선 비교 정류장 시각", () => {
+    it("풀 ISO 로 온 정류장 도착예정시각을 시:분으로 줄여 보여준다", async () => {
+      const eta = "2026-09-19T12:55:41.464829Z";
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: { ...baseDetail.routePreview!, stopsAfter: [{ seq: 1, stopName: "그린빌라 입구", eta }] },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText(formatClock(eta))).toBeInTheDocument();
+      expect(screen.queryByText(eta)).not.toBeInTheDocument();
+    });
+
+    it("도착예정시각이 없으면(결정 전 정류장) - 를 보여준다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: {
+          ...baseDetail.routePreview!,
+          stopsBefore: [{ seq: 1, stopName: "중앙로 스타빌딩 앞", eta: null as unknown as string }],
+        },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("중앙로 스타빌딩 앞", { exact: false })).toBeInTheDocument();
+      expect(screen.getByText("1. 중앙로 스타빌딩 앞").closest("div")).toHaveTextContent("-");
     });
   });
 
