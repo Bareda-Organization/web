@@ -74,16 +74,22 @@ export type StopRef = {
 };
 
 // §5.15 POST/DELETE /staff/runs/{runId}/waypoints 공용 응답 — 미리보기·배포 결과 대조.
+// roadPathBefore·roadPathAfter(`R18-C2`, Ruling 319) — §5.5 상세와 같은 이유로 §5.15 도
+// 지도용 전/후 도로 좌표를 싣는다(API_SPEC §5.15 응답).
 export type WaypointRoutePreview = {
   stopsBefore: WaypointPreviewStop[];
   stopsAfter: WaypointPreviewStop[];
   reordered: StopRef[];
   removed: StopRef[];
+  roadPathBefore: LatLng[];
+  roadPathAfter: LatLng[];
 };
 
 // estTimeBefore·After 는 지속시간이 아니라 마지막 정차지 도착예정 시각(ISO, WaypointResponse.java
 // 의 OffsetDateTime)이다 — R14-T3 실측 전에는 curl 로 확인하지 못해 number 로 잘못 적혀 있었다
 // (보고서 §1). "전" 쪽은 기록된 도착 실측이 없으면 null.
+// estDurationBefore·After(분, `R18-C2`, Ruling 318) — 노선 전체 소요. §5.5 상세와 같은 값 출처
+// (route_version.est_duration_min · 재최적화 계산 결과)를 그대로 싣는다.
 export type WaypointResultResponseTypes = {
   waypointId: number;
   routePreview: WaypointRoutePreview;
@@ -91,6 +97,8 @@ export type WaypointResultResponseTypes = {
   estTimeAfter: string | null;
   estDistanceBefore: number | null;
   estDistanceAfter: number | null;
+  estDurationBefore: number | null;
+  estDurationAfter: number | null;
   applied: boolean;
 };
 

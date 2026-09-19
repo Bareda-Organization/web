@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getRuns } from "@/features/schedule";
 import type { RunItemResponseTypes } from "@/features/schedule";
 import { ApiError } from "@/shared/lib/http";
+import { formatDurationDelta } from "@/shared/lib/format/durationDelta";
 import { AlertBanner, Button, Card, Input, SegmentedControl, Select } from "@/shared/ui";
 import { addRunWaypoint, removeRunWaypoint } from "../api";
 import type { RunDirection, WaypointResultResponseTypes } from "../types";
@@ -215,6 +216,19 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
                 <span>예상 거리 {preview.estDistanceAfter}</span>
               </StyledWaypointCompareCol>
             </StyledWaypointCompare>
+          ) : null}
+          {/* `R18-C2` 목표 3(Ruling 318) — 노선 전체 소요(분)를 §5.5 상세와 같은 형태로. 옛 확정
+              노선 버전은 이 컬럼이 없을 수 있어(WaypointResponse.java 주석) 값이 없으면 이유를 적는다.
+              라벨과 값을 별도 엘리먼트로 둔다 — 한 노드에 합치면 화면 검사가 값만 정확히 집어낼 수 없다. */}
+          {preview ? (
+            <StyledWaypointDeployedRow>
+              <span>노선 전체 소요</span>
+              <span>
+                {preview.estDurationBefore !== null && preview.estDurationAfter !== null
+                  ? formatDurationDelta(preview.estDurationBefore, preview.estDurationAfter)
+                  : "- (옛 확정 노선 버전이라 소요시간 값이 없습니다)"}
+              </span>
+            </StyledWaypointDeployedRow>
           ) : null}
 
           <StyledWaypointActionsRow>

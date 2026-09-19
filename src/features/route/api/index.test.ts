@@ -84,11 +84,15 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
               stops_after: [{ seq: 1, stop_name: "정문", eta: "2026-09-19T04:36:01.446625Z" }],
               reordered: [{ stop_id: 99, stop_name: "새 경유지" }],
               removed: [],
+              road_path_before: [{ lat: 37.1, lng: 127.1 }],
+              road_path_after: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }],
             },
             est_time_before: null,
             est_time_after: "2026-09-19T04:37:55.446625Z",
             est_distance_before: null,
             est_distance_after: 6.0,
+            est_duration_before: null,
+            est_duration_after: 12,
             applied: false,
           },
         }),
@@ -103,6 +107,15 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     ]);
     expect(result.routePreview.reordered).toEqual([{ stopId: 99, stopName: "새 경유지" }]);
     expect(result.routePreview.removed).toEqual([]);
+    // `R18-C2` 목표 1·3 — §5.5 에서 밟은 함정(before/after 를 바꿔치기해도 "둘 다 비어있지 않다"만
+    // 보면 통과)을 여기서도 피한다: 실제 좌표·분 값을 정확히 대조한다(개수만 세지 않는다).
+    expect(result.routePreview.roadPathBefore).toEqual([{ lat: 37.1, lng: 127.1 }]);
+    expect(result.routePreview.roadPathAfter).toEqual([
+      { lat: 37.1, lng: 127.1 },
+      { lat: 37.2, lng: 127.2 },
+    ]);
+    expect(result.estDurationBefore).toBeNull();
+    expect(result.estDurationAfter).toBe(12);
     expect(result.applied).toBe(false);
   });
 

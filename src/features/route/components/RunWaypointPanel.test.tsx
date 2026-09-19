@@ -1,8 +1,19 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunWaypointPanel } from "./RunWaypointPanel";
 import { getRuns } from "@/features/schedule";
 import type { RunItemResponseTypes } from "@/features/schedule";
+import { addRunWaypoint } from "../api";
+import type { WaypointResultResponseTypes } from "../types";
+
+// `R18-C2` 목표 3 — 이 화면도 §5.5(ChangeApprovalDetail)와 같은 이유로 소요시간(분) 비교를
+// 보여줘야 하므로, addRunWaypoint 호출부만 목으로 바꿔 그 값이 실제로 그려지는지 본다.
+vi.mock("../api", async () => {
+  const actual = await vi.importActual<typeof import("../api")>("../api");
+  return { ...actual, addRunWaypoint: vi.fn(), removeRunWaypoint: vi.fn() };
+});
+
+const mockAddRunWaypoint = vi.mocked(addRunWaypoint);
 
 // FE-R3 W3 목표 9 판정 ① — "오늘 회차" 목록이 이 화면에 카탈로그로 없어 run_id 를
 // 손으로 치던 문제를 화면 설계 문제로 판정해 고쳤다(주석 §1 참고). 그 판정이 실제로
@@ -60,5 +71,54 @@ describe("RunWaypointPanel — 오늘 회차 드롭다운 필터", () => {
     expect(optionLabels.some((label) => label?.includes("#2"))).toBe(false);
     expect(optionLabels.some((label) => label?.includes("#3"))).toBe(false);
     expect(optionLabels.some((label) => label?.includes("#4"))).toBe(false);
+  });
+});
+
+describe("RunWaypointPanel — 노선 전체 소요시간 비교 (`R18-C2` 목표 3)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const buildWaypointResult = (
+    overrides: Partial<WaypointResultResponseTypes> = {},
+  ): WaypointResultResponseTypes => ({
+    waypointId: 5,
+    routePreview: {
+      stopsBefore: [{ seq: 1, stopName: "정문", eta: null }],
+      stopsAfter: [{ seq: 1, stopName: "정문", eta: null }],
+      reordered: [],
+      removed: [],
+      roadPathBefore: [],
+      roadPathAfter: [],
+    },
+    estTimeBefore: null,
+    estTimeAfter: null,
+    estDistanceBefore: null,
+    estDistanceAfter: null,
+    estDurationBefore: 32,
+    estDurationAfter: 38,
+    applied: false,
+    ...overrides,
+  });
+
+  it("미리보기를 받으면 노선 전체 소요를 분·증감 부호와 함께 보여준다", async () => {
+    mockGetRuns.mockResolvedValue({
+      items: [buildRun({ id: 1, busId: 10, direction: "to_academy", canceledAt: null })],
+    });
+    mockAddRunWaypoint.mockResolvedValue(buildWaypointResult());
+
+    render(<RunWaypointPanel busId={10} direction="to_academy" />);
+    await waitFor(() => expect(mockGetRuns).toHaveBeenCalled());
+
+    const [addSelect] = screen.getAllByRole("combobox");
+    fireEvent.change(addSelect, { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("표시명"), { target: { value: "임시 정류장" } });
+    fireEvent.click(screen.getByRole("tab", { name: "좌표로 입력" }));
+    fireEvent.change(screen.getByLabelText("위도"), { target: { value: "37.2" } });
+    fireEvent.change(screen.getByLabelText("경도"), { target: { value: "127.2" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "미리보기" }));
+
+    expect(await screen.findByText("32분 → 38분 (+6분)")).toBeInTheDocument();
   });
 });

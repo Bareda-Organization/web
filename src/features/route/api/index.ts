@@ -131,11 +131,15 @@ type RawWaypointResult = {
     stops_after: RawWaypointPreviewStop[];
     reordered: RawStopRef[];
     removed: RawStopRef[];
+    road_path_before: RawGeoPoint[];
+    road_path_after: RawGeoPoint[];
   };
   est_time_before: string | null;
   est_time_after: string | null;
   est_distance_before: number | null;
   est_distance_after: number | null;
+  est_duration_before: number | null;
+  est_duration_after: number | null;
   applied: boolean;
 };
 
@@ -157,11 +161,15 @@ const toWaypointResult = (raw: RawWaypointResult): WaypointResultResponseTypes =
     stopsAfter: raw.route_preview.stops_after.map(toPreviewStop),
     reordered: raw.route_preview.reordered.map(toStopRef),
     removed: raw.route_preview.removed.map(toStopRef),
+    roadPathBefore: raw.route_preview.road_path_before,
+    roadPathAfter: raw.route_preview.road_path_after,
   },
   estTimeBefore: raw.est_time_before,
   estTimeAfter: raw.est_time_after,
   estDistanceBefore: raw.est_distance_before,
   estDistanceAfter: raw.est_distance_after,
+  estDurationBefore: raw.est_duration_before,
+  estDurationAfter: raw.est_duration_after,
   applied: raw.applied,
 });
 

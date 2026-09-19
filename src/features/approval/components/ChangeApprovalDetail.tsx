@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapPolyline } from "@/features/map";
+import { formatDurationDelta } from "@/shared/lib/format/durationDelta";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type {
   ChangeApprovalDetailResponseTypes,
@@ -42,9 +43,7 @@ const formatDurationComparison = (before: number | null, after: number | null): 
   if (before === null || after === null) {
     return "- (결정된 건은 소요시간을 다시 계산하지 않습니다)";
   }
-  const delta = after - before;
-  const sign = delta >= 0 ? "+" : "";
-  return `${before}분 → ${after}분 (${sign}${delta}분)`;
+  return formatDurationDelta(before, after);
 };
 
 const DEFAULT_MAP_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
