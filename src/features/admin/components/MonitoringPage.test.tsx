@@ -354,7 +354,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 13 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 15 } }),
       ),
     );
   });

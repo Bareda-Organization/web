@@ -470,7 +470,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 13 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 15 } }),
       ),
     );
   });
