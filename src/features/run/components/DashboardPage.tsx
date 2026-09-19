@@ -14,7 +14,14 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
+import {
+  MapSurface,
+  buildRouteDisplayState,
+  cameraForSelectedBus,
+  type MapCamera,
+  type MapMarker,
+  type MapPolyline,
+} from "@/features/map";
 import { getRunRoute } from "@/features/route";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
@@ -80,6 +87,8 @@ export const DashboardPage = () => {
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
   const [routeFallback, setRouteFallback] = useState(false);
+  // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 형태(경로 좌표 0개=데이터 부재 안내).
+  const [routeMissing, setRouteMissing] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
 
   const liveByRunId = useMemo(() => new Map(liveRuns.map((run) => [run.runId, run])), [liveRuns]);
@@ -91,14 +100,21 @@ export const DashboardPage = () => {
         .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
     [liveRuns],
   );
+  // R18-B2 목표 1·3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면
+  // 몫을 한 곳에서 정한다(MonitoringPage.tsx 와 같은 방식).
+  const selectedBusMarker = useMemo(
+    () => mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
+    [mapMarkers, selectedRunId],
+  );
   const mapCamera: MapCamera = useMemo(() => {
+    if (selectedBusMarker) return cameraForSelectedBus(selectedBusMarker, DEFAULT_CAMERA);
     if (mapMarkers.length === 0) return DEFAULT_CAMERA;
     const sum = mapMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
       lat: 0,
       lng: 0,
     });
     return { lat: sum.lat / mapMarkers.length, lng: sum.lng / mapMarkers.length, zoom: DEFAULT_CAMERA.zoom };
-  }, [mapMarkers]);
+  }, [selectedBusMarker, mapMarkers]);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -130,6 +146,7 @@ export const DashboardPage = () => {
         setSelectedRunId(null);
         setRoutePolylines([]);
         setRouteFallback(false);
+        setRouteMissing(false);
         setRouteError(null);
         return;
       }
@@ -137,11 +154,16 @@ export const DashboardPage = () => {
       setRouteError(null);
       try {
         const route = await getRunRoute(runId);
-        setRoutePolylines(route.roadPath.length > 0 ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
-        setRouteFallback(route.fallbackUsed);
+        // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
+        // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
+        const display = buildRouteDisplayState(runId, route);
+        setRoutePolylines(display.polylines);
+        setRouteFallback(display.fallback);
+        setRouteMissing(display.missing);
       } catch (cause) {
         setRoutePolylines([]);
         setRouteFallback(false);
+        setRouteMissing(false);
         setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
@@ -285,6 +307,8 @@ export const DashboardPage = () => {
           </StyledMapSurface>
           {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+          {/* R18-B2 — 좌표 0개(데이터 부재)를 빈 지도와 구별한다. */}
+          {routeMissing ? <StyledFallbackNotice>경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
           {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
         </StyledMapPane>

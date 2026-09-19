@@ -3,9 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
+import type { MapSurfaceProps } from "@/features/map";
 import type { RunLiveItemResponseTypes } from "../types";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
+
+// R18-B 목표 2 — `MapSurface` 를 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
+// 컴포넌트에 무엇으로 전달되는지만 검증한다(SDK 렌더링이 아니라 화면의 계산
+// 로직 검증 — TodayRunPage.test.tsx 와 같은 방식).
+const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+// R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
+// 쓴다(순수 함수라 SDK 에 안 걸린다). `MapSurface` 만 목으로 바꾼다.
+vi.mock("@/features/map", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/map")>();
+  return {
+    ...actual,
+    MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
+  };
+});
 
 // A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
 // 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
@@ -295,6 +310,41 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     fireEvent.click(busItem);
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
+  });
+
+  // R18-B 목표 2 — 버스를 고르면 그 버스를 지도 정중앙에 두고 확대한다.
+  it("버스를 고르면 카메라가 그 버스 좌표로 옮겨가고 확대한다", async () => {
+    const busWithPosition: RunLiveItemResponseTypes = {
+      ...baseLiveRun,
+      position: { lat: 37.111, lng: 127.222, receivedAt: "2026-09-13T00:00:01Z" },
+    };
+    mockGetRunsLive.mockResolvedValue({ runs: [busWithPosition] });
+    render(<MonitoringPage />);
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({ camera: { lat: 37.5666103, lng: 126.9783882, zoom: 12 } }),
+      ),
+    );
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 16 } }),
+      ),
+    );
+  });
+
+  // R18-B 목표 3 — 좌표가 0개면 "빈 지도"와 구별되는 안내를 띄운다. 이 블록의
+  // 기본 목(beforeEach)이 이미 roadPath: [] 라 별도 목 설정이 필요 없다.
+  it("경로 좌표가 0개면 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText("경로 정보가 아직 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
   });
 });
 
