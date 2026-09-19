@@ -8,6 +8,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getChangeApprovals } from "../api";
 import type { ChangeApprovalSummaryResponseTypes } from "../types";
 import { StyledChangeApprovalLayout } from "./ChangeApprovalList.styled";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 
 const DIRECTION_LABEL: Record<ChangeApprovalSummaryResponseTypes["direction"], string> = {
   to_academy: "등원",
@@ -71,7 +72,8 @@ export const ChangeApprovalList = () => {
       render: (row) => (row.willRemoveStop ? <Badge tone="removed">삭제 예정</Badge> : "-"),
     },
     { key: "remainingRiders", label: "잔여 인원" },
-    { key: "deadlineAt", label: "처리 기한" },
+    // 상세 화면과 같은 형식 함수를 쓴다 — 목록만 풀 ISO 로 남아 있었다(2026-09-19 실측).
+    { key: "deadlineAt", label: "처리 기한", render: (row) => formatClockTime(row.deadlineAt) },
   ];
 
   return (

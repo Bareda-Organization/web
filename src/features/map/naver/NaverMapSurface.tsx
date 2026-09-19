@@ -4,7 +4,7 @@
 // §8.3.1` 이 요구하는 포트/어댑터 경계다. 화면(features/admin·features/run)은 이 파일을
 // 몰라야 하고, 대신 한 단계 위의 `../MapSurface` 만 가져다 쓴다. 이 경계는
 // `features/map/mapAdapterBoundary.test.ts` 가 파일 스캔으로 강제한다.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MapCamera, MapMarker, MapPolyline } from "../types";
 import { getNaverMapClientId } from "./naverMapConfig";
 import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
@@ -35,6 +35,14 @@ export const NaverMapSurface = ({
   const markerRefs = useRef<Map<string, naver.maps.Marker>>(new Map());
   // R15-T2 — 선택된 노선. 마커와 달리 보간 대상이 아니다(경로는 한 번에 통째로 그린다).
   const polylineRefs = useRef<Map<string, naver.maps.Polyline>>(new Map());
+  // ⚠ 지도 생성은 SDK 적재를 기다리는 **비동기**라, 마운트 직후에는 `mapRef.current` 가
+  // 아직 `null` 이다. 아래 세 effect(카메라·마커·노선)는 그때 일찍 반환하는데,
+  // 그 뒤 의존성이 안 바뀌면 **다시 실행되지 않는다.** 자료를 비동기로 받는 화면은
+  // 상태가 뒤늦게 바뀌어 우연히 동작했지만, **자료를 이미 들고 마운트하는 화면**
+  // (구간변경 승인 상세)은 그 한 번의 이른 실행이 전부여서 지도 타일만 뜨고
+  // 경로 선이 영영 안 그려졌다(2026-09-19 사용자 지적 → 실제 브라우저로 재현).
+  // ⇒ **지도가 생긴 사실 자체를 신호로 만들어** 세 effect 가 다시 돌게 한다.
+  const [mapReady, setMapReady] = useState(false);
   // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
   // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
   const displayedPositions = useRef<Map<string, LatLng>>(new Map());
@@ -92,6 +100,7 @@ export const NaverMapSurface = ({
           zoom: camera.zoom,
         });
         mapRef.current = map;
+        setMapReady(true);
         onReady?.();
       })
       .catch((error: unknown) => {
@@ -120,6 +129,7 @@ export const NaverMapSurface = ({
       polylineRefsAtMount.forEach((line) => line.setMap(null));
       polylineRefsAtMount.clear();
       mapRef.current = null;
+      setMapReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -130,7 +140,7 @@ export const NaverMapSurface = ({
     if (!map || !window.naver) return;
     map.setCenter(new window.naver.maps.LatLng(camera.lat, camera.lng));
     map.setZoom(camera.zoom);
-  }, [camera.lat, camera.lng, camera.zoom]);
+  }, [camera.lat, camera.lng, camera.zoom, mapReady]);
 
   // 마커 갱신 — id 기준으로 추가·제거하고, 기존 마커의 좌표 변경은 보간
   // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다 — COMMON-B2 §2).
@@ -178,7 +188,7 @@ export const NaverMapSurface = ({
         displayedPositions.current.set(markerData.id, { lat: markerData.lat, lng: markerData.lng });
       }
     }
-  }, [markers]);
+  }, [markers, mapReady]);
 
   // 노선 갱신 — id 기준으로 추가·제거한다. 경로 좌표는 선택이 바뀔 때만 통째로
   // 새로 오므로(보간 대상 아님) 기존 id 가 남아 있으면 경로만 다시 그린다.
@@ -221,7 +231,7 @@ export const NaverMapSurface = ({
       });
       existing.set(polylineData.id, created);
     }
-  }, [polylines]);
+  }, [polylines, mapReady]);
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 };

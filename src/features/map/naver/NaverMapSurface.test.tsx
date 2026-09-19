@@ -1,0 +1,88 @@
+import { render, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// 이 파일이 잡는 것 — **지도가 준비되기 전에 이미 자료가 들어와 있는 경우.**
+//
+// 지도 생성은 SDK 적재를 기다리는 비동기라, 마운트 직후에는 `mapRef.current` 가
+// 아직 `null` 이다. 마커·노선·카메라 갱신 effect 는 그때 일찍 반환하는데, 그 뒤로
+// **의존성이 바뀌지 않으면 다시 실행되지 않는다.**
+//
+// 관제·운행 관리 화면은 자료를 비동기로 받아 상태가 뒤늦게 바뀌므로 우연히
+// 동작했다. 반면 구간변경 승인 상세는 **자료를 이미 들고 마운트**하므로 그 한 번의
+// 이른 실행이 전부였고, 지도 타일만 뜨고 **경로 선이 영영 안 그려졌다**
+// (2026-09-19 사용자 지적 → 조율자가 실제 브라우저로 재현).
+//
+// ⚠ SDK 를 쓰는 배선에 검사가 하나도 없어서 이 결함이 살아남았다 — 이 디렉터리의
+// 기존 검사는 전부 순수 함수(`markerIcon`·`routeColor`·`markerInterpolation`)다.
+const { loadNaverMapsScript, onNaverAuthFailure } = vi.hoisted(() => ({
+  loadNaverMapsScript: vi.fn(),
+  onNaverAuthFailure: vi.fn(() => () => {}),
+}));
+
+vi.mock("./loadNaverMapsScript", () => ({ loadNaverMapsScript, onNaverAuthFailure }));
+vi.mock("./naverMapConfig", () => ({ getNaverMapClientId: () => "test-client-id" }));
+
+import { NaverMapSurface } from "./NaverMapSurface";
+
+/** SDK 적재를 손으로 풀 수 있게 붙잡아 둔다 — "지도가 늦게 생기는" 상황의 재현 수단. */
+const heldScriptLoad = () => {
+  let release!: () => void;
+  loadNaverMapsScript.mockReturnValue(new Promise<void>((resolve) => {
+    release = resolve;
+  }));
+  return () => {
+    release();
+    // 적재 완료 → 지도 생성까지 마이크로태스크 한 바퀴
+    return Promise.resolve();
+  };
+};
+
+const polylineCtor = vi.fn();
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  polylineCtor.mockClear();
+  (window as unknown as { naver: unknown }).naver = {
+    maps: {
+      // 실제 SDK 의 `Map` 이 갖는 것 중 이 컴포넌트가 부르는 것만 흉내 낸다 —
+      // 빠뜨리면 카메라 effect 가 던져서 뒤따르는 노선 effect 까지 멈춘다.
+      Map: vi.fn(() => ({ setCenter: vi.fn(), setZoom: vi.fn(), destroy: vi.fn() })),
+      LatLng: vi.fn(function (this: unknown, lat: number, lng: number) {
+        Object.assign(this as object, { lat, lng });
+      }),
+      Marker: vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() })),
+      Polyline: polylineCtor.mockImplementation(() => ({
+        setMap: vi.fn(),
+        setPath: vi.fn(),
+        setOptions: vi.fn(),
+      })),
+      Event: { addListener: vi.fn(), removeListener: vi.fn() },
+    },
+  };
+});
+
+describe("NaverMapSurface — 지도 생성이 늦을 때", () => {
+  it("마운트 시점에 이미 있던 노선도 지도가 준비된 뒤 그려진다", async () => {
+    const releaseScript = heldScriptLoad();
+
+    render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[]}
+        polylines={[{ id: "preview", kind: "route", points: [
+          { lat: 37.49, lng: 127.02 },
+          { lat: 37.56, lng: 126.97 },
+        ] }]}
+      />,
+    );
+
+    // 아직 SDK 가 안 붙었으므로 지도도 선도 없다 — 여기까지는 정상이다.
+    expect(polylineCtor).not.toHaveBeenCalled();
+
+    await releaseScript();
+
+    // 🔴 지도가 생긴 뒤에는 **다시 그려져야 한다.** 고치기 전에는 여기서 0건이었다 —
+    // 노선 effect 가 `[polylines]` 에만 걸려 있어 지도 준비를 신호로 받지 못했다.
+    await waitFor(() => expect(polylineCtor).toHaveBeenCalledTimes(1));
+  });
+});
