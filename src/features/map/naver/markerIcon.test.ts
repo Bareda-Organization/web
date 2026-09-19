@@ -19,4 +19,12 @@ describe("markerIcon — 종류별 크기 관계(R18-B 목표 1)", () => {
     expect(html).toContain(`width:${MARKER_SIZE_PX.bus}px`);
     expect(html).toContain(`height:${MARKER_SIZE_PX.bus}px`);
   });
+
+  // R19 목표 3 — 버스는 정차지·학생과 색·크기뿐 아니라 형태로도 구별돼야 한다
+  // (사용자 지시, 그냥 파란 원이라 지도 POI 아이콘과 섞였다는 조율자 눈 확인).
+  it("버스만 lucide 아이콘(svg)을 품고, 정차지·학생은 여전히 빈 원이다", () => {
+    expect(buildMarkerIconHtml("bus")).toContain("<svg");
+    expect(buildMarkerIconHtml("stop")).not.toContain("<svg");
+    expect(buildMarkerIconHtml("student")).not.toContain("<svg");
+  });
 });

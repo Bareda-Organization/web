@@ -274,7 +274,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     mockConnectionState = "connected";
     mockGetAcademies.mockResolvedValue(baseAcademies);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
   });
 
   afterEach(() => {
@@ -288,6 +288,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
         { lat: 37.2, lng: 127.2 },
       ],
       fallbackUsed: true,
+      stops: [],
     });
     render(<MonitoringPage />);
 
@@ -299,8 +300,30 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
   });
 
+  // R19 목표 1 — 정차지도 kind:"stop" 마커로 함께 그린다. 버스 마커(kind:"bus")를
+  // 지우지 않고 더하는지, id 로 어느 정차지인지까지 본다(개수만 세는 단언은
+  // 범위 조건을 못 잡는다).
+  it("버스를 고르면 그 회차의 정차지도 kind:\"stop\" 마커로 함께 그린다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }],
+    });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({
+          markers: expect.arrayContaining([{ id: "stop-3", lat: 37.5685, lng: 126.98, kind: "stop" }]),
+        }),
+      ),
+    );
+  });
+
   it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true, stops: [] });
     render(<MonitoringPage />);
 
     const busItem = await screen.findByText("1호차 · 등원");
@@ -331,7 +354,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 16 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 13 } }),
       ),
     );
   });
@@ -356,7 +379,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
     mockGetAcademies.mockResolvedValue(baseAcademies);
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
   });
 
   it("idle·confirmed·moving·finished 가 모두 목록에 남는다", async () => {

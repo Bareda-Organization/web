@@ -208,17 +208,18 @@ export const removeRunWaypoint = async (
 
 type RawGeoPoint = { lat: number; lng: number };
 
-// R15-T1 이 §5.19 응답에 함께 싣는 필드 — 이 화면은 이 둘만 쓴다(위 타입 주석 참고).
-type RawStaffRunRoute = { road_path: RawGeoPoint[]; fallback_used: boolean };
+// R15-T1 이 §5.19 응답에 함께 싣는 필드 + R19 목표 1 이 쓰는 stops(§4.3 과 같은 구조를
+// §5.19 가 그대로 물려받는다 — `RawRouteStop` 을 재사용한다, 위 `toStop` 참고).
+type RawStaffRunRoute = { road_path: RawGeoPoint[]; fallback_used: boolean; stops: RawRouteStop[] };
 
-// GET /staff/runs/{runId}/route(§5.19, RTE-02, R15-T2 목표 4) — 선택한 버스의 노선을
-// 지도에 그리는 데 쓴다. ⚠ R15-T1 이 같은 시점에 이 응답에 road_path·fallback_used
-// 를 추가하는 중이라, 지금 실제 서버는 아직 이 두 필드를 안 줄 수 있다 — 이름은
+// GET /staff/runs/{runId}/route(§5.19, RTE-02, R15-T2 목표 4 · R19 목표 1) — 선택한
+// 버스의 노선(도로 경로)과 정차지를 지도에 그리는 데 쓴다. 이름은
 // `IMPLEMENTATION_PLAN.md §8.23` 고정 계약을 그대로 따른다.
 export const getRunRoute = async (runId: number): Promise<RunRouteResponseTypes> => {
   const raw = await apiFetch<RawStaffRunRoute>(`/staff/runs/${runId}/route`, { method: "GET" });
   return {
     roadPath: raw.road_path.map((point) => ({ lat: point.lat, lng: point.lng })),
     fallbackUsed: raw.fallback_used,
+    stops: raw.stops.map(toStop),
   };
 };

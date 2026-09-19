@@ -83,6 +83,9 @@ export const MonitoringPage = () => {
   // 뭔가 그려졌을 때의 "근사치" 안내라 서로 다른 문구다 — 둘을 동시에 켜지 않는다.
   const [routeMissing, setRouteMissing] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  // R19 목표 1 — 선택된 회차의 정차지 마커. 전 회차를 동시에 그리면 화면이
+  // 덮이므로 선택 해제 때 함께 비운다(routePolylines 와 같은 생애주기).
+  const [routeStopMarkers, setRouteStopMarkers] = useState<MapMarker[]>([]);
 
   // 실시간 회차의 좌표를 지도 마커로 옮긴다 — 위치를 아직 못 받은 회차(`position: null`)는
   // 마커를 만들지 않는다. 마커가 하나라도 있으면 그 평균 좌표를 카메라 중심으로 삼아
@@ -93,6 +96,11 @@ export const MonitoringPage = () => {
         .filter((run) => run.position != null)
         .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
     [runs],
+  );
+  // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
+  const mapMarkersWithStops: MapMarker[] = useMemo(
+    () => [...mapMarkers, ...routeStopMarkers],
+    [mapMarkers, routeStopMarkers],
   );
   // R18-B2 목표 3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면 몫을
   // 한 곳에서 정한다(R18-B 때 이 화면 안에 있던 상수를 공유 표면으로 올렸다).
@@ -160,6 +168,7 @@ export const MonitoringPage = () => {
         setRouteFallback(false);
         setRouteMissing(false);
         setRouteError(null);
+        setRouteStopMarkers([]);
         return;
       }
       setSelectedRunId(runId);
@@ -172,10 +181,12 @@ export const MonitoringPage = () => {
         setRoutePolylines(display.polylines);
         setRouteFallback(display.fallback);
         setRouteMissing(display.missing);
+        setRouteStopMarkers(display.stopMarkers);
       } catch (cause) {
         setRoutePolylines([]);
         setRouteFallback(false);
         setRouteMissing(false);
+        setRouteStopMarkers([]);
         setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
@@ -323,7 +334,7 @@ export const MonitoringPage = () => {
           <StyledMapSurface>
             <MapSurface
               camera={mapCamera}
-              markers={mapMarkers}
+              markers={mapMarkersWithStops}
               polylines={routePolylines}
               onAuthFailed={(exception) =>
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")

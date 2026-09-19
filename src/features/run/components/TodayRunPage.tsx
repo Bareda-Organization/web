@@ -108,6 +108,9 @@ export const TodayRunPage = () => {
   // R18-B2 목표 2 — MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태.
   const [routeMissing, setRouteMissing] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  // R19 목표 1 — 지금 화면에 뜬 회차의 정차지 마커(MonitoringPage.tsx 와 같은 형태).
+  // 이 화면은 선택 해제 토글이 없어(항상 회차 하나) 비우는 시점도 없다.
+  const [routeStopMarkers, setRouteStopMarkers] = useState<MapMarker[]>([]);
 
   const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
@@ -118,6 +121,11 @@ export const TodayRunPage = () => {
         ? [{ id: String(liveRun.runId), lat: liveRun.position.lat, lng: liveRun.position.lng, kind: "bus" as const }]
         : [],
     [liveRun],
+  );
+  // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
+  const mapMarkersWithStops: MapMarker[] = useMemo(
+    () => [...mapMarkers, ...routeStopMarkers],
+    [mapMarkers, routeStopMarkers],
   );
   // R18-B2 목표 2 — 이 화면은 항상 회차 하나가 선택돼 있다(대기 상태가 없다,
   // 선택 해제 토글 부재). 마커가 있으면 곧 "선택된 버스" 라 세 화면이 공유하는
@@ -179,10 +187,12 @@ export const TodayRunPage = () => {
       setRoutePolylines(display.polylines);
       setRouteFallback(display.fallback);
       setRouteMissing(display.missing);
+      setRouteStopMarkers(display.stopMarkers);
     } catch (cause) {
       setRoutePolylines([]);
       setRouteFallback(false);
       setRouteMissing(false);
+      setRouteStopMarkers([]);
       setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
     }
   }, []);
@@ -252,7 +262,7 @@ export const TodayRunPage = () => {
           <StyledMapSurface>
             <MapSurface
               camera={mapCamera}
-              markers={mapMarkers}
+              markers={mapMarkersWithStops}
               polylines={routePolylines}
               onAuthFailed={(exception) =>
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")

@@ -55,7 +55,7 @@ const mockGetRunRoute = vi.mocked(getRunRoute);
 // R15-T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
 // "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
 beforeEach(() => {
-  mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+  mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
 });
 
 const baseDashboard: DashboardResponseTypes = {
@@ -163,7 +163,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
           markers: [{ id: "7", lat: 37.55, lng: 127.01, kind: "bus" }],
           // R18-B2 목표 2 — 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
           // 하나가 선택돼 있어(토글 없음) 마커가 있으면 곧 "선택된 버스" 다.
-          camera: { lat: 37.55, lng: 127.01, zoom: 16 },
+          camera: { lat: 37.55, lng: 127.01, zoom: 13 },
         }),
       ),
     );
@@ -224,7 +224,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
   afterEach(() => {
     mockRunIdParam = null;
     vi.clearAllMocks();
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
   });
 
   it("idle·confirmed·moving·finished 4종 상태가 전부 목록에 남는다 — finished 도 걸러내지 않는다", async () => {
@@ -265,6 +265,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
         { lat: 37.2, lng: 127.2 },
       ],
       fallbackUsed: true,
+      stops: [],
     });
     render(<TodayRunPage />);
 
@@ -292,7 +293,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
     mockGetRunsLive.mockResolvedValue({ runs: [] });
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
     render(<TodayRunPage />);
 
     expect(await screen.findByText("경로 정보가 아직 없습니다")).toBeInTheDocument();

@@ -429,6 +429,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
         { lat: 37.2, lng: 127.2 },
       ],
       fallbackUsed: true,
+      stops: [],
     });
     render(<DashboardPage />);
 
@@ -439,7 +440,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
   });
 
   it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true, stops: [] });
     render(<DashboardPage />);
 
     const busItem = await screen.findByText("3호차 · 등원");
@@ -469,13 +470,13 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 16 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 13 } }),
       ),
     );
   });
 
   it("경로 좌표가 0개면 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
     render(<DashboardPage />);
 
     fireEvent.click(await screen.findByText("3호차 · 등원"));
