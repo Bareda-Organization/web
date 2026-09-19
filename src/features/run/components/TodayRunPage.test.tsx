@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { MapSurfaceProps } from "@/features/map";
 import { TodayRunPage } from "./TodayRunPage";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
+import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
 // §5.4 는 runId 쿼리가 없으면 첫 회차로 리다이렉트해 명단을 불러오는 것이 진입점의
@@ -25,6 +26,11 @@ vi.mock("../api", () => ({
   patchRunAssignment: vi.fn(),
 }));
 
+// R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
+vi.mock("@/features/route", () => ({
+  getRunRoute: vi.fn(),
+}));
+
 // 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
@@ -38,6 +44,13 @@ vi.mock("@/features/map", () => ({
 const mockGetDashboard = vi.mocked(getDashboard);
 const mockGetRunRoster = vi.mocked(getRunRoster);
 const mockGetRunsLive = vi.mocked(getRunsLive);
+const mockGetRunRoute = vi.mocked(getRunRoute);
+
+// R15-T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
+// "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
+beforeEach(() => {
+  mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+});
 
 const baseDashboard: DashboardResponseTypes = {
   metrics: { movingBuses: 1, boarded: 1, noShow: 0, absent: 0, unassignedManagers: 0 },
@@ -184,5 +197,84 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
 
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
     expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [] }));
+  });
+});
+
+// R15-T2 §8.23 목표 3·4·5 — 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
+// 회차의 §5.19 노선을 지도에 그린다.
+describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", () => {
+  const fourStatusDashboard: DashboardResponseTypes = {
+    metrics: baseDashboard.metrics,
+    runs: [
+      { ...baseDashboard.runs[0], runId: 7, busNo: "2호차", runStatus: "idle" },
+      { ...baseDashboard.runs[0], runId: 8, busNo: "3호차", runStatus: "confirmed" },
+      { ...baseDashboard.runs[0], runId: 9, busNo: "4호차", runStatus: "moving" },
+      { ...baseDashboard.runs[0], runId: 10, busNo: "5호차", runStatus: "finished" },
+    ],
+  };
+
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+  });
+
+  it("idle·confirmed·moving·finished 4종 상태가 전부 목록에 남는다 — finished 도 걸러내지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue(fourStatusDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("2호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("3호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("4호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("5호차 · 등원")).toBeInTheDocument();
+    expect(screen.getAllByText("대기").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("확정").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("운행 중").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("운행 종료").length).toBeGreaterThan(0);
+  });
+
+  it("버스 목록 항목을 클릭하면 그 회차로 이동한다", async () => {
+    mockGetDashboard.mockResolvedValue(fourStatusDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<TodayRunPage />);
+
+    fireEvent.click(await screen.findByText("5호차 · 등원"));
+
+    expect(mockReplace).toHaveBeenCalledWith("/today-run?runId=10");
+  });
+
+  it("선택된 회차의 §5.19 노선을 지도에 그리고, 근사 경로면 안내한다", async () => {
+    mockRunIdParam = "9";
+    mockGetDashboard.mockResolvedValue(fourStatusDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [
+        { lat: 37.1, lng: 127.1 },
+        { lat: 37.2, lng: 127.2 },
+      ],
+      fallbackUsed: true,
+    });
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("근사 경로")).toBeInTheDocument();
+    expect(mockGetRunRoute).toHaveBeenCalledWith(9);
+    expect(mockMapSurface).toHaveBeenCalledWith(
+      expect.objectContaining({
+        polylines: [
+          {
+            id: "route-9",
+            points: [
+              { lat: 37.1, lng: 127.1 },
+              { lat: 37.2, lng: 127.2 },
+            ],
+            kind: "route",
+          },
+        ],
+      }),
+    );
   });
 });

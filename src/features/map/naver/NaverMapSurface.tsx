@@ -5,7 +5,7 @@
 // 몰라야 하고, 대신 한 단계 위의 `../MapSurface` 만 가져다 쓴다. 이 경계는
 // `features/map/mapAdapterBoundary.test.ts` 가 파일 스캔으로 강제한다.
 import { useEffect, useRef } from "react";
-import type { MapCamera, MapMarker, MapMarkerKind } from "../types";
+import type { MapCamera, MapMarker, MapMarkerKind, MapPolyline } from "../types";
 import { getNaverMapClientId } from "./naverMapConfig";
 import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
 import { MarkerAnimationController } from "./markerAnimationController";
@@ -14,6 +14,7 @@ import type { LatLng } from "./markerInterpolation";
 export type NaverMapSurfaceProps = {
   camera: MapCamera;
   markers: MapMarker[];
+  polylines?: MapPolyline[];
   onReady?: () => void;
   onAuthFailed?: (exception: unknown) => void;
   className?: string;
@@ -27,10 +28,19 @@ const MARKER_COLOR: Record<MapMarkerKind, string> = {
   student: "#f97316",
 };
 
-export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, className }: NaverMapSurfaceProps) => {
+export const NaverMapSurface = ({
+  camera,
+  markers,
+  polylines = [],
+  onReady,
+  onAuthFailed,
+  className,
+}: NaverMapSurfaceProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markerRefs = useRef<Map<string, naver.maps.Marker>>(new Map());
+  // R15-T2 — 선택된 노선. 마커와 달리 보간 대상이 아니다(경로는 한 번에 통째로 그린다).
+  const polylineRefs = useRef<Map<string, naver.maps.Polyline>>(new Map());
   // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
   // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
   const displayedPositions = useRef<Map<string, LatLng>>(new Map());
@@ -102,6 +112,7 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
     // 돌 때는 다른 값일 수 있다")는 이 지역 변수 캡처로 해소된다(동작 변경 없음).
     const displayedPositionsAtMount = displayedPositions.current;
     const markerRefsAtMount = markerRefs.current;
+    const polylineRefsAtMount = polylineRefs.current;
 
     return () => {
       cancelled = true;
@@ -112,6 +123,8 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
       displayedPositionsAtMount.clear();
       markerRefsAtMount.forEach((marker) => marker.setMap(null));
       markerRefsAtMount.clear();
+      polylineRefsAtMount.forEach((line) => line.setMap(null));
+      polylineRefsAtMount.clear();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,6 +184,40 @@ export const NaverMapSurface = ({ camera, markers, onReady, onAuthFailed, classN
       }
     }
   }, [markers]);
+
+  // 노선 갱신 — id 기준으로 추가·제거한다. 경로 좌표는 선택이 바뀔 때만 통째로
+  // 새로 오므로(보간 대상 아님) 기존 id 가 남아 있으면 경로만 다시 그린다.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !window.naver) return;
+    const naverMaps = window.naver.maps;
+    const existing = polylineRefs.current;
+    const nextIds = new Set(polylines.map((polyline) => polyline.id));
+
+    for (const [id, line] of existing) {
+      if (!nextIds.has(id)) {
+        line.setMap(null);
+        existing.delete(id);
+      }
+    }
+
+    for (const polylineData of polylines) {
+      const path = polylineData.points.map((point) => new naverMaps.LatLng(point.lat, point.lng));
+      const found = existing.get(polylineData.id);
+      if (found) {
+        found.setPath(path);
+        continue;
+      }
+      const created = new naverMaps.Polyline({
+        map,
+        path,
+        strokeColor: "#2563eb",
+        strokeWeight: 4,
+        strokeOpacity: 0.85,
+      });
+      existing.set(polylineData.id, created);
+    }
+  }, [polylines]);
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 };

@@ -15,3 +15,14 @@ export type MapMarker = {
   lng: number;
   kind: MapMarkerKind;
 };
+
+// R15-T2 — 버스를 고르면 그 노선을 지도에 그리는 데 쓴다(§5.19 road_path). `kind`
+// 는 지금은 "route" 하나뿐이지만, 화면이 SDK 타입을 몰라야 한다는 경계(mapAdapterBoundary)
+// 를 지키려면 폴리라인도 마커처럼 종류로 구분하는 형태를 미리 열어 둔다.
+export type MapPolylineKind = "route";
+
+export type MapPolyline = {
+  id: string;
+  points: { lat: number; lng: number }[];
+  kind: MapPolylineKind;
+};

@@ -5,15 +5,26 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { MapSurface, type MapCamera, type MapMarker } from "@/features/map";
+import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
+import { getRunRoute } from "@/features/route";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
-import type { DashboardRunResponseTypes, RosterItemResponseTypes, RosterStatus, RunLiveItemResponseTypes } from "../types";
+import type {
+  DashboardRunResponseTypes,
+  RosterItemResponseTypes,
+  RosterStatus,
+  RunLiveItemResponseTypes,
+  RunStatus,
+} from "../types";
 import { ForcedAddDialog } from "./ForcedAddDialog";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
 import {
   StyledTodayRunLayout,
-  StyledBusSwitcher,
-  StyledBusSwitcherButton,
+  StyledMapTopRow,
+  StyledMapPane,
+  StyledFallbackNotice,
+  StyledBusListPane,
+  StyledBusListItem,
+  StyledBusListItemHeader,
   StyledContentGrid,
   StyledSidePanel,
   StyledMapSurface,
@@ -52,6 +63,22 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
   from_academy: "하원",
 };
 
+// R15-T2 §8.23 목표 3 — DashboardPage.tsx 와 같은 표기(대기·확정·운행 중·운행 종료).
+// finished 도 이 화면의 우측 버스 목록에서 걸러내지 않는다.
+const RUN_STATUS_LABEL: Record<RunStatus, string> = {
+  idle: "대기",
+  confirmed: "확정",
+  moving: "운행 중",
+  finished: "운행 종료",
+};
+
+const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
+  idle: "idle",
+  confirmed: "idle",
+  moving: "moving",
+  finished: "boarded",
+};
+
 // §5.4 GET /staff/runs/{runId}/roster(A-06) · §5.7 POST .../forced-add(A-07) ·
 // §5.14 PATCH .../assignment(A-06) — 금일 운행 상세(UF-M-03·UF-M-04). §5.8(전학·이동)은
 // BRIEF-w1 담당 절 목록에 없어 범위 밖이다(A-07 이름이 겹쳐 보이지만 절 목록이 기준).
@@ -68,6 +95,10 @@ export const TodayRunPage = () => {
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [liveRun, setLiveRun] = useState<RunLiveItemResponseTypes | null>(null);
+  // R15-T2 — 우측 버스 목록에서 고른(=지금 화면에 뜬) 회차의 노선.
+  const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
+  const [routeFallback, setRouteFallback] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
@@ -123,6 +154,24 @@ export const TodayRunPage = () => {
     }
   }, []);
 
+  // R15-T2 목표 4 — 지금 화면에 뜬 회차의 §5.19 노선을 지도에 그린다. 이 화면은
+  // 항상 회차 하나가 선택된 상태라(대기 상태가 없다) DashboardPage.tsx 와 달리
+  // 선택 해제 토글은 두지 않는다(보고서 §2, 판단 근거).
+  const loadRoute = useCallback(async (runId: number) => {
+    setRouteError(null);
+    try {
+      const route = await getRunRoute(runId);
+      setRoutePolylines(
+        route.roadPath.length > 0 ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" as const }] : [],
+      );
+      setRouteFallback(route.fallbackUsed);
+    } catch (cause) {
+      setRoutePolylines([]);
+      setRouteFallback(false);
+      setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       await loadRuns();
@@ -134,8 +183,9 @@ export const TodayRunPage = () => {
     (async () => {
       await loadRoster(selectedRunId);
       await loadLiveRun(selectedRunId);
+      await loadRoute(selectedRunId);
     })();
-  }, [selectedRunId, loadRoster, loadLiveRun]);
+  }, [selectedRunId, loadRoster, loadLiveRun, loadRoute]);
 
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },
@@ -182,18 +232,42 @@ export const TodayRunPage = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <StyledBusSwitcher>
-        {runs.map((run) => (
-          <StyledBusSwitcherButton
-            key={run.runId}
-            type="button"
-            $active={run.runId === selectedRunId}
-            onClick={() => router.replace(`/today-run?runId=${run.runId}`)}
-          >
-            {run.busNo} · {DIRECTION_LABEL[run.direction]}
-          </StyledBusSwitcherButton>
-        ))}
-      </StyledBusSwitcher>
+      <StyledMapTopRow>
+        <StyledMapPane>
+          <StyledMapSurface>
+            <MapSurface
+              camera={mapCamera}
+              markers={mapMarkers}
+              polylines={routePolylines}
+              onAuthFailed={(exception) =>
+                setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+              }
+            />
+          </StyledMapSurface>
+          {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
+          {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+          {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
+          {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
+        </StyledMapPane>
+
+        <StyledBusListPane>
+          {runs.map((run) => (
+            <StyledBusListItem
+              key={run.runId}
+              type="button"
+              $active={run.runId === selectedRunId}
+              onClick={() => router.replace(`/today-run?runId=${run.runId}`)}
+            >
+              <StyledBusListItemHeader>
+                <span>
+                  {run.busNo} · {DIRECTION_LABEL[run.direction]}
+                </span>
+                <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
+              </StyledBusListItemHeader>
+            </StyledBusListItem>
+          ))}
+        </StyledBusListPane>
+      </StyledMapTopRow>
 
       <StyledContentGrid>
         <Card padding={0} aria-busy={loading}>
@@ -202,17 +276,7 @@ export const TodayRunPage = () => {
 
         <StyledSidePanel>
           <Card>
-            <p>노선</p>
-            <StyledMapSurface>
-              <MapSurface
-                camera={mapCamera}
-                markers={mapMarkers}
-                onAuthFailed={(exception) =>
-                  setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
-                }
-              />
-            </StyledMapSurface>
-            {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
+            <p>현재 위치</p>
             <StyledCrewRow>
               <StyledCrewLabel>현재 위치</StyledCrewLabel>
               <span>

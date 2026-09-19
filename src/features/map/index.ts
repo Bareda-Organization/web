@@ -2,4 +2,4 @@
 // SDK 타입(`naver.maps.*`)은 어디에도 재노출하지 않는다.
 export { MapSurface } from "./MapSurface";
 export type { MapSurfaceProps } from "./MapSurface";
-export type { MapCamera, MapMarker, MapMarkerKind } from "./types";
+export type { MapCamera, MapMarker, MapMarkerKind, MapPolyline, MapPolylineKind } from "./types";

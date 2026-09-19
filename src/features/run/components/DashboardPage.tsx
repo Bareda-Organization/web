@@ -14,18 +14,21 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { MapSurface, type MapCamera, type MapMarker } from "@/features/map";
+import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
+import { getRunRoute } from "@/features/route";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import {
   StyledDashboardLayout,
   StyledStatGrid,
-  StyledContentGrid,
-  StyledLiveCard,
-  StyledLiveEmpty,
-  StyledLiveItem,
-  StyledLiveItemHeader,
-  StyledLiveItemMeta,
+  StyledMapTopRow,
+  StyledMapPane,
+  StyledFallbackNotice,
+  StyledBusListPane,
+  StyledBusListEmpty,
+  StyledBusListItem,
+  StyledBusListItemHeader,
+  StyledBusListItemMeta,
   StyledMapSurface,
 } from "./DashboardPage.styled";
 
@@ -36,11 +39,14 @@ const LIVE_POLL_INTERVAL_MS = 7000;
 // 아니게 한다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
+// R15-T2 §8.23 목표 3 이 못박은 표기 그대로 — idle(대기)·confirmed(확정)·
+// moving(운행 중)·finished(운행 종료). `finished` 도 이 목록에서 걸러내지 않는다
+// (사용자 확정 — "운행종료 버스도 목록에 남긴다").
 const RUN_STATUS_LABEL: Record<RunStatus, string> = {
   idle: "대기",
   confirmed: "확정",
-  moving: "이동 중",
-  finished: "종료",
+  moving: "운행 중",
+  finished: "운행 종료",
 };
 
 const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
@@ -68,6 +74,15 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선. 목록 자체는 `runs`(getDashboard,
+  // 4종 상태 전부)를 쓰고, 위치만 `liveRuns`(getRunsLive, moving 전용)에서 run_id 로
+  // 합친다(§8.23 목표 3 이 못박은 함정 회피).
+  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
+  const [routeFallback, setRouteFallback] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
+
+  const liveByRunId = useMemo(() => new Map(liveRuns.map((run) => [run.runId, run])), [liveRuns]);
 
   const mapMarkers: MapMarker[] = useMemo(
     () =>
@@ -106,6 +121,32 @@ export const DashboardPage = () => {
       // 실시간 카드는 보조 정보라 실패해도 본문 오류로 승격하지 않는다 — 다음 폴링에서 회복.
     }
   }, []);
+
+  // R15-T2 목표 4 — 버스를 고르면 그 노선을 지도에 그린다. 같은 버스를 다시 고르면
+  // 선택을 해제한다(토글) — 목표 4 "선택 해제도 검사"가 요구하는 짝.
+  const handleSelectBus = useCallback(
+    async (runId: number) => {
+      if (selectedRunId === runId) {
+        setSelectedRunId(null);
+        setRoutePolylines([]);
+        setRouteFallback(false);
+        setRouteError(null);
+        return;
+      }
+      setSelectedRunId(runId);
+      setRouteError(null);
+      try {
+        const route = await getRunRoute(runId);
+        setRoutePolylines(route.roadPath.length > 0 ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
+        setRouteFallback(route.fallbackUsed);
+      } catch (cause) {
+        setRoutePolylines([]);
+        setRouteFallback(false);
+        setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+      }
+    },
+    [selectedRunId],
+  );
 
   // Goal 7 — `/topic/academy/{academyId}/live` 구독. `position` 은 payload 가
   // 화면에 필요한 필드(lat·lng·currentStopName)를 전부 담고 있어 `liveRuns` 를
@@ -230,66 +271,79 @@ export const DashboardPage = () => {
         <StatCard label="매니저 미배치" value={metrics?.unassignedManagers ?? "-"} unit="건" icon="user-round-x" />
       </StyledStatGrid>
 
-      <StyledContentGrid>
-        <Card padding={0}>
-          <RosterTable
-            columns={columns}
-            rows={runs}
-            getRowKey={(row) => row.runId}
-            onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}
-          />
-        </Card>
+      <StyledMapTopRow>
+        <StyledMapPane>
+          <StyledMapSurface>
+            <MapSurface
+              camera={mapCamera}
+              markers={mapMarkers}
+              polylines={routePolylines}
+              onAuthFailed={(exception) =>
+                setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+              }
+            />
+          </StyledMapSurface>
+          {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
+          {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+          {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
+          {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
+        </StyledMapPane>
 
-        <StyledLiveCard>
-          <Card>
-            <p>실시간 위치</p>
-            <StyledMapSurface>
-              <MapSurface
-                camera={mapCamera}
-                markers={mapMarkers}
-                onAuthFailed={(exception) =>
-                  setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
-                }
-              />
-            </StyledMapSurface>
-            {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
-            {wsIsLost ? (
-              <AlertBanner
-                tone="missed"
-                title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
-              >
-                {connectionState === "forbidden"
-                  ? "이 학원의 실시간 갱신을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
-                  : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
-              </AlertBanner>
-            ) : null}
-            {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
-            {liveRuns.length === 0 ? (
-              <StyledLiveEmpty>지금 이동 중인 버스가 없습니다</StyledLiveEmpty>
-            ) : (
-              liveRuns.map((run) => (
-                <StyledLiveItem key={run.runId}>
-                  <StyledLiveItemHeader>
-                    <span>{run.busNo}</span>
-                    <StatusPill status="moving">이동 중</StatusPill>
-                  </StyledLiveItemHeader>
-                  <StyledLiveItemMeta>
-                    {run.position
-                      ? `현재 ${run.currentStop ?? "-"} → 다음 ${run.nextStop ?? "-"}`
-                      : run.lastSeenAt
-                        ? `최근 확인 ${run.lastSeenAt}`
-                        : "위치 확인 대기"}
-                  </StyledLiveItemMeta>
-                  <StyledLiveItemMeta>
-                    진행 {run.progress.done}/{run.progress.total}
-                    {run.delayMinutes ? ` · 지연 ${run.delayMinutes}분` : ""}
-                  </StyledLiveItemMeta>
-                </StyledLiveItem>
-              ))
-            )}
-          </Card>
-        </StyledLiveCard>
-      </StyledContentGrid>
+        <StyledBusListPane>
+          <p>버스 현황</p>
+          {wsIsLost ? (
+            <AlertBanner
+              tone="missed"
+              title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
+            >
+              {connectionState === "forbidden"
+                ? "이 학원의 실시간 갱신을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
+                : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
+            </AlertBanner>
+          ) : null}
+          {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
+          {runs.length === 0 ? (
+            <StyledBusListEmpty>오늘 등록된 회차가 없습니다</StyledBusListEmpty>
+          ) : (
+            runs.map((run) => {
+              const live = liveByRunId.get(run.runId);
+              return (
+                <StyledBusListItem
+                  key={run.runId}
+                  type="button"
+                  $active={run.runId === selectedRunId}
+                  onClick={() => handleSelectBus(run.runId)}
+                >
+                  <StyledBusListItemHeader>
+                    <span>
+                      {run.busNo} · {DIRECTION_LABEL[run.direction]}
+                    </span>
+                    <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
+                  </StyledBusListItemHeader>
+                  {run.runStatus === "moving" ? (
+                    <StyledBusListItemMeta>
+                      {live?.position
+                        ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}`
+                        : live?.lastSeenAt
+                          ? `최근 확인 ${live.lastSeenAt}`
+                          : "위치 확인 대기"}
+                    </StyledBusListItemMeta>
+                  ) : null}
+                </StyledBusListItem>
+              );
+            })
+          )}
+        </StyledBusListPane>
+      </StyledMapTopRow>
+
+      <Card padding={0}>
+        <RosterTable
+          columns={columns}
+          rows={runs}
+          getRowKey={(row) => row.runId}
+          onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}
+        />
+      </Card>
     </StyledDashboardLayout>
   );
 };

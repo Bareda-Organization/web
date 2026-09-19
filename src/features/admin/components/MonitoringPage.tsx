@@ -11,11 +11,23 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { MapSurface, type MapCamera, type MapMarker } from "@/features/map";
+import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
+import { getRunRoute } from "@/features/route";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { RunRosterDialog } from "./RunRosterDialog";
-import { StyledFilterRow, StyledMapSurface, StyledMonitoringLayout } from "./MonitoringPage.styled";
+import {
+  StyledFilterRow,
+  StyledMapTopRow,
+  StyledMapPane,
+  StyledFallbackNotice,
+  StyledBusListPane,
+  StyledBusListEmpty,
+  StyledBusListItem,
+  StyledBusListItemHeader,
+  StyledMapSurface,
+  StyledMonitoringLayout,
+} from "./MonitoringPage.styled";
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
 const LIVE_POLL_INTERVAL_MS = 7000;
@@ -56,6 +68,11 @@ export const MonitoringPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
+  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
+  const [routeFallback, setRouteFallback] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   // 실시간 회차의 좌표를 지도 마커로 옮긴다 — 위치를 아직 못 받은 회차(`position: null`)는
   // 마커를 만들지 않는다. 마커가 하나라도 있으면 그 평균 좌표를 카메라 중심으로 삼아
@@ -115,6 +132,32 @@ export const MonitoringPage = () => {
       setLoadingRuns(false);
     }
   }, []);
+
+  // R15-T2 목표 4 — 버스를 고르면 그 노선을 지도에 그린다. 같은 버스를 다시 고르면
+  // 선택을 해제한다(DashboardPage.tsx 와 같은 토글).
+  const handleSelectBus = useCallback(
+    async (runId: number) => {
+      if (selectedRunId === runId) {
+        setSelectedRunId(null);
+        setRoutePolylines([]);
+        setRouteFallback(false);
+        setRouteError(null);
+        return;
+      }
+      setSelectedRunId(runId);
+      setRouteError(null);
+      try {
+        const route = await getRunRoute(runId);
+        setRoutePolylines(route.roadPath.length > 0 ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
+        setRouteFallback(route.fallbackUsed);
+      } catch (cause) {
+        setRoutePolylines([]);
+        setRouteFallback(false);
+        setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+      }
+    },
+    [selectedRunId],
+  );
 
   // Goal 8 — `/topic/admin/live` 구독. 이 채널은 학원 경계를 넘어 전체를
   // 방송하므로(BRIEF-a1.md §2) `runs` 는 화면이 지금 선택한 학원 하나만 들고
@@ -246,15 +289,49 @@ export const MonitoringPage = () => {
         />
       </StyledFilterRow>
 
-      <StyledMapSurface>
-        <MapSurface
-          camera={mapCamera}
-          markers={mapMarkers}
-          onAuthFailed={(exception) =>
-            setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
-          }
-        />
-      </StyledMapSurface>
+      {/* R15-T2 §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
+          이 화면의 목록은 §6.8 정의상 moving 회차만 대상이다(Ruling 313 — O-05 는
+          "운행 중 전 차량" 관제이고, idle·finished 는 stops[].eta 등 필수 필드 자체가
+          없어 넓힐 수 없다). 아래 상세 표(EmptyState/RosterTable)는 그대로 둔다. */}
+      <StyledMapTopRow>
+        <StyledMapPane>
+          <StyledMapSurface>
+            <MapSurface
+              camera={mapCamera}
+              markers={mapMarkers}
+              polylines={routePolylines}
+              onAuthFailed={(exception) =>
+                setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+              }
+            />
+          </StyledMapSurface>
+          {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+          {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
+          {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
+        </StyledMapPane>
+
+        <StyledBusListPane>
+          {runs.length === 0 ? (
+            <StyledBusListEmpty>표시할 버스가 없습니다</StyledBusListEmpty>
+          ) : (
+            runs.map((run) => (
+              <StyledBusListItem
+                key={run.runId}
+                type="button"
+                $active={run.runId === selectedRunId}
+                onClick={() => handleSelectBus(run.runId)}
+              >
+                <StyledBusListItemHeader>
+                  <span>
+                    {run.busNo} · {DIRECTION_LABEL[run.direction]}
+                  </span>
+                  <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
+                </StyledBusListItemHeader>
+              </StyledBusListItem>
+            ))
+          )}
+        </StyledBusListPane>
+      </StyledMapTopRow>
 
       <Card padding={0} aria-busy={loadingRuns}>
         {!loadingAcademies && !error && academies.length === 0 ? (

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addRunWaypoint, getRouteDetail, getRoutes } from "./index";
+import { addRunWaypoint, getRouteDetail, getRoutes, getRunRoute } from "./index";
 
 // §5.9 RTE-01·09 · §5.15 RTE-10 — snake_case ↔ camelCase 변환 경계. toListItem 의
 // name 필드와 toStop 의 name 필드는 서로 다른 raw 타입(노선 이름 vs 정차지 이름)이지만
@@ -104,5 +104,49 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.routePreview.reordered).toEqual([{ stopId: 99, stopName: "새 경유지" }]);
     expect(result.routePreview.removed).toEqual([]);
     expect(result.applied).toBe(false);
+  });
+
+  // R15-T2 목표 4 — road_path 좌표 배열과 fallback_used 를 camelCase 로 바꾼다. 좌표
+  // 순서가 뒤집히면(경도·위도 자리 교환) 지도가 바다 위로 가므로 첫·끝 값을 각각 본다.
+  it("getRunRoute 는 road_path·fallback_used 를 camelCase 로 바꾼다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            road_path: [
+              { lat: 37.1, lng: 127.1 },
+              { lat: 37.2, lng: 127.2 },
+            ],
+            fallback_used: false,
+          },
+        }),
+      ),
+    );
+
+    const result = await getRunRoute(7);
+
+    expect(result.roadPath).toEqual([
+      { lat: 37.1, lng: 127.1 },
+      { lat: 37.2, lng: 127.2 },
+    ]);
+    expect(result.fallbackUsed).toBe(false);
+  });
+
+  it("getRunRoute 는 fallback_used=true 도 그대로 전달한다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: { road_path: [{ lat: 37.1, lng: 127.1 }], fallback_used: true },
+        }),
+      ),
+    );
+
+    const result = await getRunRoute(7);
+
+    expect(result.fallbackUsed).toBe(true);
   });
 });

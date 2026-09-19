@@ -1,7 +1,8 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
 import { getAcademies, getAcademyRunsLive } from "../api";
+import { getRunRoute } from "@/features/route";
 import type { RunLiveItemResponseTypes } from "../types";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
@@ -19,8 +20,14 @@ vi.mock("../api", () => ({
   getAcademyRunsLive: vi.fn(),
 }));
 
+// R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
+vi.mock("@/features/route", () => ({
+  getRunRoute: vi.fn(),
+}));
+
 const mockGetAcademies = vi.mocked(getAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
+const mockGetRunRoute = vi.mocked(getRunRoute);
 
 // Goal 8·9 시험은 실제 WebSocket 을 열지 않는다 — `useRealtimeChannel` 을 가짜로
 // 바꿔 봉투 전달과 연결 상태를 직접 제어한다(DashboardPage.test.tsx 와 같은 방식,
@@ -241,5 +248,52 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
     expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+// R15-T2 §8.23 목표 2·4·5 — 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
+// 유지). 버스를 고르면 그 노선을 지도에 그리고, 근사 경로면 안내한다.
+describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () => {
+  beforeEach(() => {
+    capturedOnEnvelope = undefined;
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("버스 목록 항목을 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내한다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [
+        { lat: 37.1, lng: 127.1 },
+        { lat: 37.2, lng: 127.2 },
+      ],
+      fallbackUsed: true,
+    });
+    render(<MonitoringPage />);
+
+    // 우측 버스 목록 항목 — RosterTable 의 "1호차"(busNo 단독 열)와 겹치지
+    // 않도록 방향까지 묶은 문구로 고른다(DashboardPage.test.tsx 와 같은 방식).
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(mockGetRunRoute).toHaveBeenCalledWith(1);
+    expect(await screen.findByText("근사 경로")).toBeInTheDocument();
+  });
+
+  it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
+    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true });
+    render(<MonitoringPage />);
+
+    const busItem = await screen.findByText("1호차 · 등원");
+    fireEvent.click(busItem);
+    expect(await screen.findByText("근사 경로")).toBeInTheDocument();
+
+    fireEvent.click(busItem);
+    expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
+    expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 });

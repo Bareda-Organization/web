@@ -1,13 +1,21 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 import { DashboardPage } from "./DashboardPage";
 import { getDashboard, getRunsLive } from "../api";
+import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
+}));
+
+// R15-T2 목표 4 — §5.19 를 부르는 클라이언트(getRunRoute)는 features/route 를 통해서만
+// 온다. 이 화면 시험은 지도 SDK 자체를 검증하지 않으므로(TodayRunPage.test.tsx 와 같은
+// 한계) 클릭이 이 함수를 올바른 runId 로 부르는지, fallback 문구가 뜨는지만 본다.
+vi.mock("@/features/route", () => ({
+  getRunRoute: vi.fn(),
 }));
 
 // AuthGateGuard 가 관계자 role 에서만 이 화면을 그리므로(DashboardPage.tsx 의 Goal 7
@@ -43,6 +51,7 @@ vi.mock("../api", () => ({
 
 const mockGetDashboard = vi.mocked(getDashboard);
 const mockGetRunsLive = vi.mocked(getRunsLive);
+const mockGetRunRoute = vi.mocked(getRunRoute);
 
 const emptyLive: RunsLiveResponseTypes = { runs: [] };
 
@@ -276,24 +285,28 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
 });
 
 // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. REST 폴링이 채운
-// "지금 이동 중인 버스가 없습니다"는 WS 상태와 무관하게 항상 사실이라는 판단
-// (보고서 §1)을 고정 — 배너는 목록을 대체하지 않고 위에 별도로 뜬다.
+// "오늘 등록된 회차가 없습니다"(R15-T2 이전 문구는 "지금 이동 중인 버스가 없습니다")는
+// WS 상태와 무관하게 항상 사실이라는 판단(보고서 §1)을 고정 — 배너는 목록을 대체하지
+// 않고 위에 별도로 뜬다.
 describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("연결이 끊기면(gaveUp) 연결 끊김 배너를 띄우고, 빈 목록 문구도 함께 유지한다", async () => {
+  // R15-T2 — 우측 버스 목록은 이제 getRunsLive(moving 전용)가 아니라 getDashboard(4종
+  // 상태 전부)로 채운다(§8.23 목표 3). "빈 목록" 의 기준도 그에 맞춰 runs 로 옮겨서,
+  // runs 가 빈 배열일 때만 빈 목록 문구가 뜬다는 것을 확인한다.
+  it("연결이 끊기면(gaveUp) 연결 끊김 배너를 띄우고, runs 가 비어 있으면 빈 목록 문구도 함께 유지한다", async () => {
     mockUseAuthSession.mockReturnValue({
       session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
     });
     mockConnectionState = "gaveUp";
-    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
     expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
-    expect(screen.getByText("지금 이동 중인 버스가 없습니다")).toBeInTheDocument();
+    expect(screen.getByText("오늘 등록된 회차가 없습니다")).toBeInTheDocument();
   });
 
   it("forbidden 이면 권한 없음 문구를 띄운다", async () => {
@@ -338,7 +351,7 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
   // (liveRuns.length === 0)가 같은 조건 하나로 묶여도 기존 시험은 전부
   // liveRuns 가 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이
   // 끊긴 경우를 더해 두 조건이 서로 무관함을 고정한다.
-  it("목록에 항목이 있어도(liveRuns 비어있지 않음) 연결이 끊기면 배너가 뜨고, 빈 목록 문구는 뜨지 않는다", async () => {
+  it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, 빈 목록 문구는 뜨지 않는다", async () => {
     mockUseAuthSession.mockReturnValue({
       session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
     });
@@ -351,6 +364,77 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
     // 실제로 채워졌다는 것을 보여주는 유일한 표식이다("1호차"는 대시보드 표에도 있어 유일하지 않다).
     expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
-    expect(screen.queryByText("지금 이동 중인 버스가 없습니다")).not.toBeInTheDocument();
+    expect(screen.queryByText("오늘 등록된 회차가 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+// R15-T2 §8.23 목표 3·4·5 — 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
+// 버스를 고르면 §5.19 노선을 지도에 그린다(선택 해제·근사 경로 표시 포함).
+describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", () => {
+  const fourStatusDashboard: DashboardResponseTypes = {
+    metrics: baseDashboard.metrics,
+    runs: [
+      { ...baseDashboard.runs[0], runId: 1, busNo: "1호차", runStatus: "idle" },
+      { ...baseDashboard.runs[0], runId: 2, busNo: "2호차", runStatus: "confirmed" },
+      { ...baseDashboard.runs[0], runId: 3, busNo: "3호차", runStatus: "moving" },
+      { ...baseDashboard.runs[0], runId: 4, busNo: "4호차", runStatus: "finished" },
+    ],
+  };
+
+  beforeEach(() => {
+    mockUseAuthSession.mockReturnValue({
+      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
+    });
+    mockConnectionState = "connected";
+    mockGetDashboard.mockResolvedValue(fourStatusDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("idle·confirmed·moving·finished 4종 상태 회차가 전부 목록에 남는다 — finished 도 걸러내지 않는다", async () => {
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("1호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("2호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("3호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("4호차 · 등원")).toBeInTheDocument();
+    // 같은 상태 라벨이 우측 목록과 아래 회차 표(RosterTable) 양쪽에 나온다 —
+    // getAllByText 로 "적어도 하나는 있다"만 본다(중복 자체는 문제가 아니다).
+    expect(screen.getAllByText("대기").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("확정").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("운행 중").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("운행 종료").length).toBeGreaterThan(0);
+  });
+
+  it("버스를 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내를 보여준다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [
+        { lat: 37.1, lng: 127.1 },
+        { lat: 37.2, lng: 127.2 },
+      ],
+      fallbackUsed: true,
+    });
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("3호차 · 등원"));
+
+    expect(mockGetRunRoute).toHaveBeenCalledWith(3);
+    expect(await screen.findByText("근사 경로")).toBeInTheDocument();
+  });
+
+  it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
+    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true });
+    render(<DashboardPage />);
+
+    const busItem = await screen.findByText("3호차 · 등원");
+    fireEvent.click(busItem);
+    expect(await screen.findByText("근사 경로")).toBeInTheDocument();
+
+    fireEvent.click(busItem);
+    expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
+    expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 });
