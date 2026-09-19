@@ -12,9 +12,15 @@ import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 // 컴포넌트에 무엇으로 전달되는지만 검증한다(SDK 렌더링이 아니라 화면의 계산
 // 로직 검증 — TodayRunPage.test.tsx 와 같은 방식).
 const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
-vi.mock("@/features/map", () => ({
-  MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
-}));
+// R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
+// 쓴다(순수 함수라 SDK 에 안 걸린다). `MapSurface` 만 목으로 바꾼다.
+vi.mock("@/features/map", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/map")>();
+  return {
+    ...actual,
+    MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
+  };
+});
 
 // A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
 // 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다

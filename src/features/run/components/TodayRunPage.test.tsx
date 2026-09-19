@@ -37,9 +37,15 @@ vi.mock("@/features/route", () => ({
 // `MapSurface` 자체를 목으로 바꿔 TodayRunPage 가 계산한 markers·camera 값이 그 컴포넌트에
 // 무엇으로 전달되는지만 검증한다 — SDK 렌더링이 아니라 "이 화면의 계산 로직"의 검증이다.
 const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
-vi.mock("@/features/map", () => ({
-  MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
-}));
+// R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
+// 쓴다(순수 함수, SDK 무관). `MapSurface` 만 목으로 바꾼다.
+vi.mock("@/features/map", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/map")>();
+  return {
+    ...actual,
+    MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
+  };
+});
 
 const mockGetDashboard = vi.mocked(getDashboard);
 const mockGetRunRoster = vi.mocked(getRunRoster);
@@ -155,7 +161,9 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
       expect(mockMapSurface).toHaveBeenCalledWith(
         expect.objectContaining({
           markers: [{ id: "7", lat: 37.55, lng: 127.01, kind: "bus" }],
-          camera: { lat: 37.55, lng: 127.01, zoom: 12 },
+          // R18-B2 목표 2 — 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
+          // 하나가 선택돼 있어(토글 없음) 마커가 있으면 곧 "선택된 버스" 다.
+          camera: { lat: 37.55, lng: 127.01, zoom: 16 },
         }),
       ),
     );
@@ -276,5 +284,18 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
         ],
       }),
     );
+  });
+
+  // R18-B2 목표 2 — MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태.
+  it("경로 좌표가 0개면 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
+    mockRunIdParam = "9";
+    mockGetDashboard.mockResolvedValue(fourStatusDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("경로 정보가 아직 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
   });
 });

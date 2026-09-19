@@ -5,11 +5,24 @@ import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 import { DashboardPage } from "./DashboardPage";
 import { getDashboard, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
+import type { MapSurfaceProps } from "@/features/map";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+
+// R18-B2 목표 2 — `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
+// 컴포넌트에 무엇으로 전달되는지 확인한다. `cameraForSelectedBus`·
+// `buildRouteDisplayState` 는 실제 구현 그대로 둔다(순수 함수, SDK 무관).
+const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+vi.mock("@/features/map", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/map")>();
+  return {
+    ...actual,
+    MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
+  };
+});
 
 // R15-T2 목표 4 — §5.19 를 부르는 클라이언트(getRunRoute)는 features/route 를 통해서만
 // 온다. 이 화면 시험은 지도 SDK 자체를 검증하지 않으므로(TodayRunPage.test.tsx 와 같은
@@ -436,5 +449,38 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     fireEvent.click(busItem);
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
+  });
+
+  // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 방식으로 이 화면에도 적용한다.
+  it("버스를 고르면 카메라가 그 버스 좌표로 옮겨가고 확대한다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        {
+          ...baseLiveRun,
+          runId: 3,
+          busNo: "3호차",
+          position: { lat: 37.111, lng: 127.222, recordedAt: "2026-09-13T00:00:01Z" },
+        },
+      ],
+    });
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("3호차 · 등원"));
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 16 } }),
+      ),
+    );
+  });
+
+  it("경로 좌표가 0개면 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("3호차 · 등원"));
+
+    expect(await screen.findByText("경로 정보가 아직 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
   });
 });

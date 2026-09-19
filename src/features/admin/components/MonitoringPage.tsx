@@ -11,7 +11,14 @@ import {
 import { useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
+import {
+  MapSurface,
+  buildRouteDisplayState,
+  cameraForSelectedBus,
+  type MapCamera,
+  type MapMarker,
+  type MapPolyline,
+} from "@/features/map";
 import { getRunRoute } from "@/features/route";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
@@ -87,18 +94,14 @@ export const MonitoringPage = () => {
         .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
     [runs],
   );
-  // R18-B 목표 2 — 버스를 고르면 그 버스를 지도 정중앙에 두고 확대한다. zoom 16 은
-  // 그 버스 주변 정차지 1~2개가 함께 보이는 "동네" 단위 축척이다 — 기본 축척(도시
-  // 단위, 12)보다 4단계 좁혔다(보고서 §2, 실제 지도 화면으로 눈으로 확인은 못함).
-  const SELECTED_BUS_MAP_ZOOM = 16;
+  // R18-B2 목표 3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면 몫을
+  // 한 곳에서 정한다(R18-B 때 이 화면 안에 있던 상수를 공유 표면으로 올렸다).
   const selectedBusMarker = useMemo(
     () => mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
     [mapMarkers, selectedRunId],
   );
   const mapCamera: MapCamera = useMemo(() => {
-    if (selectedBusMarker) {
-      return { lat: selectedBusMarker.lat, lng: selectedBusMarker.lng, zoom: SELECTED_BUS_MAP_ZOOM };
-    }
+    if (selectedBusMarker) return cameraForSelectedBus(selectedBusMarker, DEFAULT_CAMERA);
     if (mapMarkers.length === 0) return DEFAULT_CAMERA;
     const sum = mapMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
       lat: 0,
@@ -163,12 +166,12 @@ export const MonitoringPage = () => {
       setRouteError(null);
       try {
         const route = await getRunRoute(runId);
-        const hasRoute = route.roadPath.length > 0;
-        setRoutePolylines(hasRoute ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
-        // R18-B 목표 3 — 좌표가 0개면 빈 지도와 구별되는 "데이터 부재" 안내를 켠다.
-        // 근사 경로 안내는 실제로 무언가 그려졌을 때만 의미가 있어 그때만 켠다.
-        setRouteFallback(hasRoute && route.fallbackUsed);
-        setRouteMissing(!hasRoute);
+        // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
+        // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
+        const display = buildRouteDisplayState(runId, route);
+        setRoutePolylines(display.polylines);
+        setRouteFallback(display.fallback);
+        setRouteMissing(display.missing);
       } catch (cause) {
         setRoutePolylines([]);
         setRouteFallback(false);
