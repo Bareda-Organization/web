@@ -57,23 +57,40 @@ export type RouteOptimizeRequestTypes = {
   destination: LatLng;
 };
 
-// §5.15 POST/DELETE /staff/runs/{runId}/waypoints 공용 응답 — 미리보기·배포 결과 대조.
-export type WaypointRoutePreview = {
-  stopsBefore: RouteStop[];
-  stopsAfter: RouteStop[];
-  reordered: RouteStop[];
+// §5.5 상세 정차지 한 자리 — RouteStop(고정 노선 편성)과 달리 stop_id·lat·lng 가 없다(정차
+// 순서·이름·도착예정만 있는 축약형, PreviewStopResponse.java 확인). eta 는 "전" 목록에서는
+// 기록된 도착 실측이 없으면 null 이다(§5.15, R14-T3 실측 — curl 로 직접 확인, 보고서 §1).
+export type WaypointPreviewStop = {
+  seq: number;
+  stopName: string;
+  eta: string | null;
 };
 
-// ⚠ 단위 미표기 — §5.15 본문이 est_time_before·est_distance_before 의 단위를 명시하지
-// 않고, 이 엔드포인트를 실측(curl)하지 못했다(운행 시작 전 실 회차가 필요). 화면은
-// 값을 그대로 표시하고 단위를 임의로 붙이지 않는다(보고서 §2, 확신 없는 지점).
+// reordered·removed 한 자리 — 무엇이 바뀌었는지만 가리킨다(StopRefResponse.java, seq·eta 는
+// stopsBefore·After 쪽에 이미 있다).
+export type StopRef = {
+  stopId: number;
+  stopName: string;
+};
+
+// §5.15 POST/DELETE /staff/runs/{runId}/waypoints 공용 응답 — 미리보기·배포 결과 대조.
+export type WaypointRoutePreview = {
+  stopsBefore: WaypointPreviewStop[];
+  stopsAfter: WaypointPreviewStop[];
+  reordered: StopRef[];
+  removed: StopRef[];
+};
+
+// estTimeBefore·After 는 지속시간이 아니라 마지막 정차지 도착예정 시각(ISO, WaypointResponse.java
+// 의 OffsetDateTime)이다 — R14-T3 실측 전에는 curl 로 확인하지 못해 number 로 잘못 적혀 있었다
+// (보고서 §1). "전" 쪽은 기록된 도착 실측이 없으면 null.
 export type WaypointResultResponseTypes = {
   waypointId: number;
   routePreview: WaypointRoutePreview;
-  estTimeBefore: number;
-  estTimeAfter: number;
-  estDistanceBefore: number;
-  estDistanceAfter: number;
+  estTimeBefore: string | null;
+  estTimeAfter: string | null;
+  estDistanceBefore: number | null;
+  estDistanceAfter: number | null;
   applied: boolean;
 };
 

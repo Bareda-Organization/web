@@ -67,7 +67,11 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.busNo).toBe("1호차");
   });
 
-  it("addRunWaypoint 는 routePreview 의 stopsBefore·After·reordered 를 각각 camelCase 로 바꾼다", async () => {
+  // R14-T3 실측(curl, 보고서 §1) 대로 고친 형태 — stops_before·After 는 stop_id·lat·lng 가
+  // 없는 축약형(seq·stop_name·eta), reordered·removed 는 stop_id·stop_name 만 있는 참조형이다
+  // (PreviewStopResponse.java·StopRefResponse.java 확인). 옛 시험은 이 두 모양을 RouteStop 하나로
+  // 오인해 만든 값이라 실제 서버 응답과 달랐다.
+  it("addRunWaypoint 는 routePreview 의 stopsBefore·After·reordered·removed 를 각각 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -76,14 +80,15 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
           data: {
             waypoint_id: 5,
             route_preview: {
-              stops_before: [{ stop_id: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }],
-              stops_after: [{ stop_id: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }],
-              reordered: [{ stop_id: 99, seq: 1, name: "새 경유지", lat: 37.2, lng: 127.2 }],
+              stops_before: [{ seq: 1, stop_name: "정문", eta: null }],
+              stops_after: [{ seq: 1, stop_name: "정문", eta: "2026-09-19T04:36:01.446625Z" }],
+              reordered: [{ stop_id: 99, stop_name: "새 경유지" }],
+              removed: [],
             },
-            est_time_before: 600,
-            est_time_after: 720,
-            est_distance_before: 5000,
-            est_distance_after: 6000,
+            est_time_before: null,
+            est_time_after: "2026-09-19T04:37:55.446625Z",
+            est_distance_before: null,
+            est_distance_after: 6.0,
             applied: false,
           },
         }),
@@ -93,9 +98,11 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     const result = await addRunWaypoint(7, { label: "새 경유지", lat: 37.2, lng: 127.2, apply: false });
 
     expect(result.waypointId).toBe(5);
-    expect(result.routePreview.reordered).toEqual([
-      { stopId: 99, seq: 1, name: "새 경유지", lat: 37.2, lng: 127.2 },
+    expect(result.routePreview.stopsAfter).toEqual([
+      { seq: 1, stopName: "정문", eta: "2026-09-19T04:36:01.446625Z" },
     ]);
+    expect(result.routePreview.reordered).toEqual([{ stopId: 99, stopName: "새 경유지" }]);
+    expect(result.routePreview.removed).toEqual([]);
     expect(result.applied).toBe(false);
   });
 });

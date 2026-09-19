@@ -120,26 +120,42 @@ export const optimizeRoute = async (
   return toDetail(raw);
 };
 
+type RawWaypointPreviewStop = { seq: number; stop_name: string; eta: string | null };
+type RawStopRef = { stop_id: number; stop_name: string };
+
 type RawWaypointResult = {
   waypoint_id: number;
   route_preview: {
-    stops_before: RawRouteStop[];
-    stops_after: RawRouteStop[];
-    reordered: RawRouteStop[];
+    stops_before: RawWaypointPreviewStop[];
+    stops_after: RawWaypointPreviewStop[];
+    reordered: RawStopRef[];
+    removed: RawStopRef[];
   };
-  est_time_before: number;
-  est_time_after: number;
-  est_distance_before: number;
-  est_distance_after: number;
+  est_time_before: string | null;
+  est_time_after: string | null;
+  est_distance_before: number | null;
+  est_distance_after: number | null;
   applied: boolean;
 };
+
+const toPreviewStop = (raw: RawWaypointPreviewStop) => ({
+  seq: raw.seq,
+  stopName: raw.stop_name,
+  eta: raw.eta,
+});
+
+const toStopRef = (raw: RawStopRef) => ({
+  stopId: raw.stop_id,
+  stopName: raw.stop_name,
+});
 
 const toWaypointResult = (raw: RawWaypointResult): WaypointResultResponseTypes => ({
   waypointId: raw.waypoint_id,
   routePreview: {
-    stopsBefore: raw.route_preview.stops_before.map(toStop),
-    stopsAfter: raw.route_preview.stops_after.map(toStop),
-    reordered: raw.route_preview.reordered.map(toStop),
+    stopsBefore: raw.route_preview.stops_before.map(toPreviewStop),
+    stopsAfter: raw.route_preview.stops_after.map(toPreviewStop),
+    reordered: raw.route_preview.reordered.map(toStopRef),
+    removed: raw.route_preview.removed.map(toStopRef),
   },
   estTimeBefore: raw.est_time_before,
   estTimeAfter: raw.est_time_after,
