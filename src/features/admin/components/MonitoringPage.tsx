@@ -72,6 +72,9 @@ export const MonitoringPage = () => {
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
   const [routeFallback, setRouteFallback] = useState(false);
+  // R18-B 목표 3 — 경로 좌표가 0개(진짜 데이터 부재)인 상태. `routeFallback` 은
+  // 뭔가 그려졌을 때의 "근사치" 안내라 서로 다른 문구다 — 둘을 동시에 켜지 않는다.
+  const [routeMissing, setRouteMissing] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
 
   // 실시간 회차의 좌표를 지도 마커로 옮긴다 — 위치를 아직 못 받은 회차(`position: null`)는
@@ -84,14 +87,25 @@ export const MonitoringPage = () => {
         .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
     [runs],
   );
+  // R18-B 목표 2 — 버스를 고르면 그 버스를 지도 정중앙에 두고 확대한다. zoom 16 은
+  // 그 버스 주변 정차지 1~2개가 함께 보이는 "동네" 단위 축척이다 — 기본 축척(도시
+  // 단위, 12)보다 4단계 좁혔다(보고서 §2, 실제 지도 화면으로 눈으로 확인은 못함).
+  const SELECTED_BUS_MAP_ZOOM = 16;
+  const selectedBusMarker = useMemo(
+    () => mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
+    [mapMarkers, selectedRunId],
+  );
   const mapCamera: MapCamera = useMemo(() => {
+    if (selectedBusMarker) {
+      return { lat: selectedBusMarker.lat, lng: selectedBusMarker.lng, zoom: SELECTED_BUS_MAP_ZOOM };
+    }
     if (mapMarkers.length === 0) return DEFAULT_CAMERA;
     const sum = mapMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
       lat: 0,
       lng: 0,
     });
     return { lat: sum.lat / mapMarkers.length, lng: sum.lng / mapMarkers.length, zoom: DEFAULT_CAMERA.zoom };
-  }, [mapMarkers]);
+  }, [selectedBusMarker, mapMarkers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +155,7 @@ export const MonitoringPage = () => {
         setSelectedRunId(null);
         setRoutePolylines([]);
         setRouteFallback(false);
+        setRouteMissing(false);
         setRouteError(null);
         return;
       }
@@ -148,11 +163,16 @@ export const MonitoringPage = () => {
       setRouteError(null);
       try {
         const route = await getRunRoute(runId);
-        setRoutePolylines(route.roadPath.length > 0 ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
-        setRouteFallback(route.fallbackUsed);
+        const hasRoute = route.roadPath.length > 0;
+        setRoutePolylines(hasRoute ? [{ id: `route-${runId}`, points: route.roadPath, kind: "route" }] : []);
+        // R18-B 목표 3 — 좌표가 0개면 빈 지도와 구별되는 "데이터 부재" 안내를 켠다.
+        // 근사 경로 안내는 실제로 무언가 그려졌을 때만 의미가 있어 그때만 켠다.
+        setRouteFallback(hasRoute && route.fallbackUsed);
+        setRouteMissing(!hasRoute);
       } catch (cause) {
         setRoutePolylines([]);
         setRouteFallback(false);
+        setRouteMissing(false);
         setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
@@ -308,6 +328,8 @@ export const MonitoringPage = () => {
             />
           </StyledMapSurface>
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+          {/* R18-B 목표 3 — 좌표 0개(데이터 부재)를 빈 지도와 구별한다. */}
+          {routeMissing ? <StyledFallbackNotice>경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
           {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
         </StyledMapPane>

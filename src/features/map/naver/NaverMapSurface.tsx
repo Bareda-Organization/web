@@ -5,10 +5,11 @@
 // 몰라야 하고, 대신 한 단계 위의 `../MapSurface` 만 가져다 쓴다. 이 경계는
 // `features/map/mapAdapterBoundary.test.ts` 가 파일 스캔으로 강제한다.
 import { useEffect, useRef } from "react";
-import type { MapCamera, MapMarker, MapMarkerKind, MapPolyline } from "../types";
+import type { MapCamera, MapMarker, MapPolyline } from "../types";
 import { getNaverMapClientId } from "./naverMapConfig";
 import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
 import { MarkerAnimationController } from "./markerAnimationController";
+import { buildMarkerIconHtml } from "./markerIcon";
 import type { LatLng } from "./markerInterpolation";
 
 export type NaverMapSurfaceProps = {
@@ -18,14 +19,6 @@ export type NaverMapSurfaceProps = {
   onReady?: () => void;
   onAuthFailed?: (exception: unknown) => void;
   className?: string;
-};
-
-// 마커 종류별 표시색 — 아이콘 이미지 자산이 아직 없어(디자인 시스템에 부재,
-// 보고서 §1) 기본 핀 색상으로만 구분한다.
-const MARKER_COLOR: Record<MapMarkerKind, string> = {
-  bus: "#2563eb",
-  stop: "#16a34a",
-  student: "#f97316",
 };
 
 export const NaverMapSurface = ({
@@ -165,8 +158,9 @@ export const NaverMapSurface = ({
         const created = new naverMaps.Marker({
           map,
           position,
+          // R18-B 목표 1 — 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
           icon: {
-            content: `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${MARKER_COLOR[markerData.kind]};border:2px solid #fff;"></span>`,
+            content: buildMarkerIconHtml(markerData.kind),
           },
         });
         existing.set(markerData.id, created);
