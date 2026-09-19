@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
+import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
 import { ackEmergency, getEmergencies } from "./index";
 
 // 비상 신고 조회 화면(§5.16, EXC-04, A-16)이 부르는 엔드포인트를 실제 F5-W1
@@ -82,4 +83,14 @@ describe("emergency api — 실서버 계약", () => {
       return true;
     });
   });
+});
+
+// 이 파일은 시드의 유일한 비상 신고(emergency_id=1)를 확인 처리(ack)해 **되돌릴 API 가 부재**하다
+// (재확인 해제 엔드포인트가 없다). 그대로 두면 뒤에 도는 파일이 `getEmergencies` 를 불렀을 때
+// 미확인 건이 0개가 되어, 코드 결함이 아닌데도 실패한다 — 2026-09-19 R15 병합 검증에서
+// `features/admin/api/realBackend.test.ts` 의 §6.11 시험이 실제로 그렇게 깨졌다(단독 실행은 통과).
+// 유일한 되돌림 수단은 시드 전체 재구성(`POST /dev/reset`)뿐이라 이 파일이 끝난 뒤 무조건 돌린다
+// — `run/api/realBackend.test.ts` 와 같은 근거이며 같은 헬퍼를 그대로 재사용한다.
+afterAll(async () => {
+  await resetRealBackendSeedIfConfigured();
 });
