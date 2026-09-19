@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARKER_SIZE_PX, buildMarkerIconHtml } from "./markerIcon";
+import { MARKER_SIZE_PX, buildMarkerIconHtml, busColorOf } from "./markerIcon";
 
 // R18-B 목표 1 — 버스 아이콘이 한눈에 보여야 하고, 정차지·학생 마커와 크기로
 // 구별돼야 한다(수정 전에는 세 종류 전부 12px 로 같아 색으로만 겨우 구별됐다 —
@@ -95,6 +95,30 @@ describe("markerIcon — 버스마다 다른 아이콘(R22 목표 1)", () => {
   it("고른 버스는 번호 칩에도 흰 테두리가 붙는다", () => {
     expect(buildMarkerIconHtml("bus", { busNo: "1호차", selected: true })).toContain("box-shadow");
     expect(buildMarkerIconHtml("bus", { busNo: "1호차", selected: false })).not.toContain("box-shadow");
+  });
+});
+
+// R22 추가 지시 — 번호만으로는 한눈에 안 갈려서 색도 버스마다 다르게 한다(사용자 지시).
+describe("markerIcon — 버스마다 다른 색(R22 추가 지시)", () => {
+  it("번호가 다르면 색도 다르다 — 시드의 1·2호차가 실제로 갈린다", () => {
+    expect(busColorOf("1호차")).not.toBe(busColorOf("2호차"));
+    expect(buildMarkerIconHtml("bus", { busNo: "1호차" })).toContain(busColorOf("1호차"));
+  });
+
+  // 색을 목록 순서로 정하면 회차가 늘거나 줄 때, 또 화면(관제·대시보드·금일 운행)마다
+  // 같은 버스가 다른 색이 된다. 번호 문자열만 보고 정했는지를 검사한다.
+  it("같은 번호는 언제 불러도 같은 색이다", () => {
+    expect(busColorOf("3호차")).toBe(busColorOf("3호차"));
+    expect(busColorOf("가나다호차")).toBe(busColorOf("가나다호차"));
+  });
+
+  // 지도 위에서 상태를 뜻하는 것은 노선 선 색이다(routeColor.ts) — 버스 색이 그 4색과
+  // 겹치면 색 하나가 두 가지를 뜻하게 된다. 정차지·학생 색과도 겹치면 안 된다.
+  it("버스 색은 회차 상태 4색·정차지·학생 색과 겹치지 않는다", () => {
+    const 금지 = ["#C77E12", "#1F5C4D", "#C93F2C", "#6B7672", "#16a34a", "#f97316", "#2A312E"];
+    for (const busNo of ["1호차", "2호차", "3호차", "4호차", "5호차", "6호차", "7호차", "8호차"]) {
+      expect(금지).not.toContain(busColorOf(busNo));
+    }
   });
 });
 

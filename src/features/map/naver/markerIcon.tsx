@@ -63,6 +63,35 @@ const ENDPOINT_LABEL: Partial<Record<MapMarkerKind, string>> = {
   destination: "도착",
 };
 
+// R22 추가 지시 — 번호만으로는 한눈에 안 갈린다(사용자 지시). 버스마다 색도 다르게 한다.
+//
+// ⚠ 색 하나가 두 가지를 뜻하지 않도록 **회차 상태 4색을 피해서** 고른다. 지도 위에서
+// 상태를 뜻하는 것은 노선 선 색이다(`routeColor.ts` — 초록 종료 · 앰버 이동중 · 레드 확정 ·
+// 스톤 대기). 아래 6색은 그 4색과도, 정차지 초록(#16a34a)·학생 주황(#f97316)·출발도착
+// 스톤(#2A312E)과도 계열이 겹치지 않는 파랑~보라~청록 대역이다.
+const BUS_COLORS = [
+  "#2563eb", // 파랑 — 수정 전 모든 버스가 쓰던 색. 첫 자리에 둬서 1호차가 예전과 같아 보이게 한다.
+  "#7C3AED", // 보라
+  "#0891B2", // 청록
+  "#BE185D", // 자홍
+  "#4338CA", // 남색
+  "#0F766E", // 짙은 청록
+] as const;
+
+/**
+ * 버스 번호 → 색. **번호 문자열만으로 정한다** — 목록에서의 순서로 정하면 회차가 늘거나 줄 때
+ * 같은 버스의 색이 바뀌고, 화면마다(관제·대시보드·금일 운행) 목록이 달라 같은 버스가 다른 색이
+ * 된다. 문자 코드 합을 색 개수로 나눈 나머지라 어느 화면에서 봐도, 새로고침해도 같다.
+ *
+ * <p>버스가 7대를 넘으면 두 대가 같은 색을 받는다 — 그때는 칩 안의 번호가 여전히 둘을 가른다.
+ * 색은 "빠르게 훑는" 수단이고 번호가 정본이다.
+ */
+export const busColorOf = (busNo: string): string => {
+  let sum = 0;
+  for (const char of busNo) sum += char.codePointAt(0) ?? 0;
+  return BUS_COLORS[sum % BUS_COLORS.length];
+};
+
 export type MarkerIconOptions = {
   selected?: boolean;
   busNo?: string;
@@ -74,13 +103,15 @@ export type MarkerIconOptions = {
  * 모른다). 번호를 핀 <b>아래 라벨</b>로 달던 R21-A 방식은 지도를 축소하면 라벨이 겹쳐
  * 읽히지 않았다. 번호를 핀 <b>안으로</b> 넣어 "아이콘 자체가 버스마다 다른" 형태로 바꾼다.
  *
- * <p>색을 버스마다 달리 하지 않은 이유 — 디자인 시스템 팔레트가 green·amber·red·stone
- * 4계열뿐이고 그 4색은 회차 상태(C-09)가 이미 쓴다. 버스 식별에 색을 또 얹으면 지도 위에서
- * 색 하나가 두 가지를 뜻하게 된다.
+ * <p>R22 추가 지시 — 번호에 더해 <b>색</b>도 버스마다 다르다({@link busColorOf}). 상태를 뜻하는
+ * 색과 겹치지 않는 대역에서만 고른다 — 근거는 {@code BUS_COLORS} 주석.
  */
 const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boolean): string => {
-  const ring = selected ? selectedRingOf("bus") : "";
-  return `<span style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${MARKER_COLOR.bus};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
+  const color = busColorOf(busNo);
+  // 선택 강조는 그 버스의 색으로 두른다 — 종류별 색을 쓰는 `selectedRingOf` 와 같은 규칙을
+  // 버스에만 한 단계 좁힌 것이다(테두리가 "그 마커의 색" 이라는 뜻은 그대로다).
+  const ring = selected ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};` : "";
+  return `<span style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
 };
 
 /** R22 목표 2 — 노선의 양 끝(출발지·도착지)을 글자 핀으로 찍는다. */
