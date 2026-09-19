@@ -170,8 +170,13 @@ export const NaverMapSurface = ({
           map,
           position,
           // R18-B 목표 1 — 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
+          // R21-A 목표 1~3 — 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
           icon: {
-            content: buildMarkerIconHtml(markerData.kind),
+            content: buildMarkerIconHtml(markerData.kind, {
+              selected: markerData.selected,
+              busNo: markerData.busNo,
+              direction: markerData.direction,
+            }),
           },
         });
         existing.set(markerData.id, created);
@@ -182,6 +187,15 @@ export const NaverMapSurface = ({
       // 않지만(현재는 항상 kind: "bus" 만 갱신됨), 앞으로 다른 종류가 움직이게
       // 되더라도 목표 5는 "버스 마커 보간" 이므로 범위를 명확히 해 둔다.
       if (markerData.kind === "bus") {
+        // R21-A 목표 1 — 좌표는 그대로인 채 선택 상태만 바뀔 수 있다(같은 버스를
+        // 고르고 해제할 때 id 가 안 바뀐다) — 아이콘은 매번 다시 굳혀 반영한다.
+        found.setIcon({
+          content: buildMarkerIconHtml(markerData.kind, {
+            selected: markerData.selected,
+            busNo: markerData.busNo,
+            direction: markerData.direction,
+          }),
+        });
         animationControllerRef.current?.receive(markerData.id, { lat: markerData.lat, lng: markerData.lng });
       } else {
         found.setPosition(new naverMaps.LatLng(markerData.lat, markerData.lng));

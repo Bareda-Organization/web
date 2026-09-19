@@ -32,3 +32,22 @@ export const cameraForSelectedBus = (
   marker: Pick<MapMarker, "lat" | "lng"> | null,
   fallback: MapCamera,
 ): MapCamera => (marker ? { lat: marker.lat, lng: marker.lng, zoom: SELECTED_BUS_MAP_ZOOM } : fallback);
+
+// R21-A 목표 4 — 실시간 위치가 없는 회차(idle·확정·종료)를 고르면 `mapMarkers` 에
+// 그 버스 자체가 없어(위치 없는 회차는 버스 마커를 안 만든다) `cameraForSelectedBus`
+// 가 항상 기본 좌표(서울 시청 등)로 빠졌다 — 정차지 마커는 실제로 그려지지만
+// 카메라가 그쪽으로 옮겨가지 않아 화면 밖에 있는 것과 같았다(조율자 실측 —
+// 백엔드는 4종 상태 전부 stops 를 채워 보낸다, `/staff/runs/{runId}/route` 확인).
+// 실시간 위치가 없으면 정차지들의 평균 좌표를 카메라 중심 후보로 대신 쓴다.
+export const anchorForSelection = (
+  liveBusMarker: Pick<MapMarker, "lat" | "lng"> | null,
+  stopMarkers: Pick<MapMarker, "lat" | "lng">[],
+): Pick<MapMarker, "lat" | "lng"> | null => {
+  if (liveBusMarker) return liveBusMarker;
+  if (stopMarkers.length === 0) return null;
+  const sum = stopMarkers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
+    lat: 0,
+    lng: 0,
+  });
+  return { lat: sum.lat / stopMarkers.length, lng: sum.lng / stopMarkers.length };
+};

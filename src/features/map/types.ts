@@ -9,11 +9,21 @@ export type MapCamera = {
   zoom: number;
 };
 
+// R21-A 목표 3 — 등원·하원 구별. 색은 C-09 4색 고정이라 새로 만들 수 없어(사용자 지시)
+// 모양(버스 아이콘 형태)으로 가른다. 정차지·학생은 방향 개념이 없어 항상 undefined.
+export type MapMarkerDirection = "to_academy" | "from_academy";
+
 export type MapMarker = {
   id: string;
   lat: number;
   lng: number;
   kind: MapMarkerKind;
+  // R21-A 목표 1 — 고른 버스만 지도 위에서 다르게 보인다(흰 테두리). 버스가 아닌
+  // 마커에는 의미가 없어 항상 undefined.
+  selected?: boolean;
+  // R21-A 목표 2 — 버스끼리 구별하려고 마커에 직접 번호를 표기한다.
+  busNo?: string;
+  direction?: MapMarkerDirection;
 };
 
 // R15-T2 — 버스를 고르면 그 노선을 지도에 그리는 데 쓴다(§5.19 road_path). `kind`

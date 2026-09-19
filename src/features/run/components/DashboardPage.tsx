@@ -16,6 +16,7 @@ import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
+  anchorForSelection,
   buildRouteDisplayState,
   cameraForSelectedBus,
   type MapCamera,
@@ -104,12 +105,21 @@ export const DashboardPage = () => {
 
   const liveByRunId = useMemo(() => new Map(liveRuns.map((run) => [run.runId, run])), [liveRuns]);
 
+  // R21-A 목표 1~3 — MonitoringPage.tsx 와 같은 방식(선택 강조·번호·등원하원).
   const mapMarkers: MapMarker[] = useMemo(
     () =>
       liveRuns
         .filter((run) => run.position != null)
-        .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
-    [liveRuns],
+        .map((run) => ({
+          id: String(run.runId),
+          lat: run.position!.lat,
+          lng: run.position!.lng,
+          kind: "bus" as const,
+          selected: run.runId === selectedRunId,
+          busNo: run.busNo,
+          direction: run.direction,
+        })),
+    [liveRuns, selectedRunId],
   );
   // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
   const mapMarkersWithStops: MapMarker[] = useMemo(
@@ -118,9 +128,15 @@ export const DashboardPage = () => {
   );
   // R18-B2 목표 1·3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면
   // 몫을 한 곳에서 정한다(MonitoringPage.tsx 와 같은 방식).
+  // R21-A 목표 4 — 실시간 위치가 없는 회차를 골라도 정차지 쪽으로 카메라가
+  // 옮겨가도록 정차지 평균 좌표를 대신 쓴다(MonitoringPage.tsx 와 같은 방식).
   const selectedBusMarker = useMemo(
-    () => mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
-    [mapMarkers, selectedRunId],
+    () =>
+      anchorForSelection(
+        mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
+        routeStopMarkers,
+      ),
+    [mapMarkers, selectedRunId, routeStopMarkers],
   );
   const mapCamera: MapCamera = useMemo(() => {
     if (selectedBusMarker) return cameraForSelectedBus(selectedBusMarker, DEFAULT_CAMERA);

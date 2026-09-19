@@ -86,3 +86,38 @@ describe("NaverMapSurface — 지도 생성이 늦을 때", () => {
     await waitFor(() => expect(polylineCtor).toHaveBeenCalledTimes(1));
   });
 });
+
+// R21-A 목표 1 — 같은 버스 마커(id 불변)를 다시 골라도 흰 테두리(선택 강조)가
+// 반영돼야 한다. 마커 갱신 effect 는 기존 마커를 만나면(`found`) 좌표 보간
+// 분기로만 가고 아이콘은 생성 시점 한 번뿐이었다 — 선택 상태가 바뀌어도 아이콘이
+// 그대로 남는 결함이 될 수 있어, `setIcon` 이 다시 불리는지 직접 확인한다.
+describe("NaverMapSurface — 선택 상태가 바뀌면 기존 마커의 아이콘도 다시 굳힌다(R21-A 목표 1)", () => {
+  it("같은 id 의 버스 마커라도 selected 가 바뀌면 setIcon 이 다시 호출된다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setIcon = vi.fn();
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
+      setMap: vi.fn(),
+      setPosition: vi.fn(),
+      setIcon,
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: false }]}
+      />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(0)); // 생성 시점엔 setIcon 이 아니라 icon 옵션으로 굳힌다.
+
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: true }]}
+      />,
+    );
+
+    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(1));
+    expect(setIcon.mock.calls[0][0].content).toContain("box-shadow");
+  });
+});

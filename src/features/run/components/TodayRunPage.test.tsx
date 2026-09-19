@@ -160,7 +160,10 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
         expect.objectContaining({
-          markers: [{ id: "7", lat: 37.55, lng: 127.01, kind: "bus" }],
+          // R21-A 목표 1~3 — 이 화면은 항상 회차 하나가 선택돼 있어 selected 는 항상 true.
+          markers: [
+            { id: "7", lat: 37.55, lng: 127.01, kind: "bus", selected: true, busNo: "2호차", direction: "to_academy" },
+          ],
           // R18-B2 목표 2 — 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
           // 하나가 선택돼 있어(토글 없음) 마커가 있으면 곧 "선택된 버스" 다.
           camera: { lat: 37.55, lng: 127.01, zoom: 15 },
