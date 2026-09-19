@@ -21,9 +21,10 @@ export type MapMarker = {
 // 를 지키려면 폴리라인도 마커처럼 종류로 구분하는 형태를 미리 열어 둔다.
 //
 // R20-C 목표 3 — "route" 는 그대로 두고(features/approval 의 전/후 경로 미리보기가
-// 이미 이 값을 쓴다, 보고서 §2) 회차 상태 3종을 더한다 — `idle` 은 노선 자체가
-// 없어(routeDisplayState.ts) 선을 그릴 일이 없다.
-export type MapPolylineKind = "route" | "confirmed" | "moving" | "finished";
+// 이미 이 값을 쓴다, 보고서 §2) 회차 상태 3종을 더한다.
+// Ruling 321 — "planned" 은 idle 회차의 고정 노선 기반 "예정" 경로다. 확정 시점에
+// 그날 명단으로 다시 계산돼 달라질 수 있어 확정 경로 3종과 색을 다르게 한다.
+export type MapPolylineKind = "route" | "confirmed" | "moving" | "finished" | "planned";
 
 export type MapPolyline = {
   id: string;

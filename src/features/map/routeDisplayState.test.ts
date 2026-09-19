@@ -11,6 +11,7 @@ describe("buildRouteDisplayState", () => {
       ],
       fallbackUsed: true,
       stops: [],
+      confirmed: true,
     });
 
     expect(state.polylines).toEqual([
@@ -26,40 +27,72 @@ describe("buildRouteDisplayState", () => {
     ]);
     expect(state.fallback).toBe(true);
     expect(state.missing).toBe(false);
-    expect(state.notConfirmedYet).toBe(false);
+    expect(state.noPlannedRoute).toBe(false);
+    expect(state.planned).toBe(false);
   });
 
   it("좌표가 0개면 경로를 그리지 않고 missing 을 켠다 — fallbackUsed 와 무관하다", () => {
-    const state = buildRouteDisplayState(9, "confirmed", { roadPath: [], fallbackUsed: true, stops: [] });
+    const state = buildRouteDisplayState(9, "confirmed", {
+      roadPath: [],
+      fallbackUsed: true,
+      stops: [],
+      confirmed: true,
+    });
 
     expect(state.polylines).toEqual([]);
     expect(state.missing).toBe(true);
-    expect(state.notConfirmedYet).toBe(false);
+    expect(state.noPlannedRoute).toBe(false);
     // 좌표 0개인데 "근사 경로" 를 동시에 띄우는 모순을 막는다(R18-B 조율자 판정).
     expect(state.fallback).toBe(false);
   });
 
-  // R20-C 목표 4 — "아직 확정 전"(대기, 정상)과 "확정됐는데 경로가 없음"(데이터
-  // 결손)을 회차 상태로 가른다(조율자 실측 — run 1·6 은 확정 노선 자체가 부재).
-  it("idle 회차는 좌표가 0개여도 missing 이 아니라 notConfirmedYet 을 켠다", () => {
-    const state = buildRouteDisplayState(1, "idle", { roadPath: [], fallbackUsed: false, stops: [] });
+  // Ruling 321 — idle 회차도 이제 고정 노선 기반 "예정" 경로를 받을 수 있어, 좌표
+  // 유무가 아니라 백엔드가 보내는 `confirmed` 플래그로 "확정 전"과 "예정도 없음"을 가른다.
+  it("idle 회차인데 고정 노선(예정)도 없으면 noPlannedRoute 를 켠다 — missing 이 아니다", () => {
+    const state = buildRouteDisplayState(1, "idle", {
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: false,
+    });
 
-    expect(state.notConfirmedYet).toBe(true);
+    expect(state.noPlannedRoute).toBe(true);
     expect(state.missing).toBe(false);
+    expect(state.planned).toBe(false);
     expect(state.polylines).toEqual([]);
   });
 
-  // R20-C 목표 3 — 폴리라인의 kind 가 회차 상태를 그대로 따라간다(운행 중·운행
-  // 종료·확정). `routeColor.ts` 가 이 kind 로 색을 고른다.
+  // Ruling 321 — idle 회차가 고정 노선 기반 예정 경로를 받으면 kind:"planned" 로
+  // 그리고(회차 상태와 무관), planned 안내를 켠다. approximate 도 함께 켜서(대시 선)
+  // "확정된 경로"로 오인하지 않게 한다.
+  it("고정 노선 기반 예정 경로(confirmed=false)면 kind:planned 로 그리고 planned 를 켠다", () => {
+    const state = buildRouteDisplayState(1, "idle", {
+      roadPath: [{ lat: 37.1, lng: 127.1 }],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: false,
+    });
+
+    expect(state.polylines).toEqual([
+      { id: "route-1", points: [{ lat: 37.1, lng: 127.1 }], kind: "planned", approximate: true },
+    ]);
+    expect(state.planned).toBe(true);
+    expect(state.missing).toBe(false);
+    expect(state.noPlannedRoute).toBe(false);
+  });
+
+  // R20-C 목표 3 — 확정된 폴리라인의 kind 가 회차 상태를 그대로 따라간다(운행
+  // 중·운행 종료·확정). `routeColor.ts` 가 이 kind 로 색을 고른다.
   it.each([
     ["moving", "moving"],
     ["finished", "finished"],
     ["confirmed", "confirmed"],
-  ] as const)("%s 회차의 폴리라인 kind 는 %s 다", (status, expectedKind) => {
+  ] as const)("확정된 %s 회차의 폴리라인 kind 는 %s 다", (status, expectedKind) => {
     const state = buildRouteDisplayState(2, status, {
       roadPath: [{ lat: 37.1, lng: 127.1 }],
       fallbackUsed: false,
       stops: [],
+      confirmed: true,
     });
 
     expect(state.polylines[0]?.kind).toBe(expectedKind);
@@ -75,6 +108,7 @@ describe("buildRouteDisplayState", () => {
         { stopId: 1, lat: 37.5665, lng: 126.978 },
         { stopId: 4, lat: 37.5695, lng: 126.981 },
       ],
+      confirmed: true,
     });
 
     expect(state.stopMarkers).toEqual([

@@ -430,6 +430,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
       ],
       fallbackUsed: true,
       stops: [],
+      confirmed: true,
     });
     render(<DashboardPage />);
 
@@ -440,7 +441,12 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
   });
 
   it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true, stops: [] });
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [{ lat: 37.1, lng: 127.1 }],
+      fallbackUsed: true,
+      stops: [],
+      confirmed: true,
+    });
     render(<DashboardPage />);
 
     const busItem = await screen.findByText("3호차 · 등원");
@@ -478,7 +484,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
   // R20-C 목표 4 — 3호차는 runStatus:"moving"(확정 이후)이라 좌표 0개는 "확정됐지만
   // 경로가 없음"(데이터 결손)이지 "아직 확정 전"이 아니다.
   it("경로 좌표가 0개면 확정됐지만 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
     render(<DashboardPage />);
 
     fireEvent.click(await screen.findByText("3호차 · 등원"));
@@ -487,20 +493,36 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
   });
 
-  // R20-C 목표 4 — idle(1호차)은 좌표 0개가 정상이다(조율자 실측 — run 1·6).
-  it("idle 회차를 고르면 아직 확정 전이라 노선이 없습니다 를 보여준다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+  // Ruling 321 — idle(1호차)인데 백엔드가 confirmed:false·좌표 0개(고정 노선 자체가
+  // 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
+  it("고정 노선이 없는 idle 회차를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<DashboardPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("아직 확정 전이라 노선이 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
+  });
+
+  // Ruling 321 — idle 회차가 고정 노선 기반 "예정" 경로를 받으면 지도 위에서 알린다.
+  it("idle 회차가 예정 경로를 받으면 예정 경로 안내를 지도 위에 보여준다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [{ lat: 37.1, lng: 127.1 }],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: false,
+    });
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText(/예정 경로 — 확정 시 달라질 수 있음/)).toBeInTheDocument();
   });
 
   // R20-C 목표 1 — 버스를 골라도 지도만 움직이고 카드는 그대로였다(사용자 지적).
   it("버스를 고르면 그 카드에 aria-pressed=true 가 붙는다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
     render(<DashboardPage />);
 
     const item = await screen.findByRole("button", { name: /3호차/ });

@@ -274,7 +274,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     mockConnectionState = "connected";
     mockGetAcademies.mockResolvedValue(baseAcademies);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
   afterEach(() => {
@@ -289,6 +289,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
       ],
       fallbackUsed: true,
       stops: [],
+      confirmed: true,
     });
     render(<MonitoringPage />);
 
@@ -308,6 +309,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
       roadPath: [],
       fallbackUsed: false,
       stops: [{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }],
+      confirmed: true,
     });
     render(<MonitoringPage />);
 
@@ -323,7 +325,12 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
   });
 
   it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
-    mockGetRunRoute.mockResolvedValue({ roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: true, stops: [] });
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [{ lat: 37.1, lng: 127.1 }],
+      fallbackUsed: true,
+      stops: [],
+      confirmed: true,
+    });
     render(<MonitoringPage />);
 
     const busItem = await screen.findByText("1호차 · 등원");
@@ -372,16 +379,41 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
   });
 
-  // R20-C 목표 4 — idle 회차는 좌표 0개가 정상이다(조율자 실측 — run 1·6). "확정됐지만
-  // 없음" 이 아니라 "아직 확정 전" 문구를 보여준다.
-  it("idle 회차를 고르면 아직 확정 전이라 노선이 없습니다 를 보여준다", async () => {
+  // Ruling 321 — idle 회차인데 백엔드가 confirmed:false·좌표 0개(고정 노선 자체가
+  // 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
+  it("고정 노선이 없는 idle 회차를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
     mockGetRunsLive.mockResolvedValue({ runs: [{ ...baseLiveRun, runStatus: "idle" }] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<MonitoringPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("아직 확정 전이라 노선이 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
+  });
+
+  // Ruling 321 — idle 회차가 고정 노선 기반 "예정" 경로를 받으면 "확정된 경로"로
+  // 오인하지 않도록 지도 위에서 알린다.
+  it("고정 노선 기반 예정 경로를 받으면 예정 경로 안내를 지도 위에 보여준다", async () => {
+    mockGetRunsLive.mockResolvedValue({ runs: [{ ...baseLiveRun, runStatus: "idle" }] });
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [{ lat: 37.1, lng: 127.1 }],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: false,
+    });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText(/예정 경로 — 확정 시 달라질 수 있음/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({
+          polylines: [{ id: "route-1", points: [{ lat: 37.1, lng: 127.1 }], kind: "planned", approximate: true }],
+        }),
+      ),
+    );
   });
 });
 
@@ -392,7 +424,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
     mockGetAcademies.mockResolvedValue(baseAcademies);
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
   afterEach(() => {
@@ -447,7 +479,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
     mockGetAcademies.mockResolvedValue(baseAcademies);
-    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
   it("idle·confirmed·moving·finished 가 모두 목록에 남는다", async () => {

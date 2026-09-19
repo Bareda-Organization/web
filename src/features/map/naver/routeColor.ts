@@ -11,6 +11,9 @@ const ROUTE_COLOR: Record<MapPolylineKind, string> = {
   moving: "#C77E12", // --amber-ink, --status-moving
   finished: "#1F5C4D", // --green-600, --status-boarded
   confirmed: "#C93F2C", // --red-ink, --status-missed
+  // Ruling 321 — 예정(고정 노선 기반) 경로. 확정 경로 3종과 헷갈리지 않도록
+  // 상태색이 아닌 스톤(회색)을 쓴다 — "아직 확정 안 됨"을 색으로도 알린다.
+  planned: "#6B7672", // --stone-500
 };
 
 export const routeColorFor = (kind: MapPolylineKind): string => ROUTE_COLOR[kind];

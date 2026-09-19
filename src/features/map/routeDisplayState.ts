@@ -12,10 +12,14 @@
 // "디렉터리"). 이 파일의 산출물(`MapPolyline`·`MapMarker`)이 map 소유라 map 쪽에 둔다.
 import type { MapMarker, MapPolyline, MapPolylineKind } from "./types";
 
+// Ruling 321 — `confirmed` 는 백엔드(§5.19)가 보내는 "이 경로가 확정본인가" 신호다.
+// idle 회차도 이제 고정 노선 기반 "예정" 경로를 받을 수 있어, 좌표 유무만으론
+// "확정 안 됨"과 "예정도 없음"을 못 가른다.
 type RouteQueryResult = {
   roadPath: { lat: number; lng: number }[];
   fallbackUsed: boolean;
   stops: { stopId: number; lat: number; lng: number }[];
+  confirmed: boolean;
 };
 
 // R20-C 목표 3·4 — `features/run`·`features/admin` 의 `RunStatus` 를 그대로 import
@@ -32,11 +36,14 @@ const POLYLINE_KIND_BY_STATUS: Partial<Record<RunStatusForRoute, MapPolylineKind
 export type RouteDisplayState = {
   polylines: MapPolyline[];
   fallback: boolean;
-  // 확정된(idle 이 아닌) 회차인데 좌표가 0개 — 실제 데이터 결손.
+  // 확정된 경로인데(route.confirmed) 좌표가 0개 — 실제 데이터 결손.
   missing: boolean;
-  // R20-C 목표 4 — 대기(idle) 회차는 아직 확정 전이라 노선이 없는 게 정상이다
-  // (조율자 실측 — run 1·6 은 확정 노선 자체가 부재). `missing` 과 문구를 가른다.
-  notConfirmedYet: boolean;
+  // Ruling 321 — 확정 전인데(route.confirmed=false) 고정 노선조차 없어 예정 경로도
+  // 못 그린다. 정상 상태 중 하나다(조율자 실측 — 학원 C 처럼 일부러 비워 둔 자리).
+  noPlannedRoute: boolean;
+  // Ruling 321 — 고정 노선 기반 "예정" 경로가 그려졌다. 확정 시점에 그날 명단으로
+  // 다시 계산돼 달라질 수 있다는 안내에 쓴다 — "확정된 경로"로 오인하면 안 된다.
+  planned: boolean;
   stopMarkers: MapMarker[];
 };
 
@@ -46,15 +53,18 @@ export const buildRouteDisplayState = (
   route: RouteQueryResult,
 ): RouteDisplayState => {
   const hasRoute = route.roadPath.length > 0;
-  const kind = POLYLINE_KIND_BY_STATUS[runStatus];
+  // Ruling 321 — 예정 경로는 회차 상태(moving 등)와 무관하게 항상 "planned" 로
+  // 그린다. 확정 경로만 회차 상태별 색(POLYLINE_KIND_BY_STATUS)을 쓴다.
+  const kind: MapPolylineKind | undefined = !route.confirmed ? "planned" : POLYLINE_KIND_BY_STATUS[runStatus];
   return {
     polylines:
       hasRoute && kind
-        ? [{ id: `route-${runId}`, points: route.roadPath, kind, approximate: route.fallbackUsed }]
+        ? [{ id: `route-${runId}`, points: route.roadPath, kind, approximate: route.fallbackUsed || !route.confirmed }]
         : [],
     fallback: hasRoute && route.fallbackUsed,
-    missing: !hasRoute && runStatus !== "idle",
-    notConfirmedYet: !hasRoute && runStatus === "idle",
+    missing: !hasRoute && route.confirmed,
+    noPlannedRoute: !hasRoute && !route.confirmed,
+    planned: hasRoute && !route.confirmed,
     stopMarkers: route.stops.map((stop) => ({ id: `stop-${stop.stopId}`, lat: stop.lat, lng: stop.lng, kind: "stop" as const })),
   };
 };

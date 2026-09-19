@@ -116,8 +116,13 @@ export type WaypointCreateRequestTypes = {
 // 쓰고, R19 목표 1 이 정차지 마커용 stops 를 더한다(R15-T1 이 같이 만드는 고정 계약,
 // `IMPLEMENTATION_PLAN.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
 // 더 있지만 여기서는 옮기지 않는다 — 필요해지면 그때 추가한다(YAGNI).
+// Ruling 321 — 확정 전(idle) 회차도 고정 노선 기반 "예정" 경로를 보여준다. 백엔드
+// (r20-a) 가 이 필드로 확정 여부를 알린다 — 화면은 "예정"과 "확정"을 반드시
+// 구별해 보여줘야 한다(예정은 확정 시점에 재계산돼 달라질 수 있다). 아직 이 필드를
+// 안 보내는 옛 백엔드와의 호환을 위해 파싱 쪽(features/route/api)에서 기본값 true 를 둔다.
 export type RunRouteResponseTypes = {
   roadPath: LatLng[];
   fallbackUsed: boolean;
   stops: RouteStop[];
+  confirmed: boolean;
 };

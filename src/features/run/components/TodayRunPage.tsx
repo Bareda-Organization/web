@@ -112,9 +112,11 @@ export const TodayRunPage = () => {
   const [routeFallback, setRouteFallback] = useState(false);
   // R18-B2 목표 2 — MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태.
   const [routeMissing, setRouteMissing] = useState(false);
-  // R20-C 목표 4 — "아직 확정 전"(대기 회차, 정상)과 "확정됐는데 경로가 없음"(데이터
-  // 결손)을 가른다(MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태).
-  const [routeNotConfirmedYet, setRouteNotConfirmedYet] = useState(false);
+  // Ruling 321 — idle 회차인데 고정 노선(예정 경로)조차 없는 상태(정상,
+  // MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태).
+  const [routeNoPlannedRoute, setRouteNoPlannedRoute] = useState(false);
+  // Ruling 321 — 고정 노선 기반 "예정" 경로가 그려졌다. 확정 시점에 재계산돼 달라질 수 있다.
+  const [routePlanned, setRoutePlanned] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
   // R19 목표 1 — 지금 화면에 뜬 회차의 정차지 마커(MonitoringPage.tsx 와 같은 형태).
   // 이 화면은 선택 해제 토글이 없어(항상 회차 하나) 비우는 시점도 없다.
@@ -197,13 +199,15 @@ export const TodayRunPage = () => {
       setRoutePolylines(display.polylines);
       setRouteFallback(display.fallback);
       setRouteMissing(display.missing);
-      setRouteNotConfirmedYet(display.notConfirmedYet);
+      setRouteNoPlannedRoute(display.noPlannedRoute);
+      setRoutePlanned(display.planned);
       setRouteStopMarkers(display.stopMarkers);
     } catch (cause) {
       setRoutePolylines([]);
       setRouteFallback(false);
       setRouteMissing(false);
-      setRouteNotConfirmedYet(false);
+      setRouteNoPlannedRoute(false);
+      setRoutePlanned(false);
       setRouteStopMarkers([]);
       setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
     }
@@ -282,16 +286,24 @@ export const TodayRunPage = () => {
             />
             {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔
                 지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
-                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts). */}
-            {routeFallback ? <StyledMapOverlayNotice>근사 경로</StyledMapOverlayNotice> : null}
+                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts).
+                Ruling 321 — 예정 경로도 같은 자리에서 "확정된 경로"로 오인하지
+                않도록 알린다. 근사·예정이 겹칠 수 있어 문구를 같이 붙인다. */}
+            {routeFallback || routePlanned ? (
+              <StyledMapOverlayNotice>
+                {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </StyledMapOverlayNotice>
+            ) : null}
           </StyledMapSurface>
           {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
-          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "아직 확정 전"
-              (대기 회차, 정상)을 다른 문구로 가른다(조율자 실측 — run 1·6). */}
+          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도
+              없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
-          {routeNotConfirmedYet ? (
-            <StyledFallbackNotice>아직 확정 전이라 노선이 없습니다</StyledFallbackNotice>
+          {routeNoPlannedRoute ? (
+            <StyledFallbackNotice>등록된 고정 노선이 없어 예정 경로도 없습니다</StyledFallbackNotice>
           ) : null}
         </StyledMapPane>
 
