@@ -4,8 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
+import { MapSurface, type MapCamera, type MapPolyline } from "@/features/map";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
-import type { ChangeApprovalDetailResponseTypes, RouteStopPreviewResponseTypes } from "../types";
+import type {
+  ChangeApprovalDetailResponseTypes,
+  RoutePathPointResponseTypes,
+  RouteStopPreviewResponseTypes,
+} from "../types";
 import {
   StyledDetailLayout,
   StyledRouteGrid,
@@ -14,6 +19,7 @@ import {
   StyledInfoRow,
   StyledInfoLabel,
   StyledActionRow,
+  StyledMapSurface,
 } from "./ChangeApprovalDetail.styled";
 
 type ChangeApprovalDetailProps = {
@@ -28,6 +34,43 @@ const renderStop = (stop: RouteStopPreviewResponseTypes) => (
     <span>{stop.eta}</span>
   </StyledRouteStopRow>
 );
+
+// `R18-C` 목표 3(Ruling 318) — 노선 전체 소요(분)를 전/후·증감 부호와 함께 낸다. 결정된
+// 건처럼 값이 없으면(재최적화를 하지 않은 건) "-" 를 두고 왜 없는지 한 줄로 안내한다 —
+// 값이 그냥 비어 있으면 결함인지 "이 건은 원래 계산하지 않는다"인지 화면에서 구별이 안 된다.
+const formatDurationComparison = (before: number | null, after: number | null): string => {
+  if (before === null || after === null) {
+    return "- (결정된 건은 소요시간을 다시 계산하지 않습니다)";
+  }
+  const delta = after - before;
+  const sign = delta >= 0 ? "+" : "";
+  return `${before}분 → ${after}분 (${sign}${delta}분)`;
+};
+
+const DEFAULT_MAP_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
+
+// 도로 좌표열의 중심으로 지도를 잡는다 — MonitoringPage.tsx 의 mapCamera 계산과 같은 방식
+// (경로 전체를 정확히 맞추는 bounds-fit 은 features/map 계약에 아직 없다).
+const cameraForPath = (path: RoutePathPointResponseTypes[]): MapCamera => {
+  if (path.length === 0) return DEFAULT_MAP_CAMERA;
+  const sum = path.reduce((acc, point) => ({ lat: acc.lat + point.lat, lng: acc.lng + point.lng }), {
+    lat: 0,
+    lng: 0,
+  });
+  return { lat: sum.lat / path.length, lng: sum.lng / path.length, zoom: DEFAULT_MAP_CAMERA.zoom };
+};
+
+const renderRouteMap = (path: RoutePathPointResponseTypes[]) => {
+  if (path.length === 0) {
+    return <p>경로 좌표가 아직 없습니다</p>;
+  }
+  const polylines: MapPolyline[] = [{ id: "preview", points: path, kind: "route" }];
+  return (
+    <StyledMapSurface>
+      <MapSurface camera={cameraForPath(path)} markers={[]} polylines={polylines} />
+    </StyledMapSurface>
+  );
+};
 
 // §5.5 GET /staff/approvals/{id}(A-05) 상세 · §5.6 POST .../decide(A-05) — ②구간 변경
 // 승인 상세(UF-M-02). 노선 비교는 F4 지도가 아니라 §5.5 route_preview 의 정류장
@@ -160,6 +203,12 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
           </span>
         </StyledInfoRow>
         <StyledInfoRow>
+          {/* `R18-C` 목표 2·3(Ruling 318) — 노선 전체 소요(분). 위 "예상 소요"(도착 시각)와는
+              다른 값이다 — 특정 학생의 승하차지 도착 시각이 아니라 출발지→마지막 정차지 총 시간. */}
+          <StyledInfoLabel>노선 전체 소요</StyledInfoLabel>
+          <span>{formatDurationComparison(detail.estDurationBefore, detail.estDurationAfter)}</span>
+        </StyledInfoRow>
+        <StyledInfoRow>
           <StyledInfoLabel>영향받는 학생</StyledInfoLabel>
           <span>{detail.affectedStudents.map((s) => s.name).join(", ") || "-"}</span>
         </StyledInfoRow>
@@ -182,6 +231,23 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
           <p>이미 결정된 건이라 노선 재계산 결과가 없습니다.</p>
         )}
       </Card>
+
+      {detail.routePreview ? (
+        <Card>
+          {/* `R18-C` 목표 4(Ruling 319) — 전후 경로를 좌우 두 지도로 나란히. 한 지도에 겹치지 않는다. */}
+          <p>경로 지도</p>
+          <StyledRouteGrid>
+            <StyledRouteColumn>
+              <p>변경 전</p>
+              {renderRouteMap(detail.routePreview.roadPathBefore)}
+            </StyledRouteColumn>
+            <StyledRouteColumn>
+              <p>변경 후</p>
+              {renderRouteMap(detail.routePreview.roadPathAfter)}
+            </StyledRouteColumn>
+          </StyledRouteGrid>
+        </Card>
+      ) : null}
 
       {isAlreadyDecided ? null : (
         <Card>

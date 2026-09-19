@@ -65,17 +65,23 @@ const toRouteStop = (raw: RawRouteStop): RouteStopPreviewResponseTypes => ({
   eta: raw.eta,
 });
 
+type RawRoutePathPoint = { lat: number; lng: number };
+
 type RawChangeApprovalDetail = RawChangeApprovalSummary & {
   route_preview: {
     stops_before: RawRouteStop[];
     stops_after: RawRouteStop[];
     reordered: string[];
     removed: string[];
+    road_path_before: RawRoutePathPoint[];
+    road_path_after: RawRoutePathPoint[];
   } | null;
   est_time_before: string | null;
   est_time_after: string | null;
   est_distance_before: number | null;
   est_distance_after: number | null;
+  est_duration_before: number | null;
+  est_duration_after: number | null;
   affected_students: { student_id: number; name: string }[];
   capacity: { student_capacity: number; assigned: number };
   preview_token: string | null;
@@ -104,12 +110,16 @@ export const getChangeApprovalDetail = async (approvalId: number): Promise<Chang
           stopsAfter: raw.route_preview.stops_after.map(toRouteStop),
           reordered: raw.route_preview.reordered,
           removed: raw.route_preview.removed,
+          roadPathBefore: raw.route_preview.road_path_before,
+          roadPathAfter: raw.route_preview.road_path_after,
         }
       : null,
     estTimeBefore: raw.est_time_before,
     estTimeAfter: raw.est_time_after,
     estDistanceBefore: raw.est_distance_before,
     estDistanceAfter: raw.est_distance_after,
+    estDurationBefore: raw.est_duration_before,
+    estDurationAfter: raw.est_duration_after,
     affectedStudents: raw.affected_students.map((s) => ({ studentId: s.student_id, name: s.name })),
     capacity: { studentCapacity: raw.capacity.student_capacity, assigned: raw.capacity.assigned },
     previewToken: raw.preview_token,

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
+import type { MapSurfaceProps } from "@/features/map";
 import { ChangeApprovalDetail } from "./ChangeApprovalDetail";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type { ChangeApprovalDetailResponseTypes } from "../types";
@@ -16,6 +17,13 @@ vi.mock("next/navigation", () => ({
 vi.mock("../api", () => ({
   getChangeApprovalDetail: vi.fn(),
   decideChangeApproval: vi.fn(),
+}));
+
+// `R18-C` 목표 4(Ruling 319) — jsdom 은 실제 지도 SDK 를 못 그리므로(TodayRunPage.test.tsx
+// 와 같은 한계) `MapSurface` 를 목으로 바꿔 이 화면이 계산한 polylines·camera 만 검증한다.
+const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+vi.mock("@/features/map", () => ({
+  MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));
 
 const mockGetDetail = vi.mocked(getChangeApprovalDetail);
@@ -38,11 +46,21 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
     stopsAfter: [{ seq: 1, stopName: "후문", eta: "08:15" }],
     reordered: [],
     removed: [],
+    roadPathBefore: [
+      { lat: 37.55, lng: 126.97 },
+      { lat: 37.56, lng: 126.98 },
+    ],
+    roadPathAfter: [
+      { lat: 37.55, lng: 126.97 },
+      { lat: 37.57, lng: 126.99 },
+    ],
   },
   estTimeBefore: "08:10",
   estTimeAfter: "08:15",
   estDistanceBefore: 1200,
   estDistanceAfter: 1500,
+  estDurationBefore: 32,
+  estDurationAfter: 38,
   affectedStudents: [{ studentId: 1, name: "이학생" }],
   capacity: { studentCapacity: 20, assigned: 12 },
   previewToken: "token-abc",
@@ -103,6 +121,8 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       estTimeAfter: null,
       estDistanceBefore: null,
       estDistanceAfter: null,
+      estDurationBefore: null,
+      estDurationAfter: null,
       previewToken: null,
     });
     render(<ChangeApprovalDetail approvalId={5} />);
@@ -110,5 +130,68 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "거절" })).not.toBeInTheDocument();
+  });
+
+  // `R18-C` 목표 2·3(Ruling 318) — 노선 전체 소요(분)를 전/후·증감 부호와 함께 낸다.
+  describe("노선 전체 소요시간 비교", () => {
+    it("늘어나면 + 부호로 보여준다", async () => {
+      mockGetDetail.mockResolvedValue(baseDetail); // 32분 → 38분
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("32분 → 38분 (+6분)")).toBeInTheDocument();
+    });
+
+    it("줄어들면 - 부호로 보여준다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, estDurationBefore: 40, estDurationAfter: 35 });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("40분 → 35분 (-5분)")).toBeInTheDocument();
+    });
+
+    it("결정된 건처럼 값이 없으면 - 를 보여주고 이유를 한 줄 안내한다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: null,
+        estTimeBefore: null,
+        estTimeAfter: null,
+        estDistanceBefore: null,
+        estDistanceAfter: null,
+        estDurationBefore: null,
+        estDurationAfter: null,
+        previewToken: null,
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("- (결정된 건은 소요시간을 다시 계산하지 않습니다)")).toBeInTheDocument();
+    });
+  });
+
+  // `R18-C` 목표 4(Ruling 319) — 전후 경로를 좌우 두 지도로 나란히 그린다(한 지도에 겹치지 않는다).
+  describe("전후 경로 지도", () => {
+    it("도로 좌표를 좌우 두 지도에 각각의 폴리라인으로 그린다", async () => {
+      mockGetDetail.mockResolvedValue(baseDetail);
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
+
+      const [beforeCall, afterCall] = mockMapSurface.mock.calls;
+      expect(beforeCall[0].polylines).toEqual([
+        expect.objectContaining({ kind: "route", points: baseDetail.routePreview!.roadPathBefore }),
+      ]);
+      expect(afterCall[0].polylines).toEqual([
+        expect.objectContaining({ kind: "route", points: baseDetail.routePreview!.roadPathAfter }),
+      ]);
+    });
+
+    it("도로 좌표가 없으면 지도 대신 안내 문구를 보여준다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: { ...baseDetail.routePreview!, roadPathBefore: [], roadPathAfter: [] },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findAllByText("경로 좌표가 아직 없습니다")).toHaveLength(2);
+      expect(mockMapSurface).not.toHaveBeenCalled();
+    });
   });
 });

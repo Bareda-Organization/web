@@ -50,3 +50,11 @@ export const StyledActionRow = styled.div`
   gap: 8px;
   margin-top: 12px;
 `;
+
+// `R18-C` 목표 4(Ruling 319) — 전후 지도를 좌우로 나란히. 한 지도에 겹치지 않는다.
+export const StyledMapSurface = styled.div`
+  height: 320px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+`;

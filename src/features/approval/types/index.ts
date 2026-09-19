@@ -72,11 +72,22 @@ export type RouteStopPreviewResponseTypes = {
   eta: string;
 };
 
+// 지도에 그릴 도로 좌표 한 점(`R18-C` 목표 4, Ruling 319) — `features/map` 의 `MapPolyline.points`
+// 와 같은 모양이라 변환 없이 그대로 넘길 수 있다.
+export type RoutePathPointResponseTypes = {
+  lat: number;
+  lng: number;
+};
+
 export type RoutePreviewResponseTypes = {
   stopsBefore: RouteStopPreviewResponseTypes[];
   stopsAfter: RouteStopPreviewResponseTypes[];
   reordered: string[];
   removed: string[];
+  // `R18-C` 목표 4(Ruling 319) — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
+  // 옛 확정 노선 버전(도로 좌표 컬럼 도입 전)이면 빈 배열이다 — null 이 아니다.
+  roadPathBefore: RoutePathPointResponseTypes[];
+  roadPathAfter: RoutePathPointResponseTypes[];
 };
 
 export type ChangeApprovalAffectedStudentResponseTypes = {
@@ -84,8 +95,9 @@ export type ChangeApprovalAffectedStudentResponseTypes = {
   name: string;
 };
 
-// ⚠ 재최적화 전용 필드 6개는 전부 null 일 수 있다 — 이미 결정된 건(approved·rejected·
-// auto_rejected)의 상세 조회는 재최적화를 하지 않는다(백엔드
+// ⚠ 재최적화 전용 필드 8개(`R18-C` 에서 est_duration_before·est_duration_after 2개 추가)는
+// 전부 null 일 수 있다 — 이미 결정된 건(approved·rejected·auto_rejected)의 상세 조회는
+// 재최적화를 하지 않는다(백엔드
 // `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`,
 // 2026-09-14 F5-W1 실서버 계약 시험(approval_id=2, approved)에서도 그대로 재현 —
 // 이 널 처리가 없어 `TypeError: Cannot read properties of null (reading 'stops_before')`
@@ -96,6 +108,9 @@ export type ChangeApprovalDetailResponseTypes = ChangeApprovalSummaryResponseTyp
   estTimeAfter: string | null;
   estDistanceBefore: number | null;
   estDistanceAfter: number | null;
+  // 노선 전체 소요(분, Ruling 318) — 출발지→마지막 정차지. 특정 학생의 승하차지까지가 아니다.
+  estDurationBefore: number | null;
+  estDurationAfter: number | null;
   affectedStudents: ChangeApprovalAffectedStudentResponseTypes[];
   capacity: {
     studentCapacity: number;
