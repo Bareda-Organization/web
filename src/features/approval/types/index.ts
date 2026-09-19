@@ -104,6 +104,11 @@ export type ChangeApprovalAffectedStudentResponseTypes = {
 // 로 죽던 결함을 그 시험이 잡았다). `affectedStudents` 는 이 경우에도 빈 배열이라 null 이 아니다.
 export type ChangeApprovalDetailResponseTypes = ChangeApprovalSummaryResponseTypes & {
   routePreview: RoutePreviewResponseTypes | null;
+  // `R20-B` 목표 3(조율자 결정) — 회차 출발 예정 시각. 변경 전/후로 갈리지 않는다(재최적화가
+  // 출발 시각 자체를 옮기지 않는다). `r20-a` 가 이 필드를 추가하기 전에는 백엔드가 아예
+  // 내려주지 않으므로 `undefined` 를 `null` 로 흡수한다(api/changeApprovals.ts) — 값이
+  // 없으면 견디는 화면을 만든다는 목표 5 와 같은 이유다.
+  departTime: string | null;
   estTimeBefore: string | null;
   estTimeAfter: string | null;
   estDistanceBefore: number | null;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapPolyline } from "@/features/map";
-import { formatDurationDelta } from "@/shared/lib/format/durationDelta";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type {
   ChangeApprovalDetailResponseTypes,
@@ -27,23 +27,56 @@ type ChangeApprovalDetailProps = {
   approvalId: number;
 };
 
+// `R20-B2` 목표 1(사용자 지적) — 실제 응답은 이 값을 풀 ISO(초·밀리초·날짜 포함)로 준다
+// (같은 날 같은 회차의 정차지 시각이라 시:분이면 충분하다). 타입은 `string` 이지만 실측상
+// 결정 전 정류장은 `null` 로 오기도 해(백엔드 계약과 타입이 어긋난 지점, 보고서 §2) —
+// `formatClockTime` 에 그대로 넘기면 `Date(null)` 이 자정으로 파싱돼 없는 값을 있는
+// 것처럼 보여준다. 값이 없을 때는 "-" 로 명시한다.
 const renderStop = (stop: RouteStopPreviewResponseTypes) => (
   <StyledRouteStopRow key={`${stop.seq}-${stop.stopName}`}>
     <span>
       {stop.seq}. {stop.stopName}
     </span>
-    <span>{stop.eta}</span>
+    <span>{stop.eta ? formatClockTime(stop.eta) : "-"}</span>
   </StyledRouteStopRow>
 );
 
-// `R18-C` 목표 3(Ruling 318) — 노선 전체 소요(분)를 전/후·증감 부호와 함께 낸다. 결정된
-// 건처럼 값이 없으면(재최적화를 하지 않은 건) "-" 를 두고 왜 없는지 한 줄로 안내한다 —
-// 값이 그냥 비어 있으면 결함인지 "이 건은 원래 계산하지 않는다"인지 화면에서 구별이 안 된다.
-const formatDurationComparison = (before: number | null, after: number | null): string => {
-  if (before === null || after === null) {
-    return "- (결정된 건은 소요시간을 다시 계산하지 않습니다)";
-  }
-  return formatDurationDelta(before, after);
+// `R20-B` 목표 2·3·4(조율자 결정) — "변경 전 / 변경 후" 묶음에 시간 값은 이 3개만 낸다:
+// 전체 소요시간(분) · 출발시간 · 도착시간. 옛 est_time_before/after(이 학생 개인 도착시각)는
+// 기준이 두 갈래로 갈리는 표를 만들어 뺐다 — 소요시간은 이미 "노선 전체(출발지→마지막
+// 정차지)" 기준(Ruling 318)인데 도착시각만 "이 학생 정류장" 기준이면 관리자가 "37분
+// 걸리는데 도착이 왜 저 시각이지"로 읽는다.
+//
+// 값이 없는 두 원인을 구별한다 — ①옛 확정 노선(`route_version.est_duration_min` 컬럼
+// 도입 전)이라 소요시간 자체가 없는 경우(RunWaypointPanel.tsx 와 같은 문구),
+// ②`departTime` 이 아직 응답에 없는 경우(`r20-a` 미병합, api/changeApprovals.ts 주석).
+// "-" 만 찍으면 결함인지 아직 안 채워진 값인지 화면에서 구별이 안 된다.
+const DURATION_MISSING_REASON = "- (예전 확정 노선이라 소요시간 정보가 없습니다)";
+const DEPART_TIME_MISSING_REASON = "- (출발 시각 정보가 아직 없습니다)";
+const ARRIVAL_TIME_MISSING_REASON = "- (출발 또는 소요 정보가 없어 계산할 수 없습니다)";
+
+// 전체 소요시간 — "변경 전" 열은 값만, "변경 후" 열은 증감 부호를 덧붙인다(목표 4, 증감 유지).
+const formatTotalDuration = (minutes: number | null, deltaBase?: number | null): string => {
+  if (minutes === null) return DURATION_MISSING_REASON;
+  if (deltaBase === undefined || deltaBase === null) return `${minutes}분`;
+  const delta = minutes - deltaBase;
+  const sign = delta >= 0 ? "+" : "";
+  return `${minutes}분 (${sign}${delta}분)`;
+};
+
+// 출발시간 — 재최적화가 출발 시각 자체를 옮기지 않으므로 전/후 두 열에 같은 값이 들어간다
+// (조율자 결정 — "변경해도 출발 시각은 그대로"가 관리자에게 유용한 정보다). `R20-B2`
+// 목표 2 — 값만 같으면 사람은 버그로 읽는다(사용자 신고). 렌더 쪽에서 "전후 동일"
+// 배지를 나란히 붙여 의도된 동일값임을 밝힌다(아래 return 문).
+const formatDepartTime = (departTime: string | null): string =>
+  departTime === null ? DEPART_TIME_MISSING_REASON : formatClockTime(departTime);
+
+// 도착시간 — 새로 계산하지 않고 출발시간 + 전체 소요시간(분)의 파생값이다.
+const formatArrivalTime = (departTime: string | null, durationMin: number | null): string => {
+  if (departTime === null || durationMin === null) return ARRIVAL_TIME_MISSING_REASON;
+  const arrival = new Date(departTime);
+  arrival.setMinutes(arrival.getMinutes() + durationMin);
+  return formatClockTime(arrival.toISOString());
 };
 
 const DEFAULT_MAP_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
@@ -196,22 +229,54 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
           </span>
         </StyledInfoRow>
         <StyledInfoRow>
-          <StyledInfoLabel>예상 소요</StyledInfoLabel>
-          <span>
-            {detail.estTimeBefore ?? "-"} → {detail.estTimeAfter ?? "-"}
-          </span>
-        </StyledInfoRow>
-        <StyledInfoRow>
-          {/* `R18-C` 목표 2·3(Ruling 318) — 노선 전체 소요(분). 위 "예상 소요"(도착 시각)와는
-              다른 값이다 — 특정 학생의 승하차지 도착 시각이 아니라 출발지→마지막 정차지 총 시간. */}
-          <StyledInfoLabel>노선 전체 소요</StyledInfoLabel>
-          <span>{formatDurationComparison(detail.estDurationBefore, detail.estDurationAfter)}</span>
-        </StyledInfoRow>
-        <StyledInfoRow>
           <StyledInfoLabel>영향받는 학생</StyledInfoLabel>
           <span>{detail.affectedStudents.map((s) => s.name).join(", ") || "-"}</span>
         </StyledInfoRow>
       </Card>
+
+      {detail.routePreview ? (
+        <Card>
+          {/* `R20-B` 목표 2·3·4(조율자 결정) — 전/후를 나란히 두 열로 나눠 무엇이 달라지는지
+              바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간 3개만 낸다. */}
+          <p>소요 시간</p>
+          <StyledRouteGrid>
+            <StyledRouteColumn>
+              <p>변경 전</p>
+              <StyledInfoRow>
+                <StyledInfoLabel>전체 소요시간</StyledInfoLabel>
+                <span>{formatTotalDuration(detail.estDurationBefore)}</span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>출발시간</StyledInfoLabel>
+                <span>
+                  <span>{formatDepartTime(detail.departTime)}</span> <Badge tone="neutral">전후 동일</Badge>
+                </span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>도착시간</StyledInfoLabel>
+                <span>{formatArrivalTime(detail.departTime, detail.estDurationBefore)}</span>
+              </StyledInfoRow>
+            </StyledRouteColumn>
+            <StyledRouteColumn>
+              <p>변경 후</p>
+              <StyledInfoRow>
+                <StyledInfoLabel>전체 소요시간</StyledInfoLabel>
+                <span>{formatTotalDuration(detail.estDurationAfter, detail.estDurationBefore)}</span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>출발시간</StyledInfoLabel>
+                <span>
+                  <span>{formatDepartTime(detail.departTime)}</span> <Badge tone="neutral">전후 동일</Badge>
+                </span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>도착시간</StyledInfoLabel>
+                <span>{formatArrivalTime(detail.departTime, detail.estDurationAfter)}</span>
+              </StyledInfoRow>
+            </StyledRouteColumn>
+          </StyledRouteGrid>
+        </Card>
+      ) : null}
 
       <Card>
         <p>노선 비교</p>

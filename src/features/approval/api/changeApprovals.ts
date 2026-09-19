@@ -68,6 +68,9 @@ const toRouteStop = (raw: RawRouteStop): RouteStopPreviewResponseTypes => ({
 type RawRoutePathPoint = { lat: number; lng: number };
 
 type RawChangeApprovalDetail = RawChangeApprovalSummary & {
+  // `R20-B` 목표 3 — `r20-a` 가 아직 병합 전이라 백엔드가 이 키 자체를 안 줄 수 있다
+  // (`undefined`). optional 로 받아 두고 아래에서 `null` 로 흡수한다.
+  depart_time?: string | null;
   route_preview: {
     stops_before: RawRouteStop[];
     stops_after: RawRouteStop[];
@@ -114,6 +117,7 @@ export const getChangeApprovalDetail = async (approvalId: number): Promise<Chang
           roadPathAfter: raw.route_preview.road_path_after,
         }
       : null,
+    departTime: raw.depart_time ?? null,
     estTimeBefore: raw.est_time_before,
     estTimeAfter: raw.est_time_after,
     estDistanceBefore: raw.est_distance_before,

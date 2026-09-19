@@ -37,6 +37,7 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   busNo: "1호차",
   direction: "to_academy",
   deadlineAt: "2026-09-13T00:00:00Z",
+  departTime: null,
   stopName: "정문",
   remainingRiders: 3,
   willRemoveStop: false,
@@ -132,23 +133,66 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     expect(screen.queryByRole("button", { name: "거절" })).not.toBeInTheDocument();
   });
 
-  // `R18-C` 목표 2·3(Ruling 318) — 노선 전체 소요(분)를 전/후·증감 부호와 함께 낸다.
-  describe("노선 전체 소요시간 비교", () => {
-    it("늘어나면 + 부호로 보여준다", async () => {
-      mockGetDetail.mockResolvedValue(baseDetail); // 32분 → 38분
+  // `R20-B` 목표 2·3·4(조율자 결정) — "변경 전/변경 후" 두 열에 전체 소요시간·출발시간·
+  // 도착시간 3개만 낸다. 도착시간은 출발시간 + 전체 소요시간(분)의 파생값이라 새로
+  // 계산하지 않는다. 타임존에 좌우되지 않도록 기대값도 같은 방식(toLocaleTimeString)으로
+  // 계산해 만든다 — 실행 환경의 로컬 시간대가 달라져도 이 시험은 그대로 통과해야 한다.
+  const formatClock = (iso: string) =>
+    new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  describe("소요 시간 비교(변경 전/후)", () => {
+    const departTime = "2026-09-13T08:00:00Z";
+
+    it("전체 소요시간·출발시간·도착시간을 두 열에 나눠 보여주고, 소요시간 증감은 변경 후 열에만 부호로 낸다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime }); // 32분 → 38분
       render(<ChangeApprovalDetail approvalId={5} />);
 
-      expect(await screen.findByText("32분 → 38분 (+6분)")).toBeInTheDocument();
+      // 전체 소요시간 — 변경 전은 값만, 변경 후는 증감 부호를 덧붙인다.
+      expect(await screen.findByText("32분")).toBeInTheDocument();
+      expect(await screen.findByText("38분 (+6분)")).toBeInTheDocument();
+
+      // 출발시간 — 재최적화가 출발 시각을 옮기지 않으므로 두 열에 같은 값이 나온다.
+      // `R20-B2` 목표 2 — 같은 값이 버그로 읽히지 않도록 "전후 동일" 배지를 함께 낸다.
+      const departLabel = formatClock(departTime);
+      expect(await screen.findAllByText(departLabel)).toHaveLength(2);
+      expect(await screen.findAllByText("전후 동일")).toHaveLength(2);
+
+      // 도착시간 — 출발시간 + 전체 소요시간(분)의 파생값이라 전/후가 다르다.
+      const arrivalBefore = new Date(departTime);
+      arrivalBefore.setMinutes(arrivalBefore.getMinutes() + 32);
+      const arrivalAfter = new Date(departTime);
+      arrivalAfter.setMinutes(arrivalAfter.getMinutes() + 38);
+      expect(await screen.findByText(formatClock(arrivalBefore.toISOString()))).toBeInTheDocument();
+      expect(await screen.findByText(formatClock(arrivalAfter.toISOString()))).toBeInTheDocument();
     });
 
     it("줄어들면 - 부호로 보여준다", async () => {
-      mockGetDetail.mockResolvedValue({ ...baseDetail, estDurationBefore: 40, estDurationAfter: 35 });
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime, estDurationBefore: 40, estDurationAfter: 35 });
       render(<ChangeApprovalDetail approvalId={5} />);
 
-      expect(await screen.findByText("40분 → 35분 (-5분)")).toBeInTheDocument();
+      expect(await screen.findByText("40분")).toBeInTheDocument();
+      expect(await screen.findByText("35분 (-5분)")).toBeInTheDocument();
     });
 
-    it("결정된 건처럼 값이 없으면 - 를 보여주고 이유를 한 줄 안내한다", async () => {
+    it("옛 확정 노선이라 전체 소요시간이 없으면 이유를 한 줄 안내하고, 도착시간도 계산 불가로 안내한다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime, estDurationBefore: null });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("- (예전 확정 노선이라 소요시간 정보가 없습니다)")).toBeInTheDocument();
+      expect(await screen.findByText("- (출발 또는 소요 정보가 없어 계산할 수 없습니다)")).toBeInTheDocument();
+      // 소요시간이 없는 쪽(before) 은 증감 계산의 기준값도 없다는 뜻이라, after 는 부호 없이 값만 낸다.
+      expect(await screen.findByText("38분")).toBeInTheDocument();
+    });
+
+    it("departTime 이 아직 응답에 없으면(r20-a 미병합) 출발·도착시간에 이유를 안내한다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime: null });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findAllByText("- (출발 시각 정보가 아직 없습니다)")).toHaveLength(2);
+      expect(await screen.findAllByText("- (출발 또는 소요 정보가 없어 계산할 수 없습니다)")).toHaveLength(2);
+    });
+
+    it("이미 결정된 건(routePreview 가 null)은 소요 시간 묶음 자체를 보여주지 않는다", async () => {
       mockGetDetail.mockResolvedValue({
         ...baseDetail,
         routePreview: null,
@@ -162,7 +206,38 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       });
       render(<ChangeApprovalDetail approvalId={5} />);
 
-      expect(await screen.findByText("- (결정된 건은 소요시간을 다시 계산하지 않습니다)")).toBeInTheDocument();
+      expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
+      expect(screen.queryByText("소요 시간")).not.toBeInTheDocument();
+    });
+  });
+
+  // `R20-B2` 목표 1(사용자 지적) — "노선 비교" 정류장 목록의 도착예정시각도 이 화면의
+  // 시간 표기다. 실제 응답은 초·밀리초·날짜까지 포함한 풀 ISO 를 주므로 시:분으로 줄인다.
+  describe("노선 비교 정류장 시각", () => {
+    it("풀 ISO 로 온 정류장 도착예정시각을 시:분으로 줄여 보여준다", async () => {
+      const eta = "2026-09-19T12:55:41.464829Z";
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: { ...baseDetail.routePreview!, stopsAfter: [{ seq: 1, stopName: "그린빌라 입구", eta }] },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText(formatClock(eta))).toBeInTheDocument();
+      expect(screen.queryByText(eta)).not.toBeInTheDocument();
+    });
+
+    it("도착예정시각이 없으면(결정 전 정류장) - 를 보여준다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: {
+          ...baseDetail.routePreview!,
+          stopsBefore: [{ seq: 1, stopName: "중앙로 스타빌딩 앞", eta: null as unknown as string }],
+        },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findByText("중앙로 스타빌딩 앞", { exact: false })).toBeInTheDocument();
+      expect(screen.getByText("1. 중앙로 스타빌딩 앞").closest("div")).toHaveTextContent("-");
     });
   });
 
