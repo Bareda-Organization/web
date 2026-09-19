@@ -309,12 +309,23 @@ export const DashboardPage = () => {
       ),
     },
     {
-      // R21-B 목표 1·3·4 — "도착"은 예정 도착 예측치를 별도로 계산해 두지 않아(회차
-      // 단위로는 근거가 되는 값이 없다, 보고서 §2) 실제 종료 시각(finishedAt)만 보여준다
-      // — 종료 전엔 값이 없어 "-"로 비워 둔다.
+      // R21-B2 목표 1·2 — 출발 컬럼과 대칭으로 예정/실제를 함께 보여준다. 예정 도착은
+      // §5.3 est_arrival_time(depart_time + est_duration_min) — 회차에 소요 시간
+      // 추정치가 없으면 서버가 null 을 주므로 "-"로 견딘다(그 이유는 여기서 알 수
+      // 없어 값만 비운다, 보고서 §2).
       key: "finishedAt",
       label: "도착",
-      render: (row) => (row.finishedAt ? formatClockTimeWithSeconds(row.finishedAt) : "-"),
+      render: (row) => (
+        <>
+          예정 {row.estArrivalTime ? formatClockTimeWithSeconds(row.estArrivalTime) : "-"}
+          {row.finishedAt ? (
+            <>
+              <br />
+              실제 {formatClockTimeWithSeconds(row.finishedAt)}
+            </>
+          ) : null}
+        </>
+      ),
     },
     { key: "boardedCount", label: "탑승", render: (row) => `${row.boardedCount}/${row.totalCount}` },
     {

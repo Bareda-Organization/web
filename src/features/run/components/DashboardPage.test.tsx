@@ -106,6 +106,7 @@ const baseDashboard: DashboardResponseTypes = {
       departTime: "08:00",
       startedAt: null,
       finishedAt: null,
+      estArrivalTime: null,
       driverName: "김기사",
       escortName: null,
       boardedCount: 10,
@@ -165,13 +166,28 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   });
 
   it("실제 출발·도착 전이면 출발은 예정만, 도착은 빈 값(-)으로 보여준다", async () => {
-    mockGetDashboard.mockResolvedValue(baseDashboard); // startedAt·finishedAt 둘 다 null
+    mockGetDashboard.mockResolvedValue(baseDashboard); // startedAt·finishedAt·estArrivalTime 전부 null
     mockGetRunsLive.mockResolvedValue(emptyLive);
     const { container } = render(<DashboardPage />);
 
     await screen.findByText("1호차");
     expect(container.textContent).toContain("예정 08:00");
     expect(container.textContent).not.toContain("실제");
+    expect(container.textContent).toContain("예정 -"); // 도착 컬럼 — est_arrival_time 없음
+  });
+
+  // R21-B2 목표 1·2 — 예정 도착(est_arrival_time)이 도착 컬럼에 시:분:초로 뜬다.
+  it("도착 컬럼이 est_arrival_time 을 예정 도착으로 보여준다", async () => {
+    const estArrivalTime = "2026-09-19T08:27:00Z";
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], estArrivalTime }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    const { container } = render(<DashboardPage />);
+
+    await screen.findByText("1호차");
+    expect(container.textContent).toContain(`예정 ${formatClockTimeWithSeconds(estArrivalTime)}`);
   });
 
   it("미탑승 확인 대기 건이 있으면 배너로 건수를 보여준다", async () => {

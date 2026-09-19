@@ -256,9 +256,20 @@ export const TodayRunPage = () => {
         ),
     },
     {
+      // R21-B2 목표 1·2 — DashboardPage.tsx 와 같은 표기(예정/실제, est_arrival_time 없으면 "-").
       key: "finishedAt",
       label: "도착",
-      render: () => (selectedRun?.finishedAt ? formatClockTimeWithSeconds(selectedRun.finishedAt) : "-"),
+      render: () => (
+        <>
+          예정 {selectedRun?.estArrivalTime ? formatClockTimeWithSeconds(selectedRun.estArrivalTime) : "-"}
+          {selectedRun?.finishedAt ? (
+            <>
+              <br />
+              실제 {formatClockTimeWithSeconds(selectedRun.finishedAt)}
+            </>
+          ) : null}
+        </>
+      ),
     },
     {
       key: "change",

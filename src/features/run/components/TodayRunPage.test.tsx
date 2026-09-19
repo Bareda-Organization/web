@@ -68,6 +68,7 @@ const baseDashboard: DashboardResponseTypes = {
       departTime: "08:10",
       startedAt: "08:12:30",
       finishedAt: null,
+      estArrivalTime: "08:35:00",
       driverName: "박기사",
       escortName: "최매니저",
       boardedCount: 5,
@@ -149,6 +150,17 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     // 도착 컬럼 헤더 옆 "-" 는 다른 컬럼(변경 등)도 같은 문구를 쓰므로 헤더 존재만 본다 —
     // 값 자체는 위 통합 검사가 이미 실제 finishedAt=null 경로를 지나며 함께 검증한다.
     expect(screen.getByText("도착")).toBeInTheDocument();
+  });
+
+  // R21-B2 목표 1·2 — DashboardPage.test.tsx 와 같은 이유로 est_arrival_time 이 "예정"
+  // 도착으로 뜨는지 본다.
+  it("도착 컬럼이 est_arrival_time 을 예정 도착으로 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    const { container } = render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    expect(container.textContent).toContain("예정 08:35:00");
   });
 });
 
