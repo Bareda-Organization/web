@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
-import { MapSurface, type MapCamera, type MapPolyline } from "@/features/map";
+import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type {
   ChangeApprovalDetailResponseTypes,
   RoutePathPointResponseTypes,
   RouteStopPreviewResponseTypes,
+  RouteStopRefResponseTypes,
 } from "../types";
 import {
   StyledDetailLayout,
@@ -92,14 +93,49 @@ const cameraForPath = (path: RoutePathPointResponseTypes[]): MapCamera => {
   return { lat: sum.lat / path.length, lng: sum.lng / path.length, zoom: DEFAULT_MAP_CAMERA.zoom };
 };
 
-const renderRouteMap = (path: RoutePathPointResponseTypes[]) => {
-  if (path.length === 0) {
+// R21-A 추가 지시 ② — "변한 승하차지"(삭제·순서 변경)의 stopName 집합. stops_before·
+// stops_after 는 stopId 를 안 실어(§5.5 계약 — 이름만으로 충분하다는 기존 판단)
+// 이름으로 맞춘다 — 이 화면이 이미 정차지 표(renderStop)에서 쓰는 것과 같은 키다.
+const changedStopNamesOf = (reordered: RouteStopRefResponseTypes[], removed: RouteStopRefResponseTypes[]): Set<string> =>
+  new Set(
+    [...reordered, ...removed].map((ref) => ref.stopName).filter((name): name is string => name != null),
+  );
+
+// R21-A 추가 지시 ② — 정차지를 지도 마커로 바꾼다. 좌표가 없는 항목(경유 지점만
+// 가리키는 자리)은 건너뛴다 — 억지로 좌표를 맞추면 삭제된 승하차지가 조용히
+// 빠진 지도가 나간다(조율자 지시).
+const stopsToMarkers = (stops: RouteStopPreviewResponseTypes[], changedNames: Set<string>): MapMarker[] =>
+  stops
+    .filter((stop) => stop.lat != null && stop.lng != null)
+    .map((stop) => ({
+      id: `stop-${stop.seq}-${stop.stopName}`,
+      lat: stop.lat as number,
+      lng: stop.lng as number,
+      kind: "stop" as const,
+      selected: changedNames.has(stop.stopName),
+    }));
+
+// 도로 좌표가 비어도(옛 확정 노선 버전) 정차지 마커는 있을 수 있다 — 그때는 정차지
+// 평균 좌표로 카메라를 잡는다(R21-A §4 와 같은 판단, features/map 의 anchorForSelection
+// 과 같은 이유 — 화면이 SDK 를 몰라야 하므로 여기서 직접 평균만 낸다).
+const cameraForPathOrMarkers = (path: RoutePathPointResponseTypes[], markers: MapMarker[]): MapCamera => {
+  if (path.length > 0) return cameraForPath(path);
+  if (markers.length === 0) return DEFAULT_MAP_CAMERA;
+  const sum = markers.reduce((acc, marker) => ({ lat: acc.lat + marker.lat, lng: acc.lng + marker.lng }), {
+    lat: 0,
+    lng: 0,
+  });
+  return { lat: sum.lat / markers.length, lng: sum.lng / markers.length, zoom: DEFAULT_MAP_CAMERA.zoom };
+};
+
+const renderRouteMap = (path: RoutePathPointResponseTypes[], markers: MapMarker[]) => {
+  if (path.length === 0 && markers.length === 0) {
     return <p>경로 좌표가 아직 없습니다</p>;
   }
-  const polylines: MapPolyline[] = [{ id: "preview", points: path, kind: "route" }];
+  const polylines: MapPolyline[] = path.length > 0 ? [{ id: "preview", points: path, kind: "route" }] : [];
   return (
     <StyledMapSurface>
-      <MapSurface camera={cameraForPath(path)} markers={[]} polylines={polylines} />
+      <MapSurface camera={cameraForPathOrMarkers(path, markers)} markers={markers} polylines={polylines} />
     </StyledMapSurface>
   );
 };
@@ -298,16 +334,29 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
 
       {detail.routePreview ? (
         <Card>
-          {/* `R18-C` 목표 4(Ruling 319) — 전후 경로를 좌우 두 지도로 나란히. 한 지도에 겹치지 않는다. */}
+          {/* `R18-C` 목표 4(Ruling 319) — 전후 경로를 좌우 두 지도로 나란히. 한 지도에 겹치지 않는다.
+              R21-A 추가 지시 ② — 승하차지도 마커로 찍고, 삭제·순서 변경된 것은 흰 테두리로 강조한다. */}
           <p>경로 지도</p>
           <StyledRouteGrid>
             <StyledRouteColumn>
               <p>변경 전</p>
-              {renderRouteMap(detail.routePreview.roadPathBefore)}
+              {renderRouteMap(
+                detail.routePreview.roadPathBefore,
+                stopsToMarkers(
+                  detail.routePreview.stopsBefore,
+                  changedStopNamesOf(detail.routePreview.reordered, detail.routePreview.removed),
+                ),
+              )}
             </StyledRouteColumn>
             <StyledRouteColumn>
               <p>변경 후</p>
-              {renderRouteMap(detail.routePreview.roadPathAfter)}
+              {renderRouteMap(
+                detail.routePreview.roadPathAfter,
+                stopsToMarkers(
+                  detail.routePreview.stopsAfter,
+                  changedStopNamesOf(detail.routePreview.reordered, detail.routePreview.removed),
+                ),
+              )}
             </StyledRouteColumn>
           </StyledRouteGrid>
         </Card>

@@ -7,6 +7,7 @@ import type {
   ChangeApprovalSummaryResponseTypes,
   ChangeApprovalsResponseTypes,
   RouteStopPreviewResponseTypes,
+  RouteStopRefResponseTypes,
 } from "../types";
 
 type RawChangeApprovalSummary = {
@@ -53,16 +54,33 @@ export const getChangeApprovals = async (status?: string): Promise<ChangeApprova
   return { items: raw.items.map(toSummary), pendingCount: raw.pending_count };
 };
 
+// R21-A 추가 지시 ② — lat·lng 를 더했다(지도 마커용, 경유 지점만 가리키는 항목은 null).
 type RawRouteStop = {
   seq: number;
   stop_name: string;
   eta: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 const toRouteStop = (raw: RawRouteStop): RouteStopPreviewResponseTypes => ({
   seq: raw.seq,
   stopName: raw.stop_name,
   eta: raw.eta,
+  lat: raw.lat,
+  lng: raw.lng,
+});
+
+// R21-A 추가 지시 ② — `reordered`·`removed` 는 처음부터 객체였다(타입이 실제 모양과
+// 어긋나 있었다, 아래 `RawRouteStopRef` 참고. 지금까지 화면이 이 필드를 쓴 적이
+// 없어 드러나지 않았다).
+type RawRouteStopRef = { stop_id: number; stop_name: string | null; lat: number | null; lng: number | null };
+
+const toRouteStopRef = (raw: RawRouteStopRef): RouteStopRefResponseTypes => ({
+  stopId: raw.stop_id,
+  stopName: raw.stop_name,
+  lat: raw.lat,
+  lng: raw.lng,
 });
 
 type RawRoutePathPoint = { lat: number; lng: number };
@@ -74,8 +92,8 @@ type RawChangeApprovalDetail = RawChangeApprovalSummary & {
   route_preview: {
     stops_before: RawRouteStop[];
     stops_after: RawRouteStop[];
-    reordered: string[];
-    removed: string[];
+    reordered: RawRouteStopRef[];
+    removed: RawRouteStopRef[];
     road_path_before: RawRoutePathPoint[];
     road_path_after: RawRoutePathPoint[];
   } | null;
@@ -111,8 +129,8 @@ export const getChangeApprovalDetail = async (approvalId: number): Promise<Chang
       ? {
           stopsBefore: raw.route_preview.stops_before.map(toRouteStop),
           stopsAfter: raw.route_preview.stops_after.map(toRouteStop),
-          reordered: raw.route_preview.reordered,
-          removed: raw.route_preview.removed,
+          reordered: raw.route_preview.reordered.map(toRouteStopRef),
+          removed: raw.route_preview.removed.map(toRouteStopRef),
           roadPathBefore: raw.route_preview.road_path_before,
           roadPathAfter: raw.route_preview.road_path_after,
         }

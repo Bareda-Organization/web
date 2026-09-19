@@ -324,6 +324,32 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     );
   });
 
+  // R21-A 목표 4 — baseLiveRun 은 position:null(실시간 위치 없음)이다. 이전에는
+  // 이 경우 `selectedBusMarker` 가 항상 null 이라 카메라가 기본 좌표(서울 시청)에
+  // 머물러, 정차지는 실제로 그려지는데도 화면 밖이라 안 보였다(조율자 실측 —
+  // 백엔드는 idle·확정·종료 회차도 stops 를 채워 보낸다). 정차지 두 곳의 평균
+  // 좌표로 카메라가 옮겨가는지 정확한 수치로 확인한다(범위가 아니라 값 자체).
+  it("실시간 위치가 없는 회차를 골라도 카메라가 정차지 평균 좌표로 옮겨간다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [
+        { stopId: 1, seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
+        { stopId: 2, seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
+      ],
+      confirmed: false,
+    });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: 15 } }),
+      ),
+    );
+  });
+
   it("이미 고른 버스를 다시 클릭하면 선택을 해제하고 근사 경로 안내도 사라진다", async () => {
     mockGetRunRoute.mockResolvedValue({
       roadPath: [{ lat: 37.1, lng: 127.1 }],

@@ -28,3 +28,49 @@ describe("markerIcon — 종류별 크기 관계(R18-B 목표 1)", () => {
     expect(buildMarkerIconHtml("student")).not.toContain("<svg");
   });
 });
+
+// R21-A 목표 1 — 고른 버스만 지도 위에서 다르게 보인다.
+describe("markerIcon — 선택 강조(R21-A 목표 1)", () => {
+  it("selected:true 인 버스는 흰 테두리(box-shadow)가 붙는다", () => {
+    expect(buildMarkerIconHtml("bus", { selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("bus", { selected: false })).not.toContain("box-shadow");
+    expect(buildMarkerIconHtml("bus")).not.toContain("box-shadow");
+  });
+
+  // 버스가 아닌 마커는 선택 개념이 없다 — 옵션을 줘도 원 모양이 그대로다.
+  // R21-A 추가 지시 ② — 구간변경 승인 지도의 "변한 승하차지"도 이 강조 수단을
+  // 그대로 쓴다(버스 전용이 아니다). 종류별 색(초록·주황)을 테두리 색으로 그대로
+  // 쓴다 — 파란 테두리만 고정이면 정차지·학생 마커에 안 어울린다.
+  it("정차지·학생 마커도 selected 를 주면 흰 테두리가 붙고, 테두리 색은 그 종류의 색을 쓴다", () => {
+    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("#16a34a");
+    expect(buildMarkerIconHtml("student", { selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("student", { selected: true })).toContain("#f97316");
+    expect(buildMarkerIconHtml("stop")).not.toContain("box-shadow");
+    expect(buildMarkerIconHtml("student")).not.toContain("box-shadow");
+  });
+});
+
+// R21-A 목표 2 — 버스끼리 구별하려고 번호를 마커에 표기한다.
+describe("markerIcon — 버스 번호 표기(R21-A 목표 2)", () => {
+  it("busNo 를 주면 그 번호 문자열이 아이콘 HTML 에 그대로 들어간다", () => {
+    expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).toContain("3호차");
+  });
+
+  it("busNo 가 없으면 이전과 같은 HTML(라벨 없음)이다", () => {
+    expect(buildMarkerIconHtml("bus")).toBe(buildMarkerIconHtml("bus", {}));
+  });
+});
+
+// R21-A 목표 3 — 같은 버스라도 등원·하원을 모양으로 구별한다(색은 C-09 4색 고정이라 못 쓴다).
+describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
+  it("등원(to_academy)과 하원(from_academy)은 서로 다른 아이콘 HTML 을 낸다", () => {
+    const toAcademy = buildMarkerIconHtml("bus", { direction: "to_academy" });
+    const fromAcademy = buildMarkerIconHtml("bus", { direction: "from_academy" });
+    expect(toAcademy).not.toBe(fromAcademy);
+  });
+
+  it("direction 을 생략하면 등원과 같은 모양이다(기존 동작 보존)", () => {
+    expect(buildMarkerIconHtml("bus")).toBe(buildMarkerIconHtml("bus", { direction: "to_academy" }));
+  });
+});

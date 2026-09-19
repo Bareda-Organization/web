@@ -13,6 +13,7 @@ import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select,
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
+  anchorForSelection,
   buildRouteDisplayState,
   cameraForSelectedBus,
   type MapCamera,
@@ -101,12 +102,22 @@ export const MonitoringPage = () => {
   // 실시간 회차의 좌표를 지도 마커로 옮긴다 — 위치를 아직 못 받은 회차(`position: null`)는
   // 마커를 만들지 않는다. 마커가 하나라도 있으면 그 평균 좌표를 카메라 중심으로 삼아
   // 지금 보이는 회차들이 화면 안에 들어오게 하고, 하나도 없으면 기본 좌표를 쓴다.
+  // R21-A 목표 1~3 — 고른 버스만 강조(selected)하고, 번호(busNo)·등원하원
+  // (direction)을 마커에 실어 버스끼리·같은 버스의 구간끼리 구별한다.
   const mapMarkers: MapMarker[] = useMemo(
     () =>
       runs
         .filter((run) => run.position != null)
-        .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
-    [runs],
+        .map((run) => ({
+          id: String(run.runId),
+          lat: run.position!.lat,
+          lng: run.position!.lng,
+          kind: "bus" as const,
+          selected: run.runId === selectedRunId,
+          busNo: run.busNo,
+          direction: run.direction,
+        })),
+    [runs, selectedRunId],
   );
   // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
   const mapMarkersWithStops: MapMarker[] = useMemo(
@@ -115,9 +126,15 @@ export const MonitoringPage = () => {
   );
   // R18-B2 목표 3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면 몫을
   // 한 곳에서 정한다(R18-B 때 이 화면 안에 있던 상수를 공유 표면으로 올렸다).
+  // R21-A 목표 4 — 고른 회차에 실시간 위치가 없으면(idle·확정·종료) 버스 마커
+  // 자체가 없어 정차지 쪽으로 카메라가 못 옮겨갔다 — 정차지 평균 좌표로 대신한다.
   const selectedBusMarker = useMemo(
-    () => mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
-    [mapMarkers, selectedRunId],
+    () =>
+      anchorForSelection(
+        mapMarkers.find((marker) => marker.id === String(selectedRunId)) ?? null,
+        routeStopMarkers,
+      ),
+    [mapMarkers, selectedRunId, routeStopMarkers],
   );
   const mapCamera: MapCamera = useMemo(() => {
     if (selectedBusMarker) return cameraForSelectedBus(selectedBusMarker, DEFAULT_CAMERA);

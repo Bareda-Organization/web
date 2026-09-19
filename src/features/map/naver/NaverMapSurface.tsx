@@ -4,7 +4,7 @@
 // §8.3.1` 이 요구하는 포트/어댑터 경계다. 화면(features/admin·features/run)은 이 파일을
 // 몰라야 하고, 대신 한 단계 위의 `../MapSurface` 만 가져다 쓴다. 이 경계는
 // `features/map/mapAdapterBoundary.test.ts` 가 파일 스캔으로 강제한다.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapCamera, MapMarker, MapPolyline } from "../types";
 import { getNaverMapClientId } from "./naverMapConfig";
 import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
@@ -134,13 +134,34 @@ export const NaverMapSurface = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 카메라 갱신 — 지도 생성 이후의 `camera` 변경을 반영한다.
+  // R21-A 추가 지시 ① — 예전엔 `camera` 좌표가 바뀔 때마다(버스 위치가 갱신될
+  // 때마다) 이 effect 가 다시 돌아 `setCenter`/`setZoom` 을 불렀다 — 사용자가
+  // 이미 지도를 손으로 옮기거나 확대·축소해 둔 상태를 위치 갱신이 덮어써
+  // "간헐적으로 리셋된다"는 신고로 이어졌다(운행 중 회차만 위치가 계속 들어와
+  // 간헐적으로 보였다). `camera` 값 자체를 비교해 막으면 같은 좌표로 다시 와도
+  // 되돌아가는 문제가 남으므로, **무엇 때문에 카메라를 옮기려는가**(선택된 버스
+  // id, 또는 선택 없음)를 신호로 삼는다 — 이 값은 위치가 갱신돼도 안 바뀐다.
+  const focusKey = useMemo(
+    () => markers.find((marker) => marker.kind === "bus" && marker.selected)?.id ?? "none",
+    [markers],
+  );
+  // focusKey 가 안 바뀌면 아래 effect 가 재실행되지 않으므로, 그 사이에 갱신된
+  // 최신 `camera` 값은 이 ref 로 읽는다(effect 의존성에 넣지 않는다 — 그러면
+  // 다시 좌표 비교 문제로 돌아간다).
+  const cameraRef = useRef(camera);
+  useEffect(() => {
+    cameraRef.current = camera;
+  });
+
+  // 카메라 갱신 — 지도 생성 시 1회(`Ruling 322`) + 포커스 대상이 바뀔 때만 옮긴다.
+  // 같은 버스를 계속 보고 있는 동안의 위치 갱신은 여기에 안 걸린다(위 focusKey 참고).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.naver) return;
-    map.setCenter(new window.naver.maps.LatLng(camera.lat, camera.lng));
-    map.setZoom(camera.zoom);
-  }, [camera.lat, camera.lng, camera.zoom, mapReady]);
+    const cam = cameraRef.current;
+    map.setCenter(new window.naver.maps.LatLng(cam.lat, cam.lng));
+    map.setZoom(cam.zoom);
+  }, [focusKey, mapReady]);
 
   // 마커 갱신 — id 기준으로 추가·제거하고, 기존 마커의 좌표 변경은 보간
   // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다 — COMMON-B2 §2).
@@ -170,8 +191,13 @@ export const NaverMapSurface = ({
           map,
           position,
           // R18-B 목표 1 — 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
+          // R21-A 목표 1~3 — 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
           icon: {
-            content: buildMarkerIconHtml(markerData.kind),
+            content: buildMarkerIconHtml(markerData.kind, {
+              selected: markerData.selected,
+              busNo: markerData.busNo,
+              direction: markerData.direction,
+            }),
           },
         });
         existing.set(markerData.id, created);
@@ -182,6 +208,15 @@ export const NaverMapSurface = ({
       // 않지만(현재는 항상 kind: "bus" 만 갱신됨), 앞으로 다른 종류가 움직이게
       // 되더라도 목표 5는 "버스 마커 보간" 이므로 범위를 명확히 해 둔다.
       if (markerData.kind === "bus") {
+        // R21-A 목표 1 — 좌표는 그대로인 채 선택 상태만 바뀔 수 있다(같은 버스를
+        // 고르고 해제할 때 id 가 안 바뀐다) — 아이콘은 매번 다시 굳혀 반영한다.
+        found.setIcon({
+          content: buildMarkerIconHtml(markerData.kind, {
+            selected: markerData.selected,
+            busNo: markerData.busNo,
+            direction: markerData.direction,
+          }),
+        });
         animationControllerRef.current?.receive(markerData.id, { lat: markerData.lat, lng: markerData.lng });
       } else {
         found.setPosition(new naverMaps.LatLng(markerData.lat, markerData.lng));

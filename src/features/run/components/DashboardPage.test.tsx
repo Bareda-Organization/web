@@ -508,6 +508,30 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 
+  // R21-A 목표 4 — 이 describe 는 emptyLive(실시간 위치 전부 없음)를 쓴다. 1호차는
+  // idle 이라 위치가 없어 이전에는 카메라가 기본 좌표에 머물렀다 — 정차지 평균
+  // 좌표로 옮겨가는지 정확한 수치로 확인한다(MonitoringPage.test.tsx 와 같은 방식).
+  it("실시간 위치가 없는 idle 회차를 골라도 카메라가 정차지 평균 좌표로 옮겨간다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [
+        { stopId: 1, seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
+        { stopId: 2, seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
+      ],
+      confirmed: false,
+    });
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    await waitFor(() =>
+      expect(mockMapSurface).toHaveBeenCalledWith(
+        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: 15 } }),
+      ),
+    );
+  });
+
   // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 방식으로 이 화면에도 적용한다.
   it("버스를 고르면 카메라가 그 버스 좌표로 옮겨가고 확대한다", async () => {
     mockGetRunsLive.mockResolvedValue({

@@ -7,6 +7,7 @@ import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill }
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
+  anchorForSelection,
   buildRouteDisplayState,
   cameraForSelectedBus,
   type MapCamera,
@@ -126,10 +127,22 @@ export const TodayRunPage = () => {
   const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
 
+  // R21-A 목표 1~3 — 이 화면은 항상 회차 하나만 보여 그 버스가 곧 "선택된" 버스다
+  // (MonitoringPage.tsx·DashboardPage.tsx 와 달리 선택 해제 토글이 없다).
   const mapMarkers: MapMarker[] = useMemo(
     () =>
       liveRun?.position
-        ? [{ id: String(liveRun.runId), lat: liveRun.position.lat, lng: liveRun.position.lng, kind: "bus" as const }]
+        ? [
+            {
+              id: String(liveRun.runId),
+              lat: liveRun.position.lat,
+              lng: liveRun.position.lng,
+              kind: "bus" as const,
+              selected: true,
+              busNo: liveRun.busNo,
+              direction: liveRun.direction,
+            },
+          ]
         : [],
     [liveRun],
   );
@@ -141,9 +154,11 @@ export const TodayRunPage = () => {
   // R18-B2 목표 2 — 이 화면은 항상 회차 하나가 선택돼 있다(대기 상태가 없다,
   // 선택 해제 토글 부재). 마커가 있으면 곧 "선택된 버스" 라 세 화면이 공유하는
   // `cameraForSelectedBus`(`features/map`)를 그대로 쓴다 — 새 분기를 만들지 않는다.
+  // R21-A 목표 4 — 이 회차에 실시간 위치가 없으면(idle·확정·종료) `mapMarkers` 가
+  // 비어 카메라가 정차지 쪽으로 못 옮겨갔다 — 정차지 평균 좌표를 대신 쓴다.
   const mapCamera: MapCamera = useMemo(
-    () => cameraForSelectedBus(mapMarkers[0] ?? null, DEFAULT_CAMERA),
-    [mapMarkers],
+    () => cameraForSelectedBus(anchorForSelection(mapMarkers[0] ?? null, routeStopMarkers), DEFAULT_CAMERA),
+    [mapMarkers, routeStopMarkers],
   );
 
   const loadRuns = useCallback(async () => {

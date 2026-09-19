@@ -43,8 +43,8 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   willRemoveStop: false,
   requestedAt: "2026-09-11T00:00:00Z",
   routePreview: {
-    stopsBefore: [{ seq: 1, stopName: "정문", eta: "08:10" }],
-    stopsAfter: [{ seq: 1, stopName: "후문", eta: "08:15" }],
+    stopsBefore: [{ seq: 1, stopName: "정문", eta: "08:10", lat: 37.55, lng: 126.97 }],
+    stopsAfter: [{ seq: 1, stopName: "후문", eta: "08:15", lat: 37.57, lng: 126.99 }],
     reordered: [],
     removed: [],
     roadPathBefore: [
@@ -218,7 +218,10 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       const eta = "2026-09-19T12:55:41.464829Z";
       mockGetDetail.mockResolvedValue({
         ...baseDetail,
-        routePreview: { ...baseDetail.routePreview!, stopsAfter: [{ seq: 1, stopName: "그린빌라 입구", eta }] },
+        routePreview: {
+          ...baseDetail.routePreview!,
+          stopsAfter: [{ seq: 1, stopName: "그린빌라 입구", eta, lat: 37.5, lng: 127 }],
+        },
       });
       render(<ChangeApprovalDetail approvalId={5} />);
 
@@ -231,7 +234,9 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
         ...baseDetail,
         routePreview: {
           ...baseDetail.routePreview!,
-          stopsBefore: [{ seq: 1, stopName: "중앙로 스타빌딩 앞", eta: null as unknown as string }],
+          stopsBefore: [
+            { seq: 1, stopName: "중앙로 스타빌딩 앞", eta: null as unknown as string, lat: null, lng: null },
+          ],
         },
       });
       render(<ChangeApprovalDetail approvalId={5} />);
@@ -258,15 +263,58 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       ]);
     });
 
-    it("도로 좌표가 없으면 지도 대신 안내 문구를 보여준다", async () => {
+    it("도로 좌표도 정차지 좌표도 없으면 지도 대신 안내 문구를 보여준다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: {
+          ...baseDetail.routePreview!,
+          roadPathBefore: [],
+          roadPathAfter: [],
+          // R21-A 추가 지시 ② — 정차지 마커가 있으면 도로 좌표가 없어도 지도를 그린다(아래
+          // 별도 시험). "안내 문구" 는 마커도 전혀 없을 때만 뜬다 — 여기서 정차지 좌표도 지운다.
+          stopsBefore: [{ seq: 1, stopName: "정문", eta: "08:10", lat: null, lng: null }],
+          stopsAfter: [{ seq: 1, stopName: "후문", eta: "08:15", lat: null, lng: null }],
+        },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      expect(await screen.findAllByText("경로 좌표가 아직 없습니다")).toHaveLength(2);
+      expect(mockMapSurface).not.toHaveBeenCalled();
+    });
+
+    // R21-A 추가 지시 ② — 옛 확정 노선 버전(도로 좌표 컬럼 도입 전)이라 road_path 는 비어도
+    // 정차지 좌표는 있을 수 있다 — 그때도 지도는 그려지고 정차지 마커가 실린다.
+    it("도로 좌표가 없어도 정차지 좌표가 있으면 지도를 그리고 정차지 마커를 싣는다", async () => {
       mockGetDetail.mockResolvedValue({
         ...baseDetail,
         routePreview: { ...baseDetail.routePreview!, roadPathBefore: [], roadPathAfter: [] },
       });
       render(<ChangeApprovalDetail approvalId={5} />);
 
-      expect(await screen.findAllByText("경로 좌표가 아직 없습니다")).toHaveLength(2);
-      expect(mockMapSurface).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
+      const [beforeCall] = mockMapSurface.mock.calls;
+      expect(beforeCall[0].polylines).toEqual([]);
+      expect(beforeCall[0].markers).toEqual([
+        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", selected: false },
+      ]);
+    });
+
+    // R21-A 추가 지시 ② — "변한 승하차지"(reordered·removed 에 실린 것)는 흰 테두리로 강조된다.
+    it("변한 승하차지(삭제·순서 변경)는 마커에 selected:true 로 실린다", async () => {
+      mockGetDetail.mockResolvedValue({
+        ...baseDetail,
+        routePreview: {
+          ...baseDetail.routePreview!,
+          removed: [{ stopId: 1, stopName: "정문", lat: 37.55, lng: 126.97 }],
+        },
+      });
+      render(<ChangeApprovalDetail approvalId={5} />);
+
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
+      const [beforeCall] = mockMapSurface.mock.calls;
+      expect(beforeCall[0].markers).toEqual([
+        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", selected: true },
+      ]);
     });
   });
 });
