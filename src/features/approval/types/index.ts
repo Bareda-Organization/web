@@ -66,10 +66,14 @@ export type ChangeApprovalsResponseTypes = {
 };
 
 // §5.5 GET /staff/approvals/{id} (상세) — 조회 시점에 재최적화를 정확히 1회 돌린다.
+// R21-A 추가 지시 ② — lat·lng 를 더했다(지도 마커용). 경유 지점만 가리키는 항목은
+// 좌표를 안 실어 null 이다 — 그 마커만 건너뛴다(백엔드 코멘트와 같은 근거).
 export type RouteStopPreviewResponseTypes = {
   seq: number;
   stopName: string;
   eta: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 // 지도에 그릴 도로 좌표 한 점(`R18-C` 목표 4, Ruling 319) — `features/map` 의 `MapPolyline.points`
@@ -79,11 +83,21 @@ export type RoutePathPointResponseTypes = {
   lng: number;
 };
 
+// R21-A 추가 지시 ② 이전엔 `reordered`·`removed` 가 문자열 배열로 선언돼 있었으나(타입 오기),
+// 실제 백엔드는 처음부터 객체(`stop_id`·`stop_name`)를 줬다 — 지금까지 이 필드를 화면에서
+// 쓴 적이 없어 드러나지 않았다. lat·lng 를 더하며 실제 모양대로 바로잡는다.
+export type RouteStopRefResponseTypes = {
+  stopId: number;
+  stopName: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
 export type RoutePreviewResponseTypes = {
   stopsBefore: RouteStopPreviewResponseTypes[];
   stopsAfter: RouteStopPreviewResponseTypes[];
-  reordered: string[];
-  removed: string[];
+  reordered: RouteStopRefResponseTypes[];
+  removed: RouteStopRefResponseTypes[];
   // `R18-C` 목표 4(Ruling 319) — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
   // 옛 확정 노선 버전(도로 좌표 컬럼 도입 전)이면 빈 배열이다 — null 이 아니다.
   roadPathBefore: RoutePathPointResponseTypes[];

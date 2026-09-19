@@ -39,9 +39,13 @@ const BUS_ICON_HTML: Record<MapMarkerDirection, string> = {
   ),
 };
 
-// R21-A 목표 1 — 고른 버스를 흰 띠로 두른다(사용자 예시 그대로). 좌표 앵커가
+// R21-A 목표 1 — 고른 마커를 흰 띠로 두른다(사용자 예시 그대로). 좌표 앵커가
 // 밀리지 않도록 실제 크기(width/height)는 그대로 두고 box-shadow 로만 두른다.
-const SELECTED_RING = "box-shadow:0 0 0 3px #ffffff,0 0 0 6px #2563eb;";
+// R21-A 추가 지시 ② — 구간변경 승인 지도의 "변한 승하차지"(삭제·순서 변경)도
+// 같은 강조 수단을 그대로 쓴다(버스 전용이 아니다) — 종류별 색(MARKER_COLOR)을
+// 그대로 테두리 색으로 써서 "그 마커가 강조됐다"는 뜻만 보태고 색 의미는 안 바꾼다.
+const selectedRingOf = (kind: MapMarkerKind): string =>
+  `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${MARKER_COLOR[kind]};`;
 
 export type MarkerIconOptions = {
   selected?: boolean;
@@ -52,7 +56,7 @@ export type MarkerIconOptions = {
 export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOptions = {}): string => {
   const size = MARKER_SIZE_PX[kind];
   const icon = kind === "bus" ? BUS_ICON_HTML[options.direction ?? "to_academy"] : "";
-  const ring = kind === "bus" && options.selected ? SELECTED_RING : "";
+  const ring = options.selected ? selectedRingOf(kind) : "";
   const pin = `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`;
   // R21-A 목표 2 — 버스 번호를 핀 아래 작은 라벨로 붙인다(28px 핀 안에는 못 넣는다).
   if (kind !== "bus" || !options.busNo) return pin;

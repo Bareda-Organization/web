@@ -38,9 +38,16 @@ describe("markerIcon — 선택 강조(R21-A 목표 1)", () => {
   });
 
   // 버스가 아닌 마커는 선택 개념이 없다 — 옵션을 줘도 원 모양이 그대로다.
-  it("정차지·학생 마커는 selected 를 줘도 달라지지 않는다", () => {
-    expect(buildMarkerIconHtml("stop", { selected: true })).toBe(buildMarkerIconHtml("stop"));
-    expect(buildMarkerIconHtml("student", { selected: true })).toBe(buildMarkerIconHtml("student"));
+  // R21-A 추가 지시 ② — 구간변경 승인 지도의 "변한 승하차지"도 이 강조 수단을
+  // 그대로 쓴다(버스 전용이 아니다). 종류별 색(초록·주황)을 테두리 색으로 그대로
+  // 쓴다 — 파란 테두리만 고정이면 정차지·학생 마커에 안 어울린다.
+  it("정차지·학생 마커도 selected 를 주면 흰 테두리가 붙고, 테두리 색은 그 종류의 색을 쓴다", () => {
+    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("#16a34a");
+    expect(buildMarkerIconHtml("student", { selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("student", { selected: true })).toContain("#f97316");
+    expect(buildMarkerIconHtml("stop")).not.toContain("box-shadow");
+    expect(buildMarkerIconHtml("student")).not.toContain("box-shadow");
   });
 });
 
