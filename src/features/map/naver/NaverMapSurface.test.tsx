@@ -87,6 +87,74 @@ describe("NaverMapSurface — 지도 생성이 늦을 때", () => {
   });
 });
 
+// R21-A 추가 지시 ① — 사용자가 지도를 손으로 옮기거나 확대·축소한 뒤에도 버스
+// 위치가 갱신될 때마다 카메라가 되돌아가던 결함(사용자 지적). "무엇에 포커스
+// 됐는가"(선택된 버스 id)가 안 바뀌면 `setCenter`/`setZoom` 이 다시 불리면 안
+// 된다 — 값이 아니라 "옮길 이유가 있는가"를 검사한다.
+describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위치 갱신에 덮이지 않는다, R21-A 추가지시 ①)", () => {
+  it("선택은 그대로인데 버스 위치만 바뀌면 setCenter 가 다시 불리지 않는다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setCenter = vi.fn();
+    const setZoom = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter,
+      setZoom,
+      destroy: vi.fn(),
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 15 }}
+        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: true }]}
+      />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
+
+    // 선택(id="1")은 그대로인데 위치만 옮겨 왔다 — 실제 폴링으로 들어오는 갱신.
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 37.55, lng: 127.05, zoom: 15 }}
+        markers={[{ id: "1", lat: 37.55, lng: 127.05, kind: "bus", selected: true }]}
+      />,
+    );
+
+    expect(setCenter).toHaveBeenCalledTimes(1);
+    expect(setZoom).toHaveBeenCalledTimes(1);
+  });
+
+  it("다른 버스를 선택하면 카메라가 다시 옮겨간다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setCenter = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter,
+      setZoom: vi.fn(),
+      destroy: vi.fn(),
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 15 }}
+        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: true }]}
+      />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 38.0, lng: 128.0, zoom: 15 }}
+        markers={[
+          { id: "1", lat: 37.5, lng: 127, kind: "bus", selected: false },
+          { id: "2", lat: 38.0, lng: 128.0, kind: "bus", selected: true },
+        ]}
+      />,
+    );
+
+    expect(setCenter).toHaveBeenCalledTimes(2);
+  });
+});
+
 // R21-A 목표 1 — 같은 버스 마커(id 불변)를 다시 골라도 흰 테두리(선택 강조)가
 // 반영돼야 한다. 마커 갱신 effect 는 기존 마커를 만나면(`found`) 좌표 보간
 // 분기로만 가고 아이콘은 생성 시점 한 번뿐이었다 — 선택 상태가 바뀌어도 아이콘이
