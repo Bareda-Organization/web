@@ -116,4 +116,45 @@ describe("buildRouteDisplayState", () => {
       { id: "stop-4", lat: 37.5695, lng: 126.981, kind: "stop" },
     ]);
   });
+
+  // R22 목표 2 — 출발지·도착지가 지도에 안 나온다(사용자 지시). §5.19 응답에 그 필드가
+  // 없으므로 road_path 의 양 끝을 쓴다 — 좌표까지 대조해야 "양 끝"을 실제로 집었는지
+  // 판정된다(첫 점·끝 점을 바꿔 넣어도 개수는 그대로다).
+  it("road_path 의 첫 점과 끝 점을 출발지·도착지 마커로 만든다", () => {
+    const state = buildRouteDisplayState(9, "confirmed", {
+      roadPath: [
+        { lat: 37.5665, lng: 126.978 },
+        { lat: 37.52, lng: 127.0 },
+        { lat: 37.4979, lng: 127.0276 },
+      ],
+      fallbackUsed: false,
+      stops: [{ stopId: 1, lat: 37.5665, lng: 126.978 }],
+      confirmed: true,
+    });
+
+    expect(state.stopMarkers).toEqual([
+      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop" },
+      { id: "origin-9", lat: 37.5665, lng: 126.978, kind: "origin" },
+      { id: "destination-9", lat: 37.4979, lng: 127.0276, kind: "destination" },
+    ]);
+  });
+
+  // 한 점짜리 경로는 출발지와 도착지가 같은 자리다 — 겹쳐 찍어도 읽히지 않아 만들지 않는다.
+  it("road_path 좌표가 2개 미만이면 출발지·도착지 마커를 만들지 않는다", () => {
+    const oneS = buildRouteDisplayState(9, "confirmed", {
+      roadPath: [{ lat: 37.5665, lng: 126.978 }],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: true,
+    });
+    const none = buildRouteDisplayState(9, "confirmed", {
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: true,
+    });
+
+    expect(oneS.stopMarkers).toEqual([]);
+    expect(none.stopMarkers).toEqual([]);
+  });
 });

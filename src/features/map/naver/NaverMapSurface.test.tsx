@@ -153,6 +153,45 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
 
     expect(setCenter).toHaveBeenCalledTimes(2);
   });
+
+  // R22 목표 2 — 실시간 위치가 없는 회차(대기·확정·종료)에는 버스 마커가 아예 없다.
+  // 포커스 신호가 "선택된 버스 마커" 하나뿐이면 그런 회차를 골라도 카메라가 안 옮겨가고,
+  // 노선과 출발지·도착지가 지도 영역 밖에 그려진다(2026-09-20 눈 확인 — "도착" 이 잘렸다).
+  it("버스 마커 없이 노선만 새로 생겨도 카메라가 옮겨간다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setCenter = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter,
+      setZoom: vi.fn(),
+      destroy: vi.fn(),
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 12 }} markers={[]} polylines={[]} />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
+
+    // 대기 회차를 골랐다 — 버스 마커는 없고 예정 경로만 들어온다.
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 37.53, lng: 127.0, zoom: 15 }}
+        markers={[{ id: "origin-1", lat: 37.56, lng: 126.97, kind: "origin" }]}
+        polylines={[
+          {
+            id: "route-1",
+            kind: "planned",
+            points: [
+              { lat: 37.56, lng: 126.97 },
+              { lat: 37.49, lng: 127.02 },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(setCenter).toHaveBeenCalledTimes(2);
+  });
 });
 
 // R21-A 목표 1 — 같은 버스 마커(id 불변)를 다시 골라도 흰 테두리(선택 강조)가

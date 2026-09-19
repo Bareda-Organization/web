@@ -44,7 +44,26 @@ export type RouteDisplayState = {
   // Ruling 321 — 고정 노선 기반 "예정" 경로가 그려졌다. 확정 시점에 그날 명단으로
   // 다시 계산돼 달라질 수 있다는 안내에 쓴다 — "확정된 경로"로 오인하면 안 된다.
   planned: boolean;
+  // 승하차지 마커 + 노선 양 끝(출발지·도착지) 마커. 호출부가 한 덩어리로 지도에
+  // 얹었다 지웠다 하므로 따로 내보내지 않는다.
   stopMarkers: MapMarker[];
+};
+
+// R22 목표 2 — 출발지·도착지 마커. 백엔드 §5.19 응답에는 `stops[]`(승하차지)만 있고
+// 출발지·목적지 필드가 없다 — 대신 `road_path` 자체가 출발지에서 시작해 목적지에서
+// 끝나므로(등원 = 첫 승차지 → 학원, 하원 = 학원 → 마지막 하차지, Ruling 190) 그 양 끝을
+// 그대로 쓴다. 백엔드 계약을 안 늘리고도 "학원 쪽 끝"이 지도에 나타난다.
+//
+// 좌표가 2개 미만이면 만들지 않는다 — 한 점뿐이면 출발지와 도착지가 같은 자리라
+// 겹쳐 찍히기만 하고 뜻이 없다.
+const endpointMarkersOf = (runId: number, roadPath: { lat: number; lng: number }[]): MapMarker[] => {
+  if (roadPath.length < 2) return [];
+  const first = roadPath[0];
+  const last = roadPath[roadPath.length - 1];
+  return [
+    { id: `origin-${runId}`, lat: first.lat, lng: first.lng, kind: "origin" },
+    { id: `destination-${runId}`, lat: last.lat, lng: last.lng, kind: "destination" },
+  ];
 };
 
 export const buildRouteDisplayState = (
@@ -65,6 +84,9 @@ export const buildRouteDisplayState = (
     missing: !hasRoute && route.confirmed,
     noPlannedRoute: !hasRoute && !route.confirmed,
     planned: hasRoute && !route.confirmed,
-    stopMarkers: route.stops.map((stop) => ({ id: `stop-${stop.stopId}`, lat: stop.lat, lng: stop.lng, kind: "stop" as const })),
+    stopMarkers: [
+      ...route.stops.map((stop) => ({ id: `stop-${stop.stopId}`, lat: stop.lat, lng: stop.lng, kind: "stop" as const })),
+      ...endpointMarkersOf(runId, route.roadPath),
+    ],
   };
 };

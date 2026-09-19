@@ -62,6 +62,62 @@ describe("markerIcon — 버스 번호 표기(R21-A 목표 2)", () => {
   });
 });
 
+// R22 목표 1 — 버스마다 아이콘이 달라야 한다(사용자 지시 — 전부 같은 파란 원이라
+// 어느 버스인지 모른다). 번호를 핀 안으로 넣어 아이콘 자체를 갈랐다.
+describe("markerIcon — 버스마다 다른 아이콘(R22 목표 1)", () => {
+  it("번호가 다른 두 버스는 아이콘 HTML 자체가 다르다", () => {
+    const one = buildMarkerIconHtml("bus", { busNo: "1호차", direction: "to_academy" });
+    const two = buildMarkerIconHtml("bus", { busNo: "2호차", direction: "to_academy" });
+
+    expect(one).not.toBe(two);
+    expect(one).toContain("1호차");
+    expect(two).toContain("2호차");
+  });
+
+  // 같은 버스라도 등원·하원은 갈려야 한다 — 번호만 넣고 방향 아이콘을 빠뜨리면
+  // 두 회차가 같은 그림이 된다(R21-A 목표 3 이 세운 구별을 R22 가 무너뜨리지 않는지).
+  it("같은 번호라도 등원·하원은 아이콘 HTML 이 다르다", () => {
+    const toAcademy = buildMarkerIconHtml("bus", { busNo: "1호차", direction: "to_academy" });
+    const fromAcademy = buildMarkerIconHtml("bus", { busNo: "1호차", direction: "from_academy" });
+
+    expect(toAcademy).not.toBe(fromAcademy);
+  });
+
+  it("번호가 핀 안에 들어가 별도 라벨 요소를 만들지 않는다", () => {
+    const html = buildMarkerIconHtml("bus", { busNo: "1호차" });
+
+    // R21-A 는 핀(span) 과 라벨(span) 을 세로로 쌓는 <div> 를 만들었다 — 축소하면
+    // 라벨끼리 겹쳐 읽히지 않아 핀 하나로 합쳤다.
+    expect(html).not.toContain("flex-direction:column");
+    expect(html).toContain("<svg");
+  });
+
+  it("고른 버스는 번호 칩에도 흰 테두리가 붙는다", () => {
+    expect(buildMarkerIconHtml("bus", { busNo: "1호차", selected: true })).toContain("box-shadow");
+    expect(buildMarkerIconHtml("bus", { busNo: "1호차", selected: false })).not.toContain("box-shadow");
+  });
+});
+
+// R22 목표 2 — 출발지·도착지 마커(사용자 지시 — 지도에 표시가 안 된다).
+describe("markerIcon — 출발지·도착지(R22 목표 2)", () => {
+  it("출발지·도착지는 글자로 서로 구별되고 정차지보다 크다", () => {
+    expect(buildMarkerIconHtml("origin")).toContain("출발");
+    expect(buildMarkerIconHtml("destination")).toContain("도착");
+    expect(buildMarkerIconHtml("origin")).not.toBe(buildMarkerIconHtml("destination"));
+    expect(MARKER_SIZE_PX.origin).toBeGreaterThan(MARKER_SIZE_PX.stop);
+    expect(MARKER_SIZE_PX.destination).toBeGreaterThan(MARKER_SIZE_PX.stop);
+  });
+
+  // 버스 파랑·정차지 초록·학생 주황 어디와도 안 겹쳐야 같은 자리에 겹쳐 찍혀도 읽힌다.
+  it("출발지·도착지 색은 버스·정차지·학생 어느 것과도 다르다", () => {
+    const endpoint = buildMarkerIconHtml("origin");
+
+    expect(endpoint).not.toContain("#2563eb");
+    expect(endpoint).not.toContain("#16a34a");
+    expect(endpoint).not.toContain("#f97316");
+  });
+});
+
 // R21-A 목표 3 — 같은 버스라도 등원·하원을 모양으로 구별한다(색은 C-09 4색 고정이라 못 쓴다).
 describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
   it("등원(to_academy)과 하원(from_academy)은 서로 다른 아이콘 HTML 을 낸다", () => {

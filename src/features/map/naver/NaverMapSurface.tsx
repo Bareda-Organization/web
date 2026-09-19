@@ -141,10 +141,17 @@ export const NaverMapSurface = ({
   // 간헐적으로 보였다). `camera` 값 자체를 비교해 막으면 같은 좌표로 다시 와도
   // 되돌아가는 문제가 남으므로, **무엇 때문에 카메라를 옮기려는가**(선택된 버스
   // id, 또는 선택 없음)를 신호로 삼는다 — 이 값은 위치가 갱신돼도 안 바뀐다.
-  const focusKey = useMemo(
-    () => markers.find((marker) => marker.kind === "bus" && marker.selected)?.id ?? "none",
-    [markers],
-  );
+  // R22 목표 2 — 노선도 포커스 대상이다. 예전엔 "선택된 버스 마커" 하나만 신호라,
+  // 실시간 위치가 없는 회차(대기·확정·종료)를 고르면 버스 마커 자체가 없어 focusKey 가
+  // "none" 에 머물렀다 — 화면이 계산해 넘긴 카메라(`anchorForSelection`, R21-A 목표 4)가
+  // 있어도 이 effect 가 다시 안 돌아 지도가 기본 좌표에 그대로 있었고, 노선과 출발지·
+  // 도착지가 지도 영역 밖에 그려졌다(2026-09-20 눈 확인 — "도착" 이 지도 아래로 잘림).
+  const focusKey = useMemo(() => {
+    const selectedBusId = markers.find((marker) => marker.kind === "bus" && marker.selected)?.id;
+    if (selectedBusId) return selectedBusId;
+    // 빈 배열의 join 은 `""` 라 `??` 로는 안 걸러진다 — 빈 문자열도 "포커스 없음" 이다.
+    return polylines.map((polyline) => polyline.id).join(",") || "none";
+  }, [markers, polylines]);
   // focusKey 가 안 바뀌면 아래 effect 가 재실행되지 않으므로, 그 사이에 갱신된
   // 최신 `camera` 값은 이 ref 로 읽는다(effect 의존성에 넣지 않는다 — 그러면
   // 다시 좌표 비교 문제로 돌아간다).
@@ -153,14 +160,39 @@ export const NaverMapSurface = ({
     cameraRef.current = camera;
   });
 
+  // R22 목표 2 — 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
+  // 노선 전체가 들어오는 배율로 맞춘다. 고정 15 는 시드 정차지 4곳(대각선 426m)을 보고
+  // 정한 값이라, 승차지→학원처럼 8km 를 넘는 실제 노선에서는 한쪽 끝이 지도 밖으로
+  // 나간다 — 출발지·도착지를 마커로 찍어도 화면에 안 보이면 안 찍은 것과 같다.
+  //
+  // ⚠ `LatLngBounds`·`fitBounds` 가 없으면 예전 방식으로 되돌린다. 없는 경우가 실제로
+  // 있다 — 이 파일의 시험이 SDK 를 "이 컴포넌트가 부르는 것만" 흉내 내기 때문이다.
+  // 던지면 뒤따르는 마커·노선 effect 까지 멈춘다(위 Map 모의 주석과 같은 사고).
+  const fitToPolylines = (map: naver.maps.Map): boolean => {
+    const naverMaps = window.naver?.maps as (typeof naver.maps & { LatLngBounds?: unknown }) | undefined;
+    const points = polylines.flatMap((polyline) => polyline.points);
+    if (!naverMaps?.LatLngBounds || typeof map.fitBounds !== "function" || points.length < 2) return false;
+    const lats = points.map((point) => point.lat);
+    const lngs = points.map((point) => point.lng);
+    map.fitBounds(
+      new naverMaps.LatLngBounds(
+        new naverMaps.LatLng(Math.min(...lats), Math.min(...lngs)),
+        new naverMaps.LatLng(Math.max(...lats), Math.max(...lngs)),
+      ),
+    );
+    return true;
+  };
+
   // 카메라 갱신 — 지도 생성 시 1회(`Ruling 322`) + 포커스 대상이 바뀔 때만 옮긴다.
   // 같은 버스를 계속 보고 있는 동안의 위치 갱신은 여기에 안 걸린다(위 focusKey 참고).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.naver) return;
+    if (fitToPolylines(map)) return;
     const cam = cameraRef.current;
     map.setCenter(new window.naver.maps.LatLng(cam.lat, cam.lng));
     map.setZoom(cam.zoom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fitToPolylines 는 매 렌더 새로 만들어지는 지역 함수라 의존성에 넣으면 카메라가 매번 되돌아간다(위 focusKey 주석의 바로 그 결함)
   }, [focusKey, mapReady]);
 
   // 마커 갱신 — id 기준으로 추가·제거하고, 기존 마커의 좌표 변경은 보간

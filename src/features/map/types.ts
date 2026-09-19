@@ -1,7 +1,10 @@
 // `features/map` 의 계약 타입 — `F4-B` `COMMON-B1.md §2` 가 세 제품(웹 · Flutter 앱 2종)
 // 전체에 고정한 이름과 인자를 그대로 따른다. 화면(features/admin·features/run)은 이
 // 타입만 알고 SDK 타입(`naver.maps.*`)은 모른다 — `IMPLEMENTATION_PLAN.md §8.3.1`.
-export type MapMarkerKind = "bus" | "stop" | "student";
+// R22 목표 2 — `origin`·`destination` 은 노선의 양 끝이다(사용자 지시 — 출발지·목적지가
+// 지도에 안 보인다). 등원은 첫 승차지 → 학원, 하원은 학원 → 마지막 하차지이고(Ruling 190),
+// 학원 쪽 끝은 `stops[]` 에 없어 지금까지 어떤 마커로도 안 그려졌다.
+export type MapMarkerKind = "bus" | "stop" | "student" | "origin" | "destination";
 
 export type MapCamera = {
   lat: number;
