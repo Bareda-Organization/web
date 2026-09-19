@@ -199,7 +199,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     <StyledDetailLayout>
       <PageHeader
         title={`${detail.studentName} 구간 변경`}
-        description={`처리 기한 ${detail.deadlineAt}`}
+        description={`처리 기한 ${formatClockTime(detail.deadlineAt)}`}
       />
 
       {detail.previewStale ? (
