@@ -7,4 +7,4 @@ export type { MapCamera, MapMarker, MapMarkerKind, MapPolyline, MapPolylineKind 
 // 경로 표시 규칙. 화면마다 복사하지 않고 이 표면에서 가져다 쓴다.
 export { SELECTED_BUS_MAP_ZOOM, cameraForSelectedBus } from "./selectedBusCamera";
 export { buildRouteDisplayState } from "./routeDisplayState";
-export type { RouteDisplayState } from "./routeDisplayState";
+export type { RouteDisplayState, RunStatusForRoute } from "./routeDisplayState";

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
 import { getAcademies, getAcademyRunsLive } from "../api";
@@ -361,13 +361,81 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
   // R18-B 목표 3 — 좌표가 0개면 "빈 지도"와 구별되는 안내를 띄운다. 이 블록의
   // 기본 목(beforeEach)이 이미 roadPath: [] 라 별도 목 설정이 필요 없다.
-  it("경로 좌표가 0개면 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
+  // R20-C 목표 4 — baseLiveRun 은 runStatus:"moving"(확정 이후)이라 좌표 0개는
+  // "확정됐지만 경로가 없음"(데이터 결손)이지 "아직 확정 전"이 아니다.
+  it("경로 좌표가 0개면 확정됐지만 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
     render(<MonitoringPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("경로 정보가 아직 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText("확정됐지만 경로 정보가 아직 없습니다")).toBeInTheDocument();
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
+  });
+
+  // R20-C 목표 4 — idle 회차는 좌표 0개가 정상이다(조율자 실측 — run 1·6). "확정됐지만
+  // 없음" 이 아니라 "아직 확정 전" 문구를 보여준다.
+  it("idle 회차를 고르면 아직 확정 전이라 노선이 없습니다 를 보여준다", async () => {
+    mockGetRunsLive.mockResolvedValue({ runs: [{ ...baseLiveRun, runStatus: "idle" }] });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText("아직 확정 전이라 노선이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+// R20-C 목표 1·2 — 사용자가 직접 시연해 지적한 두 가지. 버스를 골라도 우측 목록
+// 카드가 그대로였고(무엇을 눌렀는지 모름), 확정·대기 태그가 같은 색이었다.
+describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
+  beforeEach(() => {
+    capturedOnEnvelope = undefined;
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("버스를 고르면 그 카드에 aria-pressed=true 가 붙고, 고르지 않은 카드는 false 다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: 1, busNo: "1호차" },
+        { ...baseLiveRun, runId: 2, busNo: "2호차" },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    const first = await screen.findByRole("button", { name: /1호차/ });
+    const second = await screen.findByRole("button", { name: /2호차/ });
+    expect(first).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(first);
+
+    expect(first).toHaveAttribute("aria-pressed", "true");
+    expect(second).toHaveAttribute("aria-pressed", "false");
+  });
+
+  // 상태-색 매핑이 고정(StatusPill.tsx, C-09)이라 실제 색 대신 서로 다른 class 를
+  // 단언한다 — Emotion 은 $status 가 다르면 다른 css 클래스를 생성한다.
+  it("확정과 대기는 서로 다른 태그 색(class)을 쓴다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: 31, busNo: "5호차", runStatus: "idle" },
+        { ...baseLiveRun, runId: 32, busNo: "6호차", runStatus: "confirmed" },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    // 같은 라벨이 우측 목록 카드와 아래 회차 표(RosterTable)에 중복돼 뜬다 — 목록
+    // 카드(버튼)로 좁혀 그 안의 태그만 비교한다.
+    const idleCard = await screen.findByRole("button", { name: /5호차/ });
+    const confirmedCard = await screen.findByRole("button", { name: /6호차/ });
+    const idlePill = within(idleCard).getByText("대기");
+    const confirmedPill = within(confirmedCard).getByText("확정");
+    expect(idlePill.className).not.toBe(confirmedPill.className);
   });
 });
 

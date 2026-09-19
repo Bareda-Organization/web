@@ -29,6 +29,7 @@ import {
   StyledMapTopRow,
   StyledMapPane,
   StyledFallbackNotice,
+  StyledMapOverlayNotice,
   StyledBusListPane,
   StyledBusListItem,
   StyledBusListItemHeader,
@@ -79,9 +80,13 @@ const RUN_STATUS_LABEL: Record<RunStatus, string> = {
   finished: "운행 종료",
 };
 
+// R20-C 목표 2 — 확정·대기가 같은 색이었다(둘 다 "idle" 톤, 사용자 지적). `StatusPill`
+// 의 색 4종(그린·앰버·레드·스톤, C-09)은 고정이라 새로 만들 수 없어 남은 한 톤인
+// "missed"(레드)를 확정에 배정한다 — 라벨은 `RUN_STATUS_LABEL`("확정")로 덮어써
+// "미탑승"으로 읽히지 않는다.
 const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
   idle: "idle",
-  confirmed: "idle",
+  confirmed: "missed",
   moving: "moving",
   finished: "boarded",
 };
@@ -107,6 +112,9 @@ export const TodayRunPage = () => {
   const [routeFallback, setRouteFallback] = useState(false);
   // R18-B2 목표 2 — MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태.
   const [routeMissing, setRouteMissing] = useState(false);
+  // R20-C 목표 4 — "아직 확정 전"(대기 회차, 정상)과 "확정됐는데 경로가 없음"(데이터
+  // 결손)을 가른다(MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태).
+  const [routeNotConfirmedYet, setRouteNotConfirmedYet] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
   // R19 목표 1 — 지금 화면에 뜬 회차의 정차지 마커(MonitoringPage.tsx 와 같은 형태).
   // 이 화면은 선택 해제 토글이 없어(항상 회차 하나) 비우는 시점도 없다.
@@ -177,21 +185,25 @@ export const TodayRunPage = () => {
   // R15-T2 목표 4 — 지금 화면에 뜬 회차의 §5.19 노선을 지도에 그린다. 이 화면은
   // 항상 회차 하나가 선택된 상태라(대기 상태가 없다) DashboardPage.tsx 와 달리
   // 선택 해제 토글은 두지 않는다(보고서 §2, 판단 근거).
-  const loadRoute = useCallback(async (runId: number) => {
+  // R20-C 목표 4 — "아직 확정 전"과 "확정됐는데 경로가 없음"을 가르려면 회차
+  // 상태가 필요하다(호출부가 `selectedRun.runStatus` 를 넘긴다).
+  const loadRoute = useCallback(async (runId: number, runStatus: RunStatus) => {
     setRouteError(null);
     try {
       const route = await getRunRoute(runId);
       // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
       // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
-      const display = buildRouteDisplayState(runId, route);
+      const display = buildRouteDisplayState(runId, runStatus, route);
       setRoutePolylines(display.polylines);
       setRouteFallback(display.fallback);
       setRouteMissing(display.missing);
+      setRouteNotConfirmedYet(display.notConfirmedYet);
       setRouteStopMarkers(display.stopMarkers);
     } catch (cause) {
       setRoutePolylines([]);
       setRouteFallback(false);
       setRouteMissing(false);
+      setRouteNotConfirmedYet(false);
       setRouteStopMarkers([]);
       setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
     }
@@ -208,9 +220,9 @@ export const TodayRunPage = () => {
     (async () => {
       await loadRoster(selectedRunId);
       await loadLiveRun(selectedRunId);
-      await loadRoute(selectedRunId);
+      await loadRoute(selectedRunId, selectedRun?.runStatus ?? "idle");
     })();
-  }, [selectedRunId, loadRoster, loadLiveRun, loadRoute]);
+  }, [selectedRunId, selectedRun, loadRoster, loadLiveRun, loadRoute]);
 
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },
@@ -268,13 +280,19 @@ export const TodayRunPage = () => {
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
               }
             />
+            {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔
+                지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
+                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts). */}
+            {routeFallback ? <StyledMapOverlayNotice>근사 경로</StyledMapOverlayNotice> : null}
           </StyledMapSurface>
           {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
-          {/* R18-B2 — 좌표 0개(데이터 부재)를 빈 지도와 구별한다. */}
-          {routeMissing ? <StyledFallbackNotice>경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
-          {/* Ruling 309 — 근사 경로(직선)를 실제 경로로 오인하지 않도록 반드시 표시한다. */}
-          {routeFallback ? <StyledFallbackNotice>근사 경로</StyledFallbackNotice> : null}
+          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "아직 확정 전"
+              (대기 회차, 정상)을 다른 문구로 가른다(조율자 실측 — run 1·6). */}
+          {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
+          {routeNotConfirmedYet ? (
+            <StyledFallbackNotice>아직 확정 전이라 노선이 없습니다</StyledFallbackNotice>
+          ) : null}
         </StyledMapPane>
 
         <StyledBusListPane>
@@ -283,6 +301,7 @@ export const TodayRunPage = () => {
               key={run.runId}
               type="button"
               $active={run.runId === selectedRunId}
+              aria-pressed={run.runId === selectedRunId}
               onClick={() => router.replace(`/today-run?runId=${run.runId}`)}
             >
               <StyledBusListItemHeader>

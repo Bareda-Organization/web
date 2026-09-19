@@ -11,6 +11,7 @@ import { loadNaverMapsScript, onNaverAuthFailure } from "./loadNaverMapsScript";
 import { MarkerAnimationController } from "./markerAnimationController";
 import { buildMarkerIconHtml } from "./markerIcon";
 import type { LatLng } from "./markerInterpolation";
+import { routeColorFor } from "./routeColor";
 
 export type NaverMapSurfaceProps = {
   camera: MapCamera;
@@ -197,15 +198,24 @@ export const NaverMapSurface = ({
 
     for (const polylineData of polylines) {
       const path = polylineData.points.map((point) => new naverMaps.LatLng(point.lat, point.lng));
+      // R20-C 목표 3·5 — 상태별 색(routeColor.ts)과, 근사 경로(직선 보간)는 대시
+      // 선으로 선 자체가 알린다(안내문을 지도 밖 아래에 작게 두면 못 본다).
+      const strokeColor = routeColorFor(polylineData.kind);
+      const strokeStyle: naver.maps.StrokeStyleType = polylineData.approximate ? "shortdash" : "solid";
       const found = existing.get(polylineData.id);
       if (found) {
         found.setPath(path);
+        // `PolylineOptions` 오버로드는 `path` 까지 요구해 부분 갱신이 안 된다 —
+        // key/value 오버로드로 색·스타일만 바꾼다.
+        found.setOptions("strokeColor", strokeColor);
+        found.setOptions("strokeStyle", strokeStyle);
         continue;
       }
       const created = new naverMaps.Polyline({
         map,
         path,
-        strokeColor: "#2563eb",
+        strokeColor,
+        strokeStyle,
         strokeWeight: 4,
         strokeOpacity: 0.85,
       });
