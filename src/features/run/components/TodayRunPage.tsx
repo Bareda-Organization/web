@@ -14,6 +14,7 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
+import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
 import type {
   DashboardRunResponseTypes,
@@ -234,6 +235,32 @@ export const TodayRunPage = () => {
     { key: "stopName", label: "승하차지" },
     { key: "guardianPhone", label: "보호자 연락처" },
     {
+      // R21-B 목표 2·3·4 — DashboardPage.tsx 와 같은 표기(예정/실제 구분, 시:분:초).
+      // 이 표는 학생 단위 행이지만 회차 단위 값이라 모든 행에 같은 값이 반복된다 —
+      // `selectedRun`(회차 하나만 선택된 이 화면의 전제, 위 주석)을 그대로 참조한다.
+      key: "departTime",
+      label: "출발",
+      render: () =>
+        selectedRun ? (
+          <>
+            예정 {formatClockTimeWithSeconds(selectedRun.departTime)}
+            {selectedRun.startedAt ? (
+              <>
+                <br />
+                실제 {formatClockTimeWithSeconds(selectedRun.startedAt)}
+              </>
+            ) : null}
+          </>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      key: "finishedAt",
+      label: "도착",
+      render: () => (selectedRun?.finishedAt ? formatClockTimeWithSeconds(selectedRun.finishedAt) : "-"),
+    },
+    {
       key: "change",
       label: "변경",
       render: (row) =>
@@ -355,7 +382,9 @@ export const TodayRunPage = () => {
             </StyledCrewRow>
             <StyledCrewRow>
               <StyledCrewLabel>출발 시각</StyledCrewLabel>
-              <span>{selectedRun?.departTime ?? "-"}</span>
+              {/* R21-B — 이전엔 raw ISO 문자열을 그대로 보여줬다(포맷 누락, 보고서 §2). 표
+                  컬럼과 같은 형식으로 맞춘다. */}
+              <span>{selectedRun ? formatClockTimeWithSeconds(selectedRun.departTime) : "-"}</span>
             </StyledCrewRow>
           </Card>
         </StyledSidePanel>

@@ -6,6 +6,7 @@ import { DashboardPage } from "./DashboardPage";
 import { getDashboard, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
 import type { MapSurfaceProps } from "@/features/map";
+import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
 vi.mock("next/navigation", () => ({
@@ -103,6 +104,8 @@ const baseDashboard: DashboardResponseTypes = {
       busNo: "1호차",
       direction: "to_academy",
       departTime: "08:00",
+      startedAt: null,
+      finishedAt: null,
       driverName: "김기사",
       escortName: null,
       boardedCount: 10,
@@ -138,6 +141,37 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(await screen.findByText("1호차")).toBeInTheDocument();
     expect(screen.getByText("김기사")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  // R21-B 목표 1·3·4 — 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
+  // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
+  // 포함 여부로 본다(판단 근거, 보고서 §1).
+  it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {
+    const startedAt = "2026-09-19T08:02:15Z";
+    const finishedAt = "2026-09-19T08:41:03Z";
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], startedAt, finishedAt }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    const { container } = render(<DashboardPage />);
+
+    await screen.findByText("1호차");
+    // 실행 환경의 로컬 시간대에 좌우되지 않도록(clockTime.test.ts 와 같은 이유) 리터럴
+    // 시:분:초 대신 같은 변환 함수로 기대값을 만든다.
+    expect(container.textContent).toContain(`예정 ${formatClockTimeWithSeconds(baseDashboard.runs[0].departTime)}`);
+    expect(container.textContent).toContain(`실제 ${formatClockTimeWithSeconds(startedAt)}`);
+    expect(container.textContent).toContain(formatClockTimeWithSeconds(finishedAt));
+  });
+
+  it("실제 출발·도착 전이면 출발은 예정만, 도착은 빈 값(-)으로 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard); // startedAt·finishedAt 둘 다 null
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    const { container } = render(<DashboardPage />);
+
+    await screen.findByText("1호차");
+    expect(container.textContent).toContain("예정 08:00");
+    expect(container.textContent).not.toContain("실제");
   });
 
   it("미탑승 확인 대기 건이 있으면 배너로 건수를 보여준다", async () => {

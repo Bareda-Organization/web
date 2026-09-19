@@ -17,6 +17,10 @@ export type DashboardRunResponseTypes = {
   busNo: string;
   direction: "to_academy" | "from_academy";
   departTime: string;
+  // R21-B — 실제 출발·종료(도착) 시각. `departTime`(예정)과 구별해서 쓴다. 출발·종료
+  // 전이면 서버가 null 로 채운다(§5.3 API_SPEC 갱신분).
+  startedAt: string | null;
+  finishedAt: string | null;
   driverName: string | null;
   escortName: string | null;
   boardedCount: number;

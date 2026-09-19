@@ -12,6 +12,8 @@ type RawDashboardRun = {
   bus_no: string;
   direction: "to_academy" | "from_academy";
   depart_time: string;
+  started_at: string | null;
+  finished_at: string | null;
   driver_name: string | null;
   escort_name: string | null;
   boarded_count: number;
@@ -46,6 +48,8 @@ const toDashboardRun = (raw: RawDashboardRun): DashboardRunResponseTypes => ({
   busNo: raw.bus_no,
   direction: raw.direction,
   departTime: raw.depart_time,
+  startedAt: raw.started_at,
+  finishedAt: raw.finished_at,
   driverName: raw.driver_name,
   escortName: raw.escort_name,
   boardedCount: raw.boarded_count,

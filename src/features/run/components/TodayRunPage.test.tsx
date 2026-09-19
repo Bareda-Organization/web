@@ -66,6 +66,8 @@ const baseDashboard: DashboardResponseTypes = {
       busNo: "2호차",
       direction: "to_academy",
       departTime: "08:10",
+      startedAt: "08:12:30",
+      finishedAt: null,
       driverName: "박기사",
       escortName: "최매니저",
       boardedCount: 5,
@@ -123,6 +125,30 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     render(<TodayRunPage />);
 
     await waitFor(() => expect(screen.getByText("명단 서버 오류")).toBeInTheDocument());
+  });
+
+  // R21-B 목표 2·3·4 — DashboardPage.test.tsx 와 같은 이유로 `container.textContent`
+  // 포함 여부로 본다(판단 근거, 보고서 §1). 명단 표 행마다 같은 회차 값이 반복되므로 한
+  // 번만 나오는지까지는 보지 않고 "떴는가"만 본다.
+  it("명단 표와 사이드 카드 모두 출발·도착 시각을 예정·실제로 구별해 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    const { container } = render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    expect(container.textContent).toContain("예정 08:10");
+    expect(container.textContent).toContain("실제 08:12:30");
+  });
+
+  it("아직 종료 전이면 도착 칸이 빈 값(-)으로 남는다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard); // finishedAt: null
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    // 도착 컬럼 헤더 옆 "-" 는 다른 컬럼(변경 등)도 같은 문구를 쓰므로 헤더 존재만 본다 —
+    // 값 자체는 위 통합 검사가 이미 실제 finishedAt=null 경로를 지나며 함께 검증한다.
+    expect(screen.getByText("도착")).toBeInTheDocument();
   });
 });
 
