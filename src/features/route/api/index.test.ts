@@ -133,6 +133,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
               { lat: 37.2, lng: 127.2 },
             ],
             fallback_used: false,
+            stops: [],
           },
         }),
       ),
@@ -153,7 +154,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       vi.fn().mockResolvedValue(
         mockJsonResponse(200, {
           success: true,
-          data: { road_path: [{ lat: 37.1, lng: 127.1 }], fallback_used: true },
+          data: { road_path: [{ lat: 37.1, lng: 127.1 }], fallback_used: true, stops: [] },
         }),
       ),
     );
@@ -161,5 +162,30 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     const result = await getRunRoute(7);
 
     expect(result.fallbackUsed).toBe(true);
+  });
+
+  // R19 목표 1 — stops[] 도 다른 정차지 조회(getRouteDetail)와 같은 규칙(stop_id→stopId)
+  // 으로 camelCase 로 바꾼다. id 값 자체를 대조해 "몇 개인가" 가 아니라 "어느 정차지인가"
+  // 를 확인한다(phase-goal-loop — 개수만 세는 단언은 범위 조건을 못 잡는다).
+  it("getRunRoute 는 stops[] 를 정차지 마커용으로 camelCase 로 바꾼다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            road_path: [],
+            fallback_used: false,
+            stops: [
+              { stop_id: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const result = await getRunRoute(7);
+
+    expect(result.stops).toEqual([{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }]);
   });
 });

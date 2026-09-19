@@ -90,6 +90,8 @@ export const DashboardPage = () => {
   // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 형태(경로 좌표 0개=데이터 부재 안내).
   const [routeMissing, setRouteMissing] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  // R19 목표 1 — 선택된 회차의 정차지 마커(MonitoringPage.tsx 와 같은 생애주기).
+  const [routeStopMarkers, setRouteStopMarkers] = useState<MapMarker[]>([]);
 
   const liveByRunId = useMemo(() => new Map(liveRuns.map((run) => [run.runId, run])), [liveRuns]);
 
@@ -99,6 +101,11 @@ export const DashboardPage = () => {
         .filter((run) => run.position != null)
         .map((run) => ({ id: String(run.runId), lat: run.position!.lat, lng: run.position!.lng, kind: "bus" as const })),
     [liveRuns],
+  );
+  // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
+  const mapMarkersWithStops: MapMarker[] = useMemo(
+    () => [...mapMarkers, ...routeStopMarkers],
+    [mapMarkers, routeStopMarkers],
   );
   // R18-B2 목표 1·3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면
   // 몫을 한 곳에서 정한다(MonitoringPage.tsx 와 같은 방식).
@@ -148,6 +155,7 @@ export const DashboardPage = () => {
         setRouteFallback(false);
         setRouteMissing(false);
         setRouteError(null);
+        setRouteStopMarkers([]);
         return;
       }
       setSelectedRunId(runId);
@@ -160,10 +168,12 @@ export const DashboardPage = () => {
         setRoutePolylines(display.polylines);
         setRouteFallback(display.fallback);
         setRouteMissing(display.missing);
+        setRouteStopMarkers(display.stopMarkers);
       } catch (cause) {
         setRoutePolylines([]);
         setRouteFallback(false);
         setRouteMissing(false);
+        setRouteStopMarkers([]);
         setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
@@ -298,7 +308,7 @@ export const DashboardPage = () => {
           <StyledMapSurface>
             <MapSurface
               camera={mapCamera}
-              markers={mapMarkers}
+              markers={mapMarkersWithStops}
               polylines={routePolylines}
               onAuthFailed={(exception) =>
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")

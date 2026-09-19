@@ -112,11 +112,12 @@ export type WaypointCreateRequestTypes = {
   apply: boolean;
 };
 
-// GET /staff/runs/{runId}/route(§5.19, RTE-02) — R15-T2 는 지도에 그릴 도로 경로 좌표만
-// 쓴다(R15-T1 이 같이 만드는 고정 계약, `IMPLEMENTATION_PLAN.md §8.23`). 응답에는 이
-// 화면이 안 쓰는 필드(stops·currentStop·ack 등)도 더 있지만 여기서는 옮기지 않는다 —
-// 필요해지면 그때 추가한다(YAGNI).
+// GET /staff/runs/{runId}/route(§5.19, RTE-02) — R15-T2 는 지도에 그릴 도로 경로 좌표를
+// 쓰고, R19 목표 1 이 정차지 마커용 stops 를 더한다(R15-T1 이 같이 만드는 고정 계약,
+// `IMPLEMENTATION_PLAN.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
+// 더 있지만 여기서는 옮기지 않는다 — 필요해지면 그때 추가한다(YAGNI).
 export type RunRouteResponseTypes = {
   roadPath: LatLng[];
   fallbackUsed: boolean;
+  stops: RouteStop[];
 };
