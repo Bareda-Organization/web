@@ -174,8 +174,9 @@ export type RunLiveItemResponseTypes = {
   estDepartTime: string;
   stops: LiveStopResponseTypes[];
   destinationEta: string | null;
-  driver: LiveContactResponseTypes;
-  escort: LiveContactResponseTypes;
+  // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다 — R16, Ruling 315.
+  driver: LiveContactResponseTypes | null;
+  escort: LiveContactResponseTypes | null;
 };
 
 export type AcademyRunsLiveResponseTypes = {

@@ -297,3 +297,51 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 });
+
+// R16 §8.25 목표 7 — §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
+// 이 화면은 받은 것을 거르지 않고 그대로 그려야 한다. ⚠ 특히 `finished` 는
+// 사용자가 "운행종료 버스도 목록에 남긴다" 로 확정한 항목이라(Ruling 310) 단독으로 못박는다.
+describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
+  beforeEach(() => {
+    capturedOnEnvelope = undefined;
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false });
+  });
+
+  it("idle·confirmed·moving·finished 가 모두 목록에 남는다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: 11, busNo: "1호차", runStatus: "idle" },
+        { ...baseLiveRun, runId: 12, busNo: "2호차", runStatus: "confirmed" },
+        { ...baseLiveRun, runId: 13, busNo: "3호차", runStatus: "moving" },
+        { ...baseLiveRun, runId: 14, busNo: "4호차", runStatus: "finished" },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    // ⚠ 상태 문구("대기"·"종료")는 아래 표에도 나오므로 화면 전체에서 찾으면 중복이다.
+    // 목록 항목은 버튼이라 그 이름(버스 번호)으로 좁혀 각 버튼 안의 상태를 읽는다.
+    const expected: Array<[string, string]> = [
+      ["1호차", "대기"],
+      ["2호차", "확정"],
+      ["3호차", "이동 중"],
+      ["4호차", "종료"],
+    ];
+    for (const [busNo, label] of expected) {
+      const item = await screen.findByRole("button", { name: new RegExp(busNo) });
+      expect(item).toHaveTextContent(label);
+    }
+  });
+
+  it("운행이 끝난 버스만 남아도 목록에서 사라지지 않는다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseLiveRun, runId: 21, busNo: "9호차", runStatus: "finished" }],
+    });
+    render(<MonitoringPage />);
+
+    const item = await screen.findByRole("button", { name: /9호차/ });
+    expect(item).toHaveTextContent("종료");
+    expect(screen.queryByText("표시할 버스가 없습니다")).not.toBeInTheDocument();
+  });
+});

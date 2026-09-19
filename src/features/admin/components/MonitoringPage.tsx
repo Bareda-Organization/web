@@ -239,8 +239,10 @@ export const MonitoringPage = () => {
         <StatusPill status={RUN_STATUS_TO_PILL[row.runStatus]}>{RUN_STATUS_LABEL[row.runStatus]}</StatusPill>
       ),
     },
-    { key: "driver", label: "기사", render: (row) => row.driver.name },
-    { key: "escort", label: "동승 매니저", render: (row) => row.escort.name },
+    // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다(R16, Ruling 315) — 빈 칸 대신
+    // "미배치" 를 보여 준다. 관제 화면에서 배치 누락은 관리자가 봐야 하는 정보다.
+    { key: "driver", label: "기사", render: (row) => row.driver?.name ?? "미배치" },
+    { key: "escort", label: "동승 매니저", render: (row) => row.escort?.name ?? "미배치" },
     {
       key: "lastSeenAt",
       label: "위치",
