@@ -25,7 +25,12 @@ import type { MapCamera, MapMarker } from "./types";
 // `TodayRunPage`)가 `camera: { …, zoom: 15 }` 로 값을 못 박고 있어, 바꾸면 3건이
 // 실패한다(2026-09-19 실측 — 13→15 로 고치다 실제로 걸렸다). 그 실패는 결함이 아니라
 // **"눈으로 확인했는가" 를 묻는 관문**이다. 화면을 보고 바꿨다면 검사도 함께 고쳐라.
-export const SELECTED_BUS_MAP_ZOOM = 15;
+// R25 목표 2 — 사용자가 축척을 직접 지정했다: **"지도에 100m 라고 나오는 정도"**.
+// 위 실측표의 zoom 16 이 그 자리다(축척 바 100m). 예전 값 15(≈250m)는 노선 전체를 담는
+// 쪽에 맞춘 값이었는데, 노선 담기는 이제 `fitBounds` 가 따로 하므로 이 상수는 "고른 버스를
+// 얼마나 가까이 볼 것인가" 만 뜻한다.
+// ⚠ 이 값은 **눈으로만 판정할 수 있다** — 화면을 열지 않고 바꾸지 마라(위 경고 그대로).
+export const SELECTED_BUS_MAP_ZOOM = 16;
 
 // 선택된 버스 마커가 있으면 그 좌표로 확대하고, 없으면 화면이 준 기본값을 쓴다.
 export const cameraForSelectedBus = (

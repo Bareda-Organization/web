@@ -274,3 +274,109 @@ describe("NaverMapSurface — 지도 마커 클릭(R23 목표 4)", () => {
     expect(onMarkerClick).not.toHaveBeenCalled();
   });
 });
+
+// R25 목표 1 — 승하차지를 골라 `selected` 가 켜져도 지도에서 아무 변화가 없었다
+// (2026-09-20 실측 — 누르기 전·후 둘 다 테두리 부재). 아이콘을 다시 굳히는 분기가
+// **버스에만** 걸려 있었기 때문이다.
+describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목표 1)", () => {
+  it("승하차지 마커도 selected 가 켜지면 아이콘을 다시 굳힌다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setIcon = vi.fn();
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
+      setMap: vi.fn(),
+      setPosition: vi.fn(),
+      setIcon,
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "stop-7", lat: 37.5, lng: 127, kind: "stop" }]}
+      />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(document.querySelector("div")).toBeTruthy());
+    setIcon.mockClear();
+
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "stop-7", lat: 37.5, lng: 127, kind: "stop", selected: true }]}
+      />,
+    );
+
+    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(1));
+    expect(setIcon.mock.calls[0][0].content).toContain("box-shadow");
+  });
+
+  // 좌표만 갱신되는 회차(버스 위치는 2초마다 들어온다)에 승하차지 수십 개의 DOM 을
+  // 매번 새로 그리면 깜빡인다 — 내용이 같으면 건드리지 않는다.
+  it("아이콘 내용이 그대로면 다시 굳히지 않는다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setIcon = vi.fn();
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
+      setMap: vi.fn(),
+      setPosition: vi.fn(),
+      setIcon,
+    }));
+
+    const { rerender } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "stop-7", lat: 37.5, lng: 127, kind: "stop" }]}
+      />,
+    );
+    await releaseScript();
+    setIcon.mockClear();
+
+    // 좌표만 바뀌고 아이콘을 정하는 값(selected·busNo·direction)은 그대로다.
+    rerender(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
+        markers={[{ id: "stop-7", lat: 37.51, lng: 127.01, kind: "stop" }]}
+      />,
+    );
+
+    expect(setIcon).not.toHaveBeenCalled();
+  });
+});
+
+// R25 목표 2 — 버스를 고르면 그 버스가 정중앙에 온다. 노선 전체를 담는 배율(R22)은
+// 8km 노선에서 버스가 점만 해져 "어디 있는지" 를 못 읽는다.
+describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {
+  it("고른 버스가 있으면 노선이 있어도 fitBounds 대신 그 좌표로 옮긴다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setCenter = vi.fn();
+    const setZoom = vi.fn();
+    const fitBounds = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown; LatLngBounds: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter,
+      setZoom,
+      fitBounds,
+      destroy: vi.fn(),
+    }));
+    (window as unknown as { naver: { maps: { LatLngBounds: unknown } } }).naver.maps.LatLngBounds = vi.fn();
+
+    render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 16 }}
+        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", busNo: "2호차", selected: true }]}
+        polylines={[
+          {
+            id: "route-1",
+            kind: "moving",
+            points: [
+              { lat: 37.56, lng: 126.97 },
+              { lat: 37.49, lng: 127.02 },
+            ],
+          },
+        ]}
+      />,
+    );
+    await releaseScript();
+
+    await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
+    expect(setZoom).toHaveBeenCalledWith(16);
+    expect(fitBounds).not.toHaveBeenCalled();
+  });
+});

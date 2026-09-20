@@ -126,15 +126,34 @@ const endpointChipHtml = (kind: MapMarkerKind, selected: boolean, markerId?: str
   return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;height:${MARKER_SIZE_PX[kind]}px;padding:0 7px;border-radius:999px;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;">${ENDPOINT_LABEL[kind]}</span>`;
 };
 
+/**
+ * R25 목표 2 — 마커를 **제 좌표 위에 가운데로** 얹는다.
+ *
+ * <p>`naver.maps.Marker` 의 HTML 아이콘은 `size`·`anchor` 를 주지 않으면 아이콘의 <b>좌상단</b>이
+ * 좌표에 놓인다 — 그래서 지금까지 모든 마커가 아이콘 절반만큼 오른쪽·아래로 밀려 그려졌다
+ * (2026-09-20 실측 — 버스를 정중앙에 놓았는데 화면에서는 38px 벗어났다).
+ *
+ * <p>`size`·`anchor` 를 계산해 넘기지 않고 CSS 로 미는 이유 — 버스 칩은 번호 길이에 따라 폭이
+ * 달라져서 가로 크기를 미리 알 수 없다. `translate(-50%, -50%)` 는 제 크기를 기준으로 밀기
+ * 때문에 폭이 얼마든 항상 가운데가 맞는다. 클릭 판정도 따라온다(CSS 변형은 히트 테스트에
+ * 반영된다) — 이 화면의 마커 클릭은 SDK 가 아니라 DOM 위임이라 그대로 동작한다.
+ */
+const centeredOnPoint = (html: string): string =>
+  `<span style="display:inline-block;transform:translate(-50%,-50%);">${html}</span>`;
+
 export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOptions = {}): string => {
   if (kind === "origin" || kind === "destination") {
-    return endpointChipHtml(kind, options.selected ?? false, options.markerId);
+    return centeredOnPoint(endpointChipHtml(kind, options.selected ?? false, options.markerId));
   }
   if (kind === "bus" && options.busNo) {
-    return busChipHtml(options.busNo, options.direction ?? "to_academy", options.selected ?? false, options.markerId);
+    return centeredOnPoint(
+      busChipHtml(options.busNo, options.direction ?? "to_academy", options.selected ?? false, options.markerId),
+    );
   }
   const size = MARKER_SIZE_PX[kind];
   const icon = kind === "bus" ? BUS_ICON_HTML[options.direction ?? "to_academy"] : "";
   const ring = options.selected ? selectedRingOf(kind) : "";
-  return `<span${markerIdAttr(options.markerId)} style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`;
+  return centeredOnPoint(
+    `<span${markerIdAttr(options.markerId)} style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`,
+  );
 };

@@ -154,3 +154,15 @@ describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
     expect(buildMarkerIconHtml("bus")).toBe(buildMarkerIconHtml("bus", { direction: "to_academy" }));
   });
 });
+
+// R25 목표 2 — 마커는 제 좌표 **위에 가운데로** 놓여야 한다. SDK 의 HTML 아이콘은
+// size·anchor 없이는 좌상단을 좌표에 맞춰서, 고치기 전에는 모든 마커가 아이콘 절반만큼
+// 오른쪽·아래로 밀려 그려졌다(2026-09-20 실측 — 정중앙에 놓은 버스가 38px 벗어났다).
+describe("markerIcon — 좌표 위에 가운데로(R25 목표 2)", () => {
+  it("모든 종류가 제 크기의 절반만큼 되밀린 채로 나온다", () => {
+    for (const kind of ["bus", "stop", "student", "origin", "destination"] as const) {
+      expect(buildMarkerIconHtml(kind)).toContain("translate(-50%,-50%)");
+    }
+    expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).toContain("translate(-50%,-50%)");
+  });
+});

@@ -50,6 +50,8 @@ export const NaverMapSurface = ({
   // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
   // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
   const displayedPositions = useRef<Map<string, LatLng>>(new Map());
+  // R25 목표 1 — 마커별로 "지금 화면에 반영된 아이콘 HTML". 달라졌을 때만 다시 굳힌다.
+  const renderedIcons = useRef<Map<string, string>>(new Map());
   // 보간 스케줄링 — SDK 를 모르는 순수 컨트롤러라 여기서만 `naver.maps.LatLng` 로
   // 감싸 실제 마커에 반영한다. 마커를 움직이는 것이지 카메라를 움직이는 것이
   // 아니다 — 카메라는 아래 별도 useEffect 가 즉시(보간 없이) 갱신한다.
@@ -219,9 +221,19 @@ export const NaverMapSurface = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.naver) return;
-    // 고른 노선이 있으면 그 노선 전체, 없으면 지금 보이는 버스 전체를 담는다.
-    if (fitToPoints(map, polylines.flatMap((polyline) => polyline.points))) return;
-    if (fitToPoints(map, markers.filter((marker) => marker.kind === "bus"))) return;
+    // R25 목표 2 — **버스를 고르면 그 버스를 정중앙에 놓는다**(사용자 지시). 노선 전체를
+    // 담는 배율(R22 목표 2)은 고른 버스가 화면 어디에 있는지 알기 어려웠다 — 노선이 8km 를
+    // 넘으면 버스가 점만 해진다. 고른 버스가 있으면 화면이 넘긴 `camera`(그 버스 좌표 +
+    // `SELECTED_BUS_MAP_ZOOM`)를 그대로 쓰고 아래 fitBounds 를 건너뛴다.
+    //
+    // 실시간 위치가 없는 회차(대기·확정·종료)는 버스 마커 자체가 없다 — 그때는 예전처럼
+    // 노선 전체를 담아야 출발지·도착지가 화면 안에 들어온다(R22 가 고친 그 결함).
+    const hasSelectedBus = markers.some((marker) => marker.kind === "bus" && marker.selected);
+    if (!hasSelectedBus) {
+      // 고른 노선이 있으면 그 노선 전체, 없으면 지금 보이는 버스 전체를 담는다.
+      if (fitToPoints(map, polylines.flatMap((polyline) => polyline.points))) return;
+      if (fitToPoints(map, markers.filter((marker) => marker.kind === "bus"))) return;
+    }
     const cam = cameraRef.current;
     map.setCenter(new window.naver.maps.LatLng(cam.lat, cam.lng));
     map.setZoom(cam.zoom);
@@ -242,6 +254,7 @@ export const NaverMapSurface = ({
         marker.setMap(null);
         existing.delete(id);
         displayedPositions.current.delete(id);
+        renderedIcons.current.delete(id);
         animationControllerRef.current?.forget(id);
       }
     }
@@ -252,38 +265,44 @@ export const NaverMapSurface = ({
         // 새로 나타난 마커 — 보간 없이 바로 그 자리에 놓는다. "받은 간격만큼
         // 편다"는 *갱신*에만 해당하고, 첫 등장은 보간할 이전 위치가 없다.
         const position = new naverMaps.LatLng(markerData.lat, markerData.lng);
+        const iconContent = buildMarkerIconHtml(markerData.kind, {
+          selected: markerData.selected,
+          busNo: markerData.busNo,
+          direction: markerData.direction,
+          markerId: markerData.id,
+        });
         const created = new naverMaps.Marker({
           map,
           position,
           // R18-B 목표 1 — 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
           // R21-A 목표 1~3 — 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
-          icon: {
-            content: buildMarkerIconHtml(markerData.kind, {
-              selected: markerData.selected,
-              busNo: markerData.busNo,
-              direction: markerData.direction,
-              markerId: markerData.id,
-            }),
-          },
+          icon: { content: iconContent },
         });
         existing.set(markerData.id, created);
+        renderedIcons.current.set(markerData.id, iconContent);
         displayedPositions.current.set(markerData.id, { lat: markerData.lat, lng: markerData.lng });
         continue;
       }
-      // 버스만 보간 대상이다 — 정류장·학생 마커는 이 화면에서 좌표가 바뀌지
-      // 않지만(현재는 항상 kind: "bus" 만 갱신됨), 앞으로 다른 종류가 움직이게
-      // 되더라도 목표 5는 "버스 마커 보간" 이므로 범위를 명확히 해 둔다.
+      // R25 목표 1 — **종류를 가리지 않고** 아이콘을 다시 굳힌다. 예전엔 버스만 갱신해서
+      // (R21-A 가 버스 선택 강조만 보고 고친 자리), 승하차지를 골라 `selected` 를 켜도
+      // 생성 시점의 아이콘이 그대로 남아 지도에서는 아무 변화가 없었다(2026-09-20 실측 —
+      // 누르기 전·후 둘 다 `box-shadow` 부재).
+      //
+      // 매번 `setIcon` 하지 않고 **내용이 달라졌을 때만** 부른다 — 버스 위치가 2초마다
+      // 들어오면 이 effect 도 2초마다 도는데, 그때마다 승하차지 수십 개의 DOM 을 새로
+      // 그리면 깜빡인다.
+      const content = buildMarkerIconHtml(markerData.kind, {
+        selected: markerData.selected,
+        busNo: markerData.busNo,
+        direction: markerData.direction,
+        markerId: markerData.id,
+      });
+      if (renderedIcons.current.get(markerData.id) !== content) {
+        found.setIcon({ content });
+        renderedIcons.current.set(markerData.id, content);
+      }
+      // 버스만 보간 대상이다 — 승하차지·학생은 이 화면에서 좌표가 바뀌지 않는다.
       if (markerData.kind === "bus") {
-        // R21-A 목표 1 — 좌표는 그대로인 채 선택 상태만 바뀔 수 있다(같은 버스를
-        // 고르고 해제할 때 id 가 안 바뀐다) — 아이콘은 매번 다시 굳혀 반영한다.
-        found.setIcon({
-          content: buildMarkerIconHtml(markerData.kind, {
-            selected: markerData.selected,
-            busNo: markerData.busNo,
-            direction: markerData.direction,
-            markerId: markerData.id,
-          }),
-        });
         animationControllerRef.current?.receive(markerData.id, { lat: markerData.lat, lng: markerData.lng });
       } else {
         found.setPosition(new naverMaps.LatLng(markerData.lat, markerData.lng));

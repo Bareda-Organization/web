@@ -5,6 +5,7 @@ import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 import { DashboardPage } from "./DashboardPage";
 import { getDashboard, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
+import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
 import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
@@ -527,7 +528,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: 15 } }),
+        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: SELECTED_BUS_MAP_ZOOM } }),
       ),
     );
   });
@@ -550,7 +551,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 15 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: SELECTED_BUS_MAP_ZOOM } }),
       ),
     );
   });

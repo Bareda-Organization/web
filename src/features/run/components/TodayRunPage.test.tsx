@@ -1,6 +1,7 @@
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
+import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
 import { TodayRunPage } from "./TodayRunPage";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
@@ -204,7 +205,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
           ],
           // R18-B2 목표 2 — 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
           // 하나가 선택돼 있어(토글 없음) 마커가 있으면 곧 "선택된 버스" 다.
-          camera: { lat: 37.55, lng: 127.01, zoom: 15 },
+          camera: { lat: 37.55, lng: 127.01, zoom: SELECTED_BUS_MAP_ZOOM },
         }),
       ),
     );

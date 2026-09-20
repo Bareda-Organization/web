@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
+import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
 import type { RunLiveItemResponseTypes } from "../types";
 import { ApiError } from "@/shared/lib/http";
@@ -345,7 +346,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: 15 } }),
+        expect.objectContaining({ camera: { lat: 37.1, lng: 127.1, zoom: SELECTED_BUS_MAP_ZOOM } }),
       ),
     );
   });
@@ -387,7 +388,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
-        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: 15 } }),
+        expect.objectContaining({ camera: { lat: 37.111, lng: 127.222, zoom: SELECTED_BUS_MAP_ZOOM } }),
       ),
     );
   });
