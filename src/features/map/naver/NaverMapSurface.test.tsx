@@ -192,39 +192,85 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
 
     expect(setCenter).toHaveBeenCalledTimes(2);
   });
-});
 
-// R21-A 목표 1 — 같은 버스 마커(id 불변)를 다시 골라도 흰 테두리(선택 강조)가
-// 반영돼야 한다. 마커 갱신 effect 는 기존 마커를 만나면(`found`) 좌표 보간
-// 분기로만 가고 아이콘은 생성 시점 한 번뿐이었다 — 선택 상태가 바뀌어도 아이콘이
-// 그대로 남는 결함이 될 수 있어, `setIcon` 이 다시 불리는지 직접 확인한다.
-describe("NaverMapSurface — 선택 상태가 바뀌면 기존 마커의 아이콘도 다시 굳힌다(R21-A 목표 1)", () => {
-  it("같은 id 의 버스 마커라도 selected 가 바뀌면 setIcon 이 다시 호출된다", async () => {
+  // R23 목표 3 — 아무것도 안 고른 상태에서도 버스가 전부 보여야 한다(사용자 지시).
+  // 마커는 화면이 자료를 받은 뒤에야 도착하므로, 지도가 생길 때 한 번 맞춰 놓는 것으로는
+  // 늘 빈 화면 기준이 된다 — 마커가 처음 들어온 순간에 다시 맞춰야 한다.
+  it("선택이 없어도 버스 마커가 처음 들어오면 카메라를 다시 맞춘다", async () => {
     const releaseScript = heldScriptLoad();
-    const setIcon = vi.fn();
-    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
-      setMap: vi.fn(),
-      setPosition: vi.fn(),
-      setIcon,
+    const setCenter = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter,
+      setZoom: vi.fn(),
+      destroy: vi.fn(),
     }));
 
     const { rerender } = render(
+      <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 12 }} markers={[]} polylines={[]} />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
+
+    // 폴링이 첫 자료를 물어 왔다 — 고른 버스는 없다.
+    rerender(
       <NaverMapSurface
-        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
-        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: false }]}
+        camera={{ lat: 37.52, lng: 127.0, zoom: 12 }}
+        markers={[
+          { id: "1", lat: 37.51, lng: 126.91, kind: "bus", busNo: "3호차" },
+          { id: "2", lat: 37.47, lng: 127.02, kind: "bus", busNo: "4호차" },
+        ]}
+        polylines={[]}
+      />,
+    );
+
+    expect(setCenter).toHaveBeenCalledTimes(2);
+  });
+});
+
+// R23 목표 4 — 지도 위 버스 아이콘을 눌러 고른다(사용자 지시). SDK 의 마커 이벤트가
+// 이 아이콘 형태에서 안 불려(본문 주석 참고) 마커 HTML 의 `data-marker-id` 를 컨테이너에서
+// 받는다 — 그래서 시험도 DOM 클릭으로 한다.
+describe("NaverMapSurface — 지도 마커 클릭(R23 목표 4)", () => {
+  it("data-marker-id 가 붙은 요소를 누르면 그 id 를 넘긴다", async () => {
+    const releaseScript = heldScriptLoad();
+    const onMarkerClick = vi.fn();
+
+    const { container } = render(
+      <NaverMapSurface
+        camera={{ lat: 37.5, lng: 127, zoom: 12 }}
+        markers={[{ id: "42", lat: 37.5, lng: 127, kind: "bus", busNo: "3호차" }]}
+        onMarkerClick={onMarkerClick}
       />,
     );
     await releaseScript();
-    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(0)); // 생성 시점엔 setIcon 이 아니라 icon 옵션으로 굳힌다.
 
-    rerender(
-      <NaverMapSurface
-        camera={{ lat: 37.5, lng: 127, zoom: 14 }}
-        markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: true }]}
-      />,
+    // SDK 가 마커 HTML 을 실제로 심는 자리를 시험에서는 직접 만든다 — 확인 대상은
+    // "컨테이너가 그 클릭을 받아 id 를 되찾는가" 이지 SDK 의 삽입 위치가 아니다.
+    const mapContainer = container.firstElementChild as HTMLElement;
+    const chip = document.createElement("span");
+    chip.setAttribute("data-marker-id", "42");
+    mapContainer.appendChild(chip);
+
+    chip.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(onMarkerClick).toHaveBeenCalledWith("42");
+  });
+
+  it("마커가 아닌 곳을 누르면 아무것도 넘기지 않는다", async () => {
+    const releaseScript = heldScriptLoad();
+    const onMarkerClick = vi.fn();
+
+    const { container } = render(
+      <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 12 }} markers={[]} onMarkerClick={onMarkerClick} />,
     );
+    await releaseScript();
 
-    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(1));
-    expect(setIcon.mock.calls[0][0].content).toContain("box-shadow");
+    const mapContainer = container.firstElementChild as HTMLElement;
+    const plain = document.createElement("div");
+    mapContainer.appendChild(plain);
+
+    plain.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(onMarkerClick).not.toHaveBeenCalled();
   });
 });

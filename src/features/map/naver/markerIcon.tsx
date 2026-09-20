@@ -96,7 +96,13 @@ export type MarkerIconOptions = {
   selected?: boolean;
   busNo?: string;
   direction?: MapMarkerDirection;
+  // R23 목표 4 — 지도 위 마커를 눌러 고른다. 누가 눌렸는지는 이 속성으로 되찾는다
+  // (SDK 의 마커 클릭 이벤트가 이 아이콘 형태에서는 안 걸렸다 — NaverMapSurface 주석 참고).
+  markerId?: string;
 };
+
+/** 클릭 위임이 마커를 되찾는 표식. 마커 id 는 내부 값(회차 번호·`stop-7`)이라 따옴표가 섞이지 않는다. */
+const markerIdAttr = (markerId?: string): string => (markerId ? ` data-marker-id="${markerId}"` : "");
 
 /**
  * R22 목표 1 — 버스를 서로 구별한다(사용자 지시 — 전부 같은 파란 원이라 어느 버스인지
@@ -106,29 +112,29 @@ export type MarkerIconOptions = {
  * <p>R22 추가 지시 — 번호에 더해 <b>색</b>도 버스마다 다르다({@link busColorOf}). 상태를 뜻하는
  * 색과 겹치지 않는 대역에서만 고른다 — 근거는 {@code BUS_COLORS} 주석.
  */
-const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boolean): string => {
+const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boolean, markerId?: string): string => {
   const color = busColorOf(busNo);
   // 선택 강조는 그 버스의 색으로 두른다 — 종류별 색을 쓰는 `selectedRingOf` 와 같은 규칙을
   // 버스에만 한 단계 좁힌 것이다(테두리가 "그 마커의 색" 이라는 뜻은 그대로다).
   const ring = selected ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};` : "";
-  return `<span style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
 };
 
 /** R22 목표 2 — 노선의 양 끝(출발지·도착지)을 글자 핀으로 찍는다. */
-const endpointChipHtml = (kind: MapMarkerKind, selected: boolean): string => {
+const endpointChipHtml = (kind: MapMarkerKind, selected: boolean, markerId?: string): string => {
   const ring = selected ? selectedRingOf(kind) : "";
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;height:${MARKER_SIZE_PX[kind]}px;padding:0 7px;border-radius:999px;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;">${ENDPOINT_LABEL[kind]}</span>`;
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;height:${MARKER_SIZE_PX[kind]}px;padding:0 7px;border-radius:999px;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;">${ENDPOINT_LABEL[kind]}</span>`;
 };
 
 export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOptions = {}): string => {
   if (kind === "origin" || kind === "destination") {
-    return endpointChipHtml(kind, options.selected ?? false);
+    return endpointChipHtml(kind, options.selected ?? false, options.markerId);
   }
   if (kind === "bus" && options.busNo) {
-    return busChipHtml(options.busNo, options.direction ?? "to_academy", options.selected ?? false);
+    return busChipHtml(options.busNo, options.direction ?? "to_academy", options.selected ?? false, options.markerId);
   }
   const size = MARKER_SIZE_PX[kind];
   const icon = kind === "bus" ? BUS_ICON_HTML[options.direction ?? "to_academy"] : "";
   const ring = options.selected ? selectedRingOf(kind) : "";
-  return `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`;
+  return `<span${markerIdAttr(options.markerId)} style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`;
 };

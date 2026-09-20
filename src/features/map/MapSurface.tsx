@@ -10,6 +10,8 @@ import type { MapCamera, MapMarker, MapPolyline } from "./types";
 export type MapSurfaceProps = {
   camera: MapCamera;
   markers: MapMarker[];
+  // R23 목표 4 — 지도 위 버스 아이콘을 눌러 고른다. 인자는 `MapMarker.id`(버스는 회차 id).
+  onMarkerClick?: (markerId: string) => void;
   // R15-T2 — 선택된 버스의 노선(§5.19 road_path). 생략하거나 빈 배열이면 아무것도 그리지 않는다.
   polylines?: MapPolyline[];
   onReady?: () => void;

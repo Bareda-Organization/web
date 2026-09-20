@@ -15,6 +15,7 @@ import {
   MapSurface,
   anchorForSelection,
   buildRouteDisplayState,
+  visibleMarkers,
   cameraForSelectedBus,
   type MapCamera,
   type MapMarker,
@@ -120,9 +121,11 @@ export const MonitoringPage = () => {
     [runs, selectedRunId],
   );
   // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
+  // R23 목표 4 — 버스를 고르면 그 버스와 그 노선만 남긴다(여러 대가 동시에 움직이면
+  // 고른 버스의 경로가 다른 마커에 가려 읽히지 않는다). 규칙은 `features/map` 이 갖는다.
   const mapMarkersWithStops: MapMarker[] = useMemo(
-    () => [...mapMarkers, ...routeStopMarkers],
-    [mapMarkers, routeStopMarkers],
+    () => visibleMarkers(mapMarkers, routeStopMarkers, selectedRunId == null ? null : String(selectedRunId)),
+    [mapMarkers, routeStopMarkers, selectedRunId],
   );
   // R18-B2 목표 3 — 확대 수준은 `features/map`(`cameraForSelectedBus`)이 세 화면 몫을
   // 한 곳에서 정한다(R18-B 때 이 화면 안에 있던 상수를 공유 표면으로 올렸다).
@@ -228,6 +231,18 @@ export const MonitoringPage = () => {
       }
     },
     [selectedRunId, runs],
+  );
+
+  // R23 목표 4 — 지도 위 마커 클릭. 버스 마커의 id 만 회차 번호이고 정차지·출발지·도착지는
+  // `stop-`·`origin-` 처럼 접두어가 붙는다 — 숫자로 읽히는 것만 회차 선택으로 넘긴다.
+  const handleSelectMarker = useCallback(
+    (markerId: string) => {
+      const runId = Number(markerId);
+      if (Number.isInteger(runId) && markerId !== "") {
+        handleSelectBus(runId);
+      }
+    },
+    [handleSelectBus],
   );
 
   // Goal 8 — `/topic/admin/live` 구독. 이 채널은 학원 경계를 넘어 전체를
@@ -372,6 +387,7 @@ export const MonitoringPage = () => {
             <MapSurface
               camera={mapCamera}
               markers={mapMarkersWithStops}
+              onMarkerClick={handleSelectMarker}
               polylines={routePolylines}
               onAuthFailed={(exception) =>
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
