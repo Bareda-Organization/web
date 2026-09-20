@@ -1,5 +1,5 @@
 // 메인 관리자(O-01~07). (staff) 와 레이아웃·내비게이션을 공유하지 않는다 —
-// 전 학원 범위 관제라 사이드바 구성 자체가 다르다(`frontend/IMPLEMENTATION_PLAN.md` §1 · §3.4).
+// 전 학원 범위 관제라 사이드바 구성 자체가 다르다(`docs/frontend/IMPLEMENTATION_PLAN.md` §1 · §3.4).
 // 라우트 그룹 진입 자체를 막는 판정(관계자가 이 경로로 못 들어오게)은 여기가 아니라
 // `features/auth/lib/navigation.ts` 의 decideAuthRedirect 한 곳뿐이다 — 이 레이아웃은
 // 그 판정이 끝난 뒤의 화면 골격만 맡는다(AuthGateGuard 가 그 판정을 기다리는 동안

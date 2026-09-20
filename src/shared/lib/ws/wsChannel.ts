@@ -7,7 +7,7 @@
 // 이 앱 안에서 아무도 호출하지 않는 죽은 코드가 된다 — 판단 근거, 보고서 §1.
 //
 // Dart 쪽은 `WsChannel` 이라는 이름 없는 생성자 클래스로 4개를 정적 메서드로
-// 묶었지만, `CONVENTIONS.md` "PascalCase 는 React 컴포넌트와 도메인 요소(폴더)에만"
+// 묶었지만, `CONVENTIONS_REACT.md` "PascalCase 는 React 컴포넌트와 도메인 요소(폴더)에만"
 // 규칙상 값 바인딩에 PascalCase 를 쓸 수 없다 — TS 는 네임스페이스 클래스가
 // 관용적이지도 않으므로 그냥 함수 2개로 둔다.
 export const academyLiveDestination = (academyId: string): string => `/topic/academy/${academyId}/live`;

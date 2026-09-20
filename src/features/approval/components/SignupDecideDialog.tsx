@@ -19,7 +19,7 @@ const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role 
 // §5.2 POST /staff/signup-requests/{id}/decide(A-02). 수락 시 계정↔레코드 연결이
 // 필수라(§5.2, 누락하면 422 LINK_REQUIRED) role 에 따라 studentIds 또는 managerId 를
 // 받는다. 학생·매니저 검색 UI 는 다른 기능(run·student)의 목록 API 가 필요해
-// feature 간 import 금지 규칙(`CONVENTIONS.md` "지켜야 할 의존 방향")에 걸리므로,
+// feature 간 import 금지 규칙(`CONVENTIONS_REACT.md` "지켜야 할 의존 방향")에 걸리므로,
 // 이 라운드에서는 ID 직접 입력으로 좁혀 둔다(판단 근거, 보고서 §1).
 export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDialogProps) => {
   const [studentIdsInput, setStudentIdsInput] = useState("");

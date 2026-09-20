@@ -1,4 +1,4 @@
-// features/run 이 다루는 타입 전부 — API 응답은 `OOOResponseTypes` (`CONVENTIONS.md`).
+// features/run 이 다루는 타입 전부 — API 응답은 `OOOResponseTypes` (`CONVENTIONS_REACT.md`).
 // 서버는 snake_case(§1.1)를 쓰지만 이 파일의 타입은 앱 내부 관례대로 camelCase 다 —
 // snake_case ↔ camelCase 변환은 `api/*.ts` 호출부가 경계에서 한 번만 한다.
 

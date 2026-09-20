@@ -127,7 +127,7 @@ const handleResponse = async <T>(response: Response, retry: () => Promise<Respon
 
 // API_SPEC §1 공통 규약(토큰 부착 · 401 재발급 · 클라이언트 타입 · 에러 변환 ·
 // 성공 응답 봉투 벗기기)을 한곳에서 처리하는 창구. 컴포넌트·기능 코드는 이 함수만
-// 거쳐 서버를 호출한다 — `frontend/CONVENTIONS.md` "API 호출은 기능 안에서만".
+// 거쳐 서버를 호출한다 — `docs/frontend/CONVENTIONS_REACT.md` "API 호출은 기능 안에서만".
 export const apiFetch = async <T = void>(path: string, options: ApiFetchOptions = {}): Promise<T> => {
   const response = await rawFetch(path, options);
   return handleResponse<T>(response, () => rawFetch(path, options));
