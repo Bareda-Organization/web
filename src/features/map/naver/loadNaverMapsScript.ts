@@ -40,12 +40,6 @@ export const onNaverAuthFailure = (listener: NaverAuthFailureCallback): (() => v
   };
 };
 
-// 테스트 전용 — 모듈 단위 캐시를 초기화한다(각 시험이 스크립트 적재를 독립적으로 재현하도록).
-export const resetNaverMapsScriptForTest = (): void => {
-  scriptPromise = null;
-  authFailureListeners.clear();
-};
-
 export const loadNaverMapsScript = (clientId: string): Promise<void> => {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("네이버 지도 SDK 는 브라우저에서만 실행된다"));

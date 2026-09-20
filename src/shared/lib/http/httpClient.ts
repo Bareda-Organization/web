@@ -12,6 +12,9 @@ type ApiFetchOptions = {
   body?: Record<string, unknown>;
   query?: Record<string, string | number | boolean | undefined>;
   // §1.7 멱등성 대상 두 엔드포인트에서만 넘긴다 — 본문에 `client_key` 로 실린다.
+  // 대상은 승하차 처리(PATCH .../riders/{riderId}) · 비상 발신(POST .../emergency) 둘뿐이고
+  // 그 밖에는 붙이지 않는다 — 서버가 모르는 필드를 보내는 것이라 의미가 없다.
+  // 값은 `crypto.randomUUID()` 를 부르는 쪽에서 만든다.
   idempotencyKey?: string;
   signal?: AbortSignal;
 };

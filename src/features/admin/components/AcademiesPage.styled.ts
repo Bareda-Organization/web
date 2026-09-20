@@ -12,15 +12,3 @@ export const StyledAcademiesFilterRow = styled.div`
   gap: 12px;
   align-items: flex-end;
 `;
-
-export const StyledAcademyDetailGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-`;
-
-export const StyledFormColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
