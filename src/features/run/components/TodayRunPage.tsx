@@ -40,6 +40,11 @@ import {
   StyledMapSurface,
   StyledCrewRow,
   StyledCrewLabel,
+  StyledStopRosterRow,
+  StyledStopRosterName,
+  StyledStopRosterClass,
+  StyledStopRosterEmpty,
+  StyledStopRosterHeader,
 } from "./TodayRunPage.styled";
 
 // DashboardPage.tsx·MonitoringPage.tsx 와 같은 기본 좌표(서울 시청). `DashboardRunResponseTypes`·
@@ -123,6 +128,11 @@ export const TodayRunPage = () => {
   // R19 목표 1 — 지금 화면에 뜬 회차의 정차지 마커(MonitoringPage.tsx 와 같은 형태).
   // 이 화면은 선택 해제 토글이 없어(항상 회차 하나) 비우는 시점도 없다.
   const [routeStopMarkers, setRouteStopMarkers] = useState<MapMarker[]>([]);
+  // R24 — 지도에서 고른 승하차지. 지도 마커는 좌표만 들고 있어서 명단과 이으려면
+  // 정차지 이름이 필요하다(§5.4 명단 항목은 `stopName` 문자열만 싣는다) — 노선 응답의
+  // 정차지 목록을 그대로 보관해 id → 이름을 되찾는다.
+  const [routeStops, setRouteStops] = useState<{ stopId: number; name: string }[]>([]);
+  const [selectedStopId, setSelectedStopId] = useState<number | null>(null);
 
   const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
@@ -146,11 +156,40 @@ export const TodayRunPage = () => {
         : [],
     [liveRun],
   );
+  // R24 — 지도에서 고른 승하차지의 이름. 명단(§5.4)은 승하차지를 **이름 문자열**로만
+  // 싣기 때문에(id 가 부재) 이 이름이 둘을 잇는 유일한 열쇠다. 둘 다 `stop.name` 한 컬럼에서
+  // 나오므로 같은 정차지면 반드시 일치한다.
+  // ⚠ 한 노선에 같은 이름의 승하차지가 둘 있으면 두 곳의 학생이 함께 나온다. 그때 가르려면
+  // 명단 응답에 `stop_id` 를 더해야 한다(API 계약 변경) — 지금은 그런 자료가 부재해 두지 않는다.
+  const selectedStopName = useMemo(
+    () => routeStops.find((stop) => stop.stopId === selectedStopId)?.name ?? null,
+    [routeStops, selectedStopId],
+  );
+  const stopRoster = useMemo(
+    () => (selectedStopName == null ? [] : roster.filter((item) => item.stopName === selectedStopName)),
+    [roster, selectedStopName],
+  );
+  // 고른 승하차지에 흰 테두리를 둘러 "이 자리를 보고 있다"를 지도에서도 알린다.
+  const highlightedStopMarkers = useMemo(
+    () =>
+      routeStopMarkers.map((marker) =>
+        marker.id === `stop-${selectedStopId}` ? { ...marker, selected: true } : marker,
+      ),
+    [routeStopMarkers, selectedStopId],
+  );
+  // 지도 마커 클릭 — 승하차지만 받는다. 버스·출발지·도착지를 누르면 선택을 해제한다
+  // (같은 승하차지를 다시 누르는 것도 해제다 — 목록에서 벗어날 수단이 필요하다).
+  const handleSelectMarker = useCallback((markerId: string) => {
+    const stopId = markerId.startsWith("stop-") ? Number(markerId.slice("stop-".length)) : null;
+    setSelectedStopId((previous) => (stopId == null || stopId === previous ? null : stopId));
+  }, []);
+
   // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
   const mapMarkersWithStops: MapMarker[] = useMemo(
-    () => [...mapMarkers, ...routeStopMarkers],
-    [mapMarkers, routeStopMarkers],
+    () => [...mapMarkers, ...highlightedStopMarkers],
+    [mapMarkers, highlightedStopMarkers],
   );
+
   // R18-B2 목표 2 — 이 화면은 항상 회차 하나가 선택돼 있다(대기 상태가 없다,
   // 선택 해제 토글 부재). 마커가 있으면 곧 "선택된 버스" 라 세 화면이 공유하는
   // `cameraForSelectedBus`(`features/map`)를 그대로 쓴다 — 새 분기를 만들지 않는다.
@@ -218,6 +257,8 @@ export const TodayRunPage = () => {
       setRouteNoPlannedRoute(display.noPlannedRoute);
       setRoutePlanned(display.planned);
       setRouteStopMarkers(display.stopMarkers);
+      setRouteStops(route.stops.map((stop) => ({ stopId: stop.stopId, name: stop.name })));
+      setSelectedStopId(null);
     } catch (cause) {
       setRoutePolylines([]);
       setRouteFallback(false);
@@ -225,6 +266,8 @@ export const TodayRunPage = () => {
       setRouteNoPlannedRoute(false);
       setRoutePlanned(false);
       setRouteStopMarkers([]);
+      setRouteStops([]);
+      setSelectedStopId(null);
       setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
     }
   }, []);
@@ -332,6 +375,7 @@ export const TodayRunPage = () => {
             <MapSurface
               camera={mapCamera}
               markers={mapMarkersWithStops}
+              onMarkerClick={handleSelectMarker}
               polylines={routePolylines}
               onAuthFailed={(exception) =>
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
@@ -413,6 +457,33 @@ export const TodayRunPage = () => {
               <span>{selectedRun ? formatClockTimeWithSeconds(selectedRun.departTime) : "-"}</span>
             </StyledCrewRow>
           </Card>
+
+          {/* R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 여기에 나온다
+              (사용자 지시 — "현재 위치" 하단). 아무 곳도 안 골랐으면 카드 자체를 안 그린다:
+              빈 카드가 늘 자리를 차지하면 옆 패널이 그만큼 짧아진다. */}
+          {selectedStopName != null ? (
+            <Card>
+              <StyledStopRosterHeader>
+                <p>{selectedStopName}</p>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedStopId(null)}>
+                  전체 보기
+                </Button>
+              </StyledStopRosterHeader>
+              {stopRoster.length === 0 ? (
+                <StyledStopRosterEmpty>이 승하차지에서 타고 내리는 학생이 없습니다</StyledStopRosterEmpty>
+              ) : (
+                stopRoster.map((item) => (
+                  <StyledStopRosterRow key={item.studentId}>
+                    <StyledStopRosterName>
+                      <span>{item.name}</span>
+                      <StyledStopRosterClass>{item.className ?? "-"}</StyledStopRosterClass>
+                    </StyledStopRosterName>
+                    <StatusPill status={STATUS_PILL[item.status]}>{STATUS_LABEL[item.status]}</StatusPill>
+                  </StyledStopRosterRow>
+                ))
+              )}
+            </Card>
+          ) : null}
         </StyledSidePanel>
       </StyledContentGrid>
 

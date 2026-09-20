@@ -113,3 +113,42 @@ export const StyledCrewRow = styled.div`
 export const StyledCrewLabel = styled.span`
   color: var(--text-secondary);
 `;
+
+// R24 — 지도에서 승하차지를 고르면 그 자리에서 타고 내리는 학생만 보여 준다(사용자 지시).
+// 옆 패널이 좁아 표(`RosterTable`)를 그대로 쓰면 열이 눌린다 — 한 줄에 이름·학급·상태만 둔다.
+export const StyledStopRosterRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-body-sm);
+`;
+
+export const StyledStopRosterName = styled.span`
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+`;
+
+export const StyledStopRosterClass = styled.span`
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+`;
+
+export const StyledStopRosterEmpty = styled.p`
+  margin: 0;
+  padding: 6px 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body-sm);
+`;
+
+// 고른 승하차지를 해제하는 단추 — 카드 제목 줄 오른쪽에 붙는다.
+export const StyledStopRosterHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+`;

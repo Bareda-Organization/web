@@ -411,3 +411,110 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     expect(idlePill.className).not.toBe(confirmedPill.className);
   });
 });
+
+// R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 "현재 위치" 아래에
+// 나온다(사용자 지시). 명단은 승하차지를 이름 문자열로만 싣기 때문에, 지도 마커 id
+// (`stop-{stopId}`) → 노선 응답의 정차지 이름 → 명단의 `stopName` 순으로 이어야 한다.
+describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(R24)", () => {
+  const 두정차지_노선 = {
+    roadPath: [
+      { lat: 37.56, lng: 126.97 },
+      { lat: 37.5, lng: 127.02 },
+    ],
+    fallbackUsed: false,
+    stops: [
+      { stopId: 11, seq: 1, name: "한빛아파트 정문", lat: 37.56, lng: 126.97 },
+      { stopId: 22, seq: 2, name: "그린빌라 입구", lat: 37.55, lng: 126.98 },
+    ],
+    confirmed: true,
+  };
+  const 두정차지_명단: RosterItemResponseTypes[] = [
+    { studentId: 1, name: "한빛학생", className: "1반", stopName: "한빛아파트 정문",
+      guardianPhone: "010-1111-1111", change: null, status: "waiting", note: null },
+    { studentId: 2, name: "그린학생", className: "2반", stopName: "그린빌라 입구",
+      guardianPhone: "010-2222-2222", change: null, status: "waiting", note: null },
+    { studentId: 3, name: "한빛둘째", className: "3반", stopName: "한빛아파트 정문",
+      guardianPhone: "010-3333-3333", change: null, status: "boarded", note: null },
+  ];
+
+  const 승하차지_누르기 = (markerId: string) => {
+    const onMarkerClick = mockMapSurface.mock.calls.at(-1)?.[0].onMarkerClick;
+    expect(onMarkerClick).toBeTypeOf("function");
+    onMarkerClick!(markerId);
+  };
+
+  // ⚠ 승하차지 이름은 **본 명단 표에도** 같은 글자로 있다(`stopName` 열). 글자만으로 찾으면
+  // 표의 칸이 함께 잡혀 "옆 패널에 떴는가" 를 판정하지 못한다 — 카드 제목(`<p>`)만 집는다.
+  const 옆패널_카드 = (stopName: string): HTMLElement | null => {
+    const heading = screen.queryAllByText(stopName).find((element) => element.tagName === "P");
+    return heading ? (heading.parentElement!.parentElement as HTMLElement) : null;
+  };
+
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  it("승하차지를 누르면 그 자리 학생만 나오고 다른 자리 학생은 빠진다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(두정차지_명단);
+    mockGetRunRoute.mockResolvedValue(두정차지_노선);
+    render(<TodayRunPage />);
+    await screen.findByText("한빛학생");
+
+    승하차지_누르기("stop-11");
+
+    // 옆 패널에 그 승하차지 이름이 제목으로 서고, 그 자리 학생 2명만 실린다.
+    await waitFor(() => expect(옆패널_카드("한빛아파트 정문")).not.toBeNull());
+    const card = 옆패널_카드("한빛아파트 정문")!;
+    expect(within(card).getByText("한빛학생")).toBeInTheDocument();
+    expect(within(card).getByText("한빛둘째")).toBeInTheDocument();
+    expect(within(card).queryByText("그린학생")).not.toBeInTheDocument();
+  });
+
+  it("같은 승하차지를 다시 누르면 목록이 닫힌다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(두정차지_명단);
+    mockGetRunRoute.mockResolvedValue(두정차지_노선);
+    render(<TodayRunPage />);
+    await screen.findByText("한빛학생");
+
+    승하차지_누르기("stop-22");
+    await waitFor(() => expect(옆패널_카드("그린빌라 입구")).not.toBeNull());
+
+    승하차지_누르기("stop-22");
+
+    await waitFor(() => expect(옆패널_카드("그린빌라 입구")).toBeNull());
+  });
+
+  it("버스 마커를 누르면 승하차지 선택이 풀린다 — 승하차지 마커만 목록을 연다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(두정차지_명단);
+    mockGetRunRoute.mockResolvedValue(두정차지_노선);
+    render(<TodayRunPage />);
+    await screen.findByText("한빛학생");
+
+    승하차지_누르기("stop-11");
+    await waitFor(() => expect(옆패널_카드("한빛아파트 정문")).not.toBeNull());
+
+    승하차지_누르기("7"); // 버스 마커 id = 회차 id
+
+    await waitFor(() => expect(옆패널_카드("한빛아파트 정문")).toBeNull());
+  });
+
+  it("고른 승하차지 마커에만 선택 표시가 붙는다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(두정차지_명단);
+    mockGetRunRoute.mockResolvedValue(두정차지_노선);
+    render(<TodayRunPage />);
+    await screen.findByText("한빛학생");
+
+    승하차지_누르기("stop-22");
+
+    await waitFor(() => {
+      const markers = mockMapSurface.mock.calls.at(-1)![0].markers;
+      expect(markers.find((marker) => marker.id === "stop-22")?.selected).toBe(true);
+      expect(markers.find((marker) => marker.id === "stop-11")?.selected).toBeUndefined();
+    });
+  });
+});
