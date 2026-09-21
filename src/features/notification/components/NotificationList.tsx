@@ -17,7 +17,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   boarding_canceled: "승차 취소",
   alighting_canceled: "하차 취소",
   no_show: "미승차",
-  absent: "결석",
+  absent: "미등원",
   arrive: "도착",
   delay: "지연",
   run_started: "운행 시작",

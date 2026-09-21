@@ -16,8 +16,8 @@ type RunRosterDialogProps = {
 const BOARD_STATUS_LABEL: Record<RosterBoardStatus, string> = {
   boarded: "탑승 완료",
   alighted: "하차 완료",
-  absent: "결석",
-  no_show: "미탑승",
+  absent: "미등원",
+  no_show: "미승차",
   waiting: "대기",
 };
 
