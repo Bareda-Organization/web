@@ -323,7 +323,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
       );
     });
 
-    expect(await screen.findByText("비상 상황 발생 — 2호차 호차 (accident)")).toBeInTheDocument();
+    expect(await screen.findByText("비상 상황 발생 — 2호차 (accident)")).toBeInTheDocument();
   });
 
   it("approval_requested 이벤트는 탑승 승인 요청 배너를 띄운다", async () => {

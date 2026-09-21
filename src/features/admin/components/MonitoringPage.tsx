@@ -278,7 +278,7 @@ export const MonitoringPage = () => {
           return;
         case "emergency_raised": {
           const payload = parseWsEmergencyRaisedPayload(envelope.payload);
-          setLiveAlert(`비상 상황 발생 — ${payload.busNo} 호차 (${payload.type})`);
+          setLiveAlert(`비상 상황 발생 — ${payload.busNo} (${payload.type})`);
           return;
         }
         default:
