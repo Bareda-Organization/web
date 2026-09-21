@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+import { DevQuickLogin } from "./DevQuickLogin";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Input } from "@/shared/ui";
 import { useAuthSession } from "../hooks/useAuthSession";
@@ -24,12 +26,13 @@ export const LoginForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<LoginFormState>({ kind: "idle" });
 
-  const handleSubmitClick = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // 인자를 받는 본체 — 폼 제출과 개발용 빠른 로그인이 함께 쓴다. 상태에서 읽으면 빠른 로그인이
+  // `setState` 직후에 불러 **갱신 전 값**을 보낸다(React 상태 갱신은 비동기다).
+  const submit = async (id: string, pw: string) => {
     setSubmitting(true);
     setState({ kind: "idle" });
     try {
-      await login(loginId, password);
+      await login(id, pw);
       // 이동은 여기서 하지 않는다 — AuthGateGuard 가 세션 변화를 보고 한 곳에서 판정한다.
     } catch (error) {
       if (error instanceof ApiError) {
@@ -52,6 +55,11 @@ export const LoginForm = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submit(loginId, password);
   };
 
   return (
@@ -103,6 +111,15 @@ export const LoginForm = () => {
               로그인
             </Button>
           </StyledForm>
+
+          <DevQuickLogin
+            disabled={submitting}
+            onPick={(id, pw) => {
+              setLoginId(id);
+              setPassword(pw);
+              void submit(id, pw);
+            }}
+          />
 
           <StyledFooter>
             계정이 없으신가요? <StyledLink href="/signup">회원가입</StyledLink>
