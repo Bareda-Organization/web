@@ -1,4 +1,5 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import { Fragment, useMemo, useState, type HTMLAttributes, type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { RosterColumn } from "../../types";
 import {
   StyledRosterTable,
@@ -7,6 +8,10 @@ import {
   StyledRosterTableHeadCell,
   StyledRosterTableRow,
   StyledRosterTableCell,
+  StyledRosterGroupRow,
+  StyledRosterGroupCell,
+  StyledRosterGroupButton,
+  StyledRosterGroupCount,
 } from "./RosterTable.styled";
 
 export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLDivElement> & {
@@ -21,6 +26,14 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
    * 보고서에 그대로 적는다.
    */
   getRowKey?: (row: T, index: number) => string | number;
+  /**
+   * 행을 묶는 기준 한 가지(예: 승하차지 이름). 주면 묶음마다 머리줄이 생기고 접고 펼 수
+   * 있다 — 안 주면 지금까지와 똑같이 평평한 표다.
+   *
+   * 묶음 차례는 `rows` 에 **먼저 나온 순서**를 따른다. 정렬을 새로 하지 않는 이유는 행
+   * 순서가 이미 뜻을 갖고 있기 때문이다(명단은 정차 차례대로 온다).
+   */
+  groupBy?: (row: T) => string;
 };
 
 const defaultRowKey = <T,>(row: T, index: number): string | number => {
@@ -34,8 +47,45 @@ export const RosterTable = <T,>({
   rows = [],
   onRowClick,
   getRowKey = defaultRowKey,
+  groupBy,
   ...rest
 }: RosterTableProps<T>) => {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const groups = useMemo(() => {
+    if (!groupBy) return null;
+    const byLabel = new Map<string, T[]>();
+    rows.forEach((row) => {
+      const label = groupBy(row);
+      const bucket = byLabel.get(label);
+      if (bucket) bucket.push(row);
+      else byLabel.set(label, [row]);
+    });
+    return [...byLabel.entries()].map(([label, groupRows]) => ({ label, rows: groupRows }));
+  }, [groupBy, rows]);
+
+  const toggle = (label: string) =>
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+
+  const renderRow = (row: T, index: number) => (
+    <StyledRosterTableRow
+      key={getRowKey(row, index)}
+      $clickable={Boolean(onRowClick)}
+      onClick={() => onRowClick?.(row)}
+    >
+      {columns.map((column) => (
+        <StyledRosterTableCell key={column.key} $align={column.align ?? "left"}>
+          {column.render ? column.render(row) : ((row as Record<string, unknown>)[column.key] as ReactNode)}
+        </StyledRosterTableCell>
+      ))}
+    </StyledRosterTableRow>
+  );
+
   return (
     <StyledRosterTable {...rest}>
       <StyledRosterTableElement>
@@ -49,19 +99,25 @@ export const RosterTable = <T,>({
           </StyledRosterTableHeadRow>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <StyledRosterTableRow
-              key={getRowKey(row, index)}
-              $clickable={Boolean(onRowClick)}
-              onClick={() => onRowClick?.(row)}
-            >
-              {columns.map((column) => (
-                <StyledRosterTableCell key={column.key} $align={column.align ?? "left"}>
-                  {column.render ? column.render(row) : ((row as Record<string, unknown>)[column.key] as ReactNode)}
-                </StyledRosterTableCell>
-              ))}
-            </StyledRosterTableRow>
-          ))}
+          {groups
+            ? groups.map((group) => {
+                const open = !collapsed.has(group.label);
+                return (
+                  <Fragment key={group.label}>
+                    <StyledRosterGroupRow>
+                      <StyledRosterGroupCell colSpan={columns.length || 1}>
+                        <StyledRosterGroupButton type="button" aria-expanded={open} onClick={() => toggle(group.label)}>
+                          {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+                          <span>{group.label}</span>
+                          <StyledRosterGroupCount>{group.rows.length}명</StyledRosterGroupCount>
+                        </StyledRosterGroupButton>
+                      </StyledRosterGroupCell>
+                    </StyledRosterGroupRow>
+                    {open ? group.rows.map((row, index) => renderRow(row, index)) : null}
+                  </Fragment>
+                );
+              })
+            : rows.map((row, index) => renderRow(row, index))}
         </tbody>
       </StyledRosterTableElement>
     </StyledRosterTable>

@@ -45,6 +45,7 @@ import {
   StyledStopRosterClass,
   StyledStopRosterEmpty,
   StyledStopRosterHeader,
+  StyledRosterScroll,
 } from "./TodayRunPage.styled";
 
 // DashboardPage.tsx·MonitoringPage.tsx 와 같은 기본 좌표(서울 시청). `DashboardRunResponseTypes`·
@@ -61,8 +62,8 @@ const STATUS_LABEL: Record<RosterStatus, string> = {
   waiting: "대기",
   boarded: "탑승 완료",
   alighted: "하차 완료",
-  absent: "결석",
-  no_show: "미탑승",
+  absent: "미등원",
+  no_show: "미승차",
 };
 
 const STATUS_PILL: Record<RosterStatus, "boarded" | "moving" | "missed" | "idle"> = {
@@ -425,8 +426,18 @@ export const TodayRunPage = () => {
       </StyledMapTopRow>
 
       <StyledContentGrid>
+        {/* 사용자 지시(2026-09-22) — 승하차지별로 묶어 접고 펼 수 있게, 길면 스크롤로.
+            한 회차에 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지
+            눈으로 좇기 어렵다. 스크롤 상자는 표 머리줄을 고정한다(styled 의 sticky). */}
         <Card padding={0} aria-busy={loading}>
-          <RosterTable columns={columns} rows={roster} getRowKey={(row) => row.studentId} />
+          <StyledRosterScroll>
+            <RosterTable
+              columns={columns}
+              rows={roster}
+              getRowKey={(row) => row.studentId}
+              groupBy={(row) => row.stopName ?? "승하차지 미지정"}
+            />
+          </StyledRosterScroll>
         </Card>
 
         <StyledSidePanel>
@@ -455,6 +466,14 @@ export const TodayRunPage = () => {
               {/* R21-B — 이전엔 raw ISO 문자열을 그대로 보여줬다(포맷 누락, 보고서 §2). 표
                   컬럼과 같은 형식으로 맞춘다. */}
               <span>{selectedRun ? formatClockTimeWithSeconds(selectedRun.departTime) : "-"}</span>
+            </StyledCrewRow>
+            {/* 사용자 지시(2026-09-22) — 출발 시각 아래에 도착 예정도 함께. 값은 표의 "도착"
+                컬럼과 같은 `estArrivalTime` 이라 두 자리가 어긋날 수 없다. */}
+            <StyledCrewRow>
+              <StyledCrewLabel>도착 예정</StyledCrewLabel>
+              <span>
+                {selectedRun?.estArrivalTime ? formatClockTimeWithSeconds(selectedRun.estArrivalTime) : "-"}
+              </span>
             </StyledCrewRow>
           </Card>
 

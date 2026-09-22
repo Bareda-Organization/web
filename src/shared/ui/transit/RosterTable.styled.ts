@@ -19,6 +19,11 @@ export const StyledRosterTableHeadRow = styled.tr`
 
 export const StyledRosterTableHeadCell = styled.th<{ $align: "left" | "center" | "right"; $width?: number | string }>`
   text-align: ${(props) => props.$align};
+  /* 표를 스크롤 상자 안에 넣었을 때 머리줄이 따라 올라가지 않게 한다 — 스크롤하지 않는
+     화면에서는 아무 효과가 없다. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 12px 16px;
   font: var(--fw-medium) var(--fs-micro) / 1 var(--font-sans);
   letter-spacing: var(--ls-micro);
@@ -36,4 +41,38 @@ export const StyledRosterTableCell = styled.td<{ $align: "left" | "center" | "ri
   text-align: ${(props) => props.$align};
   padding: 13px 16px;
   vertical-align: middle;
+`;
+
+/* 묶음(그룹) 머리줄 — 승하차지처럼 행을 나누는 기준 하나를 한 줄로 얹는다. */
+export const StyledRosterGroupRow = styled.tr`
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+`;
+
+export const StyledRosterGroupCell = styled.td`
+  padding: 0;
+`;
+
+export const StyledRosterGroupButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: var(--fw-medium) var(--fs-body-sm) / 1.4 var(--font-sans);
+  color: var(--text-primary);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+`;
+
+export const StyledRosterGroupCount = styled.span`
+  color: var(--text-secondary);
+  font: var(--fw-regular) var(--fs-micro) / 1 var(--font-sans);
 `;

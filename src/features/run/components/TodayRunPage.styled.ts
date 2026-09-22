@@ -152,3 +152,10 @@ export const StyledStopRosterHeader = styled.div`
   justify-content: space-between;
   gap: var(--space-2);
 `;
+
+/* 명단이 화면을 넘어가면 이 상자 안에서 스크롤한다(사용자 지시 2026-09-22).
+   높이를 화면에 맞춰 잡아 두는 이유 — 고정 px 로 두면 큰 화면에서 표가 늘 잘린다. */
+export const StyledRosterScroll = styled.div`
+  max-height: min(60vh, 720px);
+  overflow: auto;
+`;

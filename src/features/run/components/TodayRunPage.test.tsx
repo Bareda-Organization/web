@@ -113,12 +113,15 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(mockGetRunRoster).toHaveBeenCalledWith(7);
   });
 
-  it("결석 학생은 결석 라벨로 표시된다", async () => {
+  // `FEATURE_SPEC C-02` — `absent`(미등원)와 `no_show`(미승차)는 **반드시 구분**한다.
+  // ⚠ 2026-09-21 에 앱 2종과 웹 2곳을 고치면서 이 화면만 "결석"·"미탑승" 으로 남아 있었다.
+  it("미등원 학생은 사양 용어(미등원)로 표시된다 — 결석이 아니다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
     render(<TodayRunPage />);
 
-    expect(await screen.findByText("결석")).toBeInTheDocument();
+    expect(await screen.findByText("미등원")).toBeInTheDocument();
+    expect(screen.queryByText("결석")).not.toBeInTheDocument();
   });
 
   it("명단 조회에 실패하면 오류 배너를 보여준다", async () => {
@@ -162,6 +165,60 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 
     await screen.findByText("김학생");
     expect(container.textContent).toContain("예정 08:35:00");
+  });
+
+  // 사용자 지시(2026-09-22) — "현재 위치" 카드 하단에 도착 예정 시각도 보이게.
+  // 출발 시각 바로 아래에 같은 형식으로 둔다.
+  it("현재 위치 카드가 출발 시각과 함께 도착 예정 시각을 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    const label = screen.getByText("도착 예정");
+    expect(label.parentElement?.textContent).toContain("08:35:00");
+  });
+});
+
+// 사용자 지시(2026-09-22) — 명단을 승하차지별로 묶어 접고 펼 수 있게. 한 회차에
+// 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지 눈으로 좇기 어렵다.
+describe("TodayRunPage — 명단을 승하차지별로 묶는다", () => {
+  const twoStopRoster: RosterItemResponseTypes[] = [
+    { studentId: 1, name: "김학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: 2, name: "이학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: 3, name: "박학생", className: "2반", stopName: "후문", guardianPhone: "", change: null, status: "waiting", note: null },
+  ];
+
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  it("승하차지 이름과 그 자리 인원을 묶음 머리줄로 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(twoStopRoster);
+    render(<TodayRunPage />);
+
+    const first = await screen.findByRole("button", { name: /정문/ });
+    expect(first.textContent).toContain("2명");
+    expect(screen.getByRole("button", { name: /후문/ }).textContent).toContain("1명");
+  });
+
+  it("묶음 머리줄을 누르면 그 승하차지 학생만 접힌다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(twoStopRoster);
+    render(<TodayRunPage />);
+
+    const first = await screen.findByRole("button", { name: /정문/ });
+    expect(first).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(first);
+
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("김학생")).not.toBeInTheDocument();
+    expect(screen.queryByText("이학생")).not.toBeInTheDocument();
+    // 다른 묶음은 그대로 펼쳐져 있다.
+    expect(screen.getByText("박학생")).toBeInTheDocument();
   });
 });
 
