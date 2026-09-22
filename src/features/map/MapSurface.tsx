@@ -12,6 +12,9 @@ export type MapSurfaceProps = {
   markers: MapMarker[];
   // R23 목표 4 — 지도 위 버스 아이콘을 눌러 고른다. 인자는 `MapMarker.id`(버스는 회차 id).
   onMarkerClick?: (markerId: string) => void;
+  // 2026-09-22 — 지도의 빈 자리를 눌러 **좌표 자체**를 고른다(고정 노선 편성의 정차지 위치
+  // 미세 조정). 마커를 누른 경우는 `onMarkerClick` 이 받고 여기로는 오지 않는다.
+  onMapClick?: (point: { lat: number; lng: number }) => void;
   // R15-T2 — 선택된 버스의 노선(§5.19 road_path). 생략하거나 빈 배열이면 아무것도 그리지 않는다.
   polylines?: MapPolyline[];
   onReady?: () => void;

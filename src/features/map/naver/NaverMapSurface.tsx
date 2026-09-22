@@ -20,6 +20,7 @@ export type NaverMapSurfaceProps = {
   // R23 목표 4 — 지도 위 버스 아이콘을 눌러 고른다(사용자 지시). 인자는 `MapMarker.id` 이고,
   // 버스 마커의 id 는 회차 id 문자열이다(세 화면이 그렇게 만든다).
   onMarkerClick?: (markerId: string) => void;
+  onMapClick?: (point: { lat: number; lng: number }) => void;
   onReady?: () => void;
   onAuthFailed?: (exception: unknown) => void;
   className?: string;
@@ -30,6 +31,7 @@ export const NaverMapSurface = ({
   markers,
   polylines = [],
   onMarkerClick,
+  onMapClick,
   onReady,
   onAuthFailed,
   className,
@@ -169,9 +171,12 @@ export const NaverMapSurface = ({
   // 다시 좌표 비교 문제로 돌아간다).
   const cameraRef = useRef(camera);
   const onMarkerClickRef = useRef(onMarkerClick);
+
+  const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
     cameraRef.current = camera;
     onMarkerClickRef.current = onMarkerClick;
+    onMapClickRef.current = onMapClick;
   });
 
   // R22 목표 2 — 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
@@ -210,7 +215,22 @@ export const NaverMapSurface = ({
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const markerId = target?.closest?.("[data-marker-id]")?.getAttribute("data-marker-id");
-      if (markerId) onMarkerClickRef.current?.(markerId);
+      if (markerId) {
+        onMarkerClickRef.current?.(markerId);
+        return;
+      }
+      // 2026-09-22 — 마커가 아닌 자리를 누르면 그 **좌표**를 알린다. 화면 픽셀을 좌표로 옮기는
+      // 일은 SDK 만 할 수 있어(투영은 배율·중심에 달렸다) 여기서 `getProjection` 을 쓴다.
+      // 마커 클릭과 같은 갈무리 단계에서 받되, 마커를 눌렀으면 위에서 이미 돌아간다.
+      const map = mapRef.current;
+      const naverMaps = window.naver?.maps;
+      if (!map || !naverMaps || !onMapClickRef.current) return;
+      const bounds = container.getBoundingClientRect();
+      const offset = new naverMaps.Point(event.clientX - bounds.left, event.clientY - bounds.top);
+      // `Projection.fromOffsetToCoord` 의 반환 타입이 `Coord`(추상)라 위경도 접근자가 없다 —
+      // 실제 구현이 돌려주는 것은 `LatLng` 이고, 지도가 구면 좌표계 하나만 쓰므로 여기서 좁힌다.
+      const coordinate = map.getProjection().fromOffsetToCoord(offset) as naver.maps.LatLng;
+      onMapClickRef.current({ lat: coordinate.lat(), lng: coordinate.lng() });
     };
     container.addEventListener("click", handleClick, true);
     return () => container.removeEventListener("click", handleClick, true);

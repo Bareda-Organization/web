@@ -136,3 +136,20 @@ export type RoutePathResponseTypes = {
   fallbackUsed: boolean;
   stops: RouteStop[];
 };
+
+// §5.9 주소 검색(2026-09-22) — **아직 아무것도 만들지 않은** 후보 한 지점.
+export type StopSearchResultTypes = {
+  lat: number;
+  lng: number;
+  displayName: string;
+  nearby: NearbyStopTypes[];
+};
+
+export type NearbyStopTypes = {
+  stopId: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distanceM: number;
+};

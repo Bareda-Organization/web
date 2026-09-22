@@ -39,3 +39,24 @@ export const StyledOptimizeRow = styled.div`
   align-items: flex-end;
   gap: 8px;
 `;
+
+/* 주소 검색 결과 — 아직 반영되지 않은 지점을 다루는 자리(2026-09-22). */
+export const StyledDraftBox = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+`;
+
+export const StyledDraftHint = styled.p`
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--fw-regular) var(--fs-micro) / 1.5 var(--font-sans);
+`;
+
+export const StyledDraftActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`;

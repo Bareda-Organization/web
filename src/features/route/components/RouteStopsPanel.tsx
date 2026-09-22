@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Input } from "@/shared/ui";
-import { getRouteDetail, optimizeRoute, updateRoute } from "../api";
-import type { RouteStop } from "../types";
+import { addRouteStop, getRouteDetail, optimizeRoute, searchStopAddress, updateRoute } from "../api";
+import type { RouteStop, StopSearchResultTypes } from "../types";
 import { RouteMapPanel } from "./RouteMapPanel";
 import { RouteOptimizeConfirmDialog } from "./RouteOptimizeConfirmDialog";
 import {
@@ -14,6 +14,9 @@ import {
   StyledStopRow,
   StyledStopSeq,
   StyledStopsPanel,
+  StyledDraftBox,
+  StyledDraftHint,
+  StyledDraftActions,
 } from "./RouteStopsPanel.styled";
 
 type RouteStopsPanelProps = {
@@ -36,6 +39,14 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
   // 정차지 추가·삭제·순서 저장 뒤 RouteMapPanel 이 경로를 다시 불러오게 하는 트리거 —
   // load() 가 서버 상태를 새로 받아올 때마다 올려 지도도 같이 갱신한다.
   const [pathVersion, setPathVersion] = useState(0);
+  // 2026-09-22 사용자 지시 — 주소 검색 → 위치 확인 → (필요시) 수정 → 반영.
+  // `draft` 는 **아직 서버에 없는** 지점이다. 반영 버튼을 누르기 전까지 노선도 승하차지도 안 바뀐다.
+  const [address, setAddress] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [search, setSearch] = useState<StopSearchResultTypes | null>(null);
+  const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null);
+  const [draftName, setDraftName] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -111,13 +122,71 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
     }
   };
 
+  const handleSearch = async () => {
+    if (address.trim().length === 0) return;
+    setSearching(true);
+    setError(null);
+    try {
+      const result = await searchStopAddress(address.trim());
+      setSearch(result);
+      setDraft({ lat: result.lat, lng: result.lng });
+      setDraftName(result.displayName);
+    } catch (cause) {
+      setSearch(null);
+      setDraft(null);
+      setError(cause instanceof ApiError ? cause.message : "주소를 찾지 못했습니다");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddSearched = async () => {
+    if (!draft || draftName.trim().length === 0) return;
+    setAdding(true);
+    setError(null);
+    try {
+      const detail = await addRouteStop(routeId, {
+        lat: draft.lat,
+        lng: draft.lng,
+        name: draftName.trim(),
+        address: search?.displayName,
+      });
+      setStops(detail.stops);
+      setSearch(null);
+      setDraft(null);
+      setAddress("");
+      setPathVersion((version) => version + 1);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "정차지를 추가하지 못했습니다");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // 검색 결과에서 얼마나 옮겼는지 — 관계자가 "너무 멀리 찍었나" 를 스스로 판단할 유일한 값이다.
+  // 평면 근사이고 판정 범위가 수십~수백 m 라 곡률 오차는 보이지 않는다(백엔드 StopProximity 와 같은 규칙).
+  const movedMeters =
+    search && draft
+      ? Math.round(
+          Math.hypot(
+            (draft.lat - search.lat) * 111_320,
+            (draft.lng - search.lng) * 111_320 * Math.cos((draft.lat * Math.PI) / 180),
+          ),
+        )
+      : 0;
+
   if (loading) return <p>불러오는 중...</p>;
 
   return (
     <StyledStopsPanel>
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <RouteMapPanel routeId={routeId} refreshKey={pathVersion} />
+      <RouteMapPanel
+        routeId={routeId}
+        refreshKey={pathVersion}
+        draft={draft}
+        onMapClick={search ? (point) => setDraft(point) : undefined}
+      />
 
       <Card padding={16}>
         {stops.length === 0 ? (
@@ -141,6 +210,49 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
             </StyledStopRow>
           ))
         )}
+      </Card>
+
+      <Card padding={16}>
+        <StyledAddStopRow>
+          <Input
+            label="도로명 주소로 검색"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder="예) 서울시 중앙로 20"
+          />
+          <Button variant="secondary" onClick={handleSearch} disabled={searching}>
+            {searching ? "검색 중..." : "검색"}
+          </Button>
+        </StyledAddStopRow>
+
+        {search && draft ? (
+          <StyledDraftBox>
+            <p>{search.displayName}</p>
+            <StyledDraftHint>
+              지도를 눌러 실제로 버스가 서는 지점(블록 모퉁이·도로가)으로 옮길 수 있습니다
+              {movedMeters > 0 ? ` · 검색 위치에서 약 ${movedMeters}m 옮김` : ""}
+            </StyledDraftHint>
+            {search.nearby.length > 0 ? (
+              <AlertBanner
+                tone="moving"
+                title={`이 자리에 이미 "${search.nearby[0].name}" 이(가) 있습니다 (${search.nearby[0].distanceM}m)`}
+              />
+            ) : null}
+            <Input
+              label="표시명"
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+            />
+            <StyledDraftActions>
+              <Button variant="ghost" onClick={() => { setSearch(null); setDraft(null); }}>
+                취소
+              </Button>
+              <Button variant="primary" onClick={handleAddSearched} disabled={adding}>
+                {adding ? "추가 중..." : "이 위치로 추가"}
+              </Button>
+            </StyledDraftActions>
+          </StyledDraftBox>
+        ) : null}
       </Card>
 
       <StyledAddStopRow>

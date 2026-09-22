@@ -1,5 +1,6 @@
 import { apiFetch } from "@/shared/lib/http";
 import type {
+  StopSearchResultTypes,
   RouteDetailResponseTypes,
   RouteListResponseTypes,
   RouteOptimizeRequestTypes,
@@ -133,6 +134,52 @@ export const getRoutePath = async (id: number): Promise<RoutePathResponseTypes> 
     fallbackUsed: raw.fallback_used,
     stops: raw.stops.map(toStop),
   };
+};
+
+type RawNearbyStop = {
+  stop_id: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distance_m: number;
+};
+
+type RawStopSearch = { lat: number; lng: number; display_name: string; nearby: RawNearbyStop[] };
+
+/**
+ * §5.9 주소 검색 — **조회 전용이다.** 이 호출로는 승하차지가 생기지 않는다(반영은 addRouteStop).
+ * 그래서 관계자가 지도에서 지점을 옮기는 동안 잘못 찍힌 승하차지가 남지 않는다.
+ */
+export const searchStopAddress = async (address: string): Promise<StopSearchResultTypes> => {
+  const raw = await apiFetch<RawStopSearch>(`/staff/stops/search?address=${encodeURIComponent(address)}`, {
+    method: "GET",
+  });
+  return {
+    lat: raw.lat,
+    lng: raw.lng,
+    displayName: raw.display_name,
+    nearby: raw.nearby.map((item) => ({
+      stopId: item.stop_id,
+      name: item.name,
+      address: item.address,
+      lat: item.lat,
+      lng: item.lng,
+      distanceM: item.distance_m,
+    })),
+  };
+};
+
+/** §5.9 좌표로 정차지 추가 — 노선 맨 끝에 붙는다. 여기서 비로소 승하차지가 생긴다. */
+export const addRouteStop = async (
+  routeId: number,
+  request: { lat: number; lng: number; name: string; address?: string },
+): Promise<RouteDetailResponseTypes> => {
+  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${routeId}/stops`, {
+    method: "POST",
+    body: { lat: request.lat, lng: request.lng, name: request.name, address: request.address },
+  });
+  return toDetail(raw);
 };
 
 type RawWaypointPreviewStop = { seq: number; stop_name: string; eta: string | null };
