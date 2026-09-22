@@ -3,6 +3,7 @@ import type {
   RouteDetailResponseTypes,
   RouteListResponseTypes,
   RouteOptimizeRequestTypes,
+  RoutePathResponseTypes,
   RouteStop,
   RouteUpsertRequestTypes,
   RunDirection,
@@ -119,6 +120,19 @@ export const optimizeRoute = async (
     body: request,
   });
   return toDetail(raw);
+};
+
+type RawRoutePath = { road_path: RawGeoPoint[]; fallback_used: boolean; stops: RawRouteStop[] };
+
+// GET /staff/routes/{id}/path(§5.9 신설, R27-B) — 편성 화면 지도가 그릴 도로 경로.
+// stops 는 getRouteDetail 과 같은 RawRouteStop 모양이라 toStop 을 그대로 재사용한다.
+export const getRoutePath = async (id: number): Promise<RoutePathResponseTypes> => {
+  const raw = await apiFetch<RawRoutePath>(`/staff/routes/${id}/path`, { method: "GET" });
+  return {
+    roadPath: raw.road_path.map((point) => ({ lat: point.lat, lng: point.lng })),
+    fallbackUsed: raw.fallback_used,
+    stops: raw.stops.map(toStop),
+  };
 };
 
 type RawWaypointPreviewStop = { seq: number; stop_name: string; eta: string | null };

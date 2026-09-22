@@ -126,3 +126,13 @@ export type RunRouteResponseTypes = {
   stops: RouteStop[];
   confirmed: boolean;
 };
+
+// GET /staff/routes/{id}/path(§5.9 신설, R27-B) — 편성 상세와 같은 stops 모양에 도로
+// 경로를 더한다. §5.19 RunRouteResponseTypes 와 달리 idle/confirmed 구별이 없다 —
+// 이 엔드포인트가 다루는 것은 확정 노선이 아니라 학기 단위 원본 편성이라 애초에
+// "확정 여부"라는 축이 없다.
+export type RoutePathResponseTypes = {
+  roadPath: LatLng[];
+  fallbackUsed: boolean;
+  stops: RouteStop[];
+};

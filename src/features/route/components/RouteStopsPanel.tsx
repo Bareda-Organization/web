@@ -5,6 +5,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Input } from "@/shared/ui";
 import { getRouteDetail, optimizeRoute, updateRoute } from "../api";
 import type { RouteStop } from "../types";
+import { RouteMapPanel } from "./RouteMapPanel";
 import { RouteOptimizeConfirmDialog } from "./RouteOptimizeConfirmDialog";
 import {
   StyledAddStopRow,
@@ -32,6 +33,9 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
   const [destination, setDestination] = useState({ lat: "", lng: "" });
   const [confirmingOptimize, setConfirmingOptimize] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
+  // 정차지 추가·삭제·순서 저장 뒤 RouteMapPanel 이 경로를 다시 불러오게 하는 트리거 —
+  // load() 가 서버 상태를 새로 받아올 때마다 올려 지도도 같이 갱신한다.
+  const [pathVersion, setPathVersion] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -39,6 +43,7 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
       const detail = await getRouteDetail(routeId);
       setStops(detail.stops);
       setError(null);
+      setPathVersion((version) => version + 1);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "정차 순서를 불러오지 못했습니다");
     } finally {
@@ -98,6 +103,7 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
       });
       setStops(detail.stops);
       setConfirmingOptimize(false);
+      setPathVersion((version) => version + 1);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "최적화에 실패했습니다");
     } finally {
@@ -110,6 +116,8 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
   return (
     <StyledStopsPanel>
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+
+      <RouteMapPanel routeId={routeId} refreshKey={pathVersion} />
 
       <Card padding={16}>
         {stops.length === 0 ? (
