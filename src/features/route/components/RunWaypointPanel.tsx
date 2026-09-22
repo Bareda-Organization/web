@@ -6,6 +6,7 @@ import type { RunItemResponseTypes } from "@/features/schedule";
 import { ApiError } from "@/shared/lib/http";
 import { formatDurationDelta } from "@/shared/lib/format/durationDelta";
 import { AlertBanner, Button, Card, Input, SegmentedControl, Select } from "@/shared/ui";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { MapSurface } from "@/features/map";
 import type { MapCamera, MapPolyline } from "@/features/map";
 import { addRunWaypoint, removeRunWaypoint } from "../api";
@@ -49,6 +50,10 @@ type RunWaypointPanelProps = {
 // 동안 기억해 제거 입력칸에 이어 쓰는 지금 방식이 이 라운드에서 고를 수 있는 최선이다
 // — 새 엔드포인트를 만들지 않는다(브리프 지시). 조율자에게 목록 엔드포인트 신설을
 // 올린다(보고서 §1 참고).
+// 2026-09-22 화면 확인 — 예상 시각이 ISO 문자열 그대로 나왔다. 표·카드가 쓰는 형식과 같게 맞춘다
+// (`formatClockTime` 은 시:분, 값이 없으면 그 자리를 "-" 로 둔다).
+const formatEstTime = (raw: string | null): string => (raw ? formatClockTime(raw) : "-");
+
 // 좌표 평균으로 카메라를 잡는다 — RouteMapPanel·ChangeApprovalDetail 과 같은 방식.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
@@ -265,13 +270,13 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
               <StyledWaypointCompareCol>
                 <strong>변경 전</strong>
                 <span>정차 {preview.routePreview.stopsBefore.length}곳</span>
-                <span>예상 시간 {preview.estTimeBefore}</span>
+                <span>예상 시각 {formatEstTime(preview.estTimeBefore)}</span>
                 <span>예상 거리 {preview.estDistanceBefore}</span>
               </StyledWaypointCompareCol>
               <StyledWaypointCompareCol>
                 <strong>변경 후</strong>
                 <span>정차 {preview.routePreview.stopsAfter.length}곳</span>
-                <span>예상 시간 {preview.estTimeAfter}</span>
+                <span>예상 시각 {formatEstTime(preview.estTimeAfter)}</span>
                 <span>예상 거리 {preview.estDistanceAfter}</span>
               </StyledWaypointCompareCol>
             </StyledWaypointCompare>

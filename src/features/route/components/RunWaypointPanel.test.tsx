@@ -169,6 +169,27 @@ describe("RunWaypointPanel — 설 자리 지정 · 전후 지도 비교", () =>
     fireEvent.change(screen.getByLabelText("표시명"), { target: { value: "임시 경유" } });
   };
 
+  // 2026-09-22 화면 확인 — 예상 시각이 `2026-09-22T07:24:12.642407Z` 그대로 나왔다.
+  // 표·카드가 쓰는 형식(HH:MM)과 같아야 관계자가 두 값을 나란히 읽을 수 있다.
+  it("예상 시각을 시:분으로 보여준다 — ISO 문자열 그대로가 아니라", async () => {
+    await 미리보기_준비();
+    mockAddRunWaypoint.mockResolvedValue({
+      ...basePreview,
+      estTimeBefore: "2026-09-22T07:10:00Z",
+      estTimeAfter: "2026-09-22T07:24:12.642407Z",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "미리보기" }));
+
+    const local = new Date("2026-09-22T07:24:12.642407Z").toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    expect(await screen.findByText(new RegExp(local))).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-22T07:24/)).not.toBeInTheDocument();
+  });
+
   it("설 자리를 고르면 요청에 그 순번이 실린다", async () => {
     await 미리보기_준비();
     mockAddRunWaypoint.mockResolvedValue({ ...basePreview, waypointId: 5 });
