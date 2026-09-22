@@ -1,7 +1,7 @@
 // features/notification 이 다루는 타입 전부 — 알림 로그 조회(§5.17, NTF-10·11, A-13).
 // 조회 전용 화면(쓰기 엔드포인트 없음).
 
-// §9.7 알림 종류 전체 21종 — 정본에서 직접 세었다(row 21개, 값도 21개로 소계 일치).
+// §9.7 알림 종류 전체 20종 — 정본에서 직접 세었다(Ruling 324 로 link_requested 삭제 — 21종→20종).
 export type NotificationType =
   | "boarding"
   | "alighting"
@@ -17,7 +17,6 @@ export type NotificationType =
   | "change_decided"
   | "approval_requested"
   | "intent_changed"
-  | "link_requested"
   | "route_changed"
   | "assignment_changed"
   | "no_show_escalated"

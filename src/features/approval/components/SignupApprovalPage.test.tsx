@@ -4,8 +4,9 @@ import { SignupApprovalPage } from "./SignupApprovalPage";
 import { getSignupRequests, decideSignupRequest } from "../api";
 import type { SignupRequestsResponseTypes } from "../types";
 
-// §5.2 는 role=parent|student 수락 시 link.student_ids[] 가 없으면 422 LINK_REQUIRED 다 —
-// 이 화면이 그 조건부 필수 필드를 실제로 채워 보내는지가 핵심 검증 대상이다.
+// §5.2 는 role=student 수락 시 link.student_ids[] 가 없으면 422 LINK_REQUIRED 다 —
+// role=parent 는 Ruling 324 로 이 조건에서 빠졌다(자녀 연결은 §3.3·§3.4 로 분리).
+// 이 화면이 role 별로 다른 전송 payload 를 실제로 만드는지가 핵심 검증 대상이다.
 vi.mock("../api", () => ({
   getSignupRequests: vi.fn(),
   decideSignupRequest: vi.fn(),
@@ -39,20 +40,22 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     expect(mockGetSignupRequests).toHaveBeenCalledWith("pending");
   });
 
-  it("role=parent 승인 시 link.studentIds 를 채워 decide 를 호출한다", async () => {
+  it("role=parent 승인은 학생 ID 입력 없이 link 없이 decide 를 호출한다(Ruling 324)", async () => {
     mockGetSignupRequests.mockResolvedValue(baseList);
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: "처리" }));
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "101, 102" } });
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     await waitFor(() =>
       expect(mockDecideSignupRequest).toHaveBeenCalledWith(1, {
         accept: true,
-        link: { studentIds: [101, 102] },
+        link: undefined,
       }),
     );
   });
