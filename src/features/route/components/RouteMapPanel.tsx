@@ -50,11 +50,14 @@ export const RouteMapPanel = ({ routeId, refreshKey }: RouteMapPanelProps) => {
   if (error) return <AlertBanner tone="missed" title={error} />;
   if (!path || path.stops.length === 0) return null;
 
+  // 순번을 핀 안에 넣는다(R27 사용자 지시 — "각 정차지도 표기"). 시드처럼 정차지가 수백
+  // 미터 안에 몰리면 원 핀이 한 점으로 겹쳐 아래 목록의 번호와 대응시킬 수단이 없었다.
   const markers: MapMarker[] = path.stops.map((stop) => ({
     id: `stop-${stop.stopId}`,
     lat: stop.lat,
     lng: stop.lng,
     kind: "stop",
+    seq: stop.seq,
   }));
   const polylines: MapPolyline[] =
     path.roadPath.length > 0

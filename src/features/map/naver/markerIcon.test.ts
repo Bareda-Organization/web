@@ -166,3 +166,18 @@ describe("markerIcon — 좌표 위에 가운데로(R25 목표 2)", () => {
     expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).toContain("translate(-50%,-50%)");
   });
 });
+
+// 사용자 지시(2026-09-22) — "각 정차지도 표기해줘". 고정 노선 편성 지도에서 정차지가 여럿
+// 겹쳐 찍히면 어느 것이 몇 번째인지 알 수 없다. 순번을 받으면 핀 안에 그 숫자를 넣는다
+// (버스 칩이 호차를 넣는 것과 같은 형태).
+describe("정차지 순번 표기", () => {
+  it("순번을 주면 핀 안에 그 숫자가 들어간다", () => {
+    const html = buildMarkerIconHtml("stop", { seq: 3 });
+
+    expect(html).toContain(">3<");
+  });
+
+  it("순번이 없으면 지금까지와 같은 원 핀이다", () => {
+    expect(buildMarkerIconHtml("stop", {})).not.toContain(">3<");
+  });
+});

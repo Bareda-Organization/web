@@ -95,6 +95,8 @@ export const busColorOf = (busNo: string): string => {
 export type MarkerIconOptions = {
   selected?: boolean;
   busNo?: string;
+  /** 정차지 순번(R27 사용자 지시 — 각 정차지 표기). 주면 원 핀 대신 숫자 칩을 그린다. */
+  seq?: number;
   direction?: MapMarkerDirection;
   // R23 목표 4 — 지도 위 마커를 눌러 고른다. 누가 눌렸는지는 이 속성으로 되찾는다
   // (SDK 의 마커 클릭 이벤트가 이 아이콘 형태에서는 안 걸렸다 — NaverMapSurface 주석 참고).
@@ -118,6 +120,15 @@ const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boo
   // 버스에만 한 단계 좁힌 것이다(테두리가 "그 마커의 색" 이라는 뜻은 그대로다).
   const ring = selected ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};` : "";
   return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
+};
+
+/**
+ * R27 — 정차지 순번 칩. 편성 목록의 번호와 지도의 핀을 같은 숫자로 잇는다 — 정차지가 수백
+ * 미터 안에 몰리면 원 핀 여럿이 한 점으로 겹쳐 목록과 대응시킬 수단이 부재했다.
+ */
+const stopChipHtml = (seq: number, selected: boolean, markerId?: string): string => {
+  const ring = selected ? selectedRingOf("stop") : "";
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;min-width:${MARKER_SIZE_PX.stop}px;height:${MARKER_SIZE_PX.stop}px;padding:0 4px;border-radius:999px;background:${MARKER_COLOR.stop};border:2px solid #fff;${ring}color:#fff;font-size:10px;font-weight:700;line-height:1;">${seq}</span>`;
 };
 
 /** R22 목표 2 — 노선의 양 끝(출발지·도착지)을 글자 핀으로 찍는다. */
@@ -144,6 +155,9 @@ const centeredOnPoint = (html: string): string =>
 export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOptions = {}): string => {
   if (kind === "origin" || kind === "destination") {
     return centeredOnPoint(endpointChipHtml(kind, options.selected ?? false, options.markerId));
+  }
+  if (kind === "stop" && options.seq != null) {
+    return centeredOnPoint(stopChipHtml(options.seq, options.selected ?? false, options.markerId));
   }
   if (kind === "bus" && options.busNo) {
     return centeredOnPoint(

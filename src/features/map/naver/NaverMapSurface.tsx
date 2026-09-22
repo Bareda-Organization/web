@@ -269,6 +269,7 @@ export const NaverMapSurface = ({
           selected: markerData.selected,
           busNo: markerData.busNo,
           direction: markerData.direction,
+          seq: markerData.seq,
           markerId: markerData.id,
         });
         const created = new naverMaps.Marker({
@@ -295,6 +296,7 @@ export const NaverMapSurface = ({
         selected: markerData.selected,
         busNo: markerData.busNo,
         direction: markerData.direction,
+        seq: markerData.seq,
         markerId: markerData.id,
       });
       if (renderedIcons.current.get(markerData.id) !== content) {

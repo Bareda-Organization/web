@@ -27,6 +27,9 @@ export type MapMarker = {
   // R21-A 목표 2 — 버스끼리 구별하려고 마커에 직접 번호를 표기한다.
   busNo?: string;
   direction?: MapMarkerDirection;
+  // R27 사용자 지시 — 고정 노선 편성 지도에서 "각 정차지를 표기" 한다. 정차지가 가까이
+  // 붙어 있으면 원 핀만으로는 어느 것이 몇 번째인지 알 수 없다. 정차지에만 뜻이 있다.
+  seq?: number;
 };
 
 // R15-T2 — 버스를 고르면 그 노선을 지도에 그리는 데 쓴다(§5.19 road_path). `kind`
