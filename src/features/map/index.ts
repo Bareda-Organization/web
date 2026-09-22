@@ -10,4 +10,6 @@ export { SELECTED_BUS_MAP_ZOOM, anchorForSelection, cameraForSelectedBus } from 
 export { buildRouteDisplayState } from "./routeDisplayState";
 // R23 목표 4 — 고른 버스만 남기는 규칙도 세 화면이 공유한다.
 export { visibleMarkers } from "./visibleMarkers";
+// 2026-09-22 — 지도 높이는 한 곳에서만 정한다(사용자 지시 "모든 지도 크기는 통일").
+export { MAP_SURFACE_HEIGHT_PX } from "./mapSurfaceSize";
 export type { RouteDisplayState, RunStatusForRoute } from "./routeDisplayState";

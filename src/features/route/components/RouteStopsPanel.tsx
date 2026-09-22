@@ -14,6 +14,8 @@ import {
   StyledStopRow,
   StyledStopSeq,
   StyledStopsPanel,
+  StyledStopList,
+  StyledStopName,
   StyledDraftBox,
   StyledDraftHint,
   StyledDraftActions,
@@ -34,7 +36,6 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newStopId, setNewStopId] = useState("");
   const [origin, setOrigin] = useState({ lat: "", lng: "" });
   const [destination, setDestination] = useState({ lat: "", lng: "" });
   const [confirmingOptimize, setConfirmingOptimize] = useState(false);
@@ -50,6 +51,9 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null);
   const [draftName, setDraftName] = useState("");
   const [adding, setAdding] = useState(false);
+  // 드래그로 순서 바꾸기(2026-09-22 사용자 지시) — 끌고 있는 행의 위치. 라이브러리를 더하지 않고
+  // HTML5 드래그 이벤트만 쓴다. 위·아래 버튼은 그대로 둔다 — 키보드만 쓰는 사용자는 끌 수 없다.
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -84,13 +88,6 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
     setStops(stops.filter((_, i) => i !== index));
   };
 
-  const addStop = () => {
-    const stopId = Number(newStopId);
-    if (!Number.isInteger(stopId) || stopId <= 0) return;
-    setStops([...stops, { stopId, seq: stops.length + 1, name: `승하차지 #${stopId}`, lat: 0, lng: 0 }]);
-    setNewStopId("");
-  };
-
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -123,6 +120,16 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
     } finally {
       setOptimizing(false);
     }
+  };
+
+  const moveTo = (from: number, to: number) => {
+    if (from === to) return;
+    setStops((previous) => {
+      const next = [...previous];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   };
 
   const handleSearch = async () => {
@@ -204,10 +211,23 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
         {stops.length === 0 ? (
           <p>정차지가 없습니다.</p>
         ) : (
-          stops.map((stop, index) => (
-            <StyledStopRow key={`${stop.stopId}-${index}`}>
+          <StyledStopList>
+          {stops.map((stop, index) => (
+            <StyledStopRow
+              key={`${stop.stopId}-${index}`}
+              role="listitem"
+              draggable
+              $dragging={draggingIndex === index}
+              onDragStart={() => setDraggingIndex(index)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                if (draggingIndex !== null) moveTo(draggingIndex, index);
+                setDraggingIndex(null);
+              }}
+              onDragEnd={() => setDraggingIndex(null)}
+            >
               <StyledStopSeq>{index + 1}</StyledStopSeq>
-              <span>{stop.name}</span>
+              <StyledStopName>{stop.name}</StyledStopName>
               <StyledStopActions>
                 <Button variant="ghost" size="sm" icon="arrow-up" onClick={() => move(index, -1)} disabled={index === 0} />
                 <Button
@@ -220,7 +240,8 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
                 <Button variant="ghost" size="sm" icon="x" onClick={() => remove(index)} />
               </StyledStopActions>
             </StyledStopRow>
-          ))
+          ))}
+          </StyledStopList>
         )}
       </Card>
 
@@ -266,18 +287,6 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
           </StyledDraftBox>
         ) : null}
       </Card>
-
-      <StyledAddStopRow>
-        <Input
-          label="정차지 ID 로 추가"
-          value={newStopId}
-          onChange={(event) => setNewStopId(event.target.value)}
-          placeholder="stop_id"
-        />
-        <Button variant="secondary" onClick={addStop}>
-          추가
-        </Button>
-      </StyledAddStopRow>
 
       <Button variant="primary" onClick={handleSave} disabled={saving}>
         {saving ? "저장 중..." : "정차 순서 저장"}

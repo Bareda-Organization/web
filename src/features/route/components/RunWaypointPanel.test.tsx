@@ -5,6 +5,7 @@ import { getRuns } from "@/features/schedule";
 import type { RunItemResponseTypes } from "@/features/schedule";
 import { addRunWaypoint } from "../api";
 import type { WaypointResultResponseTypes } from "../types";
+import type { MapSurfaceProps } from "@/features/map";
 
 // `R18-C2` 목표 3 — 이 화면도 §5.5(ChangeApprovalDetail)와 같은 이유로 소요시간(분) 비교를
 // 보여줘야 하므로, addRunWaypoint 호출부만 목으로 바꿔 그 값이 실제로 그려지는지 본다.
@@ -26,6 +27,14 @@ vi.mock("@/features/schedule", async () => {
 });
 
 const mockGetRuns = vi.mocked(getRuns);
+
+// jsdom 에 지도 SDK 가 없다 — 다른 화면 시험과 같은 이유로 MapSurface 를 목으로 바꿔
+// "무엇을 그리라고 넘겼는가" 만 본다.
+const mapProps: MapSurfaceProps[] = [];
+vi.mock("@/features/map", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/map")>();
+  return { ...actual, MapSurface: (props: MapSurfaceProps) => { mapProps.push(props); return null; } };
+});
 
 const buildRun = (overrides: Partial<RunItemResponseTypes>): RunItemResponseTypes => ({
   id: 1,
@@ -120,5 +129,77 @@ describe("RunWaypointPanel — 노선 전체 소요시간 비교 (`R18-C2` 목�
     fireEvent.click(screen.getByRole("button", { name: "미리보기" }));
 
     expect(await screen.findByText("32분 → 38분 (+6분)")).toBeInTheDocument();
+  });
+});
+
+// 사용자 지시(2026-09-22) — ⑤경유 지점이 **설 자리**를 고를 수 있어야 하고, ⑥미리보기는
+// 기존 경로(좌)와 변경된 경로(우)를 **두 지도로** 나란히 보여줘야 한다.
+describe("RunWaypointPanel — 설 자리 지정 · 전후 지도 비교", () => {
+  afterEach(() => {
+    mapProps.length = 0;
+    vi.clearAllMocks();
+  });
+
+  const basePreview: WaypointResultResponseTypes = {
+    waypointId: 5,
+    routePreview: {
+      stopsBefore: [{ seq: 1, stopName: "정문", eta: null }],
+      stopsAfter: [{ seq: 1, stopName: "임시 경유", eta: null }],
+      reordered: [],
+      removed: [],
+      roadPathBefore: [],
+      roadPathAfter: [],
+    },
+    estTimeBefore: null,
+    estTimeAfter: null,
+    estDistanceBefore: null,
+    estDistanceAfter: null,
+    estDurationBefore: 32,
+    estDurationAfter: 38,
+    applied: false,
+  };
+
+  const 미리보기_준비 = async () => {
+    mockGetRuns.mockResolvedValue({ items: [buildRun({ id: 7, status: "confirmed" })] });
+    render(<RunWaypointPanel busId={10} direction="to_academy" />);
+    // 이 화면에는 회차 선택이 둘이다(경유 지점 추가 · 배포된 경유 지점 제거) — 첫 번째가 추가 쪽이다.
+    await waitFor(() => expect(screen.getAllByRole("option", { name: /#7/ }).length).toBeGreaterThan(0));
+    fireEvent.change(screen.getAllByLabelText("회차")[0], { target: { value: "7" } });
+    fireEvent.change(screen.getByLabelText("주소"), { target: { value: "서울시 새길로 7" } });
+    fireEvent.change(screen.getByLabelText("표시명"), { target: { value: "임시 경유" } });
+  };
+
+  it("설 자리를 고르면 요청에 그 순번이 실린다", async () => {
+    await 미리보기_준비();
+    mockAddRunWaypoint.mockResolvedValue({ ...basePreview, waypointId: 5 });
+
+    fireEvent.change(screen.getByLabelText("설 자리"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "미리보기" }));
+
+    await waitFor(() =>
+      expect(mockAddRunWaypoint).toHaveBeenCalledWith(7, expect.objectContaining({ seq: 1, apply: false })),
+    );
+  });
+
+  it("미리보기는 변경 전·후 경로를 지도 두 개로 보여준다", async () => {
+    await 미리보기_준비();
+    mockAddRunWaypoint.mockResolvedValue({
+      ...basePreview,
+      waypointId: 5,
+      routePreview: {
+        ...basePreview.routePreview,
+        roadPathBefore: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }],
+        roadPathAfter: [{ lat: 37.1, lng: 127.1 }, { lat: 37.3, lng: 127.3 }],
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "미리보기" }));
+
+    await waitFor(() => expect(mapProps.length).toBeGreaterThanOrEqual(2));
+    const drawn = mapProps.map((props) => props.polylines?.[0]?.points.length ?? 0);
+    expect(drawn.filter((count) => count === 2)).toHaveLength(2);
+    // "변경 전/후" 는 지도 머리글과 숫자 비교 양쪽에 나온다 — 둘 다 있는 것이 정상이다.
+    expect(screen.getAllByText("변경 전").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("변경 후").length).toBeGreaterThanOrEqual(2);
   });
 });

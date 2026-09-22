@@ -6,6 +6,8 @@ import type { RunItemResponseTypes } from "@/features/schedule";
 import { ApiError } from "@/shared/lib/http";
 import { formatDurationDelta } from "@/shared/lib/format/durationDelta";
 import { AlertBanner, Button, Card, Input, SegmentedControl, Select } from "@/shared/ui";
+import { MapSurface } from "@/features/map";
+import type { MapCamera, MapPolyline } from "@/features/map";
 import { addRunWaypoint, removeRunWaypoint } from "../api";
 import type { RunDirection, WaypointResultResponseTypes } from "../types";
 import {
@@ -15,6 +17,9 @@ import {
   StyledWaypointDeployedRow,
   StyledWaypointInputRow,
   StyledWaypointPanel,
+  StyledWaypointMapCompare,
+  StyledWaypointMapCol,
+  StyledWaypointMapSurface,
 } from "./RunWaypointPanel.styled";
 
 type AddressMode = "address" | "coords";
@@ -44,6 +49,22 @@ type RunWaypointPanelProps = {
 // 동안 기억해 제거 입력칸에 이어 쓰는 지금 방식이 이 라운드에서 고를 수 있는 최선이다
 // — 새 엔드포인트를 만들지 않는다(브리프 지시). 조율자에게 목록 엔드포인트 신설을
 // 올린다(보고서 §1 참고).
+// 좌표 평균으로 카메라를 잡는다 — RouteMapPanel·ChangeApprovalDetail 과 같은 방식.
+const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
+
+const cameraFor = (points: { lat: number; lng: number }[]): MapCamera => {
+  if (points.length === 0) return DEFAULT_CAMERA;
+  const sum = points.reduce((acc, p) => ({ lat: acc.lat + p.lat, lng: acc.lng + p.lng }), { lat: 0, lng: 0 });
+  return { lat: sum.lat / points.length, lng: sum.lng / points.length, zoom: DEFAULT_CAMERA.zoom };
+};
+
+// 변경 전은 "지금 배포된 경로"(confirmed), 변경 후는 "이렇게 바뀐다"(route) — 색이 갈려야
+// 두 지도를 번갈아 볼 때 어느 쪽을 보고 있는지 헷갈리지 않는다.
+const polylineOf = (kind: "before" | "after", points: { lat: number; lng: number }[]): MapPolyline[] =>
+  points.length > 0
+    ? [{ id: `waypoint-${kind}`, points, kind: kind === "before" ? "confirmed" : "route" }]
+    : [];
+
 export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) => {
   const [runs, setRuns] = useState<RunItemResponseTypes[]>([]);
   const [runsError, setRunsError] = useState<string | null>(null);
@@ -55,6 +76,8 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
   const [label, setLabel] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<WaypointResultResponseTypes | null>(null);
+  // 설 자리(2026-09-22 사용자 지시) — 빈 값이면 맨 뒤(서버 기본값과 같다).
+  const [seq, setSeq] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deployed, setDeployed] = useState<{ waypointId: number; label: string }[]>([]);
@@ -99,6 +122,7 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
     lng: mode === "coords" ? Number(lng) : undefined,
     label: label.trim(),
     note: note.trim() || undefined,
+    seq: seq.trim() ? Number(seq) : undefined,
     apply,
   });
 
@@ -179,6 +203,13 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
             />
             <Input label="표시명" value={label} onChange={(event) => setLabel(event.target.value)} />
             <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} />
+            {/* 2026-09-22 사용자 지시 — 설 자리를 관계자가 정한다. 비우면 맨 뒤(서버 기본값). */}
+            <Input
+              label="설 자리"
+              value={seq}
+              onChange={(event) => setSeq(event.target.value)}
+              placeholder="비우면 맨 뒤"
+            />
           </StyledWaypointInputRow>
 
           <SegmentedControl
@@ -200,6 +231,34 @@ export const RunWaypointPanel = ({ busId, direction }: RunWaypointPanelProps) =>
           )}
 
           {error ? <AlertBanner tone="missed" title={error} /> : null}
+
+          {/* 2026-09-22 사용자 지시 — 기존 경로(좌)와 변경된 경로(우)를 나란히. 숫자만으로는
+              "어디가 어떻게 달라지는지" 를 읽을 수 없어 배포 판단을 눈으로 못 한다.
+              좁은 화면에서는 위아래로 쌓인다(styled 의 auto-fit). */}
+          {preview ? (
+            <StyledWaypointMapCompare>
+              <StyledWaypointMapCol>
+                <strong>변경 전</strong>
+                <StyledWaypointMapSurface>
+                  <MapSurface
+                    camera={cameraFor(preview.routePreview.roadPathBefore)}
+                    markers={[]}
+                    polylines={polylineOf("before", preview.routePreview.roadPathBefore)}
+                  />
+                </StyledWaypointMapSurface>
+              </StyledWaypointMapCol>
+              <StyledWaypointMapCol>
+                <strong>변경 후</strong>
+                <StyledWaypointMapSurface>
+                  <MapSurface
+                    camera={cameraFor(preview.routePreview.roadPathAfter)}
+                    markers={[]}
+                    polylines={polylineOf("after", preview.routePreview.roadPathAfter)}
+                  />
+                </StyledWaypointMapSurface>
+              </StyledWaypointMapCol>
+            </StyledWaypointMapCompare>
+          ) : null}
 
           {preview ? (
             <StyledWaypointCompare>

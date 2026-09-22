@@ -109,6 +109,8 @@ export type WaypointCreateRequestTypes = {
   lng?: number;
   label: string;
   note?: string;
+  // 설 자리(1부터, 2026-09-22). 생략하면 맨 뒤 — 서버 기본값과 같다.
+  seq?: number;
   apply: boolean;
 };
 

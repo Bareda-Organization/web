@@ -42,3 +42,21 @@ export const StyledWaypointActionsRow = styled.div`
   display: flex;
   gap: 8px;
 `;
+
+/* 2026-09-22 — 기존 경로(좌) · 변경된 경로(우). 좁아지면 한 칸으로 쌓인다(반응형). */
+export const StyledWaypointMapCompare = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+`;
+
+export const StyledWaypointMapCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+/* 비교용이라 단독 지도(480px)보다 낮다 — 두 개가 나란히 서므로 세로를 다 쓰면 정보가 화면 밖으로 밀린다. */
+export const StyledWaypointMapSurface = styled.div`
+  height: 260px;
+`;

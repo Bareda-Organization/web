@@ -1,5 +1,7 @@
 import styled from "@emotion/styled";
 
+import { MAP_SURFACE_HEIGHT_PX } from "@/features/map/mapSurfaceSize";
+
 export const StyledDashboardLayout = styled.div`
   display: flex;
   flex-direction: column;
@@ -32,7 +34,7 @@ export const StyledMapPane = styled.div`
 // R15-T2 — "화면 상단에 가득차게" 요구에 맞춰 160px → 480px 로 키운다.
 export const StyledMapSurface = styled.div`
   position: relative;
-  height: 480px;
+  height: ${MAP_SURFACE_HEIGHT_PX}px;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-default);
@@ -69,7 +71,7 @@ export const StyledBusListPane = styled.div`
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
   overflow-y: auto;
-  max-height: 480px;
+  max-height: ${MAP_SURFACE_HEIGHT_PX}px;
 `;
 
 export const StyledBusListEmpty = styled.p`

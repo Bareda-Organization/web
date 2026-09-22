@@ -248,6 +248,7 @@ export const addRunWaypoint = async (
       lng: request.lng,
       label: request.label,
       note: request.note,
+      seq: request.seq,
       apply: request.apply,
     },
   });

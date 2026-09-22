@@ -204,3 +204,55 @@ describe("RouteStopsPanel — 주소 검색 → 확인 → 수정 → 반영", (
     expect(screen.getByText(/12m/)).toBeInTheDocument();
   });
 });
+
+// 사용자 지시(2026-09-22) — ①정차지 목록은 드래그로 순서를 바꾼다 ②"정차지 ID 로 추가" 는 없앤다
+// (주소 검색이 대체한다).
+describe("RouteStopsPanel — 드래그 정렬 · 개발자용 입력 제거", () => {
+  afterEach(() => {
+    mapProps.length = 0;
+    vi.clearAllMocks();
+  });
+
+  const 화면을_띄운다 = async () => {
+    mockGetDetail.mockResolvedValue(detail);
+    mockGetRoutePath.mockResolvedValue(emptyPath);
+    render(<RouteStopsPanel routeId={1} />);
+    await screen.findByText("정문");
+  };
+
+  it("정차지 ID 로 추가 입력이 없다 — 주소 검색이 대체한다", async () => {
+    await 화면을_띄운다();
+
+    expect(screen.queryByLabelText("정차지 ID 로 추가")).not.toBeInTheDocument();
+  });
+
+  it("행을 끌어다 놓으면 그 자리로 순서가 바뀐다", async () => {
+    await 화면을_띄운다();
+
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("정문")).toBeInTheDocument();
+
+    // 두 번째 행(후문)을 첫 자리로 끌어다 놓는다.
+    fireEvent.dragStart(rows[1]);
+    fireEvent.dragOver(rows[0]);
+    fireEvent.drop(rows[0]);
+
+    const reordered = screen.getAllByRole("listitem");
+    expect(within(reordered[0]).getByText("후문")).toBeInTheDocument();
+    expect(within(reordered[1]).getByText("정문")).toBeInTheDocument();
+  });
+
+  it("드래그로 바꾼 순서도 저장을 눌러야 서버에 간다", async () => {
+    await 화면을_띄운다();
+    mockUpdateRoute.mockResolvedValue(detail);
+
+    const rows = screen.getAllByRole("listitem");
+    fireEvent.dragStart(rows[1]);
+    fireEvent.drop(rows[0]);
+    expect(mockUpdateRoute).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "정차 순서 저장" }));
+
+    await waitFor(() => expect(mockUpdateRoute).toHaveBeenCalledWith(1, { stopIds: [2, 1] }));
+  });
+});
