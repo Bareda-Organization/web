@@ -116,6 +116,17 @@ describe("RouteStopsPanel — 주소 검색 → 확인 → 수정 → 반영", (
     expect(last.markers.some((marker) => marker.lat === 37.5 && marker.lng === 127.0)).toBe(true);
   });
 
+  // 3km 축척으로 노선 전체를 담으면 "블록 왼쪽 모퉁이" 를 찍을 수 없다 — 검색 중에는 그 지점을
+  // 확대해 보여줘야 이 기능이 성립한다.
+  it("검색 중에는 내용 맞춤을 끄고 그 지점을 확대한다", async () => {
+    await 검색한다();
+
+    const last = mapProps[mapProps.length - 1];
+    expect(last.fitToContent).toBe(false);
+    expect(last.camera.lat).toBe(37.5);
+    expect(last.camera.zoom).toBeGreaterThanOrEqual(17);
+  });
+
   it("검색만으로는 노선이 바뀌지 않는다 — 반영은 버튼을 눌러야 일어난다", async () => {
     await 검색한다();
 
@@ -150,13 +161,37 @@ describe("RouteStopsPanel — 주소 검색 → 확인 → 수정 → 반영", (
     );
   });
 
-  it("50m 안에 기존 승하차지가 있으면 알려준다 — 같은 자리에 둘을 만들지 않게", async () => {
+  // 핀을 옮기면 "이미 있다" 판정도 **옮긴 지점 기준**이어야 한다 — 검색 지점 기준 거리를 그대로
+  // 두면, 관계자가 중복을 피하려고 옮겼는데도 경고가 그대로 남아 판단을 흐린다.
+  it("핀을 옮기면 가까운 승하차지 거리도 그 지점 기준으로 다시 잰다", async () => {
     mockGetDetail.mockResolvedValue(detail);
     mockGetRoutePath.mockResolvedValue(emptyPath);
     mockSearch.mockResolvedValue({
       ...검색결과,
       nearby: [
         { stopId: 9, name: "이미 있는 자리", address: "서울시 테스트로 12", lat: 37.5, lng: 127.0, distanceM: 12 },
+      ],
+    });
+    render(<RouteStopsPanel routeId={1} />);
+    await screen.findByText("정문");
+    fireEvent.change(screen.getByLabelText("도로명 주소로 검색"), { target: { value: "테스트로 12" } });
+    fireEvent.click(screen.getByRole("button", { name: "검색" }));
+    expect(await screen.findByText(/이미 있는 자리/)).toBeInTheDocument();
+
+    // 약 100m 북쪽으로 옮기면 50m 밖이라 경고가 사라진다.
+    mapProps[mapProps.length - 1].onMapClick?.({ lat: 37.5009, lng: 127.0 });
+
+    await waitFor(() => expect(screen.queryByText(/이미 있는 자리/)).not.toBeInTheDocument());
+  });
+
+  it("50m 안에 기존 승하차지가 있으면 알려준다 — 같은 자리에 둘을 만들지 않게", async () => {
+    mockGetDetail.mockResolvedValue(detail);
+    mockGetRoutePath.mockResolvedValue(emptyPath);
+    mockSearch.mockResolvedValue({
+      ...검색결과,
+      // 약 12m 북쪽 — 화면은 **서버 값이 아니라 지금 핀 기준**으로 다시 재서 보여준다.
+      nearby: [
+        { stopId: 9, name: "이미 있는 자리", address: "서울시 테스트로 12", lat: 37.50011, lng: 127.0, distanceM: 999 },
       ],
     });
     render(<RouteStopsPanel routeId={1} />);

@@ -19,6 +19,9 @@ import {
   StyledDraftActions,
 } from "./RouteStopsPanel.styled";
 
+// 백엔드 `StopProximity.MERGE_RADIUS_METERS` 와 같은 값 — 이 안이면 반영해도 기존 승하차지에 붙는다.
+const STOP_MERGE_RADIUS_METERS = 50;
+
 type RouteStopsPanelProps = {
   routeId: number;
 };
@@ -163,17 +166,26 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
     }
   };
 
+  // 두 좌표 사이 거리(m) — 평면 근사다. 판정 범위가 수십~수백 m 라 곡률 오차가 보이지 않는다
+  // (백엔드 `StopProximity.metersBetween` 과 같은 규칙·같은 상수).
+  const metersBetween = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number =>
+    Math.round(
+      Math.hypot((a.lat - b.lat) * 111_320, (a.lng - b.lng) * 111_320 * Math.cos((a.lat * Math.PI) / 180)),
+    );
+
   // 검색 결과에서 얼마나 옮겼는지 — 관계자가 "너무 멀리 찍었나" 를 스스로 판단할 유일한 값이다.
-  // 평면 근사이고 판정 범위가 수십~수백 m 라 곡률 오차는 보이지 않는다(백엔드 StopProximity 와 같은 규칙).
-  const movedMeters =
+  const movedMeters = search && draft ? metersBetween(draft, search) : 0;
+
+  // ⚠ 거리를 **옮긴 지점 기준으로 다시 잰다.** 서버가 준 `distance_m` 은 검색 지점 기준이라,
+  // 중복을 피하려고 핀을 옮긴 뒤에도 경고가 그대로 남아 관계자의 판단을 흐린다.
+  // 임계는 백엔드 근접 병합과 같은 50m 다 — 이 안이면 반영해도 새 승하차지가 아니라 기존 것에 붙는다.
+  const nearbyFromDraft =
     search && draft
-      ? Math.round(
-          Math.hypot(
-            (draft.lat - search.lat) * 111_320,
-            (draft.lng - search.lng) * 111_320 * Math.cos((draft.lat * Math.PI) / 180),
-          ),
-        )
-      : 0;
+      ? search.nearby
+          .map((stop) => ({ ...stop, distanceM: metersBetween(draft, stop) }))
+          .filter((stop) => stop.distanceM <= STOP_MERGE_RADIUS_METERS)
+          .sort((left, right) => left.distanceM - right.distanceM)
+      : [];
 
   if (loading) return <p>불러오는 중...</p>;
 
@@ -232,10 +244,10 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
               지도를 눌러 실제로 버스가 서는 지점(블록 모퉁이·도로가)으로 옮길 수 있습니다
               {movedMeters > 0 ? ` · 검색 위치에서 약 ${movedMeters}m 옮김` : ""}
             </StyledDraftHint>
-            {search.nearby.length > 0 ? (
+            {nearbyFromDraft.length > 0 ? (
               <AlertBanner
                 tone="moving"
-                title={`이 자리에 이미 "${search.nearby[0].name}" 이(가) 있습니다 (${search.nearby[0].distanceM}m)`}
+                title={`이 자리에 이미 "${nearbyFromDraft[0].name}" 이(가) 있습니다 (${nearbyFromDraft[0].distanceM}m)`}
               />
             ) : null}
             <Input

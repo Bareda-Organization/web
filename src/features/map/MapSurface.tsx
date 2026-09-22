@@ -15,6 +15,8 @@ export type MapSurfaceProps = {
   // 2026-09-22 — 지도의 빈 자리를 눌러 **좌표 자체**를 고른다(고정 노선 편성의 정차지 위치
   // 미세 조정). 마커를 누른 경우는 `onMarkerClick` 이 받고 여기로는 오지 않는다.
   onMapClick?: (point: { lat: number; lng: number }) => void;
+  /** 기본 `true` — 노선·버스 전체를 담는 배율로 맞춘다. `false` 면 `camera` 를 그대로 쓴다. */
+  fitToContent?: boolean;
   // R15-T2 — 선택된 버스의 노선(§5.19 road_path). 생략하거나 빈 배열이면 아무것도 그리지 않는다.
   polylines?: MapPolyline[];
   onReady?: () => void;

@@ -83,7 +83,13 @@ export const RouteMapPanel = ({ routeId, refreshKey, draft, onMapClick }: RouteM
 
   return (
     <StyledMapSurface>
-      <MapSurface camera={camera} markers={markers} polylines={polylines} onMapClick={onMapClick} />
+      <MapSurface
+        camera={camera}
+        markers={markers}
+        polylines={polylines}
+        onMapClick={onMapClick}
+        fitToContent={!draft}
+      />
     </StyledMapSurface>
   );
 };

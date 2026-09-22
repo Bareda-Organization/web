@@ -21,6 +21,8 @@ export type NaverMapSurfaceProps = {
   // 버스 마커의 id 는 회차 id 문자열이다(세 화면이 그렇게 만든다).
   onMarkerClick?: (markerId: string) => void;
   onMapClick?: (point: { lat: number; lng: number }) => void;
+  /** 기본 `true` — 노선·버스 전체가 화면에 들어오게 배율을 맞춘다. `false` 면 `camera` 를 그대로 쓴다. */
+  fitToContent?: boolean;
   onReady?: () => void;
   onAuthFailed?: (exception: unknown) => void;
   className?: string;
@@ -32,6 +34,7 @@ export const NaverMapSurface = ({
   polylines = [],
   onMarkerClick,
   onMapClick,
+  fitToContent = true,
   onReady,
   onAuthFailed,
   className,
@@ -159,13 +162,16 @@ export const NaverMapSurface = ({
   // 담는 배율로 맞춘다. 그 뒤 위치가 갱신돼도 이 값은 `"all-markers"` 로 고정이라 카메라가
   // 되돌아가지 않는다 — R21-A 가 막은 "지도가 간헐적으로 리셋된다" 를 그대로 지킨다.
   const focusKey = useMemo(() => {
+    // 2026-09-22 — 내용 맞춤을 끈 동안(정차지 위치 고르기)은 **넘어온 좌표 자체**가 포커스다.
+    // 안 넣으면 검색·이동으로 좌표만 바뀔 때 이 값이 그대로라 카메라가 안 따라간다.
+    if (!fitToContent) return `camera:${camera.lat},${camera.lng},${camera.zoom}`;
     const selectedBusId = markers.find((marker) => marker.kind === "bus" && marker.selected)?.id;
     if (selectedBusId) return selectedBusId;
     // 빈 배열의 join 은 `""` 라 `??` 로는 안 걸러진다 — 빈 문자열도 "포커스 없음" 이다.
     const routeKey = polylines.map((polyline) => polyline.id).join(",");
     if (routeKey) return routeKey;
     return markers.length > 0 ? "all-markers" : "none";
-  }, [markers, polylines]);
+  }, [markers, polylines, fitToContent, camera]);
   // focusKey 가 안 바뀌면 아래 effect 가 재실행되지 않으므로, 그 사이에 갱신된
   // 최신 `camera` 값은 이 ref 로 읽는다(effect 의존성에 넣지 않는다 — 그러면
   // 다시 좌표 비교 문제로 돌아간다).
@@ -173,10 +179,13 @@ export const NaverMapSurface = ({
   const onMarkerClickRef = useRef(onMarkerClick);
 
   const onMapClickRef = useRef(onMapClick);
+
+  const fitToContentRef = useRef(fitToContent);
   useEffect(() => {
     cameraRef.current = camera;
     onMarkerClickRef.current = onMarkerClick;
     onMapClickRef.current = onMapClick;
+    fitToContentRef.current = fitToContent;
   });
 
   // R22 목표 2 — 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
@@ -248,8 +257,10 @@ export const NaverMapSurface = ({
     //
     // 실시간 위치가 없는 회차(대기·확정·종료)는 버스 마커 자체가 없다 — 그때는 예전처럼
     // 노선 전체를 담아야 출발지·도착지가 화면 안에 들어온다(R22 가 고친 그 결함).
+    // 2026-09-22 — 화면이 "이 좌표를 보여 달라" 고 못박은 경우(정차지 위치 고르기)는 내용에 맞추지
+    // 않는다. 노선 전체를 담는 배율(3km)에서는 블록 모퉁이·도로가를 찍을 수 없다.
     const hasSelectedBus = markers.some((marker) => marker.kind === "bus" && marker.selected);
-    if (!hasSelectedBus) {
+    if (!hasSelectedBus && fitToContentRef.current) {
       // 고른 노선이 있으면 그 노선 전체, 없으면 지금 보이는 버스 전체를 담는다.
       if (fitToPoints(map, polylines.flatMap((polyline) => polyline.points))) return;
       if (fitToPoints(map, markers.filter((marker) => marker.kind === "bus"))) return;
