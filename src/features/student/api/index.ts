@@ -14,6 +14,7 @@ type RawStudentListItem = {
   bus_no: string | null;
   stop_name: string | null;
   guardian_phone: string | null;
+  guardian_count: number;
 };
 
 type RawStudentListResponse = {
@@ -31,6 +32,7 @@ const toListItem = (raw: RawStudentListItem): StudentListItemResponseTypes => ({
   busNo: raw.bus_no,
   stopName: raw.stop_name,
   guardianPhone: raw.guardian_phone,
+  guardianCount: raw.guardian_count,
 });
 
 // GET /staff/students?q= (§5.11, STU-01) — §1.8 페이징. 강제 추가 자동완성과 목록 조회가 같은 엔드포인트를 쓴다.

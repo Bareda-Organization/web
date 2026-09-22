@@ -26,6 +26,7 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
                 bus_no: "1호차",
                 stop_name: "정문",
                 guardian_phone: "010-1111-2222",
+                guardian_count: 2,
               },
             ],
             page: 0,
@@ -47,6 +48,7 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
         busNo: "1호차",
         stopName: "정문",
         guardianPhone: "010-1111-2222",
+        guardianCount: 2,
       },
     ]);
   });

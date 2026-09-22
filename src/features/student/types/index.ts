@@ -14,6 +14,7 @@ export type StudentListItemResponseTypes = {
   busNo: string | null;
   stopName: string | null;
   guardianPhone: string | null;
+  guardianCount: number;
 };
 
 export type StudentListResponseTypes = {

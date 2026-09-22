@@ -70,6 +70,11 @@ export const StudentList = () => {
     { key: "stopName", label: "승하차지", render: (row) => row.stopName ?? "-" },
     { key: "guardianPhone", label: "보호자 연락처", render: (row) => row.guardianPhone ?? "-" },
     {
+      key: "guardianCount",
+      label: "보호자 연결",
+      render: (row) => (row.guardianCount > 0 ? `연결 ${row.guardianCount}명` : "미연결"),
+    },
+    {
       key: "actions",
       label: "",
       align: "right",
