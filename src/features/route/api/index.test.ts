@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addRunWaypoint, getRouteDetail, getRoutes, getRunRoute } from "./index";
+import { addRunWaypoint, getRouteDetail, getRoutePath, getRoutes, getRunRoute } from "./index";
 
 // §5.9 RTE-01·09 · §5.15 RTE-10 — snake_case ↔ camelCase 변환 경계. toListItem 의
 // name 필드와 toStop 의 name 필드는 서로 다른 raw 타입(노선 이름 vs 정차지 이름)이지만
@@ -187,5 +187,35 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     const result = await getRunRoute(7);
 
     expect(result.stops).toEqual([{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }]);
+  });
+
+  // R27-B — GET /staff/routes/{id}/path. getRunRoute 와 같은 road_path·fallback_used·
+  // stops 변환을 쓰되(§5.19 와 같은 raw 모양) confirmed 필드가 없는 것까지 함께 본다.
+  it("getRoutePath 는 road_path·fallback_used·stops 를 camelCase 로 바꾼다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            road_path: [
+              { lat: 37.1, lng: 127.1 },
+              { lat: 37.2, lng: 127.2 },
+            ],
+            fallback_used: true,
+            stops: [{ stop_id: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }],
+          },
+        }),
+      ),
+    );
+
+    const result = await getRoutePath(1);
+
+    expect(result.roadPath).toEqual([
+      { lat: 37.1, lng: 127.1 },
+      { lat: 37.2, lng: 127.2 },
+    ]);
+    expect(result.fallbackUsed).toBe(true);
+    expect(result.stops).toEqual([{ stopId: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }]);
   });
 });
