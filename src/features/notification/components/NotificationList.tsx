@@ -26,7 +26,6 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   change_decided: "구간 변경 결정",
   approval_requested: "승인 요청",
   intent_changed: "의사 변경",
-  link_requested: "연동 요청",
   route_changed: "노선 변경",
   assignment_changed: "배치 변경",
   no_show_escalated: "미승차 escalation",

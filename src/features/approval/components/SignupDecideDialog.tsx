@@ -13,7 +13,11 @@ type SignupDecideDialogProps = {
   onDone: () => void;
 };
 
-const needsStudentLink = (role: SignupRequestItemResponseTypes["role"]) => role === "parent" || role === "student";
+// Ruling 324 — 학부모(parent)는 가입 승인 시점에 학생 연결이 더 이상 필수가 아니다.
+// 자녀 연결은 각 앱에서 학생이 만든 코드를 학부모가 입력하는 별도 2단계(§3.3·§3.4)로
+// 진행하므로, 이 대화상자에는 학생 ID 입력 자리가 없다. 계정↔레코드 연결(AUTH-11)이
+// 여전히 필수인 것은 student·driver·escort 뿐이다.
+const needsStudentLink = (role: SignupRequestItemResponseTypes["role"]) => role === "student";
 const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role === "driver" || role === "escort";
 
 // §5.2 POST /staff/signup-requests/{id}/decide(A-02). 수락 시 계정↔레코드 연결이
@@ -126,6 +130,9 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
             onChange={(event) => setStudentIdsInput(event.target.value)}
             hint="다자녀는 여러 ID 를 함께 입력합니다"
           />
+        ) : null}
+        {mode === "accept" && request.role === "parent" ? (
+          <p>자녀 연결은 이 승인과 별도로 학부모 앱에서 진행됩니다(연결 코드 입력).</p>
         ) : null}
         {mode === "accept" && needsManagerLink(request.role) ? (
           <Input
