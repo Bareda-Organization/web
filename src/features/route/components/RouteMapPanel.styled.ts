@@ -9,3 +9,9 @@ export const StyledMapSurface = styled.div`
   overflow: hidden;
   border: 1px solid var(--border-default);
 `;
+
+export const StyledMapCaption = styled.p`
+  margin: 8px 0 0;
+  color: var(--text-tertiary);
+  font: var(--fw-regular) var(--fs-micro) / 1.5 var(--font-sans);
+`;

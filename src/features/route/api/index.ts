@@ -1,17 +1,15 @@
 import { apiFetch } from "@/shared/lib/http";
 import type {
-  StopSearchResultTypes,
   RouteDetailResponseTypes,
   RouteListResponseTypes,
-  RouteOptimizeRequestTypes,
   RoutePathResponseTypes,
   RouteStop,
+  RouteStopSaveItemTypes,
   RouteUpsertRequestTypes,
   RunDirection,
   RunRouteResponseTypes,
+  StopSuggestionTypes,
   Weekday,
-  WaypointCreateRequestTypes,
-  WaypointResultResponseTypes,
 } from "../types";
 
 type RawRouteStop = { stop_id: number; seq: number; name: string; lat: number; lng: number };
@@ -112,13 +110,12 @@ export const deleteRoute = async (id: number): Promise<void> => {
 
 // POST /staff/routes/{id}/optimize (RTE-09) — 미리보기 플래그가 없다. 호출 즉시
 // 기존 수동 순서를 버리고 커밋한다(§2 판단 근거 — 그래서 화면에 확인 단계를 둔다).
-export const optimizeRoute = async (
-  id: number,
-  request: RouteOptimizeRequestTypes,
-): Promise<RouteDetailResponseTypes> => {
+// 기준점은 보내지 않는다 — 서버가 방향 규칙(Ruling 190, 등원은 첫 승차지 → 학원)으로 정한다
+// (2026-09-23 사용자 지시 — 위경도 입력칸 제거).
+export const optimizeRoute = async (id: number): Promise<RouteDetailResponseTypes> => {
   const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}/optimize`, {
     method: "POST",
-    body: request,
+    body: {},
   });
   return toDetail(raw);
 };
@@ -147,125 +144,53 @@ type RawNearbyStop = {
 
 type RawStopSearch = { lat: number; lng: number; display_name: string; nearby: RawNearbyStop[] };
 
+const toStopSuggestion = (raw: RawStopSearch): StopSuggestionTypes => ({
+  lat: raw.lat,
+  lng: raw.lng,
+  displayName: raw.display_name,
+  nearby: raw.nearby.map((item) => ({
+    stopId: item.stop_id,
+    name: item.name,
+    address: item.address,
+    lat: item.lat,
+    lng: item.lng,
+    distanceM: item.distance_m,
+  })),
+});
+
 /**
- * §5.9 주소 검색 — **조회 전용이다.** 이 호출로는 승하차지가 생기지 않는다(반영은 addRouteStop).
- * 그래서 관계자가 지도에서 지점을 옮기는 동안 잘못 찍힌 승하차지가 남지 않는다.
+ * §5.9 주소 자동완성(2026-09-23 사용자 지시) — 일부만 친 주소로 후보 여럿. **조회 전용이다** —
+ * 승하차지는 저장 버튼을 눌러야 생긴다. 후보가 없으면 빈 목록이다(오류 아님).
  */
-export const searchStopAddress = async (address: string): Promise<StopSearchResultTypes> => {
-  const raw = await apiFetch<RawStopSearch>(`/staff/stops/search?address=${encodeURIComponent(address)}`, {
-    method: "GET",
-  });
-  return {
-    lat: raw.lat,
-    lng: raw.lng,
-    displayName: raw.display_name,
-    nearby: raw.nearby.map((item) => ({
-      stopId: item.stop_id,
-      name: item.name,
-      address: item.address,
-      lat: item.lat,
-      lng: item.lng,
-      distanceM: item.distance_m,
-    })),
-  };
+export const suggestStops = async (query: string): Promise<StopSuggestionTypes[]> => {
+  const raw = await apiFetch<{ items: RawStopSearch[] }>(
+    `/staff/stops/suggest?query=${encodeURIComponent(query)}`,
+    { method: "GET" },
+  );
+  return raw.items.map(toStopSuggestion);
 };
 
-/** §5.9 좌표로 정차지 추가 — 노선 맨 끝에 붙는다. 여기서 비로소 승하차지가 생긴다. */
-export const addRouteStop = async (
+/**
+ * §5.9 승하차지 한 번에 저장(2026-09-23 사용자 지시) — 추가·수정·삭제·순서를 한 요청으로.
+ * 배열 순서가 정차 순서다. `stopId` 가 없으면 새로 만든다(50m 안 기존 승하차지가 있으면 그것).
+ */
+export const saveRouteStops = async (
   routeId: number,
-  request: { lat: number; lng: number; name: string; address?: string },
+  stops: RouteStopSaveItemTypes[],
 ): Promise<RouteDetailResponseTypes> => {
   const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${routeId}/stops`, {
-    method: "POST",
-    body: { lat: request.lat, lng: request.lng, name: request.name, address: request.address },
-  });
-  return toDetail(raw);
-};
-
-type RawWaypointPreviewStop = { seq: number; stop_name: string; eta: string | null };
-type RawStopRef = { stop_id: number; stop_name: string };
-
-type RawWaypointResult = {
-  waypoint_id: number;
-  route_preview: {
-    stops_before: RawWaypointPreviewStop[];
-    stops_after: RawWaypointPreviewStop[];
-    reordered: RawStopRef[];
-    removed: RawStopRef[];
-    road_path_before: RawGeoPoint[];
-    road_path_after: RawGeoPoint[];
-  };
-  est_time_before: string | null;
-  est_time_after: string | null;
-  est_distance_before: number | null;
-  est_distance_after: number | null;
-  est_duration_before: number | null;
-  est_duration_after: number | null;
-  applied: boolean;
-};
-
-const toPreviewStop = (raw: RawWaypointPreviewStop) => ({
-  seq: raw.seq,
-  stopName: raw.stop_name,
-  eta: raw.eta,
-});
-
-const toStopRef = (raw: RawStopRef) => ({
-  stopId: raw.stop_id,
-  stopName: raw.stop_name,
-});
-
-const toWaypointResult = (raw: RawWaypointResult): WaypointResultResponseTypes => ({
-  waypointId: raw.waypoint_id,
-  routePreview: {
-    stopsBefore: raw.route_preview.stops_before.map(toPreviewStop),
-    stopsAfter: raw.route_preview.stops_after.map(toPreviewStop),
-    reordered: raw.route_preview.reordered.map(toStopRef),
-    removed: raw.route_preview.removed.map(toStopRef),
-    roadPathBefore: raw.route_preview.road_path_before,
-    roadPathAfter: raw.route_preview.road_path_after,
-  },
-  estTimeBefore: raw.est_time_before,
-  estTimeAfter: raw.est_time_after,
-  estDistanceBefore: raw.est_distance_before,
-  estDistanceAfter: raw.est_distance_after,
-  estDurationBefore: raw.est_duration_before,
-  estDurationAfter: raw.est_duration_after,
-  applied: raw.applied,
-});
-
-// POST /staff/runs/{runId}/waypoints (RTE-10, §5.15) — apply=false 는 미리보기(확정
-// 노선 불변), apply=true 는 배포(기사·동승자 푸시). 운행 시작 후 403 CHANGE_WINDOW_CLOSED.
-export const addRunWaypoint = async (
-  runId: number,
-  request: WaypointCreateRequestTypes,
-): Promise<WaypointResultResponseTypes> => {
-  const raw = await apiFetch<RawWaypointResult>(`/staff/runs/${runId}/waypoints`, {
-    method: "POST",
+    method: "PUT",
     body: {
-      address: request.address,
-      lat: request.lat,
-      lng: request.lng,
-      label: request.label,
-      note: request.note,
-      seq: request.seq,
-      apply: request.apply,
+      stops: stops.map((stop) => ({
+        stop_id: stop.stopId ?? null,
+        name: stop.name,
+        address: stop.address ?? null,
+        lat: stop.lat,
+        lng: stop.lng,
+      })),
     },
   });
-  return toWaypointResult(raw);
-};
-
-// DELETE /staff/runs/{runId}/waypoints/{waypointId}?apply= — 배포된 경유 지점만 대상.
-export const removeRunWaypoint = async (
-  runId: number,
-  waypointId: number,
-  apply: boolean,
-): Promise<WaypointResultResponseTypes> => {
-  const raw = await apiFetch<RawWaypointResult>(`/staff/runs/${runId}/waypoints/${waypointId}`, {
-    method: "DELETE",
-    query: { apply },
-  });
-  return toWaypointResult(raw);
+  return toDetail(raw);
 };
 
 type RawGeoPoint = { lat: number; lng: number };

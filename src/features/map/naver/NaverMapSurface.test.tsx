@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // 이 파일이 잡는 것 — **지도가 준비되기 전에 이미 자료가 들어와 있는 경우.**
@@ -378,5 +378,78 @@ describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {
     await waitFor(() => expect(setCenter).toHaveBeenCalledTimes(1));
     expect(setZoom).toHaveBeenCalledWith(16);
     expect(fitBounds).not.toHaveBeenCalled();
+  });
+});
+
+// 2026-09-23 사용자 지시 — 승하차지 자리를 **핀을 마우스로 끌어** 정한다. SDK 의 마커 이벤트는 이 아이콘
+// 형태에서 안 불리므로(위 R23 주석) 지도 영역에서 마우스 이벤트를 받아 직접 옮긴다. 시험 SDK 의 투영은
+// "화면 1px = 위도·경도 0.001" 로 단순화했다.
+describe("NaverMapSurface — 끌 수 있는 마커(2026-09-23)", () => {
+  const 투영 = {
+    fromCoordToOffset: (coord: { lat: number; lng: number }) => ({ x: coord.lng * 1000, y: coord.lat * 1000 }),
+    fromOffsetToCoord: (offset: { x: number; y: number }) => ({
+      lat: () => offset.y / 1000,
+      lng: () => offset.x / 1000,
+    }),
+  };
+
+  const 지도를_띄운다 = async (draggable: boolean) => {
+    const releaseScript = heldScriptLoad();
+    const setOptions = vi.fn();
+    const setPosition = vi.fn();
+    const naverMaps = (window as unknown as { naver: { maps: Record<string, unknown> } }).naver.maps;
+    naverMaps.Map = vi.fn(() => ({
+      setCenter: vi.fn(), setZoom: vi.fn(), destroy: vi.fn(), setOptions, getProjection: () => 투영,
+    }));
+    naverMaps.Point = vi.fn(function (this: unknown, x: number, y: number) {
+      Object.assign(this as object, { x, y });
+    });
+    naverMaps.Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition, setIcon: vi.fn() }));
+    const onMarkerDragEnd = vi.fn();
+    const onMapClick = vi.fn();
+    const { container } = render(
+      <NaverMapSurface
+        camera={{ lat: 0.2, lng: 0.1, zoom: 18 }}
+        markers={[{ id: "draft", lat: 0.2, lng: 0.1, kind: "stop", draggable }]}
+        onMarkerDragEnd={onMarkerDragEnd}
+        onMapClick={onMapClick}
+      />,
+    );
+    await releaseScript();
+    await waitFor(() => expect(naverMaps.Marker).toHaveBeenCalled());
+    // 시험 SDK 는 아이콘 HTML 을 DOM 에 넣지 않는다 — 실제 SDK 가 하듯 지도 영역 안에 붙인다.
+    const surface = container.firstElementChild as HTMLElement;
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0 }) as DOMRect;
+    const pin = document.createElement("span");
+    pin.setAttribute("data-marker-id", "draft");
+    surface.appendChild(pin);
+    return { pin, surface, setOptions, setPosition, onMarkerDragEnd, onMapClick };
+  };
+
+  it("핀을 잡고 끌어 놓으면 잡은 자리만큼 어긋남 없이 새 좌표를 알린다", async () => {
+    const { pin, setOptions, setPosition, onMarkerDragEnd, onMapClick } = await 지도를_띄운다(true);
+
+    // 핀 끝(좌표 0.2, 0.1 → 화면 100, 200)보다 20px 위의 머리를 잡는다.
+    fireEvent.mouseDown(pin, { clientX: 100, clientY: 180, button: 0 });
+    fireEvent.mouseMove(window, { clientX: 130, clientY: 230 });
+    fireEvent.mouseUp(window, { clientX: 130, clientY: 230 });
+    fireEvent.click(pin, { clientX: 130, clientY: 230 });
+
+    // 머리를 잡은 채 (30, 50) 옮겼으니 끝도 (130, 250) — 잡은 자리를 좌표로 쓰면 20px 어긋난다.
+    expect(onMarkerDragEnd).toHaveBeenCalledWith("draft", { lat: 0.25, lng: 0.13 });
+    expect(setPosition).toHaveBeenCalled();
+    expect(setOptions).toHaveBeenCalledWith("draggable", false);
+    expect(setOptions).toHaveBeenLastCalledWith("draggable", true);
+    expect(onMapClick).not.toHaveBeenCalled();
+  });
+
+  it("끌 수 없는 마커는 잡아도 움직이지 않는다", async () => {
+    const { pin, onMarkerDragEnd } = await 지도를_띄운다(false);
+
+    fireEvent.mouseDown(pin, { clientX: 100, clientY: 180, button: 0 });
+    fireEvent.mouseMove(window, { clientX: 130, clientY: 230 });
+    fireEvent.mouseUp(window, { clientX: 130, clientY: 230 });
+
+    expect(onMarkerDragEnd).not.toHaveBeenCalled();
   });
 });

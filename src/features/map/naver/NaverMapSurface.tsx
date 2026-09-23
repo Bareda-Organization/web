@@ -21,6 +21,7 @@ export type NaverMapSurfaceProps = {
   // 버스 마커의 id 는 회차 id 문자열이다(세 화면이 그렇게 만든다).
   onMarkerClick?: (markerId: string) => void;
   onMapClick?: (point: { lat: number; lng: number }) => void;
+  onMarkerDragEnd?: (markerId: string, point: { lat: number; lng: number }) => void;
   /** 기본 `true` — 노선·버스 전체가 화면에 들어오게 배율을 맞춘다. `false` 면 `camera` 를 그대로 쓴다. */
   fitToContent?: boolean;
   onReady?: () => void;
@@ -34,6 +35,7 @@ export const NaverMapSurface = ({
   polylines = [],
   onMarkerClick,
   onMapClick,
+  onMarkerDragEnd,
   fitToContent = true,
   onReady,
   onAuthFailed,
@@ -179,12 +181,19 @@ export const NaverMapSurface = ({
   const onMarkerClickRef = useRef(onMarkerClick);
 
   const onMapClickRef = useRef(onMapClick);
+  const onMarkerDragEndRef = useRef(onMarkerDragEnd);
+  // 끌 수 있는 마커 id — 잡기 판정은 DOM 이벤트에서 하므로 최신 목록을 ref 로 읽는다.
+  const draggableIdsRef = useRef<Set<string>>(new Set());
+  // 끌기가 끝난 직후의 click 한 번은 삼킨다 — 놓는 순간 지도 클릭으로 읽혀 핀이 튀지 않게.
+  const suppressNextClickRef = useRef(false);
 
   const fitToContentRef = useRef(fitToContent);
   useEffect(() => {
     cameraRef.current = camera;
     onMarkerClickRef.current = onMarkerClick;
     onMapClickRef.current = onMapClick;
+    onMarkerDragEndRef.current = onMarkerDragEnd;
+    draggableIdsRef.current = new Set(markers.filter((marker) => marker.draggable).map((marker) => marker.id));
     fitToContentRef.current = fitToContent;
   });
 
@@ -222,6 +231,11 @@ export const NaverMapSurface = ({
     const container = containerRef.current;
     if (!container) return;
     const handleClick = (event: MouseEvent) => {
+      if (suppressNextClickRef.current) {
+        suppressNextClickRef.current = false;
+        event.stopPropagation();
+        return;
+      }
       const target = event.target as HTMLElement | null;
       const markerId = target?.closest?.("[data-marker-id]")?.getAttribute("data-marker-id");
       if (markerId) {
@@ -243,6 +257,62 @@ export const NaverMapSurface = ({
     };
     container.addEventListener("click", handleClick, true);
     return () => container.removeEventListener("click", handleClick, true);
+  }, []);
+
+  // 2026-09-23 사용자 지시 — `draggable` 마커를 마우스로 끌어 자리를 정한다. SDK 의 `draggable` 옵션은
+  // 마커 이벤트와 같은 경로라 이 아이콘 형태에서 믿을 수 없어(위 클릭 주석) 직접 옮긴다.
+  //
+  // **잡은 자리가 아니라 핀 끝을 옮긴다.** 핀 머리를 잡고 끄는데 마우스 좌표를 그대로 쓰면, 놓는 순간
+  // 핀이 머리 높이만큼 아래로 튄다. 잡을 때 "마우스 − 핀 끝" 을 재 두고 움직이는 내내 그만큼 뺀다.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handleMouseDown = (event: MouseEvent) => {
+      const markerId = (event.target as HTMLElement | null)
+        ?.closest?.("[data-marker-id]")
+        ?.getAttribute("data-marker-id");
+      const map = mapRef.current;
+      const naverMaps = window.naver?.maps;
+      const marker = markerId ? markerRefs.current.get(markerId) : undefined;
+      const tip = markerId ? displayedPositions.current.get(markerId) : undefined;
+      if (event.button !== 0 || !markerId || !draggableIdsRef.current.has(markerId) || !map || !naverMaps
+        || !marker || !tip) {
+        return;
+      }
+      // 지도 자신의 끌기(이동)가 같은 누름을 받지 않게 여기서 멈춘다.
+      event.stopPropagation();
+      event.preventDefault();
+      const bounds = container.getBoundingClientRect();
+      const projection = map.getProjection();
+      const tipOffset = projection.fromCoordToOffset(new naverMaps.LatLng(tip.lat, tip.lng));
+      const grab = { x: event.clientX - bounds.left - tipOffset.x, y: event.clientY - bounds.top - tipOffset.y };
+      const coordAt = (moveEvent: MouseEvent) => {
+        const offset = new naverMaps.Point(moveEvent.clientX - bounds.left - grab.x,
+          moveEvent.clientY - bounds.top - grab.y);
+        const coordinate = projection.fromOffsetToCoord(offset) as naver.maps.LatLng;
+        return { lat: coordinate.lat(), lng: coordinate.lng() };
+      };
+      map.setOptions("draggable", false);
+      let moved = false;
+      const handleMove = (moveEvent: MouseEvent) => {
+        moved = true;
+        const point = coordAt(moveEvent);
+        marker.setPosition(new naverMaps.LatLng(point.lat, point.lng));
+        displayedPositions.current.set(markerId, point);
+      };
+      const handleUp = (upEvent: MouseEvent) => {
+        window.removeEventListener("mousemove", handleMove);
+        window.removeEventListener("mouseup", handleUp);
+        map.setOptions("draggable", true);
+        if (!moved) return;
+        suppressNextClickRef.current = true;
+        onMarkerDragEndRef.current?.(markerId, coordAt(upEvent));
+      };
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+    };
+    container.addEventListener("mousedown", handleMouseDown, true);
+    return () => container.removeEventListener("mousedown", handleMouseDown, true);
   }, []);
 
   // 카메라 갱신 — 지도 생성 시 1회(`Ruling 322`) + 포커스 대상이 바뀔 때만 옮긴다.

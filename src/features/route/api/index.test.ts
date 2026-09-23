@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addRunWaypoint, getRouteDetail, getRoutePath, getRoutes, getRunRoute } from "./index";
+import { getRouteDetail, getRoutePath, getRoutes, getRunRoute, saveRouteStops, suggestStops } from "./index";
 
 // §5.9 RTE-01·09 · §5.15 RTE-10 — snake_case ↔ camelCase 변환 경계. toListItem 의
 // name 필드와 toStop 의 name 필드는 서로 다른 raw 타입(노선 이름 vs 정차지 이름)이지만
@@ -67,56 +67,50 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.busNo).toBe("1호차");
   });
 
-  // R14-T3 실측(curl, 보고서 §1) 대로 고친 형태 — stops_before·After 는 stop_id·lat·lng 가
-  // 없는 축약형(seq·stop_name·eta), reordered·removed 는 stop_id·stop_name 만 있는 참조형이다
-  // (PreviewStopResponse.java·StopRefResponse.java 확인). 옛 시험은 이 두 모양을 RouteStop 하나로
-  // 오인해 만든 값이라 실제 서버 응답과 달랐다.
-  it("addRunWaypoint 는 routePreview 의 stopsBefore·After·reordered·removed 를 각각 camelCase 로 바꾼다", async () => {
+  // 2026-09-23 — 저장은 한 요청이다. 새 항목은 stop_id 를 null 로 보내야 서버가 새로 만든다 —
+  // 키를 빼거나 0 을 보내면 "없는 승하차지" 로 읽혀 422 가 난다.
+  it("saveRouteStops 는 목록 순서 그대로 snake_case 로 보내고 새 항목의 stop_id 는 null 이다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockJsonResponse(200, {
+        success: true,
+        data: { id: 1, bus_id: 3, bus_no: "1호차", weekday: "mon", direction: "to_academy", name: null, active: true,
+          stops: [] },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveRouteStops(1, [
+      { stopId: 7, name: "정문", lat: 37.1, lng: 127.1 },
+      { name: "새 모퉁이", address: "서울시 새길 7", lat: 37.2, lng: 127.2 },
+    ]);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/staff/routes/1/stops");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body)).toEqual({
+      stops: [
+        { stop_id: 7, name: "정문", address: null, lat: 37.1, lng: 127.1 },
+        { stop_id: null, name: "새 모퉁이", address: "서울시 새길 7", lat: 37.2, lng: 127.2 },
+      ],
+    });
+  });
+
+  it("suggestStops 는 후보마다 display_name·nearby 를 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
         mockJsonResponse(200, {
           success: true,
-          data: {
-            waypoint_id: 5,
-            route_preview: {
-              stops_before: [{ seq: 1, stop_name: "정문", eta: null }],
-              stops_after: [{ seq: 1, stop_name: "정문", eta: "2026-09-19T04:36:01.446625Z" }],
-              reordered: [{ stop_id: 99, stop_name: "새 경유지" }],
-              removed: [],
-              road_path_before: [{ lat: 37.1, lng: 127.1 }],
-              road_path_after: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }],
-            },
-            est_time_before: null,
-            est_time_after: "2026-09-19T04:37:55.446625Z",
-            est_distance_before: null,
-            est_distance_after: 6.0,
-            est_duration_before: null,
-            est_duration_after: 12,
-            applied: false,
-          },
+          data: { items: [{ lat: 37.1, lng: 127.1, display_name: "서울시 목동서로 1",
+            nearby: [{ stop_id: 9, name: "앞", address: "목동서로 1", lat: 37.1, lng: 127.1, distance_m: 4 }] }] },
         }),
       ),
     );
 
-    const result = await addRunWaypoint(7, { label: "새 경유지", lat: 37.2, lng: 127.2, apply: false });
-
-    expect(result.waypointId).toBe(5);
-    expect(result.routePreview.stopsAfter).toEqual([
-      { seq: 1, stopName: "정문", eta: "2026-09-19T04:36:01.446625Z" },
+    expect(await suggestStops("목동서로")).toEqual([
+      { lat: 37.1, lng: 127.1, displayName: "서울시 목동서로 1",
+        nearby: [{ stopId: 9, name: "앞", address: "목동서로 1", lat: 37.1, lng: 127.1, distanceM: 4 }] },
     ]);
-    expect(result.routePreview.reordered).toEqual([{ stopId: 99, stopName: "새 경유지" }]);
-    expect(result.routePreview.removed).toEqual([]);
-    // `R18-C2` 목표 1·3 — §5.5 에서 밟은 함정(before/after 를 바꿔치기해도 "둘 다 비어있지 않다"만
-    // 보면 통과)을 여기서도 피한다: 실제 좌표·분 값을 정확히 대조한다(개수만 세지 않는다).
-    expect(result.routePreview.roadPathBefore).toEqual([{ lat: 37.1, lng: 127.1 }]);
-    expect(result.routePreview.roadPathAfter).toEqual([
-      { lat: 37.1, lng: 127.1 },
-      { lat: 37.2, lng: 127.2 },
-    ]);
-    expect(result.estDurationBefore).toBeNull();
-    expect(result.estDurationAfter).toBe(12);
-    expect(result.applied).toBe(false);
   });
 
   // R15-T2 목표 4 — road_path 좌표 배열과 fallback_used 를 camelCase 로 바꾼다. 좌표

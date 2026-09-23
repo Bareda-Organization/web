@@ -4,13 +4,13 @@ import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import {
-  addRunWaypoint,
   createRoute,
   deleteRoute,
   getRouteDetail,
   getRoutes,
   optimizeRoute,
-  removeRunWaypoint,
+  saveRouteStops,
+  suggestStops,
   updateRoute,
 } from "./index";
 
@@ -22,17 +22,10 @@ import {
 // 미리보기 플래그가 없어 호출 즉시 정차 순서를 커밋하는 비가역 동작이고(api/index.ts
 // 주석), 전용 노선이면 그 커밋이 삭제와 함께 사라져 안전하다.
 //
-// 확정 노선 경유 지점 지정(RTE-10, addRunWaypoint·removeRunWaypoint, §5.15) — R14-T3 전용
-// 회차(R8, V2__seed_data.sql)를 두어 실제로 돈다. R12 이월은 "재료가 없다" 로만 적었으나
-// 실측(curl, 보고서 §1)해 보니 진짜 막던 것은 재료 부재가 아니라 프런트 응답 변환 버그였다
-// — stops_before·after 는 stop_id·lat·lng 가 없는 축약형(seq·stop_name·eta)인데 기존
-// toWaypointResult 가 RouteStop(RTE-01 용, stop_id·name·lat·lng)으로 잘못 매핑했다(types/index.ts
-// ·api/index.ts 정정). R8 은 route id=1(1호차·to_academy)과 academy·bus·weekday·direction 이
-// 일치하고 confirmed_route 를 갖는 전용 회차라 R2(approval 계약 시험의 지문 안정성이 걸려 있다)를
-// 건드리지 않는다.
+// 확정 노선 경유 지점(RTE-10)의 계약 검사는 2026-09-23 편성 화면에서 그 기능을 뺄 때 함께 뺐다 —
+// 웹이 그 엔드포인트를 더는 부르지 않는다(백엔드 자체 검사는 남아 있다).
 //
-// 두 계약 검사 모두 실제 네이버 Directions API 를 부른다(WaypointCommandService 클래스
-// javadoc). 한 시험 안에서 짧게 이어 부르면(이 파일이 이미 optimizeRoute 로 1회 부른 뒤라
+// 최적화 계약 검사는 실제 네이버 Directions API 를 부를 수 있다. 한 시험 안에서 짧게 이어 부르면(이 파일이 이미 optimizeRoute 로 1회 부른 뒤라
 // 통틀어 3~4회째) 드물게 개별 호출이 실패하고, 그 실패가 `mapRoute` 서킷(resilience4j,
 // sliding-window=10·최소표본=5·임계 50%)의 재시도 3회와 겹쳐 열림으로 넘어가
 // `MAP_ROUTE_UNAVAILABLE`(503)로 확정된다 — R14-T3 실측(보고서 §2, 인프라성 불안정으로
@@ -156,10 +149,8 @@ describe("route api — 실서버 계약", () => {
     });
 
     try {
-      const optimized = await optimizeRoute(created.id, {
-        origin: { lat: 37.497942, lng: 127.027621 }, // academy_id=1 좌표
-        destination: { lat: 37.5695, lng: 126.981 }, // stop_id=4 좌표
-      });
+      // 기준점을 보내지 않는다 — 서버가 방향 규칙으로 정한다(2026-09-23).
+      const optimized = await retryOnMapRouteUnavailable(() => optimizeRoute(created.id));
       const orderedIds = optimized.stops.map((s) => s.stopId);
 
       expect(optimized.id).toBe(created.id);
@@ -172,56 +163,37 @@ describe("route api — 실서버 계약", () => {
     }
   });
 
-  // addRunWaypoint(RTE-10) — 미리보기(apply=false)는 확정 노선을 바꾸지 않는다. R8 명단(학생
-  // 2명, run_stop 2건)에 새 경유 지점 하나를 더하면 "후" 정차가 1곳 늘어야 한다.
-  it(
-    "addRunWaypoint 는 apply=false 면 미리보기만 계산하고 확정 노선을 바꾸지 않는다",
-    async ({ skip }) => {
-      if (!backendReachable) skip();
-      setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+  // 2026-09-23 — 저장 한 번에 수정·추가·순서가 반영된다. 전용 노선 위에서만(비가역).
+  // 수정 대상은 이 시험이 새로 만든 승하차지다 — 시드 승하차지를 고치면 다른 노선·학생 주소가 따라 바뀐다.
+  it("saveRouteStops 는 새 승하차지를 만들고 순서·이름 수정까지 한 번에 반영한다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+    const created = await createRoute({
+      busId: 2, weekday: "thu", direction: "to_academy", name: "실서버계약시험용-저장", active: true, stopIds: [1],
+    });
 
-      const result = await retryOnMapRouteUnavailable(() =>
-        addRunWaypoint(8, { label: "실서버계약시험-경유지", lat: 37.573, lng: 126.981, apply: false }),
-      );
+    try {
+      // 시드 승하차지 1번은 목록에서 빼기만 한다(좌표를 보내 옮기지 않는다). 새 항목은 매 실행 같은 자리라
+      // 두 번째 실행부터는 50m 병합으로 지난번 승하차지를 다시 쓴다 — 그래서 첫 저장의 이름은 보지 않는다.
+      const added = await saveRouteStops(created.id, [{ name: "계약시험 새 승하차지", lat: 37.402, lng: 126.402 }]);
+      expect(added.stops).toHaveLength(1);
+      const newStop = added.stops[0];
 
-      expect(result.waypointId).toBeGreaterThan(0);
-      expect(result.applied).toBe(false);
-      expect(result.routePreview.stopsBefore.length).toBe(2);
-      expect(result.routePreview.stopsAfter.length).toBe(3);
-    },
-    MAP_ROUTE_RETRY_DELAY_MS + 10_000,
-  );
+      const saved = await saveRouteStops(created.id, [
+        { stopId: newStop.stopId, name: "계약시험 이름 바꿈", lat: newStop.lat, lng: newStop.lng },
+      ]);
 
-  // addRunWaypoint→removeRunWaypoint(RTE-10) — apply=true 로 배포하면 확정 노선이 바뀌고
-  // (정차 3곳), 같은 경유 지점을 apply=true 로 제거하면 원래 정차 수(2곳)로 되돌아간다 —
-  // R8 을 다음 실행에도 같은 상태로 남겨 반복 실행이 가능하다.
-  it(
-    "addRunWaypoint 로 배포한 경유 지점을 removeRunWaypoint 로 제거하면 원래 정차 수로 돌아간다",
-    async ({ skip }) => {
-      if (!backendReachable) skip();
-      setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+      expect(saved.stops.map((stop) => [stop.stopId, stop.name])).toEqual([[newStop.stopId, "계약시험 이름 바꿈"]]);
+    } finally {
+      await deleteRoute(created.id);
+    }
+  });
 
-      const added = await retryOnMapRouteUnavailable(() =>
-        addRunWaypoint(8, { label: "실서버계약시험-경유지-배포", lat: 37.573, lng: 126.981, apply: true }),
-      );
-      // 이 시점부터는 반드시 되돌린다 — remove 호출이 단언에 닿기 전에 던지면(위 503 류) R8 이
-      // 3정차 상태로 남아 다음 실행의 "전 2곳" 전제를 깨뜨린다.
-      let removedOk = false;
-      try {
-        expect(added.applied).toBe(true);
-        expect(added.routePreview.stopsAfter.length).toBe(3);
+  it("suggestStops 는 후보 목록을 돌려주고 후보가 없으면 빈 목록이다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-        const removed = await retryOnMapRouteUnavailable(() => removeRunWaypoint(8, added.waypointId, true));
-        removedOk = true;
-
-        expect(removed.applied).toBe(true);
-        expect(removed.routePreview.stopsAfter.length).toBe(2);
-      } finally {
-        if (!removedOk) {
-          await removeRunWaypoint(8, added.waypointId, true).catch(() => {});
-        }
-      }
-    },
-    2 * MAP_ROUTE_RETRY_DELAY_MS + 10_000,
-  );
+    expect(Array.isArray(await suggestStops("서울특별시 양천구 목동"))).toBe(true);
+    expect(await suggestStops("ㅁㄴㅇㄹ없는주소")).toEqual([]);
+  });
 });

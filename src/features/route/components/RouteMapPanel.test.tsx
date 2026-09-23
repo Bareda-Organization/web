@@ -32,45 +32,87 @@ const path: RoutePathResponseTypes = {
   ],
 };
 
+type PanelProps = Parameters<typeof RouteMapPanel>[0];
+
+const 기본: PanelProps = {
+  routeId: 1,
+  direction: "to_academy",
+  refreshKey: 0,
+  stops: [
+    { key: "a", lat: 37.1, lng: 127.1 },
+    { key: "b", lat: 37.2, lng: 127.2 },
+  ],
+  editingKey: null,
+  pin: null,
+  focus: null,
+  dirty: false,
+  onPinMove: () => {},
+};
+
+const 마지막_props = () => mockMapSurface.mock.calls.at(-1)?.[0] as MapSurfaceProps;
+
 describe("RouteMapPanel — 편성 정차지·도로 경로 지도", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("마커 수는 정차지 수와 같고, 도로 경로는 MapSurface 의 polylines 로 전달된다", async () => {
+  it("정차지는 목록 순서대로 번호 핀, 도로 경로는 polylines, 양 끝은 시점·종점으로 넘긴다", async () => {
     mockGetRoutePath.mockResolvedValue(path);
 
-    render(<RouteMapPanel routeId={1} refreshKey={0} />);
+    render(<RouteMapPanel {...기본} />);
 
-    await waitFor(() => expect(mockMapSurface).toHaveBeenCalled());
-
-    const props = mockMapSurface.mock.calls.at(-1)?.[0];
-    expect(props?.markers).toHaveLength(path.stops.length);
-    expect(props?.markers.map((marker) => marker.id)).toEqual(["stop-1", "stop-2"]);
-    expect(props?.polylines).toEqual([
-      { id: "route-1", points: path.roadPath, kind: "route", approximate: false },
-    ]);
+    await waitFor(() => expect(마지막_props()?.polylines).toHaveLength(1));
+    const props = 마지막_props();
+    expect(props.markers.filter((marker) => marker.kind === "stop").map((marker) => [marker.id, marker.seq]))
+      .toEqual([["stop-a", 1], ["stop-b", 2]]);
+    expect(props.polylines).toEqual([{ id: "route-1", points: path.roadPath, kind: "route", approximate: false }]);
+    // 등원 — 시점은 첫 승차지, 종점은 도로 경로의 끝(학원).
+    expect(props.markers.find((marker) => marker.kind === "origin")).toMatchObject({ lat: 37.1, lng: 127.1 });
+    expect(props.markers.find((marker) => marker.kind === "destination")).toMatchObject({ lat: 37.2, lng: 127.2 });
   });
 
-  it("정차지가 없으면 아무것도 그리지 않는다", async () => {
+  it("하원은 학원이 시점, 마지막 하차지가 종점이다", async () => {
+    mockGetRoutePath.mockResolvedValue(path);
+
+    render(<RouteMapPanel {...기본} direction="from_academy" />);
+
+    await waitFor(() => expect(마지막_props()?.polylines).toHaveLength(1));
+    expect(마지막_props().markers.find((marker) => marker.kind === "origin")).toMatchObject({ lat: 37.1, lng: 127.1 });
+    expect(마지막_props().markers.find((marker) => marker.kind === "destination"))
+      .toMatchObject({ lat: 37.2, lng: 127.2 });
+  });
+
+  it("정차지가 없어도 지도는 그린다(첫 승하차지를 넣을 자리) — 시점·종점은 없다", async () => {
     mockGetRoutePath.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [] });
 
-    const { container } = render(<RouteMapPanel routeId={1} refreshKey={0} />);
+    render(<RouteMapPanel {...기본} stops={[]} />);
 
     await waitFor(() => expect(mockGetRoutePath).toHaveBeenCalled());
-    expect(mockMapSurface).not.toHaveBeenCalled();
-    expect(container).toBeEmptyDOMElement();
+    expect(마지막_props().markers).toEqual([]);
   });
 
-  // 정차지 추가·삭제·순서 저장 뒤 부모(RouteStopsPanel)가 refreshKey 를 올리면 이 패널이
-  // 경로를 다시 불러야 한다 — "완료 근거" 의 호출 계수 단언.
+  it("수정 중인 핀만 끌 수 있고, 그 핀을 놓으면 새 자리를 알린다", async () => {
+    mockGetRoutePath.mockResolvedValue(path);
+    const onPinMove = vi.fn();
+
+    render(<RouteMapPanel {...기본} editingKey="b" pin={{ lat: 37.2, lng: 127.2 }} onPinMove={onPinMove} />);
+
+    await waitFor(() => expect(마지막_props()).toBeDefined());
+    expect(마지막_props().markers.filter((marker) => marker.draggable).map((marker) => marker.id)).toEqual(["stop-b"]);
+    마지막_props().onMarkerDragEnd?.("stop-a", { lat: 1, lng: 1 });
+    마지막_props().onMarkerDragEnd?.("stop-b", { lat: 37.25, lng: 127.25 });
+    expect(onPinMove).toHaveBeenCalledTimes(1);
+    expect(onPinMove).toHaveBeenCalledWith({ lat: 37.25, lng: 127.25 });
+  });
+
+  // 저장·최적화 뒤 부모(RouteStopsPanel)가 refreshKey 를 올리면 이 패널이 경로를 다시 불러야 한다.
   it("refreshKey 가 바뀌면 경로를 다시 불러온다", async () => {
     mockGetRoutePath.mockResolvedValue(path);
 
-    const { rerender } = render(<RouteMapPanel routeId={1} refreshKey={0} />);
+    const { rerender } = render(<RouteMapPanel {...기본} />);
     await waitFor(() => expect(mockGetRoutePath).toHaveBeenCalledTimes(1));
 
-    rerender(<RouteMapPanel routeId={1} refreshKey={1} />);
+    rerender(<RouteMapPanel {...기본} refreshKey={1} />);
     await waitFor(() => expect(mockGetRoutePath).toHaveBeenCalledTimes(2));
   });
 });

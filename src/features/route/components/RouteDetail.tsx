@@ -10,7 +10,6 @@ import { RouteDeleteDialog } from "./RouteDeleteDialog";
 import { StyledRouteDetailActions, StyledRouteDetailLayout } from "./RouteDetail.styled";
 import { RouteForm } from "./RouteForm";
 import { RouteStopsPanel } from "./RouteStopsPanel";
-import { RunWaypointPanel } from "./RunWaypointPanel";
 
 const WEEKDAY_LABEL: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
@@ -19,10 +18,12 @@ type RouteDetailProps = {
   routeId: number;
 };
 
-// 화면 4 — 고정 노선 편성 · 정차 순서 최적화(§5.9, A-08) + 확정 노선 경유 지점 지정
-// (§5.15, A-15). 지시서가 이 둘을 화면 하나로 묶어 두었고(FEATURE_SPEC A-15 정의 재확인,
-// §1 판단 근거), 편집 폼(RouteForm)·정차 관리(RouteStopsPanel)·경유 지점(RunWaypointPanel)
-// 셋을 이 상세 화면에서 함께 구성한다.
+// 화면 4 — 고정 노선 편성 · 정차 순서 최적화(§5.9, A-08). 편집 폼(RouteForm)·승하차지 편성
+// (RouteStopsPanel)을 이 상세 화면에서 구성한다.
+//
+// 2026-09-23 사용자 지시 — 회차 경유 지점 지정(§5.15, A-15)을 이 화면에서 뺐다. 이 화면은 이미 한
+// 노선으로 들어와서 작업하는 곳이라 "회차를 고르는" 칸이 맞지 않고, 필요한 것은 그 노선의 승하차지를
+// 직접 고치는 것이었다(승하차지 추가·수정·삭제 — RouteStopsPanel).
 export const RouteDetail = ({ routeId }: RouteDetailProps) => {
   const router = useRouter();
   const [route, setRoute] = useState<RouteDetailResponseTypes | null>(null);
@@ -74,9 +75,7 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <RouteStopsPanel routeId={routeId} />
-
-      <RunWaypointPanel busId={route.busId} direction={route.direction} />
+      <RouteStopsPanel routeId={routeId} direction={route.direction} />
 
       {editing ? (
         <RouteForm

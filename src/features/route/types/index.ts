@@ -50,70 +50,6 @@ export type RouteUpsertRequestTypes = {
 
 export type LatLng = { lat: number; lng: number };
 
-// POST /staff/routes/{id}/optimize 요청 — origin·destination 둘 다 필수(Ruling 184,
-// academy·route 어느 쪽에도 좌표 컬럼이 없어 호출자가 넘기는 것이 유일한 선택지).
-export type RouteOptimizeRequestTypes = {
-  origin: LatLng;
-  destination: LatLng;
-};
-
-// §5.5 상세 정차지 한 자리 — RouteStop(고정 노선 편성)과 달리 stop_id·lat·lng 가 없다(정차
-// 순서·이름·도착예정만 있는 축약형, PreviewStopResponse.java 확인). eta 는 "전" 목록에서는
-// 기록된 도착 실측이 없으면 null 이다(§5.15, R14-T3 실측 — curl 로 직접 확인, 보고서 §1).
-export type WaypointPreviewStop = {
-  seq: number;
-  stopName: string;
-  eta: string | null;
-};
-
-// reordered·removed 한 자리 — 무엇이 바뀌었는지만 가리킨다(StopRefResponse.java, seq·eta 는
-// stopsBefore·After 쪽에 이미 있다).
-export type StopRef = {
-  stopId: number;
-  stopName: string;
-};
-
-// §5.15 POST/DELETE /staff/runs/{runId}/waypoints 공용 응답 — 미리보기·배포 결과 대조.
-// roadPathBefore·roadPathAfter(`R18-C2`, Ruling 319) — §5.5 상세와 같은 이유로 §5.15 도
-// 지도용 전/후 도로 좌표를 싣는다(API_SPEC §5.15 응답).
-export type WaypointRoutePreview = {
-  stopsBefore: WaypointPreviewStop[];
-  stopsAfter: WaypointPreviewStop[];
-  reordered: StopRef[];
-  removed: StopRef[];
-  roadPathBefore: LatLng[];
-  roadPathAfter: LatLng[];
-};
-
-// estTimeBefore·After 는 지속시간이 아니라 마지막 정차지 도착예정 시각(ISO, WaypointResponse.java
-// 의 OffsetDateTime)이다 — R14-T3 실측 전에는 curl 로 확인하지 못해 number 로 잘못 적혀 있었다
-// (보고서 §1). "전" 쪽은 기록된 도착 실측이 없으면 null.
-// estDurationBefore·After(분, `R18-C2`, Ruling 318) — 노선 전체 소요. §5.5 상세와 같은 값 출처
-// (route_version.est_duration_min · 재최적화 계산 결과)를 그대로 싣는다.
-export type WaypointResultResponseTypes = {
-  waypointId: number;
-  routePreview: WaypointRoutePreview;
-  estTimeBefore: string | null;
-  estTimeAfter: string | null;
-  estDistanceBefore: number | null;
-  estDistanceAfter: number | null;
-  estDurationBefore: number | null;
-  estDurationAfter: number | null;
-  applied: boolean;
-};
-
-// POST /staff/runs/{runId}/waypoints 요청 — address 또는 lat·lng 둘 중 하나는 필수.
-export type WaypointCreateRequestTypes = {
-  address?: string;
-  lat?: number;
-  lng?: number;
-  label: string;
-  note?: string;
-  // 설 자리(1부터, 2026-09-22). 생략하면 맨 뒤 — 서버 기본값과 같다.
-  seq?: number;
-  apply: boolean;
-};
-
 // GET /staff/runs/{runId}/route(§5.19, RTE-02) — R15-T2 는 지도에 그릴 도로 경로 좌표를
 // 쓰고, R19 목표 1 이 정차지 마커용 stops 를 더한다(R15-T1 이 같이 만드는 고정 계약,
 // `IMPLEMENTATION_PLAN.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
@@ -140,7 +76,7 @@ export type RoutePathResponseTypes = {
 };
 
 // §5.9 주소 검색(2026-09-22) — **아직 아무것도 만들지 않은** 후보 한 지점.
-export type StopSearchResultTypes = {
+export type StopSuggestionTypes = {
   lat: number;
   lng: number;
   displayName: string;
@@ -154,4 +90,13 @@ export type NearbyStopTypes = {
   lat: number;
   lng: number;
   distanceM: number;
+};
+
+// PUT /staff/routes/{id}/stops 한 항목(2026-09-23) — `stopId` 가 없으면 새로 만든다. 배열 순서가 정차 순서다.
+export type RouteStopSaveItemTypes = {
+  stopId?: number;
+  name: string;
+  address?: string;
+  lat: number;
+  lng: number;
 };

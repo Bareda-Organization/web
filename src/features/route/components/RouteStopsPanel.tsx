@@ -2,119 +2,197 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Card, Input } from "@/shared/ui";
-import { addRouteStop, getRouteDetail, optimizeRoute, searchStopAddress, updateRoute } from "../api";
-import type { RouteStop, StopSearchResultTypes } from "../types";
+import { AlertBanner, Badge, Button, EmptyState, IconButton } from "@/shared/ui";
+import { getRouteDetail, optimizeRoute, saveRouteStops } from "../api";
+import type { NearbyStopTypes, RouteStop, RunDirection, StopSuggestionTypes } from "../types";
 import { RouteMapPanel } from "./RouteMapPanel";
 import { RouteOptimizeConfirmDialog } from "./RouteOptimizeConfirmDialog";
+import { StopForm } from "./StopForm";
 import {
-  StyledAddStopRow,
-  StyledOptimizeRow,
-  StyledStopActions,
-  StyledStopRow,
-  StyledStopSeq,
-  StyledStopsPanel,
+  StyledEditor,
+  StyledListColumn,
+  StyledListHeader,
+  StyledListHeaderActions,
+  StyledListTitle,
+  StyledSaveBar,
+  StyledSaveStatus,
   StyledStopList,
   StyledStopName,
-  StyledDraftBox,
-  StyledDraftHint,
-  StyledDraftActions,
+  StyledStopRow,
+  StyledStopSeq,
+  StyledStopActions,
+  StyledStopMain,
+  StyledMapColumn,
 } from "./RouteStopsPanel.styled";
 
-// 백엔드 `StopProximity.MERGE_RADIUS_METERS` 와 같은 값 — 이 안이면 반영해도 기존 승하차지에 붙는다.
-const STOP_MERGE_RADIUS_METERS = 50;
+type Point = { lat: number; lng: number };
+
+/** 목록의 한 줄 — `stopId` 가 없으면 저장할 때 새로 만든다. `key` 는 화면 안에서만 쓰는 이름표다. */
+type EditableStop = Point & { key: string; stopId?: number; name: string; address?: string };
+
+type StopFormState = {
+  mode: "add" | "edit";
+  /** 수정 중인 줄 — 추가면 없다. */
+  key?: string;
+  name: string;
+  address?: string;
+  pin: Point | null;
+  /** 옮긴 거리를 잴 기준(고른 후보 · 원래 자리). */
+  anchor: Point | null;
+  /** 카메라를 옮길 자리 — 핀을 끌어도 바뀌지 않는다. */
+  focus: Point | null;
+  nearby: NearbyStopTypes[];
+};
 
 type RouteStopsPanelProps = {
   routeId: number;
+  direction: RunDirection;
 };
 
-// §5.9 정차 순서 관리 — GET 상세의 stops[] 를 그대로 편집한다. stop_id 를 고를 카탈로그
-// 조회 엔드포인트가 사양에 없어(§2 확신 없는 지점) "정차지 ID 로 추가"만 제공한다 —
-// 이름·좌표는 서버가 그 ID 로 채워 주므로 저장 후 다시 불러와야 화면에 반영된다.
-export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
-  const [stops, setStops] = useState<RouteStop[]>([]);
+const fromServer = (stops: RouteStop[]): EditableStop[] =>
+  stops.map((stop) => ({ key: `stop-${stop.stopId}`, stopId: stop.stopId, name: stop.name, lat: stop.lat, lng: stop.lng }));
+
+// 무엇이 바뀌었는지 — 줄마다 표시하고 저장 버튼 옆에 몇 건인지 알린다.
+const isEdited = (stop: EditableStop, saved: EditableStop[]): boolean => {
+  const original = saved.find((candidate) => candidate.stopId === stop.stopId);
+  return !!original && (original.name !== stop.name || original.lat !== stop.lat || original.lng !== stop.lng);
+};
+
+const countChanges = (stops: EditableStop[], saved: EditableStop[]): number => {
+  const added = stops.filter((stop) => stop.stopId === undefined).length;
+  const kept = stops.filter((stop) => stop.stopId !== undefined);
+  const removed = saved.filter((stop) => !kept.some((candidate) => candidate.stopId === stop.stopId)).length;
+  const edited = kept.filter((stop) => isEdited(stop, saved)).length;
+  const keptOrder = kept.map((stop) => stop.stopId);
+  const savedOrder = saved.map((stop) => stop.stopId).filter((stopId) => keptOrder.includes(stopId));
+  const reordered = keptOrder.some((stopId, index) => stopId !== savedOrder[index]) ? 1 : 0;
+  return added + removed + edited + reordered;
+};
+
+/**
+ * 고정 노선의 승하차지 편성(2026-09-23 사용자 지시) — 목록은 왼쪽 좁은 칸, 지도는 오른쪽(지시 1).
+ *
+ * <p><b>저장 버튼을 누르기 전까지 서버는 아무것도 모른다</b>(지시 7). 추가·수정·삭제·순서는 이 화면의 목록만
+ * 바꾸고, 저장이 `PUT /staff/routes/{id}/stops` 한 요청으로 보낸다 — 하나라도 거부되면 서버는 아무것도 안
+ * 바꾸므로(백엔드 검증) 반쯤 저장된 노선이 남지 않는다.
+ */
+export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) => {
+  const [saved, setSaved] = useState<EditableStop[]>([]);
+  const [stops, setStops] = useState<EditableStop[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [origin, setOrigin] = useState({ lat: "", lng: "" });
-  const [destination, setDestination] = useState({ lat: "", lng: "" });
+  const [form, setForm] = useState<StopFormState | null>(null);
   const [confirmingOptimize, setConfirmingOptimize] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
-  // 정차지 추가·삭제·순서 저장 뒤 RouteMapPanel 이 경로를 다시 불러오게 하는 트리거 —
-  // load() 가 서버 상태를 새로 받아올 때마다 올려 지도도 같이 갱신한다.
+  // 저장·최적화 뒤 지도가 경로를 다시 불러오게 하는 트리거.
   const [pathVersion, setPathVersion] = useState(0);
-  // 2026-09-22 사용자 지시 — 주소 검색 → 위치 확인 → (필요시) 수정 → 반영.
-  // `draft` 는 **아직 서버에 없는** 지점이다. 반영 버튼을 누르기 전까지 노선도 승하차지도 안 바뀐다.
-  const [address, setAddress] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [search, setSearch] = useState<StopSearchResultTypes | null>(null);
-  const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null);
-  const [draftName, setDraftName] = useState("");
-  const [adding, setAdding] = useState(false);
-  // 드래그로 순서 바꾸기(2026-09-22 사용자 지시) — 끌고 있는 행의 위치. 라이브러리를 더하지 않고
-  // HTML5 드래그 이벤트만 쓴다. 위·아래 버튼은 그대로 둔다 — 키보드만 쓰는 사용자는 끌 수 없다.
+  // 드래그로 순서 바꾸기 — 라이브러리 없이 HTML5 드래그만 쓴다. 위·아래 버튼은 키보드 사용자를 위해 둔다.
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [nextKey, setNextKey] = useState(0);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const detail = await getRouteDetail(routeId);
-      setStops(detail.stops);
-      setError(null);
-      setPathVersion((version) => version + 1);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "정차 순서를 불러오지 못했습니다");
-    } finally {
-      setLoading(false);
-    }
+  const changes = countChanges(stops, saved);
+  const dirty = changes > 0;
+
+  const adopt = (serverStops: RouteStop[]) => {
+    const next = fromServer(serverStops);
+    setSaved(next);
+    setStops(next);
+    setForm(null);
+    setPathVersion((version) => version + 1);
   };
 
   useEffect(() => {
     (async () => {
-      await load();
+      try {
+        adopt((await getRouteDetail(routeId)).stops);
+        setError(null);
+      } catch (cause) {
+        setError(cause instanceof ApiError ? cause.message : "승하차지를 불러오지 못했습니다");
+      } finally {
+        setLoading(false);
+      }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
 
-  const move = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= stops.length) return;
+  // 저장하지 않은 채 창을 닫으면 편집이 사라진다 — 브라우저가 한 번 묻게 한다.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  const moveTo = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= stops.length) return;
     const next = [...stops];
-    [next[index], next[target]] = [next[target], next[index]];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
     setStops(next);
   };
 
-  const remove = (index: number) => {
-    setStops(stops.filter((_, i) => i !== index));
+  const remove = (key: string) => {
+    setStops(stops.filter((stop) => stop.key !== key));
+    if (form?.key === key) setForm(null);
+  };
+
+  const startAdd = () =>
+    setForm({ mode: "add", name: "", pin: null, anchor: null, focus: null, nearby: [] });
+
+  const startEdit = (stop: EditableStop) =>
+    setForm({ mode: "edit", key: stop.key, name: stop.name, address: stop.address, pin: stop, anchor: stop, focus: stop,
+      nearby: [] });
+
+  const pickSuggestion = (suggestion: StopSuggestionTypes) => {
+    if (!form) return;
+    const point = { lat: suggestion.lat, lng: suggestion.lng };
+    setForm({
+      ...form,
+      // 추가는 후보 주소를 표시명 기본값으로 쓴다. 수정은 관계자가 붙인 이름을 지우지 않는다.
+      name: form.mode === "add" || form.name.trim().length === 0 ? suggestion.displayName : form.name,
+      address: suggestion.displayName,
+      pin: point,
+      anchor: point,
+      focus: point,
+      nearby: suggestion.nearby,
+    });
+  };
+
+  const applyForm = () => {
+    if (!form?.pin) return;
+    const values = { name: form.name.trim(), address: form.address, lat: form.pin.lat, lng: form.pin.lng };
+    if (form.mode === "add") {
+      setStops([...stops, { key: `new-${nextKey}`, ...values }]);
+      setNextKey(nextKey + 1);
+    } else {
+      setStops(stops.map((stop) => (stop.key === form.key ? { ...stop, ...values } : stop)));
+    }
+    setForm(null);
   };
 
   const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
-      await updateRoute(routeId, { stopIds: stops.map((stop) => stop.stopId) });
-      await load();
+      const detail = await saveRouteStops(
+        routeId,
+        stops.map((stop) => ({ stopId: stop.stopId, name: stop.name, address: stop.address, lat: stop.lat, lng: stop.lng })),
+      );
+      adopt(detail.stops);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "정차 순서 저장에 실패했습니다");
+      // 편집한 목록은 그대로 둔다 — 고쳐서 다시 저장할 수 있어야 한다(서버는 아무것도 안 바꿨다).
+      setError(cause instanceof ApiError ? cause.message : "저장하지 못했습니다");
     } finally {
       setSaving(false);
     }
   };
 
-  const canOptimize =
-    origin.lat.trim() && origin.lng.trim() && destination.lat.trim() && destination.lng.trim();
-
   const handleOptimizeConfirm = async () => {
     setOptimizing(true);
     setError(null);
     try {
-      const detail = await optimizeRoute(routeId, {
-        origin: { lat: Number(origin.lat), lng: Number(origin.lng) },
-        destination: { lat: Number(destination.lat), lng: Number(destination.lng) },
-      });
-      setStops(detail.stops);
+      adopt((await optimizeRoute(routeId)).stops);
       setConfirmingOptimize(false);
-      setPathVersion((version) => version + 1);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "최적화에 실패했습니다");
     } finally {
@@ -122,201 +200,113 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
     }
   };
 
-  const moveTo = (from: number, to: number) => {
-    if (from === to) return;
-    setStops((previous) => {
-      const next = [...previous];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
-  };
-
-  const handleSearch = async () => {
-    if (address.trim().length === 0) return;
-    setSearching(true);
-    setError(null);
-    try {
-      const result = await searchStopAddress(address.trim());
-      setSearch(result);
-      setDraft({ lat: result.lat, lng: result.lng });
-      setDraftName(result.displayName);
-    } catch (cause) {
-      setSearch(null);
-      setDraft(null);
-      setError(cause instanceof ApiError ? cause.message : "주소를 찾지 못했습니다");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleAddSearched = async () => {
-    if (!draft || draftName.trim().length === 0) return;
-    setAdding(true);
-    setError(null);
-    try {
-      const detail = await addRouteStop(routeId, {
-        lat: draft.lat,
-        lng: draft.lng,
-        name: draftName.trim(),
-        address: search?.displayName,
-      });
-      setStops(detail.stops);
-      setSearch(null);
-      setDraft(null);
-      setAddress("");
-      setPathVersion((version) => version + 1);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "정차지를 추가하지 못했습니다");
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  // 두 좌표 사이 거리(m) — 평면 근사다. 판정 범위가 수십~수백 m 라 곡률 오차가 보이지 않는다
-  // (백엔드 `StopProximity.metersBetween` 과 같은 규칙·같은 상수).
-  const metersBetween = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number =>
-    Math.round(
-      Math.hypot((a.lat - b.lat) * 111_320, (a.lng - b.lng) * 111_320 * Math.cos((a.lat * Math.PI) / 180)),
-    );
-
-  // 검색 결과에서 얼마나 옮겼는지 — 관계자가 "너무 멀리 찍었나" 를 스스로 판단할 유일한 값이다.
-  const movedMeters = search && draft ? metersBetween(draft, search) : 0;
-
-  // ⚠ 거리를 **옮긴 지점 기준으로 다시 잰다.** 서버가 준 `distance_m` 은 검색 지점 기준이라,
-  // 중복을 피하려고 핀을 옮긴 뒤에도 경고가 그대로 남아 관계자의 판단을 흐린다.
-  // 임계는 백엔드 근접 병합과 같은 50m 다 — 이 안이면 반영해도 새 승하차지가 아니라 기존 것에 붙는다.
-  const nearbyFromDraft =
-    search && draft
-      ? search.nearby
-          .map((stop) => ({ ...stop, distanceM: metersBetween(draft, stop) }))
-          .filter((stop) => stop.distanceM <= STOP_MERGE_RADIUS_METERS)
-          .sort((left, right) => left.distanceM - right.distanceM)
-      : [];
-
   if (loading) return <p>불러오는 중...</p>;
 
   return (
-    <StyledStopsPanel>
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
-
-      <RouteMapPanel
-        routeId={routeId}
-        refreshKey={pathVersion}
-        draft={draft}
-        onMapClick={search ? (point) => setDraft(point) : undefined}
-      />
-
-      <Card padding={16}>
-        {stops.length === 0 ? (
-          <p>정차지가 없습니다.</p>
-        ) : (
-          <StyledStopList>
-          {stops.map((stop, index) => (
-            <StyledStopRow
-              key={`${stop.stopId}-${index}`}
-              role="listitem"
-              draggable
-              $dragging={draggingIndex === index}
-              onDragStart={() => setDraggingIndex(index)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => {
-                if (draggingIndex !== null) moveTo(draggingIndex, index);
-                setDraggingIndex(null);
-              }}
-              onDragEnd={() => setDraggingIndex(null)}
+    <StyledEditor>
+      <StyledListColumn>
+        <StyledListHeader>
+          <StyledListTitle>
+            승하차지 <strong>{stops.length}</strong>곳
+          </StyledListTitle>
+          <StyledListHeaderActions>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="sparkles"
+              onClick={() => setConfirmingOptimize(true)}
+              disabled={dirty || stops.length < 2 || form !== null}
+              title={dirty ? "저장한 뒤에 최적화할 수 있습니다" : undefined}
             >
-              <StyledStopSeq>{index + 1}</StyledStopSeq>
-              <StyledStopName>{stop.name}</StyledStopName>
-              <StyledStopActions>
-                <Button variant="ghost" size="sm" icon="arrow-up" onClick={() => move(index, -1)} disabled={index === 0} />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon="arrow-down"
-                  onClick={() => move(index, 1)}
-                  disabled={index === stops.length - 1}
-                />
-                <Button variant="ghost" size="sm" icon="x" onClick={() => remove(index)} />
-              </StyledStopActions>
-            </StyledStopRow>
-          ))}
+              순서 최적화
+            </Button>
+            <Button variant="soft" size="sm" icon="plus" onClick={startAdd} disabled={form !== null}>
+              승하차지 추가
+            </Button>
+          </StyledListHeaderActions>
+        </StyledListHeader>
+
+        {error ? <AlertBanner tone="missed" title={error} /> : null}
+
+        {form ? (
+          <StopForm
+            mode={form.mode}
+            name={form.name}
+            onNameChange={(name) => setForm({ ...form, name })}
+            pin={form.pin}
+            anchor={form.anchor}
+            nearby={form.nearby}
+            onPick={pickSuggestion}
+            onCancel={() => setForm(null)}
+            onApply={applyForm}
+          />
+        ) : null}
+
+        {stops.length === 0 ? (
+          <EmptyState icon="map-pin" title="승하차지가 없습니다">
+            &quot;승하차지 추가&quot; 로 주소를 검색해 넣으세요
+          </EmptyState>
+        ) : (
+          <StyledStopList role="list" aria-label="승하차지 목록">
+            {stops.map((stop, index) => (
+              <StyledStopRow
+                key={stop.key}
+                role="listitem"
+                draggable={form === null}
+                $dragging={draggingIndex === index}
+                $selected={form?.key === stop.key}
+                onDragStart={() => setDraggingIndex(index)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => {
+                  if (draggingIndex !== null) moveTo(draggingIndex, index);
+                  setDraggingIndex(null);
+                }}
+                onDragEnd={() => setDraggingIndex(null)}
+              >
+                <StyledStopSeq>{index + 1}</StyledStopSeq>
+                <StyledStopMain>
+                  <StyledStopName>{stop.name}</StyledStopName>
+                  {stop.stopId === undefined ? <Badge tone="added">새로 추가</Badge> : null}
+                  {isEdited(stop, saved) ? <Badge tone="amber">수정됨</Badge> : null}
+                </StyledStopMain>
+                <StyledStopActions>
+                  <IconButton icon="arrow-up" label={`${stop.name} 위로`} size={28} onClick={() => moveTo(index, index - 1)}
+                    disabled={index === 0} />
+                  <IconButton icon="arrow-down" label={`${stop.name} 아래로`} size={28} onClick={() => moveTo(index, index + 1)}
+                    disabled={index === stops.length - 1} />
+                  <IconButton icon="pencil" label={`${stop.name} 수정`} size={28} onClick={() => startEdit(stop)}
+                    disabled={form !== null} />
+                  <IconButton icon="trash-2" label={`${stop.name} 삭제`} size={28} onClick={() => remove(stop.key)} />
+                </StyledStopActions>
+              </StyledStopRow>
+            ))}
           </StyledStopList>
         )}
-      </Card>
 
-      <Card padding={16}>
-        <StyledAddStopRow>
-          <Input
-            label="도로명 주소로 검색"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            placeholder="예) 서울시 중앙로 20"
-          />
-          <Button variant="secondary" onClick={handleSearch} disabled={searching}>
-            {searching ? "검색 중..." : "검색"}
+        <StyledSaveBar $dirty={dirty}>
+          <StyledSaveStatus>{dirty ? `저장하지 않은 변경 ${changes}건` : "저장된 상태입니다"}</StyledSaveStatus>
+          <Button variant="ghost" size="sm" onClick={() => { setStops(saved); setForm(null); }} disabled={!dirty || saving}>
+            되돌리기
           </Button>
-        </StyledAddStopRow>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={!dirty || saving || form !== null}>
+            {saving ? "저장 중..." : "저장"}
+          </Button>
+        </StyledSaveBar>
+      </StyledListColumn>
 
-        {search && draft ? (
-          <StyledDraftBox>
-            <p>{search.displayName}</p>
-            <StyledDraftHint>
-              지도를 눌러 실제로 버스가 서는 지점(블록 모퉁이·도로가)으로 옮길 수 있습니다
-              {movedMeters > 0 ? ` · 검색 위치에서 약 ${movedMeters}m 옮김` : ""}
-            </StyledDraftHint>
-            {nearbyFromDraft.length > 0 ? (
-              <AlertBanner
-                tone="moving"
-                title={`이 자리에 이미 "${nearbyFromDraft[0].name}" 이(가) 있습니다 (${nearbyFromDraft[0].distanceM}m)`}
-              />
-            ) : null}
-            <Input
-              label="표시명"
-              value={draftName}
-              onChange={(event) => setDraftName(event.target.value)}
-            />
-            <StyledDraftActions>
-              <Button variant="ghost" onClick={() => { setSearch(null); setDraft(null); }}>
-                취소
-              </Button>
-              <Button variant="primary" onClick={handleAddSearched} disabled={adding}>
-                {adding ? "추가 중..." : "이 위치로 추가"}
-              </Button>
-            </StyledDraftActions>
-          </StyledDraftBox>
-        ) : null}
-      </Card>
-
-      <Button variant="primary" onClick={handleSave} disabled={saving}>
-        {saving ? "저장 중..." : "정차 순서 저장"}
-      </Button>
-
-      <StyledOptimizeRow>
-        <Input
-          label="출발 기준점 위도"
-          value={origin.lat}
-          onChange={(event) => setOrigin({ ...origin, lat: event.target.value })}
+      <StyledMapColumn>
+        <RouteMapPanel
+          routeId={routeId}
+          direction={direction}
+          refreshKey={pathVersion}
+          stops={stops}
+          editingKey={form?.mode === "edit" ? (form.key ?? null) : null}
+          pin={form?.pin ?? null}
+          focus={form?.focus ?? null}
+          dirty={dirty}
+          onPinMove={(point) => form && setForm({ ...form, pin: point })}
         />
-        <Input
-          label="출발 기준점 경도"
-          value={origin.lng}
-          onChange={(event) => setOrigin({ ...origin, lng: event.target.value })}
-        />
-        <Input
-          label="도착 기준점 위도"
-          value={destination.lat}
-          onChange={(event) => setDestination({ ...destination, lat: event.target.value })}
-        />
-        <Input
-          label="도착 기준점 경도"
-          value={destination.lng}
-          onChange={(event) => setDestination({ ...destination, lng: event.target.value })}
-        />
-        <Button variant="secondary" disabled={!canOptimize} onClick={() => setConfirmingOptimize(true)}>
-          최적화 실행
-        </Button>
-      </StyledOptimizeRow>
+      </StyledMapColumn>
 
       {confirmingOptimize ? (
         <RouteOptimizeConfirmDialog
@@ -325,6 +315,6 @@ export const RouteStopsPanel = ({ routeId }: RouteStopsPanelProps) => {
           submitting={optimizing}
         />
       ) : null}
-    </StyledStopsPanel>
+    </StyledEditor>
   );
 };
