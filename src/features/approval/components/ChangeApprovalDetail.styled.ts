@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT_PX } from "@/features/map/mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "@/features/map/mapSurfaceSize";
 
 export const StyledDetailLayout = styled.div`
   display: flex;
@@ -55,7 +55,7 @@ export const StyledActionRow = styled.div`
 
 // `R18-C` 목표 4(Ruling 319) — 전후 지도를 좌우로 나란히. 한 지도에 겹치지 않는다.
 export const StyledMapSurface = styled.div`
-  height: ${MAP_SURFACE_HEIGHT_PX}px;
+  height: ${MAP_SURFACE_HEIGHT};
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-default);

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MAP_SURFACE_HEIGHT_PX } from "./mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "./mapSurfaceSize";
 
 // 2026-09-22 사용자 지시 — "모든 지도 크기는 통일". 화면마다 styled 파일에 숫자를 적어 두면
 // 다음 화면이 또 제 값을 적어 갈린다(실제로 480 과 320 으로 갈려 있었다). 상수 한 곳만 쓰게 고정한다.
@@ -30,7 +30,11 @@ describe("지도 높이는 한 곳에서만 정한다", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("상수는 세 지도 화면이 쓰던 큰 쪽(480)이다 — 낮은 쪽은 노선 전체를 담을 때 잘렸다", () => {
-    expect(MAP_SURFACE_HEIGHT_PX).toBe(480);
+  // 2026-09-23 사용자 지시 — "화면 절반 이상은 채워줘. 모든 지도에 해당". 고정 픽셀이면 큰 모니터에서
+  // 지도가 화면의 1/3 에 그친다. 화면 높이 비율로 정하되, 작은 창에서 노선이 잘리지 않게 480px 아래로는 안 내린다.
+  it("화면 높이의 절반 이상이고, 작은 창에서도 480px 아래로 내려가지 않는다", () => {
+    const viewportShare = Number(/(\d+)vh/.exec(MAP_SURFACE_HEIGHT)?.[1]);
+    expect(viewportShare).toBeGreaterThan(50);
+    expect(MAP_SURFACE_HEIGHT).toMatch(/^max\(480px,\s*\d+vh\)$/);
   });
 });

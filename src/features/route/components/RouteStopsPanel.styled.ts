@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT_PX } from "@/features/map/mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "@/features/map/mapSurfaceSize";
 
 // 목록 칸의 폭 — 이름·배지·버튼 네 개가 한 줄에 들어가는 만큼만(지시 1: 가로로 길 필요 없다).
 const LIST_COLUMN_WIDTH_PX = 380;
@@ -68,7 +68,7 @@ export const StyledStopList = styled.ol`
   margin: 0;
   padding: 8px;
   list-style: none;
-  max-height: ${MAP_SURFACE_HEIGHT_PX - 120}px;
+  max-height: calc(${MAP_SURFACE_HEIGHT} - 120px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;

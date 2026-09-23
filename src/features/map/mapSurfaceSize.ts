@@ -7,4 +7,8 @@
 // styled 파일은 배럴(`@/features/map`)이 아니라 이 파일을 직접 가져온다 — 화면 시험이 배럴을
 // 통째로 목으로 바꾸는 관례가 있어(jsdom 에 지도 SDK 가 없다), 배럴로 가져오면 그 목마다 이 상수를
 // 다시 내보내야 하고 하나라도 빠지면 시험이 "정의되지 않았다" 로 죽는다.
-export const MAP_SURFACE_HEIGHT_PX = 480;
+//
+// 2026-09-23 사용자 지시 — "화면 절반 이상은 채워줘". 고정 480px 은 큰 모니터에서 화면의 1/3 에 그쳤다.
+// 화면 높이의 60% 로 정하되 480px 아래로는 안 내린다(작은 창에서 노선 전체가 잘리지 않게). CSS 길이 문자열이라
+// styled 파일은 `height: ${MAP_SURFACE_HEIGHT};` 처럼 단위 없이 그대로 쓴다.
+export const MAP_SURFACE_HEIGHT = "max(480px, 60vh)";
