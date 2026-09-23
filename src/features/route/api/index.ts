@@ -142,9 +142,16 @@ type RawNearbyStop = {
   distance_m: number;
 };
 
-type RawStopSearch = { lat: number; lng: number; display_name: string; nearby: RawNearbyStop[] };
+type RawStopSearch = {
+  place_name?: string;
+  lat: number;
+  lng: number;
+  display_name: string;
+  nearby: RawNearbyStop[];
+};
 
 const toStopSuggestion = (raw: RawStopSearch): StopSuggestionTypes => ({
+  ...(raw.place_name ? { placeName: raw.place_name } : {}),
   lat: raw.lat,
   lng: raw.lng,
   displayName: raw.display_name,

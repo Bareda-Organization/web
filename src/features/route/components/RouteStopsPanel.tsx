@@ -149,7 +149,10 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
     setForm({
       ...form,
       // 추가는 후보 주소를 표시명 기본값으로 쓴다. 수정은 관계자가 붙인 이름을 지우지 않는다.
-      name: form.mode === "add" || form.name.trim().length === 0 ? suggestion.displayName : form.name,
+      name:
+        form.mode === "add" || form.name.trim().length === 0
+          ? (suggestion.placeName ?? suggestion.displayName)
+          : form.name,
       address: suggestion.displayName,
       pin: point,
       anchor: point,

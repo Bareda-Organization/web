@@ -64,6 +64,17 @@ export const StyledSuggestion = styled.li<{ $active: boolean }>`
   }
 `;
 
+export const StyledSuggestionPlace = styled.span`
+  display: block;
+  font-weight: var(--fw-bold);
+`;
+
+export const StyledSuggestionAddress = styled.span`
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--fs-micro);
+`;
+
 export const StyledSearchStatus = styled.li<{ $tone?: "error" }>`
   padding: 9px 10px;
   font: var(--fw-regular) var(--fs-micro) / 1.5 var(--font-sans);

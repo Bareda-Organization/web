@@ -77,6 +77,8 @@ export type RoutePathResponseTypes = {
 
 // §5.9 주소 검색(2026-09-22) — **아직 아무것도 만들지 않은** 후보 한 지점.
 export type StopSuggestionTypes = {
+  // 장소 이름 검색(NAVER API HUB 지역 검색)으로 찾은 후보면 그 이름. 주소 후보면 없다.
+  placeName?: string;
   lat: number;
   lng: number;
   displayName: string;

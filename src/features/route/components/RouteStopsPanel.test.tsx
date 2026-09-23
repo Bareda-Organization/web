@@ -164,6 +164,24 @@ describe("RouteStopsPanel — 주소 자동완성과 핀 끌기(지시 2·3·10)
     expect(마지막_지도().onMapClick).toBeUndefined();
   });
 
+  // 2026-09-23 — 장소 검색 후보는 장소 이름을 표시명 기본값으로, 주소는 도로명으로 보낸다.
+  it("장소 후보를 고르면 장소 이름이 표시명, 도로명이 주소가 된다", async () => {
+    mockSuggest.mockResolvedValue([
+      { placeName: "신정역 5호선", lat: 37.52, lng: 126.85, displayName: "서울특별시 양천구 오목로 179", nearby: [] },
+    ]);
+    await 띄운다();
+    fireEvent.click(screen.getByRole("button", { name: "승하차지 추가" }));
+    fireEvent.change(screen.getByLabelText("주소 검색"), { target: { value: "신정역" } });
+    fireEvent.click(await screen.findByRole("option", { name: /신정역 5호선/ }));
+
+    expect(screen.getByLabelText("표시명")).toHaveValue("신정역 5호선");
+    fireEvent.click(screen.getByRole("button", { name: "목록에 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockSave).toHaveBeenCalled());
+    expect(mockSave.mock.calls[0][1][2]).toMatchObject({ name: "신정역 5호선", address: "서울특별시 양천구 오목로 179" });
+  });
+
   it("후보 목록은 키보드로 고를 수 있다(↓ 다음 Enter)", async () => {
     await 띄운다();
     fireEvent.click(screen.getByRole("button", { name: "승하차지 추가" }));

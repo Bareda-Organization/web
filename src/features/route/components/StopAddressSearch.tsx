@@ -10,7 +10,9 @@ import {
   StyledSearchStatus,
   StyledSearchWrap,
   StyledSuggestion,
+  StyledSuggestionAddress,
   StyledSuggestionList,
+  StyledSuggestionPlace,
 } from "./StopAddressSearch.styled";
 
 // 입력을 멈춘 뒤 이만큼 기다렸다 부른다 — 한 글자마다 부르면 지오코딩 호출이 글자 수만큼 나간다.
@@ -61,7 +63,7 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
 
   const pick = (suggestion: StopSuggestionTypes) => {
     setOpen(false);
-    setQuery(suggestion.displayName);
+    setQuery(suggestion.placeName ?? suggestion.displayName);
     onPick(suggestion);
   };
 
@@ -92,7 +94,7 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
         aria-expanded={showList && items.length > 0}
         aria-controls="stop-address-suggestions"
         aria-autocomplete="list"
-        placeholder="도로명·지번 주소 일부 (예: 목동서로)"
+        placeholder="장소 이름이나 주소 (예: 신정역, 목동동로 257)"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -109,7 +111,7 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
         <StyledSuggestionList id="stop-address-suggestions" role="listbox">
           {items.map((item, index) => (
             <StyledSuggestion
-              key={`${item.displayName}-${item.lat}-${item.lng}`}
+              key={`${item.placeName ?? ""}-${item.displayName}-${item.lat}-${item.lng}`}
               role="option"
               aria-selected={index === active}
               $active={index === active}
@@ -117,7 +119,14 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => pick(item)}
             >
-              {item.displayName}
+              {item.placeName ? (
+                <>
+                  <StyledSuggestionPlace>{item.placeName}</StyledSuggestionPlace>
+                  <StyledSuggestionAddress>{item.displayName}</StyledSuggestionAddress>
+                </>
+              ) : (
+                item.displayName
+              )}
             </StyledSuggestion>
           ))}
           {status === "loading" ? <StyledSearchStatus>찾는 중…</StyledSearchStatus> : null}
