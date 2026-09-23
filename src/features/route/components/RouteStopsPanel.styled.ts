@@ -44,6 +44,7 @@ export const StyledListHeader = styled.header`
 
 export const StyledListTitle = styled.h2`
   margin: 0;
+  white-space: nowrap;
   font: var(--fw-medium) var(--fs-body) / 1.2 var(--font-sans);
   color: var(--text-secondary);
 
@@ -56,6 +57,10 @@ export const StyledListTitle = styled.h2`
 export const StyledListHeaderActions = styled.div`
   display: flex;
   gap: 4px;
+
+  & > button {
+    white-space: nowrap;
+  }
 `;
 
 /* 지도와 같은 높이 안에서만 늘어나고 넘치면 이 칸 안에서 스크롤한다 — 페이지 전체가 길어지지 않게. */
