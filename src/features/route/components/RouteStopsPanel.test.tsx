@@ -241,6 +241,20 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, [2]));
   });
 
+  it("한 번에 여러 줄을 고정해도 하나도 빠지지 않는다", async () => {
+    mockOptimize.mockResolvedValue(detail);
+    await 띄운다();
+
+    act(() => {
+      within(행("정문")).getByRole("button", { name: "정문 자리 고정" }).click();
+      within(행("후문")).getByRole("button", { name: "후문 자리 고정" }).click();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "순서 최적화" }));
+    fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
+
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, [1, 2]));
+  });
+
   it("등원은 첫 줄이 시점, 하원은 마지막 줄이 종점이라고 표시한다(학원 쪽 끝은 늘 고정)", async () => {
     const { unmount } = render(<RouteStopsPanel routeId={1} direction="to_academy" />);
     await screen.findByText("정문");

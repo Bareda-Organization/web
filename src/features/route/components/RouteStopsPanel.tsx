@@ -134,12 +134,14 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
     setStops(next);
   };
 
-  const togglePin = (key: string) => {
-    const next = new Set(pinnedKeys);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    setPinnedKeys(next);
-  };
+  // 이전 값에서 계산한다 — 한 틱에 두 번 누르면(빠른 연타) 둘 다 같은 옛 값을 읽어 하나가 사라진다.
+  const togglePin = (key: string) =>
+    setPinnedKeys((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   // 정차지 쪽 끝 — 등원은 첫 승차지가 시점(종점은 학원), 하원은 마지막 하차지가 종점(시점은 학원).
   const endpointLabelOf = (index: number): string | null => {
