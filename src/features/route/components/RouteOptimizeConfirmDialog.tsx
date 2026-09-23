@@ -3,6 +3,8 @@
 import { Button, Dialog } from "@/shared/ui";
 
 type RouteOptimizeConfirmDialogProps = {
+  /** 자리를 지킬 승하차지 수 — 0 이면 전부 다시 매긴다. */
+  fixedCount: number;
   onCancel: () => void;
   onConfirm: () => void;
   submitting: boolean;
@@ -12,7 +14,7 @@ type RouteOptimizeConfirmDialogProps = {
 // apply=false 미리보기가 없다 — 호출 즉시 기존 수동 정차 순서를 버리고 커밋한다.
 // 되돌릴 수단이 없는 조작이라, ForcedAddDialog(run 기능)의 2단계 확인 관례를 그대로
 // 가져와 이 한 단계만 확인 절차로 세운다(§2 판단 근거 — 사양 자체엔 확인 단계 지시가 없음).
-export const RouteOptimizeConfirmDialog = ({ onCancel, onConfirm, submitting }: RouteOptimizeConfirmDialogProps) => (
+export const RouteOptimizeConfirmDialog = ({ fixedCount, onCancel, onConfirm, submitting }: RouteOptimizeConfirmDialogProps) => (
   <Dialog
     title="정차 순서 최적화"
     onClose={onCancel}
@@ -27,6 +29,11 @@ export const RouteOptimizeConfirmDialog = ({ onCancel, onConfirm, submitting }: 
       </>
     }
   >
-    <p>지금까지 정한 정차 순서를 버리고 새로 계산합니다. 이 조작은 되돌릴 수 없습니다.</p>
+    <p>
+      {fixedCount > 0
+        ? `고정한 ${fixedCount}곳은 자리를 지키고 나머지 순서만 새로 계산합니다.`
+        : "지금까지 정한 정차 순서를 버리고 새로 계산합니다."}{" "}
+      이 조작은 되돌릴 수 없습니다.
+    </p>
   </Dialog>
 );

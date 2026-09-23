@@ -111,11 +111,11 @@ export const deleteRoute = async (id: number): Promise<void> => {
 // POST /staff/routes/{id}/optimize (RTE-09) — 미리보기 플래그가 없다. 호출 즉시
 // 기존 수동 순서를 버리고 커밋한다(§2 판단 근거 — 그래서 화면에 확인 단계를 둔다).
 // 기준점은 보내지 않는다 — 서버가 방향 규칙(Ruling 190, 등원은 첫 승차지 → 학원)으로 정한다
-// (2026-09-23 사용자 지시 — 위경도 입력칸 제거).
-export const optimizeRoute = async (id: number): Promise<RouteDetailResponseTypes> => {
+// (2026-09-23 사용자 지시 — 위경도 입력칸 제거). `fixedStopIds` 는 지금 자리를 지킬 승하차지다(시점·종점·중간 고정).
+export const optimizeRoute = async (id: number, fixedStopIds: number[] = []): Promise<RouteDetailResponseTypes> => {
   const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}/optimize`, {
     method: "POST",
-    body: {},
+    body: { fixed_stop_ids: fixedStopIds },
   });
   return toDetail(raw);
 };

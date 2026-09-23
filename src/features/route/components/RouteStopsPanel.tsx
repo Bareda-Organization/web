@@ -90,6 +90,9 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
   // 드래그로 순서 바꾸기 — 라이브러리 없이 HTML5 드래그만 쓴다. 위·아래 버튼은 키보드 사용자를 위해 둔다.
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [nextKey, setNextKey] = useState(0);
+  // 최적화에서 자리를 지킬 줄(2026-09-23 사용자 지시 — 특정 순서·시점·종점 고정). 저장 대상이 아니라 최적화
+  // 조건이라 변경 건수에 넣지 않는다. 줄 이름표(`stop-{id}`)로 들고 있어 순서를 바꿔도 따라간다.
+  const [pinnedKeys, setPinnedKeys] = useState<Set<string>>(new Set());
 
   const changes = countChanges(stops, saved);
   const dirty = changes > 0;
@@ -130,6 +133,24 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
     next.splice(to, 0, moved);
     setStops(next);
   };
+
+  const togglePin = (key: string) => {
+    const next = new Set(pinnedKeys);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setPinnedKeys(next);
+  };
+
+  // 정차지 쪽 끝 — 등원은 첫 승차지가 시점(종점은 학원), 하원은 마지막 하차지가 종점(시점은 학원).
+  const endpointLabelOf = (index: number): string | null => {
+    if (direction === "to_academy" && index === 0) return "시점";
+    if (direction === "from_academy" && index === stops.length - 1) return "종점";
+    return null;
+  };
+
+  const pinnedStopIds = stops
+    .filter((stop) => pinnedKeys.has(stop.key) && stop.stopId !== undefined)
+    .map((stop) => stop.stopId as number);
 
   const remove = (key: string) => {
     setStops(stops.filter((stop) => stop.key !== key));
@@ -194,7 +215,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
     setOptimizing(true);
     setError(null);
     try {
-      adopt((await optimizeRoute(routeId)).stops);
+      adopt((await optimizeRoute(routeId, pinnedStopIds)).stops);
       setConfirmingOptimize(false);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "최적화에 실패했습니다");
@@ -269,10 +290,20 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
                 <StyledStopSeq>{index + 1}</StyledStopSeq>
                 <StyledStopMain>
                   <StyledStopName>{stop.name}</StyledStopName>
+                  {endpointLabelOf(index) ? <Badge tone="neutral">{endpointLabelOf(index)}</Badge> : null}
                   {stop.stopId === undefined ? <Badge tone="added">새로 추가</Badge> : null}
                   {isEdited(stop, saved) ? <Badge tone="amber">수정됨</Badge> : null}
                 </StyledStopMain>
                 <StyledStopActions>
+                  <IconButton
+                    icon={pinnedKeys.has(stop.key) ? "lock" : "lock-open"}
+                    label={`${stop.name} 자리 고정`}
+                    title={pinnedKeys.has(stop.key) ? "최적화해도 이 자리를 지킵니다 — 누르면 해제" : "최적화해도 이 자리를 지키게 고정"}
+                    size={28}
+                    aria-pressed={pinnedKeys.has(stop.key)}
+                    tone={pinnedKeys.has(stop.key) ? "soft" : "plain"}
+                    onClick={() => togglePin(stop.key)}
+                  />
                   <IconButton icon="arrow-up" label={`${stop.name} 위로`} size={28} onClick={() => moveTo(index, index - 1)}
                     disabled={index === 0} />
                   <IconButton icon="arrow-down" label={`${stop.name} 아래로`} size={28} onClick={() => moveTo(index, index + 1)}
@@ -313,6 +344,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
 
       {confirmingOptimize ? (
         <RouteOptimizeConfirmDialog
+          fixedCount={pinnedStopIds.length}
           onCancel={() => setConfirmingOptimize(false)}
           onConfirm={handleOptimizeConfirm}
           submitting={optimizing}

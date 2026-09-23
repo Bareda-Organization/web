@@ -215,7 +215,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     fireEvent.click(screen.getByRole("button", { name: "순서 최적화" }));
     fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
 
-    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, []));
 
     // 정차지 수는 그대로(2곳) 두고 순서만 바꾼다 — 지우면 "2곳 미만" 규칙이 먼저 막아 이 조건이 가려진다.
     // 최적화 응답이 [후문, 정문] 이라 정문은 둘째 줄이다.
@@ -223,6 +223,35 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     fireEvent.click(within(행("정문")).getByRole("button", { name: "정문 위로" }));
     expect(screen.getByText("저장하지 않은 변경 1건")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "순서 최적화" })).toBeDisabled();
+  });
+
+  // 2026-09-23 사용자 지시 — "특정 순서나 시점, 종점을 고정". 고정은 저장 대상이 아니라 최적화에 넘기는 조건이다.
+  it("자물쇠를 채운 승하차지를 실어 최적화하고, 고정은 저장할 변경으로 세지 않는다", async () => {
+    mockOptimize.mockResolvedValue(detail);
+    await 띄운다();
+
+    fireEvent.click(within(행("후문")).getByRole("button", { name: "후문 자리 고정" }));
+
+    expect(within(행("후문")).getByRole("button", { name: "후문 자리 고정" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("저장된 상태입니다")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "순서 최적화" }));
+    expect(screen.getByText(/고정한 1곳은 자리를 지키고/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
+
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, [2]));
+  });
+
+  it("등원은 첫 줄이 시점, 하원은 마지막 줄이 종점이라고 표시한다(학원 쪽 끝은 늘 고정)", async () => {
+    const { unmount } = render(<RouteStopsPanel routeId={1} direction="to_academy" />);
+    await screen.findByText("정문");
+    expect(within(행("정문")).getByText("시점")).toBeInTheDocument();
+    expect(within(행("후문")).queryByText("종점")).not.toBeInTheDocument();
+    unmount();
+
+    render(<RouteStopsPanel routeId={1} direction="from_academy" />);
+    await screen.findByText("정문");
+    expect(within(행("후문")).getByText("종점")).toBeInTheDocument();
+    expect(within(행("정문")).queryByText("시점")).not.toBeInTheDocument();
   });
 
   it("등원은 첫 승차지를 시점, 학원을 종점으로 찍고 순서를 바꾸면 핀 번호와 시점이 바로 따라온다", async () => {
