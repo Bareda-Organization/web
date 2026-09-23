@@ -18,7 +18,7 @@ import type { MapMarker, MapPolyline, MapPolylineKind } from "./types";
 type RouteQueryResult = {
   roadPath: { lat: number; lng: number }[];
   fallbackUsed: boolean;
-  stops: { stopId: number; lat: number; lng: number }[];
+  stops: { stopId: number; seq: number; lat: number; lng: number }[];
   confirmed: boolean;
 };
 
@@ -85,7 +85,13 @@ export const buildRouteDisplayState = (
     noPlannedRoute: !hasRoute && !route.confirmed,
     planned: hasRoute && !route.confirmed,
     stopMarkers: [
-      ...route.stops.map((stop) => ({ id: `stop-${stop.stopId}`, lat: stop.lat, lng: stop.lng, kind: "stop" as const })),
+      ...route.stops.map((stop) => ({
+        id: `stop-${stop.stopId}`,
+        lat: stop.lat,
+        lng: stop.lng,
+        kind: "stop" as const,
+        seq: stop.seq,
+      })),
       ...endpointMarkersOf(runId, route.roadPath),
     ],
   };

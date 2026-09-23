@@ -100,20 +100,22 @@ describe("buildRouteDisplayState", () => {
 
   // R19 목표 1 — stops[] 를 kind:"stop" 마커로 바꾼다. id 로 어느 정차지인지까지
   // 대조한다(개수만 세는 단언은 범위 조건을 못 잡는다).
-  it('stops[] 를 kind:"stop" 마커로 바꾼다', () => {
+  // 2026-09-23 — 순번도 싣는다(핀 안에 숫자, 사용자 지시). 정차지 id 와 순번은 다른 값이라
+  // 둘을 일부러 다르게 둔다 — 섞어 넣어도 통과하면 이 시험은 아무것도 못 가린다.
+  it('stops[] 를 kind:"stop" 마커로 바꾸고 순번을 싣는다', () => {
     const state = buildRouteDisplayState(9, "moving", {
       roadPath: [],
       fallbackUsed: false,
       stops: [
-        { stopId: 1, lat: 37.5665, lng: 126.978 },
-        { stopId: 4, lat: 37.5695, lng: 126.981 },
+        { stopId: 1, seq: 2, lat: 37.5665, lng: 126.978 },
+        { stopId: 4, seq: 1, lat: 37.5695, lng: 126.981 },
       ],
       confirmed: true,
     });
 
     expect(state.stopMarkers).toEqual([
-      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop" },
-      { id: "stop-4", lat: 37.5695, lng: 126.981, kind: "stop" },
+      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 2 },
+      { id: "stop-4", lat: 37.5695, lng: 126.981, kind: "stop", seq: 1 },
     ]);
   });
 
@@ -128,12 +130,12 @@ describe("buildRouteDisplayState", () => {
         { lat: 37.4979, lng: 127.0276 },
       ],
       fallbackUsed: false,
-      stops: [{ stopId: 1, lat: 37.5665, lng: 126.978 }],
+      stops: [{ stopId: 1, seq: 1, lat: 37.5665, lng: 126.978 }],
       confirmed: true,
     });
 
     expect(state.stopMarkers).toEqual([
-      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop" },
+      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 1 },
       { id: "origin-9", lat: 37.5665, lng: 126.978, kind: "origin" },
       { id: "destination-9", lat: 37.4979, lng: 127.0276, kind: "destination" },
     ]);

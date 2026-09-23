@@ -319,7 +319,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
         expect.objectContaining({
-          markers: expect.arrayContaining([{ id: "stop-3", lat: 37.5685, lng: 126.98, kind: "stop" }]),
+          markers: expect.arrayContaining([{ id: "stop-3", lat: 37.5685, lng: 126.98, kind: "stop", seq: 1 }]),
         }),
       ),
     );

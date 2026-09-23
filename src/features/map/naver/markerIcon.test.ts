@@ -22,9 +22,10 @@ describe("markerIcon — 종류별 크기 관계(R18-B 목표 1)", () => {
 
   // R19 목표 3 — 버스는 정차지·학생과 색·크기뿐 아니라 형태로도 구별돼야 한다
   // (사용자 지시, 그냥 파란 원이라 지도 POI 아이콘과 섞였다는 조율자 눈 확인).
-  it("버스만 lucide 아이콘(svg)을 품고, 정차지·학생은 여전히 빈 원이다", () => {
+  // 사용자 지시(2026-09-23) — 정차지는 물방울 핀이라 svg 경로로 그린다. 학생은 여전히 빈 원이다.
+  it("버스는 lucide 아이콘, 정차지는 핀 경로(svg)를 품고, 학생은 빈 원이다", () => {
     expect(buildMarkerIconHtml("bus")).toContain("<svg");
-    expect(buildMarkerIconHtml("stop")).not.toContain("<svg");
+    expect(buildMarkerIconHtml("stop")).toContain("<path");
     expect(buildMarkerIconHtml("student")).not.toContain("<svg");
   });
 });
@@ -41,12 +42,13 @@ describe("markerIcon — 선택 강조(R21-A 목표 1)", () => {
   // R21-A 추가 지시 ② — 구간변경 승인 지도의 "변한 승하차지"도 이 강조 수단을
   // 그대로 쓴다(버스 전용이 아니다). 종류별 색(초록·주황)을 테두리 색으로 그대로
   // 쓴다 — 파란 테두리만 고정이면 정차지·학생 마커에 안 어울린다.
-  it("정차지·학생 마커도 selected 를 주면 흰 테두리가 붙고, 테두리 색은 그 종류의 색을 쓴다", () => {
-    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("box-shadow");
-    expect(buildMarkerIconHtml("stop", { selected: true })).toContain("#16a34a");
+  it("정차지·학생 마커도 selected 를 주면 테두리가 붙고, 테두리 색은 그 종류의 색을 쓴다", () => {
+    // 정차지 핀은 box-shadow 가 사각형으로 그려져 핀 모양을 따라가지 못한다 — 핀 윤곽을 따라 긋는
+    // 굵은 선(stroke)으로 두른다.
+    expect(buildMarkerIconHtml("stop", { selected: true })).toContain('stroke="#16a34a"');
+    expect(buildMarkerIconHtml("stop")).not.toContain('stroke="#16a34a"');
     expect(buildMarkerIconHtml("student", { selected: true })).toContain("box-shadow");
     expect(buildMarkerIconHtml("student", { selected: true })).toContain("#f97316");
-    expect(buildMarkerIconHtml("stop")).not.toContain("box-shadow");
     expect(buildMarkerIconHtml("student")).not.toContain("box-shadow");
   });
 });
@@ -159,8 +161,8 @@ describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
 // size·anchor 없이는 좌상단을 좌표에 맞춰서, 고치기 전에는 모든 마커가 아이콘 절반만큼
 // 오른쪽·아래로 밀려 그려졌다(2026-09-20 실측 — 정중앙에 놓은 버스가 38px 벗어났다).
 describe("markerIcon — 좌표 위에 가운데로(R25 목표 2)", () => {
-  it("모든 종류가 제 크기의 절반만큼 되밀린 채로 나온다", () => {
-    for (const kind of ["bus", "stop", "student", "origin", "destination"] as const) {
+  it("정차지를 뺀 모든 종류가 제 크기의 절반만큼 되밀린 채로 나온다", () => {
+    for (const kind of ["bus", "student", "origin", "destination"] as const) {
       expect(buildMarkerIconHtml(kind)).toContain("translate(-50%,-50%)");
     }
     expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).toContain("translate(-50%,-50%)");
@@ -177,7 +179,22 @@ describe("정차지 순번 표기", () => {
     expect(html).toContain(">3<");
   });
 
-  it("순번이 없으면 지금까지와 같은 원 핀이다", () => {
-    expect(buildMarkerIconHtml("stop", {})).not.toContain(">3<");
+  it("순번이 없으면 숫자 없는 핀이다", () => {
+    expect(buildMarkerIconHtml("stop", {})).not.toContain("<text");
+  });
+});
+
+// 사용자 지시(2026-09-23) — 정차지는 "끝이 좌표를 가리키는 물방울 핀 + 순번". 가운데를 좌표에 맞추면
+// 핀 끝이 좌표보다 반 칸 아래를 찌른다 — 핀의 아래 끝(끝점)을 좌표에 맞춘다.
+describe("정차지 핀 — 끝이 좌표를 가리킨다", () => {
+  it("가로는 가운데, 세로는 제 높이 전체만큼 올려 끝점이 좌표에 온다", () => {
+    const html = buildMarkerIconHtml("stop", { seq: 3 });
+
+    expect(html).toContain("translate(-50%,-100%)");
+    expect(html).not.toContain("translate(-50%,-50%)");
+  });
+
+  it("두 자리 순번도 핀 안에 들어간다", () => {
+    expect(buildMarkerIconHtml("stop", { seq: 15 })).toContain(">15<");
   });
 });

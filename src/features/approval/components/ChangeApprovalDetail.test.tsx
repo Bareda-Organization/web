@@ -295,7 +295,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       const [beforeCall] = mockMapSurface.mock.calls;
       expect(beforeCall[0].polylines).toEqual([]);
       expect(beforeCall[0].markers).toEqual([
-        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", selected: false },
+        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", seq: 1, selected: false },
       ]);
     });
 
@@ -313,7 +313,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
       const [beforeCall] = mockMapSurface.mock.calls;
       expect(beforeCall[0].markers).toEqual([
-        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", selected: true },
+        { id: "stop-1-정문", lat: 37.55, lng: 126.97, kind: "stop", seq: 1, selected: true },
       ]);
     });
   });

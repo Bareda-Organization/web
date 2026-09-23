@@ -112,6 +112,7 @@ const stopsToMarkers = (stops: RouteStopPreviewResponseTypes[], changedNames: Se
       lat: stop.lat as number,
       lng: stop.lng as number,
       kind: "stop" as const,
+      seq: stop.seq,
       selected: changedNames.has(stop.stopName),
     }));
 

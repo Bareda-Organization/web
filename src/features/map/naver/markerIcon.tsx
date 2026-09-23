@@ -21,14 +21,17 @@ const MARKER_COLOR: Record<MapMarkerKind, string> = {
 // 들르는 고정 지점이라 버스보다 작지만 알아볼 크기(16px), 학생은 정차지 하나에
 // 여럿이 몰릴 수 있어 가장 촘촘히 찍히므로 화면이 덮이지 않게 가장 작게 둔다
 // (10px). 수정 전에는 세 종류 전부 12px 로 같아 색으로만 겨우 구별됐다(보고서 §1).
+//
+// 2026-09-23 — 정차지가 물방울 핀이 되면서 16 → 22(핀의 폭). 16 에서는 핀 머리 안 숫자가 7px 로
+// 줄어 두 자리 순번(10~15)을 못 읽는다. 출발지·도착지는 아래 규칙대로 그보다 크게 따라 올린다.
 export const MARKER_SIZE_PX: Record<MapMarkerKind, number> = {
   bus: 28,
-  stop: 16,
+  stop: 22,
   student: 10,
   // R22 목표 2 — 출발지·도착지는 정차지보다 크다. 노선의 양 끝이라 경로를 읽는
   // 출발점이고, 첫 승차지·마지막 하차지와 같은 자리에 겹쳐 찍히므로 더 커야 위로 보인다.
-  origin: 20,
-  destination: 20,
+  origin: 24,
+  destination: 24,
 };
 
 // R19 목표 3 — 버스는 정차지·학생과 색·크기뿐 아니라 형태로도 구별돼야 한다(사용자
@@ -122,13 +125,29 @@ const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boo
   return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
 };
 
+// 물방울 핀 윤곽 — 머리는 (12,12) 중심 반지름 12 의 원, 끝점은 (12,32). viewBox 를 흰 테두리
+// 두께(2)의 절반씩 넓혀 잘리지 않게 한다. 끝점이 viewBox 아래 끝에서 1 단위(약 0.8px) 위다.
+const STOP_PIN_PATH = "M12 32C12 32 0 20.5 0 12a12 12 0 0 1 24 0c0 8.5-12 20-12 20z";
+const STOP_PIN_VIEWBOX = { x: -1, y: -1, width: 26, height: 34 };
+const STOP_PIN_HEIGHT_PX = Math.round((MARKER_SIZE_PX.stop * STOP_PIN_VIEWBOX.height) / STOP_PIN_VIEWBOX.width);
+
 /**
- * R27 — 정차지 순번 칩. 편성 목록의 번호와 지도의 핀을 같은 숫자로 잇는다 — 정차지가 수백
- * 미터 안에 몰리면 원 핀 여럿이 한 점으로 겹쳐 목록과 대응시킬 수단이 부재했다.
+ * 정차지 핀 — 끝이 좌표를 가리키는 물방울 모양, 머리 안에 순번(사용자 지시 2026-09-23).
+ *
+ * <p>R27 의 순번 칩(편성 목록의 번호와 지도의 핀을 같은 숫자로 잇는다)을 모양만 바꾼 것이다.
+ * 선택 강조는 핀 윤곽을 따라 종류 색의 굵은 선을 먼저 긋는다 — box-shadow 는 사각형으로 그려져
+ * 핀 모양을 따라가지 못한다. `overflow="visible"` 이 그 굵은 선이 viewBox 밖으로 나가도 보이게 한다.
  */
-const stopChipHtml = (seq: number, selected: boolean, markerId?: string): string => {
-  const ring = selected ? selectedRingOf("stop") : "";
-  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;min-width:${MARKER_SIZE_PX.stop}px;height:${MARKER_SIZE_PX.stop}px;padding:0 4px;border-radius:999px;background:${MARKER_COLOR.stop};border:2px solid #fff;${ring}color:#fff;font-size:10px;font-weight:700;line-height:1;">${seq}</span>`;
+const stopPinHtml = (seq: number | undefined, selected: boolean, markerId?: string): string => {
+  const { x, y, width, height } = STOP_PIN_VIEWBOX;
+  const ring = selected
+    ? `<path d="${STOP_PIN_PATH}" fill="none" stroke="${MARKER_COLOR.stop}" stroke-width="9" stroke-linejoin="round"/>`
+    : "";
+  const label =
+    seq == null
+      ? ""
+      : `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="13" font-weight="700">${seq}</text>`;
+  return `<span${markerIdAttr(markerId)} style="display:block;width:${MARKER_SIZE_PX.stop}px;height:${STOP_PIN_HEIGHT_PX}px;"><svg width="${MARKER_SIZE_PX.stop}" height="${STOP_PIN_HEIGHT_PX}" viewBox="${x} ${y} ${width} ${height}" overflow="visible" style="display:block;">${ring}<path d="${STOP_PIN_PATH}" fill="${MARKER_COLOR.stop}" stroke="#fff" stroke-width="${selected ? 4 : 2}" stroke-linejoin="round"/>${label}</svg></span>`;
 };
 
 /** R22 목표 2 — 노선의 양 끝(출발지·도착지)을 글자 핀으로 찍는다. */
@@ -152,12 +171,16 @@ const endpointChipHtml = (kind: MapMarkerKind, selected: boolean, markerId?: str
 const centeredOnPoint = (html: string): string =>
   `<span style="display:inline-block;transform:translate(-50%,-50%);">${html}</span>`;
 
+/** 정차지 핀 전용 — 핀의 <b>아래 끝</b>이 좌표에 오도록 제 높이 전체만큼 올린다(가로는 가운데). */
+const tipOnPoint = (html: string): string =>
+  `<span style="display:inline-block;transform:translate(-50%,-100%);">${html}</span>`;
+
 export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOptions = {}): string => {
   if (kind === "origin" || kind === "destination") {
     return centeredOnPoint(endpointChipHtml(kind, options.selected ?? false, options.markerId));
   }
-  if (kind === "stop" && options.seq != null) {
-    return centeredOnPoint(stopChipHtml(options.seq, options.selected ?? false, options.markerId));
+  if (kind === "stop") {
+    return tipOnPoint(stopPinHtml(options.seq, options.selected ?? false, options.markerId));
   }
   if (kind === "bus" && options.busNo) {
     return centeredOnPoint(

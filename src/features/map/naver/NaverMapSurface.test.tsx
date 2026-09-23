@@ -306,7 +306,7 @@ describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목�
     );
 
     await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(1));
-    expect(setIcon.mock.calls[0][0].content).toContain("box-shadow");
+    expect(setIcon.mock.calls[0][0].content).toContain('stroke="#16a34a"');
   });
 
   // 좌표만 갱신되는 회차(버스 위치는 2초마다 들어온다)에 승하차지 수십 개의 DOM 을
