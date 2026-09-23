@@ -199,7 +199,11 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
 
     await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1));
 
-    fireEvent.click(within(행("정문")).getByRole("button", { name: "정문 삭제" }));
+    // 정차지 수는 그대로(2곳) 두고 순서만 바꾼다 — 지우면 "2곳 미만" 규칙이 먼저 막아 이 조건이 가려진다.
+    // 최적화 응답이 [후문, 정문] 이라 정문은 둘째 줄이다.
+    await screen.findByText("저장된 상태입니다");
+    fireEvent.click(within(행("정문")).getByRole("button", { name: "정문 위로" }));
+    expect(screen.getByText("저장하지 않은 변경 1건")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "순서 최적화" })).toBeDisabled();
   });
 
