@@ -19,6 +19,8 @@ const ACCOUNTS: ReadonlyArray<{ label: string; loginId: string }> = [
   { label: "관계자(타 학원)", loginId: "staffB" },
   { label: "메인 관리자", loginId: "sysadmin" },
   { label: "승인 대기", loginId: "staffPending" },
+  // V14 데모 학원(목동) — 버스 3대 · 학생 60명 · 승인 대기 건이 많은 학원.
+  { label: "데모 학원 관계자", loginId: "staff01" },
 ];
 
 type Props = {
