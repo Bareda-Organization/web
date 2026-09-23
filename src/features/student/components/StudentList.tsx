@@ -66,8 +66,6 @@ export const StudentList = () => {
   const columns: RosterColumn<StudentListItemResponseTypes>[] = [
     { key: "name", label: "이름" },
     { key: "className", label: "반", render: (row) => row.className ?? "-" },
-    { key: "busNo", label: "호차", render: (row) => row.busNo ?? "-" },
-    { key: "stopName", label: "승하차지", render: (row) => row.stopName ?? "-" },
     { key: "guardianPhone", label: "보호자 연락처", render: (row) => row.guardianPhone ?? "-" },
     {
       key: "guardianCount",

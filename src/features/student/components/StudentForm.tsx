@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Checkbox, Dialog, Input, PhotoUploadField, Select } from "@/shared/ui";
 import { createStudent, getStudentDetail, updateStudent } from "../api";
-import type { StudentGender, StudentUpsertRequestTypes } from "../types";
+import type { StudentGender, StudentGuardianTypes, StudentUpsertRequestTypes } from "../types";
+import { StyledGuardianEmpty, StyledGuardianSection, StyledGuardianTitle } from "./StudentForm.styled";
 
 type StudentFormProps = {
   /** 있으면 수정 대상 student_id, 없으면 신규 등록. */
@@ -22,7 +23,7 @@ const GENDER_OPTIONS = [
 // §5.11 POST·PATCH /staff/students(STU-02·03) — 학생 등록·수정 폼. 목록에는 이 폼이
 // 필요한 필드(성별·생년월일·좌석 등)가 없어, 수정일 때는 상세 GET 을 따로 불러 채운다
 // (§5.12/§5.13 과 달리 학생은 상세 GET 이 사양에 있다 — Ruling 없음, 실측 확인).
-// 주소·보호자 연락처는 이 폼에 없다 — §5.11 "수정 — 주소·보호자 연락처는 대상 밖".
+// 주소는 이 폼에 없다(학부모가 요일별로 등록). 보호자 연락처는 수정할 때 고칠 수 있다(Ruling 326).
 export const StudentForm = ({ studentId, onClose, onDone }: StudentFormProps) => {
   const [loading, setLoading] = useState(!!studentId);
   const [name, setName] = useState("");
@@ -31,7 +32,9 @@ export const StudentForm = ({ studentId, onClose, onDone }: StudentFormProps) =>
   const [birthDate, setBirthDate] = useState("");
   const [grade, setGrade] = useState("");
   const [className, setClassName] = useState("");
-  const [seatNo, setSeatNo] = useState("");
+  const [guardians, setGuardians] = useState<StudentGuardianTypes[]>([]);
+  // 고친 보호자만 보낸다 — 안 고친 번호까지 보내면 다른 관계자가 그사이 고친 값을 옛 값으로 덮는다.
+  const [originalPhones, setOriginalPhones] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
   const [canGoAlone, setCanGoAlone] = useState(false);
   const [photo, setPhoto] = useState<File | null | undefined>(undefined);
@@ -51,7 +54,8 @@ export const StudentForm = ({ studentId, onClose, onDone }: StudentFormProps) =>
         setBirthDate(detail.birthDate ?? "");
         setGrade(detail.grade ?? "");
         setClassName(detail.className ?? "");
-        setSeatNo(detail.seatNo != null ? String(detail.seatNo) : "");
+        setGuardians(detail.guardians);
+        setOriginalPhones(Object.fromEntries(detail.guardians.map((guardian) => [guardian.guardianId, guardian.phone])));
         setNote(detail.note ?? "");
         setCanGoAlone(detail.canGoAlone);
         setExistingPhotoUrl(detail.photoUrl ?? undefined);
@@ -77,7 +81,11 @@ export const StudentForm = ({ studentId, onClose, onDone }: StudentFormProps) =>
         birthDate: birthDate || undefined,
         grade: grade.trim() || undefined,
         className: className.trim() || undefined,
-        seatNo: seatNo ? Number(seatNo) : undefined,
+        guardians: studentId
+          ? guardians
+              .filter((guardian) => guardian.phone.trim() !== originalPhones[guardian.guardianId])
+              .map((guardian) => ({ guardianId: guardian.guardianId, phone: guardian.phone.trim() }))
+          : undefined,
         note: note.trim() || undefined,
         canGoAlone,
         photo,
@@ -127,7 +135,33 @@ export const StudentForm = ({ studentId, onClose, onDone }: StudentFormProps) =>
           <Input label="생년월일" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} />
           <Input label="학년" value={grade} onChange={(event) => setGrade(event.target.value)} />
           <Input label="반" value={className} onChange={(event) => setClassName(event.target.value)} />
-          <Input label="좌석 번호" type="number" value={seatNo} onChange={(event) => setSeatNo(event.target.value)} />
+          {studentId ? (
+            <StyledGuardianSection>
+              <StyledGuardianTitle>보호자 연락처</StyledGuardianTitle>
+              {guardians.length === 0 ? (
+                <StyledGuardianEmpty>
+                  연결된 보호자가 없습니다 — 학생 앱에서 연결 코드를 만들고 학부모 앱에서 입력하면 연결됩니다.
+                </StyledGuardianEmpty>
+              ) : (
+                guardians.map((guardian) => (
+                  <Input
+                    key={guardian.guardianId}
+                    label={`${guardian.name} 연락처`}
+                    aria-label={`${guardian.name} 연락처`}
+                    inputMode="tel"
+                    value={guardian.phone}
+                    onChange={(event) =>
+                      setGuardians((previous) =>
+                        previous.map((item) =>
+                          item.guardianId === guardian.guardianId ? { ...item, phone: event.target.value } : item,
+                        ),
+                      )
+                    }
+                  />
+                ))
+              )}
+            </StyledGuardianSection>
+          ) : null}
           <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} />
           <Checkbox
             checked={canGoAlone}

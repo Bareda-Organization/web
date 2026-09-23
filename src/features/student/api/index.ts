@@ -11,8 +11,6 @@ type RawStudentListItem = {
   student_id: string;
   name: string;
   class_name: string | null;
-  bus_no: string | null;
-  stop_name: string | null;
   guardian_phone: string | null;
   guardian_count: number;
 };
@@ -29,8 +27,6 @@ const toListItem = (raw: RawStudentListItem): StudentListItemResponseTypes => ({
   studentId: raw.student_id,
   name: raw.name,
   className: raw.class_name,
-  busNo: raw.bus_no,
-  stopName: raw.stop_name,
   guardianPhone: raw.guardian_phone,
   guardianCount: raw.guardian_count,
 });
@@ -59,10 +55,9 @@ type RawStudentDetail = {
   birth_date: string | null;
   grade: string | null;
   class_name: string | null;
-  seat_no: number | null;
   note: string | null;
   can_go_alone: boolean;
-  guardian_phone: string | null;
+  guardians: { guardian_id: string; name: string; phone: string }[];
 };
 
 const toDetail = (raw: RawStudentDetail): StudentDetailResponseTypes => ({
@@ -74,10 +69,13 @@ const toDetail = (raw: RawStudentDetail): StudentDetailResponseTypes => ({
   birthDate: raw.birth_date,
   grade: raw.grade,
   className: raw.class_name,
-  seatNo: raw.seat_no,
   note: raw.note,
   canGoAlone: raw.can_go_alone,
-  guardianPhone: raw.guardian_phone,
+  guardians: raw.guardians.map((guardian) => ({
+    guardianId: guardian.guardian_id,
+    name: guardian.name,
+    phone: guardian.phone,
+  })),
 });
 
 // GET /staff/students/{id} (§5.11, STU-01) — 404 STUDENT_NOT_FOUND 는 미존재·타 학원
@@ -94,9 +92,9 @@ const toFields = (request: StudentUpsertRequestTypes) => ({
   birth_date: request.birthDate,
   grade: request.grade,
   class_name: request.className,
-  seat_no: request.seatNo,
   note: request.note,
   can_go_alone: request.canGoAlone,
+  guardians: request.guardians?.map((guardian) => ({ guardian_id: guardian.guardianId, phone: guardian.phone })),
 });
 
 // POST /staff/students (STU-02) — multipart(§1.1 40행 유일 예외). 사진은 3종·5MB
@@ -110,7 +108,7 @@ export const createStudent = async (request: StudentUpsertRequestTypes): Promise
   return toDetail(raw);
 };
 
-// PATCH /staff/students/{id} (STU-03) — 주소·보호자 연락처는 대상 밖(§5.11). photo 를
+// PATCH /staff/students/{id} (STU-03) — 주소는 대상 밖, 보호자 연락처는 고칠 수 있다(Ruling 326). photo 를
 // 새로 고르지 않으면 file 파트를 아예 보내지 않아 기존 사진을 유지한다.
 export const updateStudent = async (
   studentId: string,

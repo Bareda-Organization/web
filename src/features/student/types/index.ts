@@ -11,8 +11,6 @@ export type StudentListItemResponseTypes = {
   studentId: string;
   name: string;
   className: string | null;
-  busNo: string | null;
-  stopName: string | null;
   guardianPhone: string | null;
   guardianCount: number;
 };
@@ -37,11 +35,13 @@ export type StudentDetailResponseTypes = {
   birthDate: string | null;
   grade: string | null;
   className: string | null;
-  seatNo: number | null;
   note: string | null;
   canGoAlone: boolean;
-  guardianPhone: string | null;
+  // 연결된 보호자 전부(먼저 연결된 차례) — 관계자가 연락처를 고칠 수 있다(Ruling 326).
+  guardians: StudentGuardianTypes[];
 };
+
+export type StudentGuardianTypes = { guardianId: string; name: string; phone: string };
 
 // POST /staff/students · PATCH /staff/students/{id} 공용 요청 — multipart(§1.1 40행,
 // 이 엔드포인트만 예외). photo 는 새로 고를 때만 채워지고, 없으면 기존 사진을 유지한다.
@@ -53,7 +53,8 @@ export type StudentUpsertRequestTypes = {
   birthDate?: string;
   grade?: string;
   className?: string;
-  seatNo?: number;
   note?: string;
   canGoAlone: boolean;
+  // 고친 보호자 연락처만 싣는다(수정 전용). 연결되지 않은 보호자는 서버가 422 로 막는다.
+  guardians?: { guardianId: string; phone: string }[];
 };

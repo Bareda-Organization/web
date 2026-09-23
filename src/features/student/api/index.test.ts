@@ -23,8 +23,6 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
                 student_id: "stu-1",
                 name: "김바래",
                 class_name: "초등부",
-                bus_no: "1호차",
-                stop_name: "정문",
                 guardian_phone: "010-1111-2222",
                 guardian_count: 2,
               },
@@ -45,15 +43,13 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
         studentId: "stu-1",
         name: "김바래",
         className: "초등부",
-        busNo: "1호차",
-        stopName: "정문",
         guardianPhone: "010-1111-2222",
         guardianCount: 2,
       },
     ]);
   });
 
-  it("getStudentDetail 은 canGoAlone·seatNo 등 상세 전용 필드까지 바꾼다", async () => {
+  it("getStudentDetail 은 canGoAlone·guardians 등 상세 전용 필드까지 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -68,10 +64,9 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
             birth_date: "2015-03-01",
             grade: "3",
             class_name: "초등부",
-            seat_no: 5,
             note: null,
             can_go_alone: true,
-            guardian_phone: "010-1111-2222",
+            guardians: [{ guardian_id: "7", name: "최부모", phone: "010-1111-2222" }],
           },
         }),
       ),
@@ -80,7 +75,7 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
     const result = await getStudentDetail("stu-1");
 
     expect(result.canGoAlone).toBe(true);
-    expect(result.seatNo).toBe(5);
+    expect(result.guardians).toEqual([{ guardianId: "7", name: "최부모", phone: "010-1111-2222" }]);
     expect(result.gender).toBe("male");
   });
 });

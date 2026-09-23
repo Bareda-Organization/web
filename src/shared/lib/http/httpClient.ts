@@ -26,7 +26,8 @@ type ApiFetchOptions = {
 // 변환된 값 — 백엔드가 전역 SNAKE_CASE 네이밍 전략을 쓴다).
 type ApiFetchMultipartOptions = {
   method?: Extract<HttpMethod, "POST" | "PATCH">;
-  data?: Record<string, string | number | boolean | undefined>;
+  // JSON 파트(`data`)로 직렬화되므로 목록·객체도 담을 수 있다(학생 수정의 보호자 연락처 목록).
+  data?: Record<string, unknown>;
   file?: { field: string; value: File };
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
