@@ -102,9 +102,14 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
     return next;
   }, []);
 
+  // 서버 호출이 실패해도 이 기기의 세션은 비운다 — 비우지 않으면 토큰은 지워졌는데(logoutRequest 의 finally)
+  // 화면은 로그인된 채 남아, 다음 요청마다 401 이 난다.
   const logout = useCallback(async (): Promise<void> => {
-    await logoutRequest();
-    setSession(null);
+    try {
+      await logoutRequest();
+    } finally {
+      setSession(null);
+    }
   }, []);
 
   const value = useMemo<AuthSessionContextValue>(

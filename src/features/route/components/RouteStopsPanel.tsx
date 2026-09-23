@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
+import { setLeaveWarning } from "@/shared/lib/navigation/leaveGuard";
 import { AlertBanner, Badge, Button, EmptyState, IconButton } from "@/shared/ui";
 import { getRouteDetail, optimizeRoute, saveRouteStops } from "../api";
 import type { NearbyStopTypes, RouteStop, RunDirection, StopSuggestionTypes } from "../types";
@@ -117,6 +118,12 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
       }
     })();
   }, [routeId]);
+
+  // 앱 안에서 떠날 때(뒤로·사이드바·로그아웃)도 묻는다 — 아래 beforeunload 는 창을 닫을 때만 불린다.
+  useEffect(() => {
+    setLeaveWarning(dirty ? `저장하지 않은 변경 ${changes}건이 사라집니다. 이 화면을 떠날까요?` : null);
+    return () => setLeaveWarning(null);
+  }, [dirty, changes]);
 
   // 저장하지 않은 채 창을 닫으면 편집이 사라진다 — 브라우저가 한 번 묻게 한다.
   useEffect(() => {

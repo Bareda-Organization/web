@@ -36,3 +36,10 @@ export const StyledAdminHeaderScope = styled.span`
   font-weight: var(--fw-bold);
   color: var(--text-primary);
 `;
+
+// 머리 양쪽 묶음 — 왼쪽은 뒤로 + 날짜, 오른쪽은 학원 이름 + 로그아웃(2026-09-23).
+export const StyledAdminHeaderSide = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;

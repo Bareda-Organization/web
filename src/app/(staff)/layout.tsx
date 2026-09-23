@@ -6,14 +6,17 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, useAuthSession } from "@/features/auth";
-import { SideNav } from "@/shared/ui";
+import { AuthGateGuard, LogoutButton, useAuthSession } from "@/features/auth";
+import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
+import { Button, SideNav } from "@/shared/ui";
 import {
   StyledStaffShell,
   StyledStaffMain,
   StyledStaffHeader,
   StyledStaffHeaderDate,
   StyledStaffHeaderAcademy,
+  StyledStaffHeaderSide,
 } from "./layout.styled";
 
 const NAV_ITEMS = [
@@ -47,19 +50,32 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
+  const { canGoBack, goBack } = useBackNavigation();
 
   return (
     <StyledStaffShell>
       <SideNav
         items={NAV_ITEMS.map((item) => ({ value: item.value, label: item.label, icon: item.icon }))}
         value={resolveActiveValue(pathname)}
-        onChange={(value) => router.push(`/${value}`)}
+        onChange={(value) => {
+          if (confirmLeave()) router.push(`/${value}`);
+        }}
         academy={session?.academy?.name}
       />
       <StyledStaffMain>
         <StyledStaffHeader>
-          <StyledStaffHeaderDate>{formatToday()}</StyledStaffHeaderDate>
-          <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
+          <StyledStaffHeaderSide>
+            {canGoBack ? (
+              <Button variant="ghost" size="sm" icon="arrow-left" onClick={() => confirmLeave() && goBack()}>
+                뒤로
+              </Button>
+            ) : null}
+            <StyledStaffHeaderDate>{formatToday()}</StyledStaffHeaderDate>
+          </StyledStaffHeaderSide>
+          <StyledStaffHeaderSide>
+            <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
+            <LogoutButton />
+          </StyledStaffHeaderSide>
         </StyledStaffHeader>
         {children}
       </StyledStaffMain>

@@ -7,14 +7,17 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, useAuthSession } from "@/features/auth";
-import { SideNav } from "@/shared/ui";
+import { AuthGateGuard, LogoutButton, useAuthSession } from "@/features/auth";
+import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
+import { Button, SideNav } from "@/shared/ui";
 import {
   StyledAdminShell,
   StyledAdminMain,
   StyledAdminHeader,
   StyledAdminHeaderDate,
   StyledAdminHeaderScope,
+  StyledAdminHeaderSide,
 } from "./layout.styled";
 
 // features/auth/lib/navigation.ts 의 ADMIN_PATH_SEGMENTS 와 반드시 같은 8개를 유지한다 —
@@ -44,19 +47,32 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
+  const { canGoBack, goBack } = useBackNavigation();
 
   return (
     <StyledAdminShell>
       <SideNav
         items={NAV_ITEMS.map((item) => ({ value: item.value, label: item.label, icon: item.icon }))}
         value={resolveActiveValue(pathname)}
-        onChange={(value) => router.push(`/${value}`)}
+        onChange={(value) => {
+          if (confirmLeave()) router.push(`/${value}`);
+        }}
         academy="전체 학원"
       />
       <StyledAdminMain>
         <StyledAdminHeader>
-          <StyledAdminHeaderDate>{formatToday()}</StyledAdminHeaderDate>
-          <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
+          <StyledAdminHeaderSide>
+            {canGoBack ? (
+              <Button variant="ghost" size="sm" icon="arrow-left" onClick={() => confirmLeave() && goBack()}>
+                뒤로
+              </Button>
+            ) : null}
+            <StyledAdminHeaderDate>{formatToday()}</StyledAdminHeaderDate>
+          </StyledAdminHeaderSide>
+          <StyledAdminHeaderSide>
+            <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
+            <LogoutButton />
+          </StyledAdminHeaderSide>
         </StyledAdminHeader>
         {children}
       </StyledAdminMain>

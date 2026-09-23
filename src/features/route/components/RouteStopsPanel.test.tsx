@@ -4,6 +4,7 @@ import type { MapMarker, MapSurfaceProps } from "@/features/map";
 import { RouteStopsPanel } from "./RouteStopsPanel";
 import { getRouteDetail, getRoutePath, optimizeRoute, saveRouteStops, suggestStops } from "../api";
 import type { RouteDetailResponseTypes, RoutePathResponseTypes } from "../types";
+import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 
 // 고정 노선 편성 — 승하차지 목록·추가·수정·삭제·저장(2026-09-23 사용자 지시 11건 중 1·2·3·4·5·7·8·10).
 // jsdom 에는 지도가 없어 MapSurface 를 목으로 바꾸고, 넘어간 props 로 "지도에 무엇을 그리라고 했는가" 를 본다.
@@ -134,6 +135,23 @@ describe("RouteStopsPanel — 저장 버튼을 눌러야 반영된다(지시 7)"
 
     expect(screen.getByText("후문")).toBeInTheDocument();
     expect(저장).toBeDisabled();
+  });
+});
+
+describe("RouteStopsPanel — 저장 안 한 채 앱 안에서 떠날 때(뒤로·사이드바·로그아웃)", () => {
+  it("변경이 있는 동안만 떠나기 전에 묻고, 저장하면 풀린다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await 띄운다();
+    expect(confirmLeave()).toBe(true);
+
+    fireEvent.click(within(행("후문")).getByRole("button", { name: "후문 삭제" }));
+    expect(confirmLeave()).toBe(false);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("저장하지 않은 변경 1건"));
+
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await screen.findByText("저장된 상태입니다");
+    expect(confirmLeave()).toBe(true);
+    confirm.mockRestore();
   });
 });
 

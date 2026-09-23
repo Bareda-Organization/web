@@ -2,6 +2,7 @@
 export { AuthSessionProvider } from "./components/AuthSessionProvider";
 export { useAuthSession } from "./hooks/useAuthSession";
 export { AuthGateGuard } from "./components/AuthGateGuard";
+export { LogoutButton } from "./components/LogoutButton";
 export { LoginForm } from "./components/LoginForm";
 export { SignupForm } from "./components/SignupForm";
 export { SignupStatusPanel } from "./components/SignupStatusPanel";
