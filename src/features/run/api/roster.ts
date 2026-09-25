@@ -6,7 +6,7 @@ type RawRosterItem = {
   name: string;
   class_name: string | null;
   stop_name: string;
-  guardian_phone: string;
+  guardian_phone: string | null; // 보호자 미연결 학생은 null(§5.4 ○, BR-082)
   change: RosterChange;
   status: RosterStatus;
   note: string | null;

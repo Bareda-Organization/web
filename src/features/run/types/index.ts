@@ -83,7 +83,7 @@ export type RosterItemResponseTypes = {
   name: string;
   className: string | null;
   stopName: string;
-  guardianPhone: string;
+  guardianPhone: string | null;
   change: RosterChange;
   status: RosterStatus;
   note: string | null;
