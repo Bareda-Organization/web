@@ -6,4 +6,5 @@ export { LogoutButton } from "./components/LogoutButton";
 export { LoginForm } from "./components/LoginForm";
 export { SignupForm } from "./components/SignupForm";
 export { SignupStatusPanel } from "./components/SignupStatusPanel";
+export { AccountPasswordResetDialog } from "./components/AccountPasswordResetDialog";
 export type { AuthSession, AccountRole, AccountStatus } from "./types";

@@ -108,3 +108,10 @@ export type AuthSession = {
   status: AccountStatus;
   academy: AcademyRefResponseTypes;
 };
+
+// POST /staff/accounts/{accountId}/password-reset (§5.22) 응답 — 임시 비밀번호는 1회 반환.
+export type AccountPasswordResetResponseTypes = {
+  accountId: string;
+  loginId: string;
+  temporaryPassword: string;
+};

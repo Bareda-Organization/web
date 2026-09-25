@@ -39,9 +39,12 @@ export type StudentDetailResponseTypes = {
   canGoAlone: boolean;
   // 연결된 보호자 전부(먼저 연결된 차례) — 관계자가 연락처를 고칠 수 있다(Ruling 326).
   guardians: StudentGuardianTypes[];
+  // 학생 본인 계정 — 가입 연결 전이면 null. 관리자 경유 비밀번호 초기화(§5.22 · Ruling 329)의 대상.
+  accountId: string | null;
 };
 
-export type StudentGuardianTypes = { guardianId: string; name: string; phone: string };
+// accountId 는 보호자 계정 — 관리자 경유 비밀번호 초기화(§5.22)의 대상.
+export type StudentGuardianTypes = { guardianId: string; name: string; phone: string; accountId: string };
 
 // POST /staff/students · PATCH /staff/students/{id} 공용 요청 — multipart(§1.1 40행,
 // 이 엔드포인트만 예외). photo 는 새로 고를 때만 채워지고, 없으면 기존 사진을 유지한다.

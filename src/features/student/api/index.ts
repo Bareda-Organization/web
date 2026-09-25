@@ -57,7 +57,8 @@ type RawStudentDetail = {
   class_name: string | null;
   note: string | null;
   can_go_alone: boolean;
-  guardians: { guardian_id: string; name: string; phone: string }[];
+  guardians: { guardian_id: string; name: string; phone: string; account_id: string }[];
+  account_id: string | null;
 };
 
 const toDetail = (raw: RawStudentDetail): StudentDetailResponseTypes => ({
@@ -75,7 +76,9 @@ const toDetail = (raw: RawStudentDetail): StudentDetailResponseTypes => ({
     guardianId: guardian.guardian_id,
     name: guardian.name,
     phone: guardian.phone,
+    accountId: guardian.account_id,
   })),
+  accountId: raw.account_id,
 });
 
 // GET /staff/students/{id} (§5.11, STU-01) — 404 STUDENT_NOT_FOUND 는 미존재·타 학원

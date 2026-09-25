@@ -3,6 +3,7 @@ import type { RecoverAccountRequestTypes } from "../types";
 
 // POST /auth/recover (§2.9, AUTH-08) — 비인증 허용.
 // ⚠ F2 화면 목록에 복구 화면이 없어 UI 는 아직 연결하지 않았다(password.ts 와 같은 판단).
+// ⚠ SMS 연동 전까지 서버가 503 RECOVERY_UNAVAILABLE 을 낸다(Ruling 329) — 복구는 관리자 경유(§5.22 · §6.7).
 export const recoverAccount = async (request: RecoverAccountRequestTypes): Promise<void> => {
   await apiFetch<void>("/auth/recover", {
     method: "POST",
