@@ -66,7 +66,8 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
             class_name: "초등부",
             note: null,
             can_go_alone: true,
-            guardians: [{ guardian_id: "7", name: "최부모", phone: "010-1111-2222" }],
+            guardians: [{ guardian_id: "7", name: "최부모", phone: "010-1111-2222", account_id: "5" }],
+            account_id: "10",
           },
         }),
       ),
@@ -75,7 +76,8 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
     const result = await getStudentDetail("stu-1");
 
     expect(result.canGoAlone).toBe(true);
-    expect(result.guardians).toEqual([{ guardianId: "7", name: "최부모", phone: "010-1111-2222" }]);
+    expect(result.guardians).toEqual([{ guardianId: "7", name: "최부모", phone: "010-1111-2222", accountId: "5" }]);
+    expect(result.accountId).toBe("10");
     expect(result.gender).toBe("male");
   });
 });

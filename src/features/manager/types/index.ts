@@ -17,6 +17,8 @@ export type ManagerItemResponseTypes = {
   phone: string;
   role: ManagerRole;
   workHours: WorkHours | null;
+  // 연결된 계정 — 가입 연결 전이면 null. 관리자 경유 비밀번호 초기화(§5.22 · Ruling 329)의 대상.
+  accountId: string | null;
 };
 
 export type ManagerListResponseTypes = {

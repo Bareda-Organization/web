@@ -61,3 +61,19 @@ describe("LoginForm — 에러 코드별 분기", () => {
     expect(await screen.findByText("퇴사 처리된 계정입니다")).toBeInTheDocument();
   });
 });
+
+// Ruling 329 — 전화번호 복구(§2.9)가 SMS 연동 전 503 이라, 분실 시 어디로 가야 하는지를 로그인 화면이 알린다.
+describe("LoginForm — 비밀번호 분실 안내", () => {
+  it("관리자 경유 초기화를 안내한다", () => {
+    mockUseAuthSession.mockReturnValue({
+      bootstrapStatus: "ready",
+      session: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+    render(<LoginForm />);
+
+    expect(screen.getByText(/메인 관리자에게 초기화를 요청/)).toBeInTheDocument();
+  });
+});

@@ -12,6 +12,7 @@ type RawManager = {
   phone: string;
   role: "driver" | "escort";
   work_hours: WorkHours | null;
+  account_id: string | null;
 };
 
 type RawManagerListResponse = {
@@ -28,6 +29,7 @@ const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
   phone: raw.phone,
   role: raw.role,
   workHours: raw.work_hours,
+  accountId: raw.account_id,
 });
 
 // GET /staff/managers?q= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.

@@ -124,6 +124,10 @@ export const LoginForm = () => {
           <StyledFooter>
             계정이 없으신가요? <StyledLink href="/signup">회원가입</StyledLink>
           </StyledFooter>
+          {/* Ruling 329 — 전화번호 복구(§2.9)는 SMS 연동 전까지 닫혀 있어 관리자 경유만 연다. */}
+          <StyledFooter>
+            비밀번호를 잊으셨나요? 관계자 계정은 메인 관리자에게 초기화를 요청해 주세요.
+          </StyledFooter>
         </StyledWrapper>
       </StyledContainer>
     </StyledLayout>

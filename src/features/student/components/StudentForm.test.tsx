@@ -5,6 +5,10 @@ import { createStudent, getStudentDetail, updateStudent } from "../api";
 
 // §5.11 STU-02·03 · API_SPEC §1.9 — 등록이 서버에서 거부되면 화면이 조용히
 // onDone 을 호출해 넘어가지 않고 오류 문구를 보여줘야 한다.
+vi.mock("@/features/auth", () => ({
+  AccountPasswordResetDialog: ({ name }: { name: string }) => <div>초기화 확인: {name}</div>,
+}));
+
 vi.mock("../api", () => ({
   createStudent: vi.fn(),
   updateStudent: vi.fn(),
@@ -54,9 +58,10 @@ describe("StudentForm — 보호자 연락처 수정", () => {
       note: null,
       canGoAlone: false,
       guardians: [
-        { guardianId: "7", name: "최부모", phone: "010-1000-0001" },
-        { guardianId: "8", name: "정부모", phone: "010-1000-0002" },
+        { guardianId: "7", name: "최부모", phone: "010-1000-0001", accountId: "5" },
+        { guardianId: "8", name: "정부모", phone: "010-1000-0002", accountId: "6" },
       ],
+      accountId: null,
     });
     vi.mocked(updateStudent).mockResolvedValue({} as never);
     const onDone = vi.fn();
@@ -77,11 +82,37 @@ describe("StudentForm — 보호자 연락처 수정", () => {
   it("연결된 보호자가 없으면 그 사실과 연결 방법을 알린다", async () => {
     vi.mocked(getStudentDetail).mockResolvedValue({
       studentId: "1", name: "김바래", studentPhone: null, photoUrl: null, gender: null, birthDate: null, grade: null,
-      className: null, note: null, canGoAlone: false, guardians: [],
+      className: null, note: null, canGoAlone: false, guardians: [], accountId: null,
     });
 
     render(<StudentForm studentId="1" onClose={vi.fn()} onDone={vi.fn()} />);
 
     expect(await screen.findByText(/연결된 보호자가 없습니다/)).toBeInTheDocument();
+  });
+});
+
+// Ruling 329 — 관리자 경유 비밀번호 초기화(§5.22)의 진입점. 보호자·학생 계정마다 버튼이 있다.
+describe("StudentForm — 비밀번호 초기화 진입점", () => {
+  it("보호자 버튼을 누르면 그 보호자의 초기화 확인 창을 연다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue({
+      studentId: "1",
+      name: "김바래",
+      studentPhone: null,
+      photoUrl: null,
+      gender: null,
+      birthDate: null,
+      grade: null,
+      className: null,
+      note: null,
+      canGoAlone: false,
+      guardians: [{ guardianId: "7", name: "최부모", phone: "010-1000-0001", accountId: "5" }],
+      accountId: "10",
+    });
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "최부모 비밀번호 초기화" }));
+
+    expect(screen.getByText("초기화 확인: 최부모")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "학생 계정 비밀번호 초기화" })).toBeInTheDocument();
   });
 });
