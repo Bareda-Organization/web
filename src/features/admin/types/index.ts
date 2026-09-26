@@ -210,6 +210,9 @@ export type RunRosterResponseTypes = {
 };
 
 // ── §6.10 · §6.12 차단 계정 해제 (O-03) ───────────────────────────────────
+// §9.1 전체 6종 — 차단은 역할 무관하게 걸릴 수 있다.
+export type AccountRole = "parent" | "student" | "driver" | "escort" | "staff" | "system_admin";
+
 export type BlockedAccountItemResponseTypes = {
   accountId: string;
   loginId: string;
@@ -218,6 +221,10 @@ export type BlockedAccountItemResponseTypes = {
   blockedAt: string;
   failedAttempts: number;
   reason: string;
+  // W6 — §9.1 역할(`Ruling 328`).
+  role: AccountRole;
+  // W6 — 차단 직전 계정 상태. 해제하면 이 값으로 되돌아간다(§6.12 · `Ruling 328`).
+  statusBeforeBlock: "active" | "pending" | "rejected";
 };
 
 export type BlockedAccountsResponseTypes = {

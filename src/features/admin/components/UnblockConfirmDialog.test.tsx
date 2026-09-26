@@ -21,6 +21,8 @@ const account: BlockedAccountItemResponseTypes = {
   blockedAt: "2026-09-10T09:00:00Z",
   failedAttempts: 5,
   reason: "로그인 5회 연속 실패",
+  role: "staff",
+  statusBeforeBlock: "active",
 };
 
 describe("UnblockConfirmDialog — 차단 근거 노출 후 해제", () => {

@@ -1,6 +1,11 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
-import type { BlockedAccountItemResponseTypes, BlockedAccountsResponseTypes, UnblockAccountResponseTypes } from "../types";
+import type {
+  AccountRole,
+  BlockedAccountItemResponseTypes,
+  BlockedAccountsResponseTypes,
+  UnblockAccountResponseTypes,
+} from "../types";
 
 type RawBlockedAccountItem = {
   account_id: string | number;
@@ -10,6 +15,8 @@ type RawBlockedAccountItem = {
   blocked_at: string;
   failed_attempts: number;
   reason: string;
+  role: AccountRole;
+  status_before_block: "active" | "pending" | "rejected";
 };
 
 type RawBlockedAccountsResponse = {
@@ -28,6 +35,8 @@ const toBlockedAccountItem = (raw: RawBlockedAccountItem): BlockedAccountItemRes
   blockedAt: raw.blocked_at,
   failedAttempts: raw.failed_attempts,
   reason: raw.reason,
+  role: raw.role,
+  statusBeforeBlock: raw.status_before_block,
 });
 
 // GET /admin/blocked-accounts (§6.10, O-03). BRIEF-a1.md §4.2 — 누가 왜 차단됐는지
