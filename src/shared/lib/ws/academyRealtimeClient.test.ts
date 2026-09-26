@@ -206,6 +206,56 @@ describe("AcademyRealtimeClient", () => {
     }
   });
 
+  it("W2: TOKEN_EXPIRED STOMP 오류를 받으면 재발급을 부르고, 성공하면 새 토큰으로 재연결한다", async () => {
+    const { factory, handles } = createFakeClientFactory();
+    const refreshAccessToken = vi.fn().mockResolvedValue("new-token");
+    const client = new AcademyRealtimeClient({
+      url: "ws://x",
+      createClient: factory,
+      readAccessToken: () => "old-token",
+      refreshAccessToken,
+    });
+    client.connect();
+    handles[0].connected = true;
+    handles[0].config.onConnect({ headers: {}, body: "" });
+
+    handles[0].config.onStompError({ headers: { message: "TOKEN_EXPIRED" }, body: "" });
+    handles[0].config.onWebSocketClose({});
+    // 재발급이 끝날 때까지 재연결이 걸리지 않는다 — 마이크로태스크 큐를 비운다.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(handles).toHaveLength(2);
+    expect(handles[1].config.connectHeaders).toEqual({ Authorization: "Bearer new-token" });
+  });
+
+  it("W2: TOKEN_EXPIRED 뒤 재발급이 실패하면 재연결하지 않고 로그인 만료를 알린다", async () => {
+    const { factory, handles } = createFakeClientFactory();
+    const refreshAccessToken = vi.fn().mockRejectedValue(new Error("refresh 실패"));
+    const onSessionExpired = vi.fn();
+    const client = new AcademyRealtimeClient({
+      url: "ws://x",
+      createClient: factory,
+      readAccessToken: () => "old-token",
+      refreshAccessToken,
+      onSessionExpired,
+    });
+    client.connect();
+    handles[0].connected = true;
+    handles[0].config.onConnect({ headers: {}, body: "" });
+
+    handles[0].config.onStompError({ headers: { message: "TOKEN_EXPIRED" }, body: "" });
+    handles[0].config.onWebSocketClose({});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(handles).toHaveLength(1);
+    expect(client.getSnapshot()).toBe("disconnected");
+  });
+
   it("onWebSocketError 와 onWebSocketClose 가 같은 시도에 대해 둘 다 와도 재연결은 한 번만 걸린다 (disconnectHandled 가드)", () => {
     vi.useFakeTimers();
     try {

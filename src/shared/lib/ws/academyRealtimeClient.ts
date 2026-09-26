@@ -1,4 +1,5 @@
-import { getAccessToken } from "../http";
+import { getAccessToken, refreshAccessToken as defaultRefreshAccessToken } from "../http";
+import { notifyAuthGate } from "../http/authGate";
 import { WsBackoffPolicy } from "./wsBackoffPolicy";
 import type { WsConnectionState } from "./wsConnectionState";
 import { parseWebSocketEnvelope, type WebSocketEnvelope } from "./webSocketEnvelope";
@@ -16,6 +17,13 @@ export type AcademyRealtimeClientOptions = {
   // 자리 — `stompClient.ts` 상단 주석 참고.
   createClient?: StompClientFactory;
   readAccessToken?: () => string | null;
+  // STOMP `ERROR` `TOKEN_EXPIRED` 를 받았을 때 부를 재발급 창구 — 기본값은
+  // `refreshClient.ts` 의 동시 재발급을 1회로 묶는 그 함수다(REST 401 처리와
+  // 같은 창구를 공유해야 refresh 토큰 1회용 회전과 부딪히지 않는다).
+  refreshAccessToken?: () => Promise<string>;
+  // 재발급까지 실패했을 때(refresh 토큰도 무효) 알릴 창구 — 기본값은 REST
+  // 401 처리와 같은 `notifyAuthGate` 라 화면은 로그인 만료를 한 경로로만 받는다.
+  onSessionExpired?: () => void;
   onDebugMessage?: (message: string) => void;
 };
 
@@ -43,6 +51,8 @@ export class AcademyRealtimeClient {
   private readonly backoffPolicy: WsBackoffPolicy;
   private readonly createClient: StompClientFactory;
   private readonly readAccessToken: () => string | null;
+  private readonly refreshAccessToken: () => Promise<string>;
+  private readonly onSessionExpired: () => void;
   private readonly onDebugMessage: (message: string) => void;
 
   private client: StompClientLike | null = null;
@@ -56,6 +66,11 @@ export class AcademyRealtimeClient {
   // 뒤 끊긴 실패가 stompjs 에서도 다른 콜백으로 온다). 가드가 없으면 재연결
   // 스케줄이 두 번 걸려 타이머가 두 개 생긴다.
   private disconnectHandled = false;
+  // 이번 연결이 끊긴 원인이 TOKEN_EXPIRED 였는지 — `handleStompError` 가
+  // 세워 두면 뒤이어 오는 `handleDisconnected` 가 이 플래그를 보고 일반
+  // 백오프 대신 재발급 경로(`handleTokenExpired`)를 탄다(Dart `_tokenExpired`
+  // 와 같은 사정 — 재발급·재연결은 소켓이 실제로 닫힌 뒤에 시작해야 한다).
+  private tokenExpired = false;
 
   private state: WsConnectionState = "disconnected";
   // 이번 연결에서 구독했지만 아직 해제하지 않은 목적지 — STOMP ERROR 프레임은
@@ -70,6 +85,8 @@ export class AcademyRealtimeClient {
     this.backoffPolicy = options.backoffPolicy ?? new WsBackoffPolicy();
     this.createClient = options.createClient ?? createStompClient;
     this.readAccessToken = options.readAccessToken ?? getAccessToken;
+    this.refreshAccessToken = options.refreshAccessToken ?? defaultRefreshAccessToken;
+    this.onSessionExpired = options.onSessionExpired ?? (() => notifyAuthGate({ type: "session-expired" }));
     this.onDebugMessage = options.onDebugMessage ?? (() => {});
   }
 
@@ -130,7 +147,10 @@ export class AcademyRealtimeClient {
     };
   }
 
-  private doConnect(): void {
+  // [overrideToken] 을 주면 저장소를 다시 읽지 않고 그 값을 그대로 싣는다 —
+  // 재발급 직후(`handleTokenExpired`)는 방금 받은 새 토큰이 손에 있는데
+  // 저장소 왕복을 한 번 더 거칠 이유가 없다(Dart `_doConnect` 와 동일 판단).
+  private doConnect(overrideToken?: string): void {
     this.disconnectHandled = false;
     // 새 소켓은 이전 세션의 구독을 이어받지 않는다 — 옛 목적지가 여기 남아
     // 있으면 다음 FORBIDDEN 이 이미 끊긴 목적지를 다시 가리키게 된다.
@@ -139,7 +159,7 @@ export class AcademyRealtimeClient {
     // 매 (재)연결마다 새로 읽는다 — REST 401 로 토큰이 갱신됐으면 다음
     // 재연결이 그 새 토큰을 자동으로 집는다(`BaraedaWebSocketClient` 클래스
     // 문서의 "토큰 만료 처리"와 동일한 판단).
-    const token = this.readAccessToken();
+    const token = overrideToken ?? this.readAccessToken();
     this.client = this.createClient({
       brokerURL: this.url,
       connectHeaders: token === null ? {} : { Authorization: `Bearer ${token}` },
@@ -166,6 +186,13 @@ export class AcademyRealtimeClient {
       this.forbidden = true;
       this.setState("forbidden");
     }
+    // API_SPEC §7 — 연결에 쓰인 access 토큰이 만료되면 서버가 이 프레임으로
+    // 세션을 닫는다. 실제 재발급·재연결은 뒤이어 오는 `handleDisconnected` 가
+    // 이 플래그를 보고 처리한다 — 서버가 소켓을 닫는 시점과 순서를 맞추기
+    // 위해 여기서 바로 재발급을 시작하지 않는다(Dart 원본과 동일 근거).
+    if (message === "TOKEN_EXPIRED") {
+      this.tokenExpired = true;
+    }
     this.onDebugMessage(`[AcademyRealtimeClient] STOMP ERROR: ${JSON.stringify(frame.headers)} ${frame.body}`);
   }
 
@@ -187,6 +214,12 @@ export class AcademyRealtimeClient {
       return;
     }
 
+    if (this.tokenExpired) {
+      this.tokenExpired = false;
+      void this.handleTokenExpired();
+      return;
+    }
+
     this.reconnectAttempt += 1;
     if (this.backoffPolicy.shouldGiveUp(this.reconnectAttempt)) {
       this.setState("gaveUp");
@@ -197,6 +230,22 @@ export class AcademyRealtimeClient {
     const delay = this.backoffPolicy.delayFor(this.reconnectAttempt);
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => this.doConnect(), delay);
+  }
+
+  // TOKEN_EXPIRED 로 끊긴 뒤의 처리 — 재발급에 성공하면 곧바로 새 토큰으로
+  // 재연결하고(백오프 횟수를 소모하지 않는다 — 예정된 갱신이지 네트워크
+  // 실패가 아니다), 실패하면 `gaveUp` 이 아니라 로그인 만료로 넘긴다(같은
+  // 토큰으로 재시도해 봐야 다시 거부되므로 "재시도"가 뜻을 잃는다).
+  private async handleTokenExpired(): Promise<void> {
+    this.setState("reconnecting");
+    try {
+      const newToken = await this.refreshAccessToken();
+      this.reconnectAttempt = 0;
+      this.doConnect(newToken);
+    } catch {
+      this.onSessionExpired();
+      this.setState("disconnected");
+    }
   }
 
   private clearReconnectTimer(): void {
