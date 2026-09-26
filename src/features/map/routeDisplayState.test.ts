@@ -141,6 +141,23 @@ describe("buildRouteDisplayState", () => {
     ]);
   });
 
+  // W7 — API_SPEC §4.3·§5.19 `stops[].is_destination`(등원 회차의 마지막 항목,
+  // 학원). road_path 끝점(destination 마커)과 같은 자리라 정차지 마커로 한 번 더
+  // 찍으면 겹친다(`FIX-H.md §2` 관측) — 학원 항목은 정차지 마커 산출에서 뺀다.
+  it("stops[] 의 is_destination=true 항목(학원)은 정차지 마커에서 뺀다", () => {
+    const state = buildRouteDisplayState("9", "moving", {
+      roadPath: [],
+      fallbackUsed: false,
+      stops: [
+        { stopId: "1", seq: 1, lat: 37.5665, lng: 126.978, isDestination: false },
+        { stopId: "9", seq: 2, lat: 37.4979, lng: 127.0276, isDestination: true },
+      ],
+      confirmed: true,
+    });
+
+    expect(state.stopMarkers).toEqual([{ id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 1 }]);
+  });
+
   // 한 점짜리 경로는 출발지와 도착지가 같은 자리다 — 겹쳐 찍어도 읽히지 않아 만들지 않는다.
   it("road_path 좌표가 2개 미만이면 출발지·도착지 마커를 만들지 않는다", () => {
     const oneS = buildRouteDisplayState("9", "confirmed", {

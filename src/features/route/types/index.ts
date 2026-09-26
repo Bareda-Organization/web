@@ -12,6 +12,9 @@ export type RouteStop = {
   name: string;
   lat: number;
   lng: number;
+  // W7 — §4.3·§5.19 `is_destination`(등원 회차의 마지막 항목, 학원). RTE-01 편성
+  // 조회에는 이 필드가 없어(학원 자체를 정차지로 다루지 않는다) 기본값 false.
+  isDestination?: boolean;
 };
 
 export type RouteListItemResponseTypes = {

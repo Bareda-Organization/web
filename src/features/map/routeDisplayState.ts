@@ -18,7 +18,9 @@ import type { MapMarker, MapPolyline, MapPolylineKind } from "./types";
 type RouteQueryResult = {
   roadPath: { lat: number; lng: number }[];
   fallbackUsed: boolean;
-  stops: { stopId: string; seq: number; lat: number; lng: number }[];
+  // W7 — `is_destination=true`(등원 회차의 마지막 항목, 학원)은 road_path 끝점
+  // (destination 마커)과 같은 자리라 정차지 마커 산출에서 뺀다(`API_SPEC §4.3·§5.19`).
+  stops: { stopId: string; seq: number; lat: number; lng: number; isDestination?: boolean }[];
   confirmed: boolean;
 };
 
@@ -85,13 +87,15 @@ export const buildRouteDisplayState = (
     noPlannedRoute: !hasRoute && !route.confirmed,
     planned: hasRoute && !route.confirmed,
     stopMarkers: [
-      ...route.stops.map((stop) => ({
-        id: `stop-${stop.stopId}`,
-        lat: stop.lat,
-        lng: stop.lng,
-        kind: "stop" as const,
-        seq: stop.seq,
-      })),
+      ...route.stops
+        .filter((stop) => !stop.isDestination)
+        .map((stop) => ({
+          id: `stop-${stop.stopId}`,
+          lat: stop.lat,
+          lng: stop.lng,
+          kind: "stop" as const,
+          seq: stop.seq,
+        })),
       ...endpointMarkersOf(runId, route.roadPath),
     ],
   };

@@ -13,7 +13,16 @@ import type {
   Weekday,
 } from "../types";
 
-type RawRouteStop = { stop_id: string | number; seq: number; name: string; lat: number; lng: number };
+// `is_destination` 는 RTE-01(고정 노선 편성) 응답에는 없고 §4.3·§5.19 응답에만
+// 온다 — `?:` 로 두고 매핑에서 `?? false` 로 기본값을 준다.
+type RawRouteStop = {
+  stop_id: string | number;
+  seq: number;
+  name: string;
+  lat: number;
+  lng: number;
+  is_destination?: boolean;
+};
 
 type RawRouteListItem = {
   id: string | number;
@@ -41,6 +50,7 @@ const toStop = (raw: RawRouteStop): RouteStop => ({
   name: raw.name,
   lat: raw.lat,
   lng: raw.lng,
+  isDestination: raw.is_destination ?? false,
 });
 
 const toListItem = (raw: RawRouteListItem) => ({
