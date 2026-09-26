@@ -36,7 +36,8 @@ describe("emergency api — 실서버 계약", () => {
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
     expect(typeof result.unackedCount).toBe("number");
-    expect(typeof result.items[0].emergencyId).toBe("number");
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(typeof result.items[0].emergencyId).toBe("string");
   });
 
   // r12-t1 목표1① — ackEmergency(§5.16, EXC-04, A-16) 실제 재현. emergency_id=1 은
@@ -63,7 +64,8 @@ describe("emergency api — 실서버 계약", () => {
     // 채로 시작할 수도 있다 — 그때만 최초 확인 호출을 건너뛴다.
     if (target && !target.acked) {
       const result = await ackEmergency("1");
-      expect(result.emergencyId).toBe(1);
+      // 응답 식별자는 문자열이다(Ruling 332·357).
+      expect(result.emergencyId).toBe("1");
       expect(typeof result.ackedAt).toBe("string");
 
       // 기본 조회(status 미지정)는 open 만 돌려줘 확인 처리한 건이 빠진다(실측 확인)

@@ -102,7 +102,8 @@ describe("schedule api — 실서버 계약", () => {
       destinationName: "바래다학원 A",
     });
     try {
-      expect(created.busId).toBe(1);
+      // 응답 식별자는 문자열이다(Ruling 332·357).
+      expect(created.busId).toBe("1");
       expect(created.weekday).toBe(tomorrow);
       expect(created.active).toBe(true);
 

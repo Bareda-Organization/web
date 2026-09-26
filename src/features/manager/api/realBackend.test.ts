@@ -45,7 +45,8 @@ describe("manager api — 실서버 계약", () => {
 
     const created = await createManager({ name: "실서버계약시험", phone: "010-9999-0000", role: "driver" });
     try {
-      expect(created.id).toBeGreaterThan(0);
+      // 응답 식별자는 문자열이다(Ruling 332·357) — 값 자체는 여전히 양의 정수 형태다.
+      expect(created.id).toMatch(/^[1-9]\d*$/);
 
       const updated = await updateManager(created.id, {
         name: "실서버계약시험-수정",

@@ -56,7 +56,8 @@ describe("admin api — 실서버 계약", () => {
 
     const result = await getAcademy("1");
 
-    expect(result.id).toBe(1);
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(result.id).toBe("1");
     expect(Array.isArray(result.staffAccounts)).toBe(true);
   });
 
@@ -118,7 +119,8 @@ describe("admin api — 실서버 계약", () => {
 
     const result = await updateStaffAccount("20", { name: "한관리" });
 
-    expect(result.accountId).toBe(20);
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(result.accountId).toBe("20");
   });
 
   it("getAcademyRunsLive 는 학원의 실시간 회차 목록을 돌려준다(§6.8)", async ({ skip }) => {
@@ -157,7 +159,8 @@ describe("admin api — 실서버 계약", () => {
     const driverBlocked = result.items.find((item) => item.loginId === "driverBlocked");
     if (driverBlocked) {
       expect(driverBlocked.failedAttempts).toBeGreaterThanOrEqual(5);
-      expect(driverBlocked.accountId).toBe(15);
+      // 응답 식별자는 문자열이다(Ruling 332·357).
+      expect(driverBlocked.accountId).toBe("15");
     }
   });
 

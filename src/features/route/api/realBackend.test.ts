@@ -77,7 +77,8 @@ describe("route api — 실서버 계약", () => {
 
     const result = await getRouteDetail("1");
 
-    expect(result.id).toBe(1);
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(result.id).toBe("1");
     expect(Array.isArray(result.stops)).toBe(true);
     expect(result.stops.length).toBeGreaterThan(0);
   });
@@ -96,7 +97,8 @@ describe("route api — 실서버 계약", () => {
       active: true,
     });
     try {
-      expect(created.id).toBeGreaterThan(0);
+      // 응답 식별자는 문자열이다(Ruling 332·357) — 값 자체는 여전히 양의 정수 형태다.
+      expect(created.id).toMatch(/^[1-9]\d*$/);
     } finally {
       await deleteRoute(created.id);
     }
@@ -127,7 +129,8 @@ describe("route api — 실서버 계약", () => {
       });
 
       expect(updated.name).toBe("실서버계약시험용-수정후");
-      expect(updated.stops.map((s) => s.stopId)).toEqual([2, 1]);
+      // 응답 식별자는 문자열이다(Ruling 332·357).
+      expect(updated.stops.map((s) => s.stopId)).toEqual(["2", "1"]);
     } finally {
       await deleteRoute(created.id);
     }
@@ -155,9 +158,10 @@ describe("route api — 실서버 계약", () => {
 
       expect(optimized.id).toBe(created.id);
       expect(orderedIds.length).toBe(3);
-      expect([...orderedIds].sort()).toEqual([1, 2, 3]);
+      // 응답 식별자는 문자열이다(Ruling 332·357).
+      expect([...orderedIds].sort()).toEqual(["1", "2", "3"]);
       // 입력 그대로면 엔진을 통과하지 않고 되돌려준 것과 구별이 안 된다 — 실제로 재정렬됐는지 확인.
-      expect(orderedIds).not.toEqual([3, 1, 2]);
+      expect(orderedIds).not.toEqual(["3", "1", "2"]);
     } finally {
       await deleteRoute(created.id);
     }
