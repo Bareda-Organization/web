@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   AcademiesResponseTypes,
   AcademyDetailResponseTypes,
@@ -11,7 +12,7 @@ import type {
 } from "../types";
 
 type RawAcademySummary = {
-  id: number;
+  id: string | number;
   code: string;
   name: string;
   region: string;
@@ -29,7 +30,7 @@ type RawAcademiesResponse = {
 };
 
 const toSummary = (raw: RawAcademySummary): AcademySummaryResponseTypes => ({
-  id: raw.id,
+  id: asIdString(raw.id),
   code: raw.code,
   name: raw.name,
   region: raw.region,
@@ -53,7 +54,7 @@ export const getAcademies = async (q?: string, status?: AcademyStatus): Promise<
   };
 };
 
-type RawStaffAccountRef = { account_id: number; name: string; login_id: string };
+type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string };
 
 type RawAcademyDetail = RawAcademySummary & {
   address: string | null;
@@ -64,13 +65,13 @@ type RawAcademyDetail = RawAcademySummary & {
 };
 
 const toStaffAccountRef = (raw: RawStaffAccountRef): AcademyStaffAccountRefResponseTypes => ({
-  accountId: raw.account_id,
+  accountId: asIdString(raw.account_id),
   name: raw.name,
   loginId: raw.login_id,
 });
 
 // GET /admin/academies/{id} (§6.3, ACAD-03, O-01).
-export const getAcademy = async (id: number): Promise<AcademyDetailResponseTypes> => {
+export const getAcademy = async (id: string): Promise<AcademyDetailResponseTypes> => {
   const raw = await apiFetch<RawAcademyDetail>(`/admin/academies/${id}`, { method: "GET" });
   return {
     ...toSummary(raw),
@@ -83,7 +84,7 @@ export const getAcademy = async (id: number): Promise<AcademyDetailResponseTypes
 };
 
 type RawCreateAcademyResponse = {
-  academy_id: number;
+  academy_id: string | number;
   code: string;
   name: string;
   region: string;
@@ -104,7 +105,7 @@ export const createAcademy = async (payload: CreateAcademyRequestTypes): Promise
     },
   });
   return {
-    academyId: raw.academy_id,
+    academyId: asIdString(raw.academy_id),
     code: raw.code,
     name: raw.name,
     region: raw.region,
@@ -113,7 +114,7 @@ export const createAcademy = async (payload: CreateAcademyRequestTypes): Promise
 };
 
 // PATCH /admin/academies/{id} (§6.3, ACAD-04, O-01). code 는 수정 대상 밖 — 요청에 안 싣는다.
-export const updateAcademy = async (id: number, payload: UpdateAcademyRequestTypes): Promise<void> => {
+export const updateAcademy = async (id: string, payload: UpdateAcademyRequestTypes): Promise<void> => {
   await apiFetch<void>(`/admin/academies/${id}`, {
     method: "PATCH",
     body: {

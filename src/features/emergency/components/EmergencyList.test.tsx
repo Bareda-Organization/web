@@ -15,11 +15,11 @@ const mockGet = vi.mocked(getEmergencies);
 const mockAck = vi.mocked(ackEmergency);
 
 const ITEM = {
-  emergencyId: 1,
+  emergencyId: "1",
   type: "accident" as const,
   memo: null,
   raisedBy: { name: "이기사", role: "driver" as const, phone: "010-1111-2222" },
-  runId: 10,
+  runId: "10",
   busNo: "1호차",
   direction: "to_academy" as const,
   position: { lat: 37.5, lng: 127.0, recordedAt: null },

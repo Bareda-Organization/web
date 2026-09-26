@@ -35,7 +35,7 @@ export const EmergencyList = () => {
   const [unackedCount, setUnackedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [ackingId, setAckingId] = useState<number | null>(null);
+  const [ackingId, setAckingId] = useState<string | null>(null);
 
   const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string) => {
     setLoading(true);
@@ -59,7 +59,7 @@ export const EmergencyList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  const handleAck = async (emergencyId: number) => {
+  const handleAck = async (emergencyId: string) => {
     setAckingId(emergencyId);
     setError(null);
     try {

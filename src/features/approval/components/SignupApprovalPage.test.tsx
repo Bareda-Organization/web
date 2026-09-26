@@ -17,7 +17,7 @@ const mockDecideSignupRequest = vi.mocked(decideSignupRequest);
 
 const baseList: SignupRequestsResponseTypes = {
   items: [
-    { requestId: 1, name: "김보호", role: "parent", phone: "010-1111-2222", requestedAt: "2026-09-10T00:00:00Z" },
+    { requestId: "1", name: "김보호", role: "parent", phone: "010-1111-2222", requestedAt: "2026-09-10T00:00:00Z" },
   ],
   pendingCount: 1,
   page: 0,
@@ -53,7 +53,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     await waitFor(() =>
-      expect(mockDecideSignupRequest).toHaveBeenCalledWith(1, {
+      expect(mockDecideSignupRequest).toHaveBeenCalledWith("1", {
         accept: true,
         link: undefined,
       }),

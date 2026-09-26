@@ -12,7 +12,7 @@ import { StyledMapCaption, StyledMapSurface } from "./RouteMapPanel.styled";
 type Point = { lat: number; lng: number };
 
 type RouteMapPanelProps = {
-  routeId: number;
+  routeId: string;
   direction: RunDirection;
   // 저장·최적화 뒤 경로를 다시 불러오게 하는 트리거 — 값이 바뀔 때마다 재조회한다.
   refreshKey: number;

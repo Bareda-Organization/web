@@ -16,10 +16,10 @@ vi.mock("../api", () => ({
 const mockDecide = vi.mocked(decideStaffSignupRequest);
 
 const request: StaffSignupRequestItemResponseTypes = {
-  requestId: 7,
+  requestId: "7",
   name: "박대기",
   phone: "010-2222-3333",
-  academy: { id: 4, code: "C97U7K5D", name: "A1검증학원", region: "서울" },
+  academy: { id: "4", code: "C97U7K5D", name: "A1검증학원", region: "서울" },
   requestedAt: "2026-09-10T09:00:00Z",
   academyStaffCount: 1,
 };
@@ -61,6 +61,6 @@ describe("MemberApprovalDecideDialog — 승인·거절 실패 시 오류 표시
     fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
-    expect(mockDecide).toHaveBeenCalledWith(7, { accept: true });
+    expect(mockDecide).toHaveBeenCalledWith("7", { accept: true });
   });
 });

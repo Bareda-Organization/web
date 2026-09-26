@@ -7,10 +7,10 @@ export type ReportType = "guardian_absent" | "road_block" | "vehicle_issue" | "e
 
 // report_id — §5.20 표는 명시하지 않았으나 실측은 숫자였다.
 export type ReportItemResponseTypes = {
-  reportId: number;
+  reportId: string;
   type: ReportType;
   memo: string;
-  runId: number;
+  runId: string;
   busNo: string;
   // guardian_absent 일 때만 채워진다. 실측 확인.
   studentName: string | null;
@@ -31,5 +31,5 @@ export type ReportListResponseTypes = {
 export type ReportListQueryTypes = {
   type?: ReportType;
   date?: string;
-  runId?: number;
+  runId?: string;
 };

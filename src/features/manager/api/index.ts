@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   ManagerItemResponseTypes,
   ManagerListResponseTypes,
@@ -7,7 +8,7 @@ import type {
 } from "../types";
 
 type RawManager = {
-  id: number;
+  id: string | number;
   name: string;
   phone: string;
   role: "driver" | "escort";
@@ -24,7 +25,7 @@ type RawManagerListResponse = {
 };
 
 const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
-  id: raw.id,
+  id: asIdString(raw.id),
   name: raw.name,
   phone: raw.phone,
   role: raw.role,
@@ -62,7 +63,7 @@ export const createManager = async (request: ManagerUpsertRequestTypes): Promise
 
 // PATCH /staff/managers/{id} (MGR-03) — 상세 GET 이 사양에 없어 목록 행 데이터로 폼을 채운다.
 export const updateManager = async (
-  id: number,
+  id: string,
   request: ManagerUpsertRequestTypes,
 ): Promise<ManagerItemResponseTypes> => {
   const raw = await apiFetch<RawManager>(`/staff/managers/${id}`, { method: "PATCH", body: toRawUpsert(request) });
@@ -70,6 +71,6 @@ export const updateManager = async (
 };
 
 // DELETE /staff/managers/{id} (MGR-04) — 배치 중이면 409 MANAGER_ASSIGNED. 화면이 그 경계를 그대로 안내한다.
-export const deleteManager = async (id: number): Promise<void> => {
+export const deleteManager = async (id: string): Promise<void> => {
   await apiFetch<void>(`/staff/managers/${id}`, { method: "DELETE" });
 };

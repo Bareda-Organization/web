@@ -15,7 +15,7 @@ const WEEKDAY_LABEL: Record<string, string> = { mon: "월", tue: "화", wed: "�
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
 
 type RouteDetailProps = {
-  routeId: number;
+  routeId: string;
 };
 
 // 화면 4 — 고정 노선 편성 · 정차 순서 최적화(§5.9, A-08). 편집 폼(RouteForm)·승하차지 편성

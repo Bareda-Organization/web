@@ -22,11 +22,11 @@ export type EmergencyPositionTypes = {
 // emergency_id — §5.16 표는 string 이라 적었지만 실측은 숫자였다(notification_id 와
 // 같은 성격의 사양-실제 불일치, §2).
 export type EmergencyItemResponseTypes = {
-  emergencyId: number;
+  emergencyId: string;
   type: EmergencyType;
   memo: string | null;
   raisedBy: EmergencyPersonTypes;
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   position: EmergencyPositionTypes;
@@ -55,6 +55,6 @@ export type EmergencyListQueryTypes = {
 };
 
 export type AckEmergencyResponseTypes = {
-  emergencyId: number;
+  emergencyId: string;
   ackedAt: string;
 };

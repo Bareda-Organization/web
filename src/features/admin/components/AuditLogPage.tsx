@@ -40,8 +40,8 @@ export const AuditLogPage = () => {
 
   const buildQuery = useCallback(
     () => ({
-      academyId: academyId ? Number(academyId) : undefined,
-      accountId: accountId ? Number(accountId) : undefined,
+      academyId: academyId || undefined,
+      accountId: accountId || undefined,
       from: from || undefined,
       to: to || undefined,
     }),

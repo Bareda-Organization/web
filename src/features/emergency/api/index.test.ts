@@ -49,11 +49,11 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        emergencyId: 1,
+        emergencyId: "1",
         type: "vehicle_fault",
         memo: "타이어 펑크",
         raisedBy: { name: "이기사", role: "driver", phone: "010-1111-2222" },
-        runId: 7,
+        runId: "7",
         busNo: "1호차",
         direction: "to_academy",
         position: { lat: 37.5, lng: 127.1, recordedAt: "2026-09-15T08:10:00" },
@@ -80,8 +80,8 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await ackEmergency(1);
+    const result = await ackEmergency("1");
 
-    expect(result).toEqual({ emergencyId: 1, ackedAt: "2026-09-15T08:12:00" });
+    expect(result).toEqual({ emergencyId: "1", ackedAt: "2026-09-15T08:12:00" });
   });
 });

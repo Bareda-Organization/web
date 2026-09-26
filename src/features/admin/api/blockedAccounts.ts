@@ -1,8 +1,9 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { BlockedAccountItemResponseTypes, BlockedAccountsResponseTypes, UnblockAccountResponseTypes } from "../types";
 
 type RawBlockedAccountItem = {
-  account_id: number;
+  account_id: string | number;
   login_id: string;
   name: string;
   academy_name: string;
@@ -20,7 +21,7 @@ type RawBlockedAccountsResponse = {
 };
 
 const toBlockedAccountItem = (raw: RawBlockedAccountItem): BlockedAccountItemResponseTypes => ({
-  accountId: raw.account_id,
+  accountId: asIdString(raw.account_id),
   loginId: raw.login_id,
   name: raw.name,
   academyName: raw.academy_name,
@@ -45,7 +46,7 @@ export const getBlockedAccounts = async (): Promise<BlockedAccountsResponseTypes
 type RawUnblockResponse = { account_status: "active"; unblocked_by: string; unblocked_at: string };
 
 // POST /admin/blocked-accounts/{id}/unblock (§6.12, O-03). 요청 본문 없음.
-export const unblockAccount = async (accountId: number): Promise<UnblockAccountResponseTypes> => {
+export const unblockAccount = async (accountId: string): Promise<UnblockAccountResponseTypes> => {
   const raw = await apiFetch<RawUnblockResponse>(`/admin/blocked-accounts/${accountId}/unblock`, {
     method: "POST",
   });

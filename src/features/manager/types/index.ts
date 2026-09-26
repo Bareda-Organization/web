@@ -12,7 +12,7 @@ export type WorkHoursRange = { start: string; end: string };
 export type WorkHours = Partial<Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", WorkHoursRange[]>>;
 
 export type ManagerItemResponseTypes = {
-  id: number;
+  id: string;
   name: string;
   phone: string;
   role: ManagerRole;

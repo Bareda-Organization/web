@@ -30,7 +30,7 @@ export const ScheduleList = () => {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ScheduleItemResponseTypes | undefined>(undefined);
   const [creating, setCreating] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async (nextPage: number) => {
     setLoading(true);

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   ReportItemResponseTypes,
   ReportListQueryTypes,
@@ -7,10 +8,10 @@ import type {
 } from "../types";
 
 type RawReportItem = {
-  report_id: number;
+  report_id: string | number;
   type: ReportType;
   memo: string;
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   student_name: string | null;
   reported_by: string;
@@ -24,10 +25,10 @@ type RawReportListResponse = {
 };
 
 const toItem = (raw: RawReportItem): ReportItemResponseTypes => ({
-  reportId: raw.report_id,
+  reportId: asIdString(raw.report_id),
   type: raw.type,
   memo: raw.memo,
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   studentName: raw.student_name,
   reportedBy: raw.reported_by,
@@ -49,7 +50,7 @@ export const getReports = async (filters: ReportListQueryTypes = {}): Promise<Re
 // 별도 상세 페이지를 두지 않는다(판단 근거, 보고서 §1). 404 REPORT_NOT_FOUND 는
 // 존재 비노출(Ruling 163) — 호출부가 없어 이 함수만 barrel 없이 남겨 두되, 필요
 // 시 재사용할 수 있도록 구현은 해 둔다.
-export const getReportDetail = async (reportId: number): Promise<ReportItemResponseTypes> => {
+export const getReportDetail = async (reportId: string): Promise<ReportItemResponseTypes> => {
   const raw = await apiFetch<RawReportItem>(`/staff/reports/${reportId}`, { method: "GET" });
   return toItem(raw);
 };

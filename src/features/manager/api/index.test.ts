@@ -41,13 +41,13 @@ describe("manager api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        id: 1,
+        id: "1",
         name: "이기사",
         phone: "010-2222-3333",
         role: "driver",
         workHours: { mon: [{ start: "07:00", end: "19:00" }] },
       },
-      { id: 2, name: "박동승", phone: "010-3333-4444", role: "escort", workHours: null },
+      { id: "2", name: "박동승", phone: "010-3333-4444", role: "escort", workHours: null },
     ]);
   });
 });

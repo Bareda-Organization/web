@@ -25,7 +25,7 @@ import {
 } from "./ChangeApprovalDetail.styled";
 
 type ChangeApprovalDetailProps = {
-  approvalId: number;
+  approvalId: string;
 };
 
 // `R20-B2` 목표 1(사용자 지적) — 실제 응답은 이 값을 풀 ISO(초·밀리초·날짜 포함)로 준다

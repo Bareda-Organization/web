@@ -34,7 +34,7 @@ const DIRECTION_OPTIONS: { value: RunDirection; label: string }[] = [
 // 조합이 UNIQUE 라(uk_route_bus_weekday_direction), 하나만 바꿔도 409 DUPLICATE_ROUTE 가 날 수 있다.
 export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
   const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<number | undefined>(route?.busId);
+  const [busId, setBusId] = useState<string | undefined>(route?.busId);
   const [weekday, setWeekday] = useState<Weekday>(route?.weekday ?? "mon");
   const [direction, setDirection] = useState<RunDirection>(route?.direction ?? "to_academy");
   const [name, setName] = useState(route?.name ?? "");
@@ -103,8 +103,8 @@ export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
       <Select
         label="차량"
         options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
-        value={busId !== undefined ? String(busId) : ""}
-        onChange={(event) => setBusId(Number(event.target.value))}
+        value={busId ?? ""}
+        onChange={(event) => setBusId(event.target.value)}
       />
       <Select
         label="요일"

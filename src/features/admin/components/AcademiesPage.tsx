@@ -24,7 +24,7 @@ export const AcademiesPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogTarget, setDialogTarget] = useState<{ academyId?: number } | null>(null);
+  const [dialogTarget, setDialogTarget] = useState<{ academyId?: string } | null>(null);
 
   const load = useCallback(async (q: string, status: string) => {
     setLoading(true);

@@ -35,7 +35,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     const result = await getRoutes(0, 20);
 
     expect(result.items).toEqual([
-      { id: 1, busId: 3, busNo: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true },
+      { id: "1", busId: "3", busNo: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true },
     ]);
     expect(result.totalCount).toBe(1);
     expect(result.hasNext).toBe(false);
@@ -61,9 +61,9 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getRouteDetail(1);
+    const result = await getRouteDetail("1");
 
-    expect(result.stops).toEqual([{ stopId: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }]);
+    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1 }]);
     expect(result.busNo).toBe("1호차");
   });
 
@@ -79,8 +79,8 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await saveRouteStops(1, [
-      { stopId: 7, name: "정문", lat: 37.1, lng: 127.1 },
+    await saveRouteStops("1", [
+      { stopId: "7", name: "정문", lat: 37.1, lng: 127.1 },
       { name: "새 모퉁이", address: "서울시 새길 7", lat: 37.2, lng: 127.2 },
     ]);
 
@@ -89,7 +89,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body)).toEqual({
       stops: [
-        { stop_id: 7, name: "정문", address: null, lat: 37.1, lng: 127.1 },
+        { stop_id: "7", name: "정문", address: null, lat: 37.1, lng: 127.1 },
         { stop_id: null, name: "새 모퉁이", address: "서울시 새길 7", lat: 37.2, lng: 127.2 },
       ],
     });
@@ -109,7 +109,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
 
     expect(await suggestStops("목동서로")).toEqual([
       { lat: 37.1, lng: 127.1, displayName: "서울시 목동서로 1",
-        nearby: [{ stopId: 9, name: "앞", address: "목동서로 1", lat: 37.1, lng: 127.1, distanceM: 4 }] },
+        nearby: [{ stopId: "9", name: "앞", address: "목동서로 1", lat: 37.1, lng: 127.1, distanceM: 4 }] },
     ]);
   });
 
@@ -133,7 +133,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getRunRoute(7);
+    const result = await getRunRoute("7");
 
     expect(result.roadPath).toEqual([
       { lat: 37.1, lng: 127.1 },
@@ -153,7 +153,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getRunRoute(7);
+    const result = await getRunRoute("7");
 
     expect(result.fallbackUsed).toBe(true);
   });
@@ -178,9 +178,9 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getRunRoute(7);
+    const result = await getRunRoute("7");
 
-    expect(result.stops).toEqual([{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }]);
+    expect(result.stops).toEqual([{ stopId: "3", seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }]);
   });
 
   // R27-B — GET /staff/routes/{id}/path. getRunRoute 와 같은 road_path·fallback_used·
@@ -203,13 +203,13 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getRoutePath(1);
+    const result = await getRoutePath("1");
 
     expect(result.roadPath).toEqual([
       { lat: 37.1, lng: 127.1 },
       { lat: 37.2, lng: 127.2 },
     ]);
     expect(result.fallbackUsed).toBe(true);
-    expect(result.stops).toEqual([{ stopId: 10, seq: 1, name: "정문", lat: 37.1, lng: 127.1 }]);
+    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1 }]);
   });
 });

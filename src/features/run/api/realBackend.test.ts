@@ -52,7 +52,7 @@ describe("run api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await getRunRoster(2);
+    const result = await getRunRoster("2");
 
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
@@ -76,7 +76,7 @@ describe("run api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffB"));
 
-    await expect(getRunRoster(2)).rejects.toSatisfy((error: unknown) => {
+    await expect(getRunRoster("2")).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(ApiError);
       const apiError = error as ApiError;
       expect(apiError.status).toBe(403);
@@ -98,13 +98,13 @@ describe("run api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await patchRunAssignment(6, { driverManagerId: 1, escortManagerId: 3 });
+    const result = await patchRunAssignment("6", { driverManagerId: "1", escortManagerId: "3" });
 
-    expect(result.runId).toBe(6);
+    expect(result.runId).toBe("6");
     const driver = result.assignments.find((a) => a.role === "driver");
     const escort = result.assignments.find((a) => a.role === "escort");
-    expect(driver?.managerId).toBe(1);
-    expect(escort?.managerId).toBe(3);
+    expect(driver?.managerId).toBe("1");
+    expect(escort?.managerId).toBe("3");
   });
 
   // r7-t2 목표 4 — CAPACITY_EXCEEDED 실제 재현. run_id=6(R6)은 idle·출발 4시간 전
@@ -122,7 +122,7 @@ describe("run api — 실서버 계약", () => {
 
     const REAL_ADDRESS = "서울특별시 중구 세종대로 110";
     for (let i = 0; i < 12; i += 1) {
-      const result = await postForcedAdd(6, {
+      const result = await postForcedAdd("6", {
         newStudentName: `r7t2-정원초과검증-${i}`,
         address: REAL_ADDRESS,
         note: "r7-t2 CAPACITY_EXCEEDED 재현용 — 이 파일의 afterAll 에서 시드로 되돌림",
@@ -131,7 +131,7 @@ describe("run api — 실서버 계약", () => {
     }
 
     await expect(
-      postForcedAdd(6, {
+      postForcedAdd("6", {
         newStudentName: "r7t2-정원초과검증-13",
         address: REAL_ADDRESS,
         note: "r7-t2 CAPACITY_EXCEEDED 재현용",

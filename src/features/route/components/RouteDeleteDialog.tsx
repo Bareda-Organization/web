@@ -6,7 +6,7 @@ import { AlertBanner, Button, Dialog } from "@/shared/ui";
 import { deleteRoute } from "../api";
 
 type RouteDeleteDialogProps = {
-  routeId: number;
+  routeId: string;
   onCancel: () => void;
   onDeleted: () => void;
 };

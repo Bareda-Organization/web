@@ -6,7 +6,7 @@ import { AlertBanner, Button, Dialog } from "@/shared/ui";
 import { cancelRun } from "../api";
 
 type RunCancelDialogProps = {
-  runId: number;
+  runId: string;
   onCancel: () => void;
   onCanceled: () => void;
 };

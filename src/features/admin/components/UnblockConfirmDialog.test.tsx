@@ -14,7 +14,7 @@ vi.mock("../api", () => ({
 const mockUnblockAccount = vi.mocked(unblockAccount);
 
 const account: BlockedAccountItemResponseTypes = {
-  accountId: 5,
+  accountId: "5",
   loginId: "staffA",
   name: "이관계",
   academyName: "바래다 학원",
@@ -48,7 +48,7 @@ describe("UnblockConfirmDialog — 차단 근거 노출 후 해제", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "차단 해제" }));
 
-    await waitFor(() => expect(mockUnblockAccount).toHaveBeenCalledWith(5));
+    await waitFor(() => expect(mockUnblockAccount).toHaveBeenCalledWith("5"));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
   });
 });

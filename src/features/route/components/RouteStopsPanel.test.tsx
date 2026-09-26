@@ -31,16 +31,16 @@ const mockSuggest = vi.mocked(suggestStops);
 const mockOptimize = vi.mocked(optimizeRoute);
 
 const detail: RouteDetailResponseTypes = {
-  id: 1,
-  busId: 3,
+  id: "1",
+  busId: "3",
   busNo: "1호차",
   weekday: "mon",
   direction: "to_academy",
   name: "본선",
   active: true,
   stops: [
-    { stopId: 1, seq: 1, name: "정문", lat: 37.1, lng: 127.1 },
-    { stopId: 2, seq: 2, name: "후문", lat: 37.2, lng: 127.2 },
+    { stopId: "1", seq: 1, name: "정문", lat: 37.1, lng: 127.1 },
+    { stopId: "2", seq: 2, name: "후문", lat: 37.2, lng: 127.2 },
   ],
 };
 
@@ -59,7 +59,7 @@ const 마지막_지도 = (): MapSurfaceProps => mapProps[mapProps.length - 1];
 const 마커 = (kind: MapMarker["kind"]): MapMarker[] => 마지막_지도().markers.filter((marker) => marker.kind === kind);
 
 const 띄운다 = async () => {
-  render(<RouteStopsPanel routeId={1} direction="to_academy" />);
+  render(<RouteStopsPanel routeId="1" direction="to_academy" />);
   await screen.findByText("정문");
   await waitFor(() => expect(mockGetPath).toHaveBeenCalled());
 };
@@ -83,7 +83,7 @@ beforeEach(() => {
   mockSave.mockImplementation(async (_routeId, stops) => ({
     ...detail,
     stops: stops.map((stop, index) => ({
-      stopId: stop.stopId ?? 100 + index,
+      stopId: stop.stopId ?? String(100 + index),
       seq: index + 1,
       name: stop.name,
       lat: stop.lat,
@@ -117,8 +117,8 @@ describe("RouteStopsPanel — 저장 버튼을 눌러야 반영된다(지시 7)"
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
-    expect(mockSave).toHaveBeenCalledWith(1, [
-      { stopId: 1, name: "정문 앞 모퉁이", address: undefined, lat: 37.1, lng: 127.1 },
+    expect(mockSave).toHaveBeenCalledWith("1", [
+      { stopId: "1", name: "정문 앞 모퉁이", address: undefined, lat: 37.1, lng: 127.1 },
       { stopId: undefined, name: "서울시 목동서로 1", address: "서울시 목동서로 1", lat: 37.3, lng: 127.3 },
     ]);
   });
@@ -233,7 +233,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     fireEvent.click(screen.getByRole("button", { name: "순서 최적화" }));
     fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
 
-    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, []));
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith("1", []));
 
     // 정차지 수는 그대로(2곳) 두고 순서만 바꾼다 — 지우면 "2곳 미만" 규칙이 먼저 막아 이 조건이 가려진다.
     // 최적화 응답이 [후문, 정문] 이라 정문은 둘째 줄이다.
@@ -256,7 +256,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     expect(screen.getByText(/고정한 1곳은 자리를 지키고/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
 
-    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, [2]));
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith("1", ["2"]));
   });
 
   it("한 번에 여러 줄을 고정해도 하나도 빠지지 않는다", async () => {
@@ -270,17 +270,17 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     fireEvent.click(screen.getByRole("button", { name: "순서 최적화" }));
     fireEvent.click(screen.getByRole("button", { name: "확정하고 최적화" }));
 
-    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith(1, [1, 2]));
+    await waitFor(() => expect(mockOptimize).toHaveBeenCalledWith("1", ["1", "2"]));
   });
 
   it("등원은 첫 줄이 시점, 하원은 마지막 줄이 종점이라고 표시한다(학원 쪽 끝은 늘 고정)", async () => {
-    const { unmount } = render(<RouteStopsPanel routeId={1} direction="to_academy" />);
+    const { unmount } = render(<RouteStopsPanel routeId="1" direction="to_academy" />);
     await screen.findByText("정문");
     expect(within(행("정문")).getByText("시점")).toBeInTheDocument();
     expect(within(행("후문")).queryByText("종점")).not.toBeInTheDocument();
     unmount();
 
-    render(<RouteStopsPanel routeId={1} direction="from_academy" />);
+    render(<RouteStopsPanel routeId="1" direction="from_academy" />);
     await screen.findByText("정문");
     expect(within(행("후문")).getByText("종점")).toBeInTheDocument();
     expect(within(행("정문")).queryByText("시점")).not.toBeInTheDocument();

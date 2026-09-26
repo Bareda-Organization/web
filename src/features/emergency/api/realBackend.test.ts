@@ -57,25 +57,25 @@ describe("emergency api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const before = await getEmergencies();
-    const target = before.items.find((item) => item.emergencyId === 1);
+    const target = before.items.find((item) => item.emergencyId === "1");
 
     // 리셋이 비활성화된 환경(§ 위 주석 "실패해도 조용히 넘어간다")에서 이미 확인된
     // 채로 시작할 수도 있다 — 그때만 최초 확인 호출을 건너뛴다.
     if (target && !target.acked) {
-      const result = await ackEmergency(1);
+      const result = await ackEmergency("1");
       expect(result.emergencyId).toBe(1);
       expect(typeof result.ackedAt).toBe("string");
 
       // 기본 조회(status 미지정)는 open 만 돌려줘 확인 처리한 건이 빠진다(실측 확인)
       // — status="acked" 로 다시 물어야 방금 확인한 건이 보인다.
       const after = await getEmergencies({ status: "acked" });
-      const updated = after.items.find((item) => item.emergencyId === 1);
+      const updated = after.items.find((item) => item.emergencyId === "1");
       expect(updated?.acked).toBe(true);
     }
 
     // 같은 실행 안에서 곧바로 다시 부른다 — 방금(또는 이전에) 확인된 건이라
     // 정확히 409 ALREADY_ACKED 로 막혀야 한다.
-    await expect(ackEmergency(1)).rejects.toSatisfy((error: unknown) => {
+    await expect(ackEmergency("1")).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(ApiError);
       const apiError = error as ApiError;
       expect(apiError.status).toBe(409);

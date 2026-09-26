@@ -1,8 +1,9 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { BusItemResponseTypes, BusListResponseTypes, BusUpsertRequestTypes } from "../types";
 
 type RawBus = {
-  id: number;
+  id: string | number;
   bus_no: string;
   plate_no: string;
   capacity: number;
@@ -19,7 +20,7 @@ type RawBusListResponse = {
 };
 
 const toBus = (raw: RawBus): BusItemResponseTypes => ({
-  id: raw.id,
+  id: asIdString(raw.id),
   busNo: raw.bus_no,
   plateNo: raw.plate_no,
   capacity: raw.capacity,
@@ -53,7 +54,7 @@ export const createBus = async (request: BusUpsertRequestTypes): Promise<BusItem
 };
 
 // PATCH /staff/buses/{id} (BUS-03) — 상세 GET 이 사양에 없어(§5.12) 목록 행 데이터로 폼을 채운다.
-export const updateBus = async (id: number, request: BusUpsertRequestTypes): Promise<BusItemResponseTypes> => {
+export const updateBus = async (id: string, request: BusUpsertRequestTypes): Promise<BusItemResponseTypes> => {
   const raw = await apiFetch<RawBus>(`/staff/buses/${id}`, { method: "PATCH", body: toRawUpsert(request) });
   return toBus(raw);
 };

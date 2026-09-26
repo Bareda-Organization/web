@@ -7,7 +7,7 @@
 export type AcademyStatus = "active" | "inactive";
 
 export type AcademySummaryResponseTypes = {
-  id: number;
+  id: string;
   code: string;
   name: string;
   region: string;
@@ -25,7 +25,7 @@ export type AcademiesResponseTypes = {
 };
 
 export type AcademyStaffAccountRefResponseTypes = {
-  accountId: number;
+  accountId: string;
   name: string;
   loginId: string;
 };
@@ -48,7 +48,7 @@ export type CreateAcademyRequestTypes = {
 };
 
 export type CreateAcademyResponseTypes = {
-  academyId: number;
+  academyId: string;
   code: string;
   name: string;
   region: string;
@@ -67,14 +67,14 @@ export type UpdateAcademyRequestTypes = {
 
 // ── §6.4~§6.5 관계자 가입 승인 (O-02) ─────────────────────────────────────
 export type StaffSignupAcademyRefResponseTypes = {
-  id: number;
+  id: string;
   code: string;
   name: string;
   region: string;
 };
 
 export type StaffSignupRequestItemResponseTypes = {
-  requestId: number;
+  requestId: string;
   name: string;
   phone: string;
   academy: StaffSignupAcademyRefResponseTypes;
@@ -106,7 +106,7 @@ export type StaffSignupDecideResponseTypes = {
 export type StaffAccountStatus = "active" | "inactive";
 
 export type StaffAccountItemResponseTypes = {
-  accountId: number;
+  accountId: string;
   name: string;
   loginId: string;
   phone: string;
@@ -134,7 +134,7 @@ export type UpdateStaffAccountRequestTypes = {
 };
 
 export type UpdateStaffAccountResponseTypes = {
-  accountId: number;
+  accountId: string;
   temporaryPassword?: string;
 };
 
@@ -148,7 +148,7 @@ export type LivePositionResponseTypes = {
 } | null;
 
 export type LiveStopResponseTypes = {
-  stopId: number;
+  stopId: string;
   seq: number;
   name: string;
   lat: number;
@@ -164,7 +164,7 @@ export type LiveContactResponseTypes = {
 };
 
 export type RunLiveItemResponseTypes = {
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   runStatus: RunStatus;
@@ -188,7 +188,7 @@ export type AcademyRunsLiveResponseTypes = {
 export type RosterBoardStatus = "boarded" | "alighted" | "absent" | "no_show" | "waiting";
 
 export type RosterStudentResponseTypes = {
-  studentId: number;
+  studentId: string;
   name: string;
   photoUrl: string | null;
   studentPhone: string | null;
@@ -197,7 +197,7 @@ export type RosterStudentResponseTypes = {
 };
 
 export type RosterStopResponseTypes = {
-  stopId: number;
+  stopId: string;
   seq: number;
   name: string;
   students: RosterStudentResponseTypes[];
@@ -209,7 +209,7 @@ export type RunRosterResponseTypes = {
 
 // ── §6.10 · §6.12 차단 계정 해제 (O-03) ───────────────────────────────────
 export type BlockedAccountItemResponseTypes = {
-  accountId: number;
+  accountId: string;
   loginId: string;
   name: string;
   academyName: string;
@@ -241,7 +241,7 @@ export type UnblockAccountResponseTypes = {
 export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc";
 
 export type EmergencyAcademyRefResponseTypes = {
-  id: number;
+  id: string;
   name: string;
   contact: string;
 };
@@ -263,12 +263,12 @@ export type EmergencyPositionResponseTypes = {
 // 문서에 없는 것이 아니라 §5.16 이 이미 명시한 필드다(이전 코멘트의 오기, A1 수정
 // 라운드에서 §5.16 을 직접 대조해 정정) — 목록 헤더에 "미확인 N건" 으로 쓴다.
 export type EmergencyItemResponseTypes = {
-  emergencyId: number;
+  emergencyId: string;
   academy: EmergencyAcademyRefResponseTypes;
   type: EmergencyType;
   memo: string | null;
   raisedBy: EmergencyPersonResponseTypes;
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   position: EmergencyPositionResponseTypes;
@@ -294,7 +294,7 @@ export type AuditLogItemResponseTypes = {
   actor: string;
   action: AuditAction;
   targetType: string;
-  targetId: number;
+  targetId: string;
   academyName: string | null;
   occurredAt: string;
 };
@@ -310,7 +310,7 @@ export type AuditLogsResponseTypes = {
 export type LoginHistoryResult = "success" | "fail";
 
 export type LoginHistoryItemResponseTypes = {
-  accountId: number;
+  accountId: string;
   loginId: string;
   result: LoginHistoryResult;
   ip: string;
@@ -328,8 +328,8 @@ export type LoginHistoryResponseTypes = {
 
 // 감사·접속 이력 목록 조회 시 공통으로 쓰는 필터 (§6.13 쿼리 파라미터).
 export type AuditQueryTypes = {
-  academyId?: number;
-  accountId?: number;
+  academyId?: string;
+  accountId?: string;
   from?: string;
   to?: string;
 };
@@ -340,8 +340,8 @@ export type ForceConfirmRequestTypes = {
 };
 
 export type ForceConfirmResponseTypes = {
-  runId: number;
-  routeVersionId: number;
+  runId: string;
+  routeVersionId: string;
   fallbackUsed: true;
   confirmedAt: string;
 };

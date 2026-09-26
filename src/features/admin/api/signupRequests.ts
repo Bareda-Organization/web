@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   StaffSignupAcademyRefResponseTypes,
   StaffSignupDecideRequestTypes,
@@ -7,17 +8,17 @@ import type {
   StaffSignupRequestsResponseTypes,
 } from "../types";
 
-type RawAcademyRef = { id: number; code: string; name: string; region: string };
+type RawAcademyRef = { id: string | number; code: string; name: string; region: string };
 
 const toAcademyRef = (raw: RawAcademyRef): StaffSignupAcademyRefResponseTypes => ({
-  id: raw.id,
+  id: asIdString(raw.id),
   code: raw.code,
   name: raw.name,
   region: raw.region,
 });
 
 type RawSignupRequestItem = {
-  request_id: number;
+  request_id: string | number;
   name: string;
   phone: string;
   academy: RawAcademyRef;
@@ -34,7 +35,7 @@ type RawSignupRequestsResponse = {
 };
 
 const toSignupRequestItem = (raw: RawSignupRequestItem): StaffSignupRequestItemResponseTypes => ({
-  requestId: raw.request_id,
+  requestId: asIdString(raw.request_id),
   name: raw.name,
   phone: raw.phone,
   academy: toAcademyRef(raw.academy),
@@ -59,7 +60,7 @@ type RawDecideResponse = { account_status: "active" | "rejected"; decided_at: st
 // POST /admin/staff-signup-requests/{id}/decide (§6.5, O-02).
 // accept=false 일 때 reject_reason 이 필수 — 화면 쪽에서 빈 문자열을 막는다.
 export const decideStaffSignupRequest = async (
-  requestId: number,
+  requestId: string,
   payload: StaffSignupDecideRequestTypes,
 ): Promise<StaffSignupDecideResponseTypes> => {
   const raw = await apiFetch<RawDecideResponse>(`/admin/staff-signup-requests/${requestId}/decide`, {

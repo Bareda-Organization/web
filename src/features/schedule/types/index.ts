@@ -10,8 +10,8 @@ export type ScheduleDirection = "to_academy" | "from_academy";
 export type RunStatus = "idle" | "confirmed" | "moving" | "finished";
 
 export type ScheduleItemResponseTypes = {
-  id: number;
-  busId: number;
+  id: string;
+  busId: string;
   busNo: string;
   weekday: ScheduleWeekday;
   direction: ScheduleDirection;
@@ -32,7 +32,7 @@ export type ScheduleListResponseTypes = {
 
 // POST·PATCH /staff/schedules 공용 요청 — PATCH 는 보낸 필드만 고친다(부분 갱신).
 export type ScheduleUpsertRequestTypes = {
-  busId: number;
+  busId: string;
   weekday: ScheduleWeekday;
   direction: ScheduleDirection;
   departTime: string;
@@ -43,17 +43,17 @@ export type ScheduleUpsertRequestTypes = {
 };
 
 export type RunAssignmentEntryResponseTypes = {
-  managerId: number;
+  managerId: string;
   name: string;
   role: "driver" | "escort";
 };
 
 // GET /staff/runs?service_date= 응답 항목 — schedule_id 가 null 이면 임시 회차(§5.10 표시 규약).
 export type RunItemResponseTypes = {
-  id: number;
-  busId: number;
+  id: string;
+  busId: string;
   busNo: string;
-  scheduleId: number | null;
+  scheduleId: string | null;
   serviceDate: string;
   direction: ScheduleDirection;
   departTime: string;
@@ -75,7 +75,7 @@ export type RunListResponseTypes = {
 
 // POST /staff/runs(SCH-03, 임시 추가) 요청.
 export type RunCreateRequestTypes = {
-  busId: number;
+  busId: string;
   serviceDate: string;
   direction: ScheduleDirection;
   departTime: string;

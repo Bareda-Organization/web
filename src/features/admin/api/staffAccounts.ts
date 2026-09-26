@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   StaffAccountItemResponseTypes,
   StaffAccountStatus,
@@ -8,7 +9,7 @@ import type {
 } from "../types";
 
 type RawStaffAccountItem = {
-  account_id: number;
+  account_id: string | number;
   name: string;
   login_id: string;
   phone: string;
@@ -26,7 +27,7 @@ type RawStaffAccountsResponse = {
 };
 
 const toStaffAccountItem = (raw: RawStaffAccountItem): StaffAccountItemResponseTypes => ({
-  accountId: raw.account_id,
+  accountId: asIdString(raw.account_id),
   name: raw.name,
   loginId: raw.login_id,
   phone: raw.phone,
@@ -47,12 +48,12 @@ export const getStaffAccounts = async (): Promise<StaffAccountsResponseTypes> =>
   };
 };
 
-type RawUpdateStaffAccountResponse = { account_id: number; temporary_password?: string };
+type RawUpdateStaffAccountResponse = { account_id: string | number; temporary_password?: string };
 
 // PATCH /admin/staff-accounts/{id} (§6.7, O-02). status=inactive 는 재직 상태만 바꾸며
 // 계정 로그인 자체를 막는다 — 화면에서 "재직 해제" 문구로 안내한다(판단 근거, 보고서 §1).
 export const updateStaffAccount = async (
-  accountId: number,
+  accountId: string,
   payload: UpdateStaffAccountRequestTypes,
 ): Promise<UpdateStaffAccountResponseTypes> => {
   const raw = await apiFetch<RawUpdateStaffAccountResponse>(`/admin/staff-accounts/${accountId}`, {
@@ -65,5 +66,5 @@ export const updateStaffAccount = async (
       status: payload.status,
     },
   });
-  return { accountId: raw.account_id, temporaryPassword: raw.temporary_password };
+  return { accountId: asIdString(raw.account_id), temporaryPassword: raw.temporary_password };
 };

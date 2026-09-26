@@ -54,7 +54,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    const result = await getAcademy(1);
+    const result = await getAcademy("1");
 
     expect(result.id).toBe(1);
     expect(Array.isArray(result.staffAccounts)).toBe(true);
@@ -94,7 +94,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    await expect(decideStaffSignupRequest(1, { accept: true })).rejects.toMatchObject({
+    await expect(decideStaffSignupRequest("1", { accept: true })).rejects.toMatchObject({
       status: 409,
       code: "STAFF_QUOTA_EXCEEDED",
     });
@@ -116,7 +116,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    const result = await updateStaffAccount(20, { name: "한관리" });
+    const result = await updateStaffAccount("20", { name: "한관리" });
 
     expect(result.accountId).toBe(20);
   });
@@ -125,7 +125,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    const result = await getAcademyRunsLive(1);
+    const result = await getAcademyRunsLive("1");
 
     expect(Array.isArray(result.runs)).toBe(true);
     expect(result.runs.length).toBeGreaterThan(0);
@@ -135,7 +135,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    const result = await getRunRoster(3);
+    const result = await getRunRoster("3");
 
     expect(Array.isArray(result.stops)).toBe(true);
     expect(result.stops.length).toBeGreaterThan(0);
@@ -202,11 +202,11 @@ describe("admin api — 실서버 계약", () => {
       expect(blockedJson.error?.code).toBe("AUTH_ACCOUNT_BLOCKED");
 
       setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
-      const unblocked = await unblockAccount(15);
+      const unblocked = await unblockAccount("15");
       expect(unblocked.accountStatus).toBe("active");
     } else {
       // 이전 실행이 이미 해제해 둔 상태 — §6.12 의 두 번째 오류 분기를 재현한다.
-      await expect(unblockAccount(15)).rejects.toMatchObject({
+      await expect(unblockAccount("15")).rejects.toMatchObject({
         status: 409,
         code: "ACCOUNT_NOT_BLOCKED",
       });
@@ -246,7 +246,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    await expect(forceConfirmRun(3, "F5-W2 계약 시험")).rejects.toMatchObject({
+    await expect(forceConfirmRun("3", "F5-W2 계약 시험")).rejects.toMatchObject({
       status: 409,
       code: "RUN_NOT_IDLE",
     });
@@ -256,7 +256,7 @@ describe("admin api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
 
-    await expect(forceConfirmRun(99999, "F5-W2 계약 시험")).rejects.toMatchObject({
+    await expect(forceConfirmRun("99999", "F5-W2 계약 시험")).rejects.toMatchObject({
       status: 404,
       code: "RUN_NOT_FOUND",
     });

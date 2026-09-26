@@ -8,7 +8,7 @@ import type { RosterBoardStatus, RunRosterResponseTypes } from "../types";
 import { StyledRosterStopBlock, StyledRosterStopTitle, StyledRosterStudentRow } from "./MonitoringPage.styled";
 
 type RunRosterDialogProps = {
-  runId: number;
+  runId: string;
   busNo: string;
   onClose: () => void;
 };

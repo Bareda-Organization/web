@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   AcademyRunsLiveResponseTypes,
   LiveContactResponseTypes,
@@ -11,7 +12,7 @@ import type {
 type RawPosition = { lat: number; lng: number; received_at: string } | null;
 
 type RawLiveStop = {
-  stop_id: number;
+  stop_id: string | number;
   seq: number;
   name: string;
   lat: number;
@@ -24,7 +25,7 @@ type RawLiveStop = {
 type RawContact = { name: string; phone: string } | null;
 
 type RawRunLiveItem = {
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
   run_status: RunStatus;
@@ -44,7 +45,7 @@ const toPosition = (raw: RawPosition): LivePositionResponseTypes =>
   raw ? { lat: raw.lat, lng: raw.lng, receivedAt: raw.received_at } : null;
 
 const toStop = (raw: RawLiveStop): LiveStopResponseTypes => ({
-  stopId: raw.stop_id,
+  stopId: asIdString(raw.stop_id),
   seq: raw.seq,
   name: raw.name,
   lat: raw.lat,
@@ -61,7 +62,7 @@ const toContact = (raw: RawContact): LiveContactResponseTypes | null =>
   raw == null ? null : { name: raw.name, phone: raw.phone };
 
 const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   direction: raw.direction,
   runStatus: raw.run_status,
@@ -77,7 +78,7 @@ const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
 
 // GET /admin/academies/{id}/runs/live (§6.8, O-05 · O-06). 학원 경계를 넘나드는 화면이라
 // 호출부(컴포넌트)가 학원 목록을 먼저 받아 이 함수를 학원마다 돌린다.
-export const getAcademyRunsLive = async (academyId: number): Promise<AcademyRunsLiveResponseTypes> => {
+export const getAcademyRunsLive = async (academyId: string): Promise<AcademyRunsLiveResponseTypes> => {
   const raw = await apiFetch<RawAcademyRunsLiveResponse>(`/admin/academies/${academyId}/runs/live`, {
     method: "GET",
   });

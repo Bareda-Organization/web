@@ -57,17 +57,17 @@ describe("approval api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const pending = await getSignupRequests("pending");
-    const stillPending = pending.items.some((item) => item.requestId === 2);
+    const stillPending = pending.items.some((item) => item.requestId === "2");
 
     if (stillPending) {
-      const result = await decideSignupRequest(2, {
+      const result = await decideSignupRequest("2", {
         accept: false,
         rejectReason: "r11-t1 실서버 계약 시험 — 되돌릴 API 가 없어 거절로 소진",
       });
       expect(result.accountStatus).toBe("rejected");
     } else {
       await expect(
-        decideSignupRequest(2, { accept: false, rejectReason: "r11-t1 실서버 계약 시험 재실행" }),
+        decideSignupRequest("2", { accept: false, rejectReason: "r11-t1 실서버 계약 시험 재실행" }),
       ).rejects.toSatisfy((error: unknown) => {
         expect(error).toBeInstanceOf(ApiError);
         const apiError = error as ApiError;
@@ -100,7 +100,7 @@ describe("approval api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await getChangeApprovalDetail(2);
+    const result = await getChangeApprovalDetail("2");
 
     expect(result.approvalId).toBe(2);
     expect(result.routePreview).toBeNull();
@@ -119,7 +119,7 @@ describe("approval api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     await expect(
-      decideChangeApproval(2, { approve: true, previewToken: "bogus-stale-token-from-contract-test" }),
+      decideChangeApproval("2", { approve: true, previewToken: "bogus-stale-token-from-contract-test" }),
     ).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(ApiError);
       const apiError = error as ApiError;
@@ -151,7 +151,7 @@ describe("approval api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await getChangeApprovalDetail(1);
+    const result = await getChangeApprovalDetail("1");
 
     expect(result.approvalId).toBe(1);
     expect(result.previewToken).not.toBeNull();
@@ -163,7 +163,7 @@ describe("approval api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     await expect(
-      decideChangeApproval(1, { approve: true, previewToken: "00000000-0000-0000-0000-000000000000" }),
+      decideChangeApproval("1", { approve: true, previewToken: "00000000-0000-0000-0000-000000000000" }),
     ).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(ApiError);
       const apiError = error as ApiError;

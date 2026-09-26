@@ -18,7 +18,7 @@ import type { MapMarker, MapPolyline, MapPolylineKind } from "./types";
 type RouteQueryResult = {
   roadPath: { lat: number; lng: number }[];
   fallbackUsed: boolean;
-  stops: { stopId: number; seq: number; lat: number; lng: number }[];
+  stops: { stopId: string; seq: number; lat: number; lng: number }[];
   confirmed: boolean;
 };
 
@@ -56,7 +56,7 @@ export type RouteDisplayState = {
 //
 // 좌표가 2개 미만이면 만들지 않는다 — 한 점뿐이면 출발지와 도착지가 같은 자리라
 // 겹쳐 찍히기만 하고 뜻이 없다.
-const endpointMarkersOf = (runId: number, roadPath: { lat: number; lng: number }[]): MapMarker[] => {
+const endpointMarkersOf = (runId: string, roadPath: { lat: number; lng: number }[]): MapMarker[] => {
   if (roadPath.length < 2) return [];
   const first = roadPath[0];
   const last = roadPath[roadPath.length - 1];
@@ -67,7 +67,7 @@ const endpointMarkersOf = (runId: number, roadPath: { lat: number; lng: number }
 };
 
 export const buildRouteDisplayState = (
-  runId: number,
+  runId: string,
   runStatus: RunStatusForRoute,
   route: RouteQueryResult,
 ): RouteDisplayState => {

@@ -25,9 +25,10 @@ export type NotificationType =
   | "emergency_canceled";
 
 // ⚠ notification_id — §5.17 표는 타입을 string 으로 적었지만, 실측(curl, staffA 로그인)
-// 응답은 매번 숫자였다(§2 확신 없는 지점 · 사양-실제 불일치로 보고). 화면은 실측을 따른다.
+// 응답은 매번 숫자였다(§2 확신 없는 지점 · 사양-실제 불일치로 보고). W1 흡수로 서버가 숫자든
+// 문자열이든 이 도메인 타입은 string 으로 고정한다(asIdString, api/index.ts 참고).
 export type NotificationListItemResponseTypes = {
-  notificationId: number;
+  notificationId: string;
   sentAt: string;
   busNo: string | null;
   recipientName: string;

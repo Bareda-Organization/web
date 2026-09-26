@@ -9,7 +9,7 @@
 export type SignupRole = "parent" | "student" | "driver" | "escort";
 
 export type SignupRequestItemResponseTypes = {
-  requestId: number;
+  requestId: string;
   name: string;
   role: SignupRole;
   phone: string;
@@ -31,8 +31,8 @@ export type SignupDecideRequestTypes = {
   accept: boolean;
   rejectReason?: string;
   link?: {
-    studentIds?: number[];
-    managerId?: number;
+    studentIds?: string[];
+    managerId?: string;
   };
 };
 
@@ -47,10 +47,10 @@ export type SignupDecideResponseTypes = {
 export type ChangeApprovalSource = "intent" | "change_request";
 
 export type ChangeApprovalSummaryResponseTypes = {
-  approvalId: number;
+  approvalId: string;
   source: ChangeApprovalSource;
   studentName: string;
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   deadlineAt: string;
@@ -87,7 +87,7 @@ export type RoutePathPointResponseTypes = {
 // 실제 백엔드는 처음부터 객체(`stop_id`·`stop_name`)를 줬다 — 지금까지 이 필드를 화면에서
 // 쓴 적이 없어 드러나지 않았다. lat·lng 를 더하며 실제 모양대로 바로잡는다.
 export type RouteStopRefResponseTypes = {
-  stopId: number;
+  stopId: string;
   stopName: string | null;
   lat: number | null;
   lng: number | null;
@@ -105,7 +105,7 @@ export type RoutePreviewResponseTypes = {
 };
 
 export type ChangeApprovalAffectedStudentResponseTypes = {
-  studentId: number;
+  studentId: string;
   name: string;
 };
 

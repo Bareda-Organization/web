@@ -46,7 +46,7 @@ describe("notification api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        notificationId: 1,
+        notificationId: "1",
         sentAt: "2026-09-15T08:00:00",
         busNo: null,
         recipientName: "김학부모",

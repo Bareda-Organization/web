@@ -17,10 +17,10 @@ const mockGetChangeApprovals = vi.mocked(getChangeApprovals);
 const baseList: ChangeApprovalsResponseTypes = {
   items: [
     {
-      approvalId: 5,
+      approvalId: "5",
       source: "change_request",
       studentName: "이학생",
-      runId: 10,
+      runId: "10",
       busNo: "1호차",
       direction: "to_academy",
       deadlineAt: "2026-09-13T00:00:00Z",

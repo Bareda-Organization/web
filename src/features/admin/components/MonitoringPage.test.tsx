@@ -60,7 +60,7 @@ vi.mock("@/shared/hooks", () => ({
 }));
 
 const baseAcademies = {
-  items: [{ id: 1, code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const }],
+  items: [{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const }],
   page: 1,
   size: 20,
   totalCount: 1,
@@ -68,7 +68,7 @@ const baseAcademies = {
 };
 
 const baseLiveRun: RunLiveItemResponseTypes = {
-  runId: 1,
+  runId: "1",
   busNo: "1호차",
   direction: "to_academy",
   runStatus: "moving",
@@ -123,7 +123,7 @@ describe("MonitoringPage — 실시간 회차 조회 실패", () => {
 
   it("회차 조회가 실패하면 EmptyState 는 뜨지 않는다 — '정말 0건' 과 '조회 실패' 를 구별한다", async () => {
     mockGetAcademies.mockResolvedValue({
-      items: [{ id: 1, code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }],
+      items: [{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }],
       page: 1,
       size: 20,
       totalCount: 1,
@@ -282,6 +282,32 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     vi.clearAllMocks();
   });
 
+  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
+  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
+  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
+    const stringIdRun: RunLiveItemResponseTypes = {
+      ...baseLiveRun,
+      runId: "run-a1",
+      position: { lat: 37.1, lng: 127.1, receivedAt: "2026-09-13T00:00:01Z" },
+    };
+    mockGetRunsLive.mockResolvedValue({ runs: [stringIdRun] });
+    render(<MonitoringPage />);
+
+    // 목록 항목 텍스트가 뜬 뒤에야 mapMarkers 가 이 회차를 담은 렌더가 끝난 상태다 —
+    // 그 전에 onMarkerClick 을 집으면 markers 가 비어 있던 렌더의 낡은 클로저를 잡는다.
+    await screen.findByText("1호차 · 등원");
+    const onMarkerClick = mockMapSurface.mock.calls.at(-1)?.[0].onMarkerClick;
+    expect(onMarkerClick).toBeTypeOf("function");
+
+    act(() => {
+      onMarkerClick!("run-a1");
+    });
+
+    await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledWith("run-a1"));
+  });
+
   it("버스 목록 항목을 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내한다", async () => {
     mockGetRunRoute.mockResolvedValue({
       roadPath: [
@@ -298,7 +324,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     // 않도록 방향까지 묶은 문구로 고른다(DashboardPage.test.tsx 와 같은 방식).
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(mockGetRunRoute).toHaveBeenCalledWith(1);
+    expect(mockGetRunRoute).toHaveBeenCalledWith("1");
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
   });
 
@@ -309,7 +335,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     mockGetRunRoute.mockResolvedValue({
       roadPath: [],
       fallbackUsed: false,
-      stops: [{ stopId: 3, seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }],
+      stops: [{ stopId: "3", seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98 }],
       confirmed: true,
     });
     render(<MonitoringPage />);
@@ -335,8 +361,8 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
       roadPath: [],
       fallbackUsed: false,
       stops: [
-        { stopId: 1, seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
-        { stopId: 2, seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
+        { stopId: "1", seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
+        { stopId: "2", seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
       ],
       confirmed: false,
     });
@@ -461,8 +487,8 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   it("버스를 고르면 그 카드에 aria-pressed=true 가 붙고, 고르지 않은 카드는 false 다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
-        { ...baseLiveRun, runId: 1, busNo: "1호차" },
-        { ...baseLiveRun, runId: 2, busNo: "2호차" },
+        { ...baseLiveRun, runId: "1", busNo: "1호차" },
+        { ...baseLiveRun, runId: "2", busNo: "2호차" },
       ],
     });
     render(<MonitoringPage />);
@@ -482,8 +508,8 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   it("확정과 대기는 서로 다른 태그 색(class)을 쓴다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
-        { ...baseLiveRun, runId: 31, busNo: "5호차", runStatus: "idle" },
-        { ...baseLiveRun, runId: 32, busNo: "6호차", runStatus: "confirmed" },
+        { ...baseLiveRun, runId: "31", busNo: "5호차", runStatus: "idle" },
+        { ...baseLiveRun, runId: "32", busNo: "6호차", runStatus: "confirmed" },
       ],
     });
     render(<MonitoringPage />);
@@ -512,10 +538,10 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
   it("idle·confirmed·moving·finished 가 모두 목록에 남는다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
-        { ...baseLiveRun, runId: 11, busNo: "1호차", runStatus: "idle" },
-        { ...baseLiveRun, runId: 12, busNo: "2호차", runStatus: "confirmed" },
-        { ...baseLiveRun, runId: 13, busNo: "3호차", runStatus: "moving" },
-        { ...baseLiveRun, runId: 14, busNo: "4호차", runStatus: "finished" },
+        { ...baseLiveRun, runId: "11", busNo: "1호차", runStatus: "idle" },
+        { ...baseLiveRun, runId: "12", busNo: "2호차", runStatus: "confirmed" },
+        { ...baseLiveRun, runId: "13", busNo: "3호차", runStatus: "moving" },
+        { ...baseLiveRun, runId: "14", busNo: "4호차", runStatus: "finished" },
       ],
     });
     render(<MonitoringPage />);
@@ -536,7 +562,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
 
   it("운행이 끝난 버스만 남아도 목록에서 사라지지 않는다", async () => {
     mockGetRunsLive.mockResolvedValue({
-      runs: [{ ...baseLiveRun, runId: 21, busNo: "9호차", runStatus: "finished" }],
+      runs: [{ ...baseLiveRun, runId: "21", busNo: "9호차", runStatus: "finished" }],
     });
     render(<MonitoringPage />);
 

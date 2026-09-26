@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { RunLiveItemResponseTypes, RunsLiveResponseTypes, RunStatus } from "../types";
 
 type RawPosition = {
@@ -8,7 +9,7 @@ type RawPosition = {
 } | null;
 
 type RawRunLiveItem = {
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
   status: RunStatus;
@@ -27,7 +28,7 @@ type RawRunsLive = {
 };
 
 const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   direction: raw.direction,
   status: raw.status,

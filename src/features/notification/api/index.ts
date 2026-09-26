@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   NotificationListItemResponseTypes,
   NotificationListQueryTypes,
@@ -7,7 +8,7 @@ import type {
 } from "../types";
 
 type RawNotificationItem = {
-  notification_id: number;
+  notification_id: string | number;
   sent_at: string;
   bus_no: string | null;
   recipient_name: string;
@@ -27,7 +28,7 @@ type RawNotificationListResponse = {
 };
 
 const toItem = (raw: RawNotificationItem): NotificationListItemResponseTypes => ({
-  notificationId: raw.notification_id,
+  notificationId: asIdString(raw.notification_id),
   sentAt: raw.sent_at,
   busNo: raw.bus_no,
   recipientName: raw.recipient_name,

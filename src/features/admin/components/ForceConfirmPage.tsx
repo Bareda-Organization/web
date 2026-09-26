@@ -15,7 +15,7 @@ import { StyledFilterRow, StyledForceConfirmLayout } from "./ForceConfirmPage.st
 // (우려·확신 없는 지점, 보고서 §2).
 export const ForceConfirmPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
-  const [academyId, setAcademyId] = useState<number | null>(null);
+  const [academyId, setAcademyId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [target, setTarget] = useState<RunLiveItemResponseTypes | null>(null);
   const [loadingAcademies, setLoadingAcademies] = useState(true);
@@ -48,7 +48,7 @@ export const ForceConfirmPage = () => {
     };
   }, []);
 
-  const loadRuns = useCallback(async (id: number) => {
+  const loadRuns = useCallback(async (id: string) => {
     setLoadingRuns(true);
     try {
       const data = await getAcademyRunsLive(id);
@@ -97,7 +97,7 @@ export const ForceConfirmPage = () => {
         <Select
           label="학원"
           value={academyId ?? ""}
-          onChange={(event) => setAcademyId(Number(event.target.value))}
+          onChange={(event) => setAcademyId(event.target.value)}
           options={academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))}
           disabled={loadingAcademies || academies.length === 0}
         />

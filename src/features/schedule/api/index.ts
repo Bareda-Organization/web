@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   RunAssignmentEntryResponseTypes,
   RunCreateRequestTypes,
@@ -13,8 +14,8 @@ import type {
 } from "../types";
 
 type RawSchedule = {
-  id: number;
-  bus_id: number;
+  id: string | number;
+  bus_id: string | number;
   bus_no: string;
   weekday: ScheduleWeekday;
   direction: ScheduleDirection;
@@ -33,13 +34,13 @@ type RawScheduleListResponse = {
   has_next: boolean;
 };
 
-type RawRunAssignment = { manager_id: number; name: string; role: "driver" | "escort" };
+type RawRunAssignment = { manager_id: string | number; name: string; role: "driver" | "escort" };
 
 type RawRun = {
-  id: number;
-  bus_id: number;
+  id: string | number;
+  bus_id: string | number;
   bus_no: string;
-  schedule_id: number | null;
+  schedule_id: string | number | null;
   service_date: string;
   direction: ScheduleDirection;
   depart_time: string;
@@ -53,8 +54,8 @@ type RawRun = {
 };
 
 const toSchedule = (raw: RawSchedule): ScheduleItemResponseTypes => ({
-  id: raw.id,
-  busId: raw.bus_id,
+  id: asIdString(raw.id),
+  busId: asIdString(raw.bus_id),
   busNo: raw.bus_no,
   weekday: raw.weekday,
   direction: raw.direction,
@@ -66,16 +67,16 @@ const toSchedule = (raw: RawSchedule): ScheduleItemResponseTypes => ({
 });
 
 const toAssignment = (raw: RawRunAssignment): RunAssignmentEntryResponseTypes => ({
-  managerId: raw.manager_id,
+  managerId: asIdString(raw.manager_id),
   name: raw.name,
   role: raw.role,
 });
 
 const toRun = (raw: RawRun): RunItemResponseTypes => ({
-  id: raw.id,
-  busId: raw.bus_id,
+  id: asIdString(raw.id),
+  busId: asIdString(raw.bus_id),
   busNo: raw.bus_no,
-  scheduleId: raw.schedule_id,
+  scheduleId: raw.schedule_id == null ? null : asIdString(raw.schedule_id),
   serviceDate: raw.service_date,
   direction: raw.direction,
   departTime: raw.depart_time,
@@ -119,7 +120,7 @@ export const createSchedule = async (request: ScheduleUpsertRequestTypes): Promi
 
 // PATCH /staff/schedules/{id}(SCH-01) — 보낸 필드만 고친다(부분 갱신, §5.10 본문).
 export const updateSchedule = async (
-  id: number,
+  id: string,
   request: Partial<ScheduleUpsertRequestTypes>,
 ): Promise<ScheduleItemResponseTypes> => {
   const raw = await apiFetch<RawSchedule>(`/staff/schedules/${id}`, {
@@ -131,7 +132,7 @@ export const updateSchedule = async (
 
 // DELETE /staff/schedules/{id}(SCH-01) — 행을 지운다(soft delete 부재, §5.10 본문).
 // 이미 만들어진 회차는 run.schedule_id 가 NULL 로 남는다(ERD FK SET NULL).
-export const deleteSchedule = async (id: number): Promise<void> => {
+export const deleteSchedule = async (id: string): Promise<void> => {
   await apiFetch<void>(`/staff/schedules/${id}`, { method: "DELETE" });
 };
 
@@ -161,6 +162,6 @@ export const createRun = async (request: RunCreateRequestTypes): Promise<RunItem
 
 // DELETE /staff/runs/{id}(SCH-03, 임시 취소) — 행을 지우지 않고 canceled_at 을 채운다
 // (실측 확인: 취소 후 재조회에도 행이 남고 canceled_at 만 채워짐, status 는 그대로).
-export const cancelRun = async (id: number): Promise<void> => {
+export const cancelRun = async (id: string): Promise<void> => {
   await apiFetch<void>(`/staff/runs/${id}`, { method: "DELETE" });
 };

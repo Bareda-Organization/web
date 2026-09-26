@@ -27,15 +27,15 @@ const path: RoutePathResponseTypes = {
   ],
   fallbackUsed: false,
   stops: [
-    { stopId: 1, seq: 1, name: "정문", lat: 37.1, lng: 127.1 },
-    { stopId: 2, seq: 2, name: "후문", lat: 37.2, lng: 127.2 },
+    { stopId: "1", seq: 1, name: "정문", lat: 37.1, lng: 127.1 },
+    { stopId: "2", seq: 2, name: "후문", lat: 37.2, lng: 127.2 },
   ],
 };
 
 type PanelProps = Parameters<typeof RouteMapPanel>[0];
 
 const 기본: PanelProps = {
-  routeId: 1,
+  routeId: "1",
   direction: "to_academy",
   refreshKey: 0,
   stops: [

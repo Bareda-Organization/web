@@ -29,7 +29,7 @@ import {
 type Point = { lat: number; lng: number };
 
 /** 목록의 한 줄 — `stopId` 가 없으면 저장할 때 새로 만든다. `key` 는 화면 안에서만 쓰는 이름표다. */
-type EditableStop = Point & { key: string; stopId?: number; name: string; address?: string };
+type EditableStop = Point & { key: string; stopId?: string; name: string; address?: string };
 
 type StopFormState = {
   mode: "add" | "edit";
@@ -46,7 +46,7 @@ type StopFormState = {
 };
 
 type RouteStopsPanelProps = {
-  routeId: number;
+  routeId: string;
   direction: RunDirection;
 };
 
@@ -159,7 +159,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
 
   const pinnedStopIds = stops
     .filter((stop) => pinnedKeys.has(stop.key) && stop.stopId !== undefined)
-    .map((stop) => stop.stopId as number);
+    .map((stop) => stop.stopId as string);
 
   const remove = (key: string) => {
     setStops(stops.filter((stop) => stop.key !== key));

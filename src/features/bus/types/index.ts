@@ -5,7 +5,7 @@
 // 2026-09-12 curl 로 실측한 결과 목록·응답 모두 기본키가 `bus_id` 가 아니라 `id`(숫자)다.
 
 export type BusItemResponseTypes = {
-  id: number;
+  id: string;
   busNo: string;
   plateNo: string;
   capacity: number;

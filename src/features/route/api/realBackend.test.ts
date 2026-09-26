@@ -75,7 +75,7 @@ describe("route api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await getRouteDetail(1);
+    const result = await getRouteDetail("1");
 
     expect(result.id).toBe(1);
     expect(Array.isArray(result.stops)).toBe(true);
@@ -89,7 +89,7 @@ describe("route api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const created = await createRoute({
-      busId: 2,
+      busId: "2",
       weekday: "wed",
       direction: "to_academy",
       name: "실서버계약시험용",
@@ -112,18 +112,18 @@ describe("route api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const created = await createRoute({
-      busId: 2,
+      busId: "2",
       weekday: "wed",
       direction: "to_academy",
       name: "실서버계약시험용-수정전",
       active: true,
-      stopIds: [1, 2],
+      stopIds: ["1", "2"],
     });
 
     try {
       const updated = await updateRoute(created.id, {
         name: "실서버계약시험용-수정후",
-        stopIds: [2, 1],
+        stopIds: ["2", "1"],
       });
 
       expect(updated.name).toBe("실서버계약시험용-수정후");
@@ -139,12 +139,12 @@ describe("route api — 실서버 계약", () => {
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
     const created = await createRoute({
-      busId: 2,
+      busId: "2",
       weekday: "wed",
       direction: "to_academy",
       name: "실서버계약시험용-최적화",
       active: true,
-      stopIds: [3, 1, 2], // 일부러 뒤섞은 순서 — 최적화가 실제로 다시 정렬하는지 판별하려면
+      stopIds: ["3", "1", "2"], // 일부러 뒤섞은 순서 — 최적화가 실제로 다시 정렬하는지 판별하려면
       // 입력이 이미 최적 순서면 안 바뀌어도 통과해 버려 구별이 안 된다.
     });
 
@@ -169,7 +169,7 @@ describe("route api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
     const created = await createRoute({
-      busId: 2, weekday: "thu", direction: "to_academy", name: "실서버계약시험용-저장", active: true, stopIds: [1],
+      busId: "2", weekday: "thu", direction: "to_academy", name: "실서버계약시험용-저장", active: true, stopIds: ["1"],
     });
 
     try {

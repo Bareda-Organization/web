@@ -34,7 +34,7 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
     const result = await getBuses(0, 20);
 
     expect(result.items).toEqual([
-      { id: 1, busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 15, operable: true },
+      { id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 15, operable: true },
     ]);
     expect(result.totalCount).toBe(1);
     expect(result.hasNext).toBe(false);
@@ -55,7 +55,7 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
     const sentBody = JSON.parse(init.body as string);
     expect(sentBody).toEqual({ bus_no: "9호차", plate_no: "99나9999", capacity: 25, operable: false });
     expect(result).toEqual({
-      id: 9,
+      id: "9",
       busNo: "9호차",
       plateNo: "99나9999",
       capacity: 25,

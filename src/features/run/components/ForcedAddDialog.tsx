@@ -9,7 +9,7 @@ import { StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
 type Mode = "existing" | "new";
 
 type ForcedAddDialogProps = {
-  runId: number;
+  runId: string;
   open: boolean;
   onClose: () => void;
   onDone: () => void;
@@ -53,7 +53,7 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
     setError(null);
     try {
       await postForcedAdd(runId, {
-        studentId: mode === "existing" ? Number(studentIdInput) : undefined,
+        studentId: mode === "existing" ? studentIdInput.trim() : undefined,
         newStudentName: mode === "new" ? newStudentName.trim() : undefined,
         address: address.trim(),
         note: note.trim() || undefined,

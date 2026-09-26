@@ -1,8 +1,9 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { ManagerRole, ManagerSummaryResponseTypes } from "../types";
 
 type RawManager = {
-  id: number;
+  id: string | number;
   name: string;
   phone: string;
   role: ManagerRole;
@@ -22,5 +23,5 @@ export const getManagers = async (query?: string): Promise<ManagerSummaryRespons
     method: "GET",
     query: query ? { q: query } : undefined,
   });
-  return raw.items.map((m) => ({ id: m.id, name: m.name, phone: m.phone, role: m.role }));
+  return raw.items.map((m) => ({ id: asIdString(m.id), name: m.name, phone: m.phone, role: m.role }));
 };

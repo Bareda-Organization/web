@@ -132,10 +132,10 @@ export const TodayRunPage = () => {
   // R24 — 지도에서 고른 승하차지. 지도 마커는 좌표만 들고 있어서 명단과 이으려면
   // 정차지 이름이 필요하다(§5.4 명단 항목은 `stopName` 문자열만 싣는다) — 노선 응답의
   // 정차지 목록을 그대로 보관해 id → 이름을 되찾는다.
-  const [routeStops, setRouteStops] = useState<{ stopId: number; name: string }[]>([]);
-  const [selectedStopId, setSelectedStopId] = useState<number | null>(null);
+  const [routeStops, setRouteStops] = useState<{ stopId: string; name: string }[]>([]);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
-  const selectedRunId = runIdParam ? Number(runIdParam) : (runs[0]?.runId ?? null);
+  const selectedRunId = runIdParam ?? (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
 
   // R21-A 목표 1~3 — 이 화면은 항상 회차 하나만 보여 그 버스가 곧 "선택된" 버스다
@@ -181,7 +181,7 @@ export const TodayRunPage = () => {
   // 지도 마커 클릭 — 승하차지만 받는다. 버스·출발지·도착지를 누르면 선택을 해제한다
   // (같은 승하차지를 다시 누르는 것도 해제다 — 목록에서 벗어날 수단이 필요하다).
   const handleSelectMarker = useCallback((markerId: string) => {
-    const stopId = markerId.startsWith("stop-") ? Number(markerId.slice("stop-".length)) : null;
+    const stopId = markerId.startsWith("stop-") ? markerId.slice("stop-".length) : null;
     setSelectedStopId((previous) => (stopId == null || stopId === previous ? null : stopId));
   }, []);
 
@@ -214,7 +214,7 @@ export const TodayRunPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadRoster = useCallback(async (runId: number) => {
+  const loadRoster = useCallback(async (runId: string) => {
     setLoading(true);
     try {
       const items = await getRunRoster(runId);
@@ -231,7 +231,7 @@ export const TodayRunPage = () => {
   // §5.18 은 `status='moving'` 인 회차만 돌려준다 — 선택된 회차가 없으면(대기·종료)
   // `liveRun` 은 null 로 남고 지도는 기본 좌표를 보여준다. 위치 카드는 보조 정보라
   // 실패해도 본문 오류로 승격하지 않는다(DashboardPage.tsx 의 loadLive 와 같은 판단).
-  const loadLiveRun = useCallback(async (runId: number) => {
+  const loadLiveRun = useCallback(async (runId: string) => {
     try {
       const data = await getRunsLive();
       setLiveRun(data.runs.find((run) => run.runId === runId) ?? null);
@@ -245,7 +245,7 @@ export const TodayRunPage = () => {
   // 선택 해제 토글은 두지 않는다(보고서 §2, 판단 근거).
   // R20-C 목표 4 — "아직 확정 전"과 "확정됐는데 경로가 없음"을 가르려면 회차
   // 상태가 필요하다(호출부가 `selectedRun.runStatus` 를 넘긴다).
-  const loadRoute = useCallback(async (runId: number, runStatus: RunStatus) => {
+  const loadRoute = useCallback(async (runId: string, runStatus: RunStatus) => {
     setRouteError(null);
     try {
       const route = await getRunRoute(runId);

@@ -9,7 +9,7 @@ import { StyledDialogForm, StyledDialogFormRow, StyledStaffAccountList } from ".
 
 type AcademyFormDialogProps = {
   /** 없으면 등록 모드, 있으면 그 학원 수정 모드 */
-  academyId?: number;
+  academyId?: string;
   onClose: () => void;
   onDone: () => void;
 };

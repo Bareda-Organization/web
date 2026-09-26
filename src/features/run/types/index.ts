@@ -13,7 +13,7 @@ export type NoShowCaseResponseTypes = {
 
 // §5.3 runs[] 행 하나.
 export type DashboardRunResponseTypes = {
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   departTime: string;
@@ -56,7 +56,7 @@ export type RunLivePositionResponseTypes = {
 } | null;
 
 export type RunLiveItemResponseTypes = {
-  runId: number;
+  runId: string;
   busNo: string;
   direction: "to_academy" | "from_academy";
   status: RunStatus;
@@ -79,7 +79,7 @@ export type RosterChange = "added" | "removed" | null;
 export type RosterStatus = "waiting" | "boarded" | "alighted" | "absent" | "no_show";
 
 export type RosterItemResponseTypes = {
-  studentId: number;
+  studentId: string;
   name: string;
   className: string | null;
   stopName: string;
@@ -91,17 +91,17 @@ export type RosterItemResponseTypes = {
 
 // §5.7 POST /staff/runs/{runId}/forced-add.
 export type ForcedAddRequestTypes = {
-  studentId?: number;
+  studentId?: string;
   newStudentName?: string;
   address: string;
   note?: string;
 };
 
 export type ForcedAddResponseTypes = {
-  forcedAdditionId: number;
-  runId: number;
-  studentId: number;
-  stopId: number;
+  forcedAdditionId: string;
+  runId: string;
+  studentId: string;
+  stopId: string;
   status: "staged";
 };
 
@@ -109,7 +109,7 @@ export type ForcedAddResponseTypes = {
 export type ManagerRole = "driver" | "escort";
 
 export type ManagerSummaryResponseTypes = {
-  id: number;
+  id: string;
   name: string;
   phone: string;
   role: ManagerRole;
@@ -117,12 +117,12 @@ export type ManagerSummaryResponseTypes = {
 
 // §5.14 PATCH /staff/runs/{runId}/assignment.
 export type AssignmentRequestTypes = {
-  driverManagerId?: number;
-  escortManagerId?: number;
+  driverManagerId?: string;
+  escortManagerId?: string;
 };
 
 export type AssignmentEntryResponseTypes = {
-  managerId: number;
+  managerId: string;
   name: string;
   role: ManagerRole;
 };
@@ -131,13 +131,13 @@ export type AssignmentWarningCode = "WORK_HOURS_MISMATCH" | "MANAGER_DOUBLE_BOOK
 
 export type AssignmentWarningResponseTypes = {
   code: AssignmentWarningCode;
-  managerId: number;
+  managerId: string;
   role: ManagerRole;
   message: string;
 };
 
 export type AssignmentResponseTypes = {
-  runId: number;
+  runId: string;
   assignments: AssignmentEntryResponseTypes[];
   warnings: AssignmentWarningResponseTypes[];
 };

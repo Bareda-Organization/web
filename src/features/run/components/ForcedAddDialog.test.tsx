@@ -19,13 +19,13 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
 
   it("기존 학생 모드에서 확정하면 studentId 만 싣고 newStudentName 은 undefined 다", async () => {
     mockPostForcedAdd.mockResolvedValue({
-      forcedAdditionId: 1,
-      runId: 7,
-      studentId: 101,
-      stopId: 1,
+      forcedAdditionId: "1",
+      runId: "7",
+      studentId: "101",
+      stopId: "1",
       status: "staged",
     });
-    render(<ForcedAddDialog runId={7} open onClose={vi.fn()} onDone={vi.fn()} />);
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     const inputs = screen.getAllByRole("textbox");
     fireEvent.change(inputs[0], { target: { value: "101" } });
@@ -35,8 +35,8 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     fireEvent.click(screen.getByRole("button", { name: "확정하고 추가" }));
 
     await waitFor(() =>
-      expect(mockPostForcedAdd).toHaveBeenCalledWith(7, {
-        studentId: 101,
+      expect(mockPostForcedAdd).toHaveBeenCalledWith("7", {
+        studentId: "101",
         newStudentName: undefined,
         address: "서울시 정문로 1",
         note: undefined,
@@ -46,13 +46,13 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
 
   it("신규 학생 모드로 전환하면 newStudentName 을 싣고 studentId 는 undefined 다", async () => {
     mockPostForcedAdd.mockResolvedValue({
-      forcedAdditionId: 2,
-      runId: 7,
-      studentId: 999,
-      stopId: 2,
+      forcedAdditionId: "2",
+      runId: "7",
+      studentId: "999",
+      stopId: "2",
       status: "staged",
     });
-    render(<ForcedAddDialog runId={7} open onClose={vi.fn()} onDone={vi.fn()} />);
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "신규 학생" }));
     const inputs = screen.getAllByRole("textbox");
@@ -63,7 +63,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     fireEvent.click(screen.getByRole("button", { name: "확정하고 추가" }));
 
     await waitFor(() =>
-      expect(mockPostForcedAdd).toHaveBeenCalledWith(7, {
+      expect(mockPostForcedAdd).toHaveBeenCalledWith("7", {
         studentId: undefined,
         newStudentName: "새학생",
         address: "서울시 후문로 2",
@@ -73,7 +73,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
   });
 
   it("주소를 입력하지 않으면 다음 버튼이 비활성 상태다", () => {
-    render(<ForcedAddDialog runId={7} open onClose={vi.fn()} onDone={vi.fn()} />);
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     const inputs = screen.getAllByRole("textbox");
     fireEvent.change(inputs[0], { target: { value: "101" } });

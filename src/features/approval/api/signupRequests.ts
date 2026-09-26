@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   SignupDecideRequestTypes,
   SignupDecideResponseTypes,
@@ -8,7 +9,7 @@ import type {
 } from "../types";
 
 type RawSignupRequestItem = {
-  request_id: number;
+  request_id: string | number;
   name: string;
   role: SignupRole;
   phone: string;
@@ -25,7 +26,7 @@ type RawSignupRequestsResponse = {
 };
 
 const toItem = (raw: RawSignupRequestItem): SignupRequestItemResponseTypes => ({
-  requestId: raw.request_id,
+  requestId: asIdString(raw.request_id),
   name: raw.name,
   role: raw.role,
   phone: raw.phone,
@@ -58,7 +59,7 @@ type RawSignupDecideResponse = {
 // link 는 accept=true 이고 role 이 parent·student 면 studentIds, driver·escort 면
 // managerId 가 필수다 — 안 넣으면 422 LINK_REQUIRED.
 export const decideSignupRequest = async (
-  requestId: number,
+  requestId: string,
   payload: SignupDecideRequestTypes,
 ): Promise<SignupDecideResponseTypes> => {
   const body: Record<string, unknown> = { accept: payload.accept };

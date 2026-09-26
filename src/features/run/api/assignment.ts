@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   AssignmentEntryResponseTypes,
   AssignmentRequestTypes,
@@ -8,33 +9,33 @@ import type {
 } from "../types";
 
 type RawAssignmentEntry = {
-  manager_id: number;
+  manager_id: string | number;
   name: string;
   role: ManagerRole;
 };
 
 type RawAssignmentWarning = {
   code: AssignmentWarningResponseTypes["code"];
-  manager_id: number;
+  manager_id: string | number;
   role: ManagerRole;
   message: string;
 };
 
 type RawAssignmentResponse = {
-  run_id: number;
+  run_id: string | number;
   assignments: RawAssignmentEntry[];
   warnings: RawAssignmentWarning[];
 };
 
 const toEntry = (raw: RawAssignmentEntry): AssignmentEntryResponseTypes => ({
-  managerId: raw.manager_id,
+  managerId: asIdString(raw.manager_id),
   name: raw.name,
   role: raw.role,
 });
 
 const toWarning = (raw: RawAssignmentWarning): AssignmentWarningResponseTypes => ({
   code: raw.code,
-  managerId: raw.manager_id,
+  managerId: asIdString(raw.manager_id),
   role: raw.role,
   message: raw.message,
 });
@@ -44,7 +45,7 @@ const toWarning = (raw: RawAssignmentWarning): AssignmentWarningResponseTypes =>
 // MANAGER_DOUBLE_BOOKED · WORK_HOURS_NOT_SET 3종은 비차단 경고(warnings[])로만 오고
 // 요청은 200 으로 성공한다. 차단은 409 DUPLICATE_ASSIGNMENT(같은 역할 중복 배치) 뿐.
 export const patchRunAssignment = async (
-  runId: number,
+  runId: string,
   payload: AssignmentRequestTypes,
 ): Promise<AssignmentResponseTypes> => {
   const body: Record<string, unknown> = {};
@@ -60,7 +61,7 @@ export const patchRunAssignment = async (
     body,
   });
   return {
-    runId: raw.run_id,
+    runId: asIdString(raw.run_id),
     assignments: raw.assignments.map(toEntry),
     warnings: raw.warnings.map(toWarning),
   };

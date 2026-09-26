@@ -6,7 +6,7 @@ import { AlertBanner, Button, Dialog } from "@/shared/ui";
 import { deleteSchedule } from "../api";
 
 type ScheduleDeleteDialogProps = {
-  scheduleId: number;
+  scheduleId: string;
   onCancel: () => void;
   onDeleted: () => void;
 };

@@ -74,7 +74,7 @@ const DIRECTION_LABEL: Record<RunLiveItemResponseTypes["direction"], string> = {
 // 대시보드처럼 학원 하나로 고정된 화면이 아니다.
 export const MonitoringPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
-  const [academyId, setAcademyId] = useState<number | null>(null);
+  const [academyId, setAcademyId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [rosterTarget, setRosterTarget] = useState<RunLiveItemResponseTypes | null>(null);
   const [loadingAcademies, setLoadingAcademies] = useState(true);
@@ -83,7 +83,7 @@ export const MonitoringPage = () => {
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
-  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
   const [routeFallback, setRouteFallback] = useState(false);
   // R18-B 목표 3 — 경로 좌표가 0개(진짜 데이터 부재)인 상태. `routeFallback` 은
@@ -175,7 +175,7 @@ export const MonitoringPage = () => {
     };
   }, []);
 
-  const loadRuns = useCallback(async (id: number) => {
+  const loadRuns = useCallback(async (id: string) => {
     setLoadingRuns(true);
     try {
       const data = await getAcademyRunsLive(id);
@@ -192,7 +192,7 @@ export const MonitoringPage = () => {
   // R15-T2 목표 4 — 버스를 고르면 그 노선을 지도에 그린다. 같은 버스를 다시 고르면
   // 선택을 해제한다(DashboardPage.tsx 와 같은 토글).
   const handleSelectBus = useCallback(
-    async (runId: number) => {
+    async (runId: string) => {
       if (selectedRunId === runId) {
         setSelectedRunId(null);
         setRoutePolylines([]);
@@ -233,16 +233,16 @@ export const MonitoringPage = () => {
     [selectedRunId, runs],
   );
 
-  // R23 목표 4 — 지도 위 마커 클릭. 버스 마커의 id 만 회차 번호이고 정차지·출발지·도착지는
-  // `stop-`·`origin-` 처럼 접두어가 붙는다 — 숫자로 읽히는 것만 회차 선택으로 넘긴다.
+  // R23 목표 4 — 지도 위 마커 클릭. 버스 마커만 회차 선택으로 넘긴다 — 정차지·출발지·도착지는
+  // `stop-`·`origin-` 처럼 다른 kind 라 W1(식별자 문자열 흡수) 이후에도 kind 로 가른다
+  // (숫자로 읽히는지로 가르면 서버가 숫자 아닌 문자열 id 를 보내는 순간 선택이 조용히 실패한다).
   const handleSelectMarker = useCallback(
     (markerId: string) => {
-      const runId = Number(markerId);
-      if (Number.isInteger(runId) && markerId !== "") {
-        handleSelectBus(runId);
+      if (mapMarkers.some((marker) => marker.id === markerId)) {
+        handleSelectBus(markerId);
       }
     },
-    [handleSelectBus],
+    [handleSelectBus, mapMarkers],
   );
 
   // Goal 8 — `/topic/admin/live` 구독. 이 채널은 학원 경계를 넘어 전체를
@@ -371,7 +371,7 @@ export const MonitoringPage = () => {
         <Select
           label="학원"
           value={academyId ?? ""}
-          onChange={(event) => setAcademyId(Number(event.target.value))}
+          onChange={(event) => setAcademyId(event.target.value)}
           options={academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))}
           disabled={loadingAcademies || academies.length === 0}
         />

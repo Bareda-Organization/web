@@ -15,7 +15,7 @@ vi.mock("../api", () => ({
 const mockForceConfirmRun = vi.mocked(forceConfirmRun);
 
 const run: RunLiveItemResponseTypes = {
-  runId: 42,
+  runId: "42",
   busNo: "701호",
   direction: "to_academy",
   runStatus: "idle",
@@ -42,8 +42,8 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
 
   it("성공하면 결과 화면으로 전환되고, 사유 입력창(폼)으로 돌아갈 길이 없다", async () => {
     mockForceConfirmRun.mockResolvedValue({
-      runId: 42,
-      routeVersionId: 9,
+      runId: "42",
+      routeVersionId: "9",
       fallbackUsed: true,
       confirmedAt: "2026-09-12T08:00:00Z",
     });
@@ -56,7 +56,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
 
     await waitFor(() => expect(screen.getByText("강제 확정 완료")).toBeInTheDocument());
 
-    expect(mockForceConfirmRun).toHaveBeenCalledWith(42, "노선 계산 3회 연속 실패");
+    expect(mockForceConfirmRun).toHaveBeenCalledWith("42", "노선 계산 3회 연속 실패");
     // 결과 화면에는 폼 요소(사유 입력창·실행 버튼)가 존재하지 않고 "닫기"만 있다.
     expect(screen.queryByLabelText("강제 확정 사유")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "강제 확정 실행" })).not.toBeInTheDocument();

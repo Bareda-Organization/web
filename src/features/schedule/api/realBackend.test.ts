@@ -62,7 +62,7 @@ describe("schedule api — 실서버 계약", () => {
     ).padStart(2, "0")}`;
 
     const created = await createRun({
-      busId: 1,
+      busId: "1",
       serviceDate: "2099-01-01",
       direction: "to_academy",
       departTime,
@@ -94,7 +94,7 @@ describe("schedule api — 실서버 계약", () => {
     const tomorrow = WEEKDAYS_BY_GETDAY[(new Date().getDay() + 1) % 7];
 
     const created = await createSchedule({
-      busId: 1,
+      busId: "1",
       weekday: tomorrow,
       direction: "to_academy",
       departTime: "07:30",

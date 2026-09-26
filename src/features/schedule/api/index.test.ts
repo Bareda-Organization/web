@@ -45,8 +45,8 @@ describe("schedule api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        id: 1,
-        busId: 3,
+        id: "1",
+        busId: "3",
         weekday: "mon",
         direction: "to_academy",
         departTime: "08:00",
@@ -89,9 +89,9 @@ describe("schedule api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        id: 1,
-        busId: 3,
-        scheduleId: 1,
+        id: "1",
+        busId: "3",
+        scheduleId: "1",
         serviceDate: "2026-09-15",
         direction: "to_academy",
         departTime: "08:00",
@@ -101,7 +101,7 @@ describe("schedule api — snake_case ↔ camelCase 변환", () => {
         destinationName: "학원",
         estDurationMin: 20,
         canceledAt: null,
-        assignments: [{ managerId: 5, name: "이기사", role: "driver" }],
+        assignments: [{ managerId: "5", name: "이기사", role: "driver" }],
       },
     ]);
   });
@@ -126,7 +126,7 @@ describe("schedule api — snake_case ↔ camelCase 변환", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await createSchedule({
-      busId: 3,
+      busId: "3",
       weekday: "tue",
       direction: "from_academy",
       departTime: "17:00",
@@ -137,7 +137,7 @@ describe("schedule api — snake_case ↔ camelCase 변환", () => {
     const [, init] = fetchMock.mock.calls[0];
     const sentBody = JSON.parse(init.body as string);
     expect(sentBody).toEqual({
-      bus_id: 3,
+      bus_id: "3",
       weekday: "tue",
       direction: "from_academy",
       depart_time: "17:00",

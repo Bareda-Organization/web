@@ -41,7 +41,7 @@ export const RunDayList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   const load = useCallback(async (date: string) => {
     setLoading(true);

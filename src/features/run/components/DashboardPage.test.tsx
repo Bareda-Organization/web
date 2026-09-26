@@ -71,7 +71,7 @@ const mockGetRunRoute = vi.mocked(getRunRoute);
 const emptyLive: RunsLiveResponseTypes = { runs: [] };
 
 const baseLiveRun: RunLiveItemResponseTypes = {
-  runId: 1,
+  runId: "1",
   busNo: "1호차",
   direction: "to_academy",
   status: "moving",
@@ -101,7 +101,7 @@ const baseDashboard: DashboardResponseTypes = {
   metrics: { movingBuses: 3, boarded: 42, noShow: 1, absent: 2, unassignedManagers: 0 },
   runs: [
     {
-      runId: 1,
+      runId: "1",
       busNo: "1호차",
       direction: "to_academy",
       departTime: "08:00",
@@ -438,10 +438,10 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
   const fourStatusDashboard: DashboardResponseTypes = {
     metrics: baseDashboard.metrics,
     runs: [
-      { ...baseDashboard.runs[0], runId: 1, busNo: "1호차", runStatus: "idle" },
-      { ...baseDashboard.runs[0], runId: 2, busNo: "2호차", runStatus: "confirmed" },
-      { ...baseDashboard.runs[0], runId: 3, busNo: "3호차", runStatus: "moving" },
-      { ...baseDashboard.runs[0], runId: 4, busNo: "4호차", runStatus: "finished" },
+      { ...baseDashboard.runs[0], runId: "1", busNo: "1호차", runStatus: "idle" },
+      { ...baseDashboard.runs[0], runId: "2", busNo: "2호차", runStatus: "confirmed" },
+      { ...baseDashboard.runs[0], runId: "3", busNo: "3호차", runStatus: "moving" },
+      { ...baseDashboard.runs[0], runId: "4", busNo: "4호차", runStatus: "finished" },
     ],
   };
 
@@ -473,6 +473,29 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(screen.getAllByText("운행 종료").length).toBeGreaterThan(0);
   });
 
+  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
+  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
+  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseLiveRun, runId: "run-a1", position: { lat: 37.1, lng: 127.1, recordedAt: "2026-09-13T00:00:01Z" } }],
+    });
+    render(<DashboardPage />);
+
+    // 목록 항목 텍스트가 뜬 뒤에야 mapMarkers 가 이 회차를 담은 렌더가 끝난 상태다 —
+    // 그 전에 onMarkerClick 을 집으면 markers 가 비어 있던 렌더의 낡은 클로저를 잡는다.
+    await screen.findByText("1호차 · 등원");
+    const onMarkerClick = mockMapSurface.mock.calls.at(-1)?.[0].onMarkerClick;
+    expect(onMarkerClick).toBeTypeOf("function");
+
+    act(() => {
+      onMarkerClick!("run-a1");
+    });
+
+    await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledWith("run-a1"));
+  });
+
   it("버스를 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내를 보여준다", async () => {
     mockGetRunRoute.mockResolvedValue({
       roadPath: [
@@ -487,7 +510,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
     fireEvent.click(await screen.findByText("3호차 · 등원"));
 
-    expect(mockGetRunRoute).toHaveBeenCalledWith(3);
+    expect(mockGetRunRoute).toHaveBeenCalledWith("3");
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
   });
 
@@ -517,8 +540,8 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
       roadPath: [],
       fallbackUsed: false,
       stops: [
-        { stopId: 1, seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
-        { stopId: 2, seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
+        { stopId: "1", seq: 1, name: "정류장A", lat: 37.0, lng: 127.0 },
+        { stopId: "2", seq: 2, name: "정류장B", lat: 37.2, lng: 127.2 },
       ],
       confirmed: false,
     });
@@ -539,7 +562,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
       runs: [
         {
           ...baseLiveRun,
-          runId: 3,
+          runId: "3",
           busNo: "3호차",
           position: { lat: 37.111, lng: 127.222, recordedAt: "2026-09-13T00:00:01Z" },
         },

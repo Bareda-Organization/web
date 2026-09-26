@@ -23,7 +23,7 @@ const DIRECTION_OPTIONS: { value: ScheduleDirection; label: string }[] = [
 // 1회성 운행이라 만들어진 회차는 schedule_id 가 비어 있다(실측 확인, api/index.ts 주석).
 export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) => {
   const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<number | undefined>(undefined);
+  const [busId, setBusId] = useState<string | undefined>(undefined);
   const [direction, setDirection] = useState<ScheduleDirection>("to_academy");
   const [departTime, setDepartTime] = useState("");
   const [originName, setOriginName] = useState("");
@@ -95,8 +95,8 @@ export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) =>
       <Select
         label="차량"
         options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
-        value={busId !== undefined ? String(busId) : ""}
-        onChange={(event) => setBusId(Number(event.target.value))}
+        value={busId ?? ""}
+        onChange={(event) => setBusId(event.target.value)}
       />
       <Select
         label="방향"

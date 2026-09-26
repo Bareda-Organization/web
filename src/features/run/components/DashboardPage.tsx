@@ -92,7 +92,7 @@ export const DashboardPage = () => {
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선. 목록 자체는 `runs`(getDashboard,
   // 4종 상태 전부)를 쓰고, 위치만 `liveRuns`(getRunsLive, moving 전용)에서 run_id 로
   // 합친다(§8.23 목표 3 이 못박은 함정 회피).
-  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
   const [routeFallback, setRouteFallback] = useState(false);
   // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 형태(경로 좌표 0개=데이터 부재 안내).
@@ -177,7 +177,7 @@ export const DashboardPage = () => {
   // R15-T2 목표 4 — 버스를 고르면 그 노선을 지도에 그린다. 같은 버스를 다시 고르면
   // 선택을 해제한다(토글) — 목표 4 "선택 해제도 검사"가 요구하는 짝.
   const handleSelectBus = useCallback(
-    async (runId: number) => {
+    async (runId: string) => {
       if (selectedRunId === runId) {
         setSelectedRunId(null);
         setRoutePolylines([]);
@@ -218,16 +218,16 @@ export const DashboardPage = () => {
     [selectedRunId, runs],
   );
 
-  // R23 목표 4 — 지도 위 마커 클릭. 버스 마커의 id 만 회차 번호이고 정차지·출발지·도착지는
-  // `stop-`·`origin-` 처럼 접두어가 붙는다 — 숫자로 읽히는 것만 회차 선택으로 넘긴다.
+  // R23 목표 4 — 지도 위 마커 클릭. 버스 마커만 회차 선택으로 넘긴다 — 정차지·출발지·도착지는
+  // `stop-`·`origin-` 처럼 다른 kind 라 W1(식별자 문자열 흡수) 이후에도 kind 로 가른다
+  // (숫자로 읽히는지로 가르면 서버가 숫자 아닌 문자열 id 를 보내는 순간 선택이 조용히 실패한다).
   const handleSelectMarker = useCallback(
     (markerId: string) => {
-      const runId = Number(markerId);
-      if (Number.isInteger(runId) && markerId !== "") {
-        handleSelectBus(runId);
+      if (mapMarkers.some((marker) => marker.id === markerId)) {
+        handleSelectBus(markerId);
       }
     },
-    [handleSelectBus],
+    [handleSelectBus, mapMarkers],
   );
 
   // Goal 7 — `/topic/academy/{academyId}/live` 구독. `position` 은 payload 가

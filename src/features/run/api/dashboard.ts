@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { DashboardResponseTypes, DashboardRunResponseTypes, NoShowCaseResponseTypes, RunStatus } from "../types";
 
 type RawNoShowCase = {
@@ -8,7 +9,7 @@ type RawNoShowCase = {
 };
 
 type RawDashboardRun = {
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
   depart_time: string;
@@ -45,7 +46,7 @@ const toNoShowCase = (raw: RawNoShowCase): NoShowCaseResponseTypes => ({
 });
 
 const toDashboardRun = (raw: RawDashboardRun): DashboardRunResponseTypes => ({
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   direction: raw.direction,
   departTime: raw.depart_time,

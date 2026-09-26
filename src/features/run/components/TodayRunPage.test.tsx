@@ -63,7 +63,7 @@ const baseDashboard: DashboardResponseTypes = {
   metrics: { movingBuses: 1, boarded: 1, noShow: 0, absent: 0, unassignedManagers: 0 },
   runs: [
     {
-      runId: 7,
+      runId: "7",
       busNo: "2호차",
       direction: "to_academy",
       departTime: "08:10",
@@ -86,7 +86,7 @@ const baseDashboard: DashboardResponseTypes = {
 
 const baseRoster: RosterItemResponseTypes[] = [
   {
-    studentId: 1,
+    studentId: "1",
     name: "김학생",
     className: "1반",
     stopName: "정문",
@@ -110,7 +110,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/today-run?runId=7"));
     expect(await screen.findByText("김학생")).toBeInTheDocument();
-    expect(mockGetRunRoster).toHaveBeenCalledWith(7);
+    expect(mockGetRunRoster).toHaveBeenCalledWith("7");
   });
 
   // `FEATURE_SPEC C-02` — `absent`(미등원)와 `no_show`(미승차)는 **반드시 구분**한다.
@@ -184,9 +184,9 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 // 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지 눈으로 좇기 어렵다.
 describe("TodayRunPage — 명단을 승하차지별로 묶는다", () => {
   const twoStopRoster: RosterItemResponseTypes[] = [
-    { studentId: 1, name: "김학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
-    { studentId: 2, name: "이학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
-    { studentId: 3, name: "박학생", className: "2반", stopName: "후문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "1", name: "김학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "2", name: "이학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "3", name: "박학생", className: "2반", stopName: "후문", guardianPhone: "", change: null, status: "waiting", note: null },
   ];
 
   afterEach(() => {
@@ -235,7 +235,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
     const liveResponse: RunsLiveResponseTypes = {
       runs: [
         {
-          runId: 7,
+          runId: "7",
           busNo: "2호차",
           direction: "to_academy",
           status: "moving",
@@ -275,7 +275,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
         {
-          runId: 7,
+          runId: "7",
           busNo: "2호차",
           direction: "to_academy",
           status: "moving",
@@ -313,10 +313,10 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
   const fourStatusDashboard: DashboardResponseTypes = {
     metrics: baseDashboard.metrics,
     runs: [
-      { ...baseDashboard.runs[0], runId: 7, busNo: "2호차", runStatus: "idle" },
-      { ...baseDashboard.runs[0], runId: 8, busNo: "3호차", runStatus: "confirmed" },
-      { ...baseDashboard.runs[0], runId: 9, busNo: "4호차", runStatus: "moving" },
-      { ...baseDashboard.runs[0], runId: 10, busNo: "5호차", runStatus: "finished" },
+      { ...baseDashboard.runs[0], runId: "7", busNo: "2호차", runStatus: "idle" },
+      { ...baseDashboard.runs[0], runId: "8", busNo: "3호차", runStatus: "confirmed" },
+      { ...baseDashboard.runs[0], runId: "9", busNo: "4호차", runStatus: "moving" },
+      { ...baseDashboard.runs[0], runId: "10", busNo: "5호차", runStatus: "finished" },
     ],
   };
 
@@ -373,7 +373,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     // `selectedRun` 이 runs 로딩 전엔 null 이라 loadRoute 이펙트가 두 번 걸린다
     // (idle 기본값 → 실제 상태) — waitFor 로 최종 렌더를 기다린다.
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
-    expect(mockGetRunRoute).toHaveBeenCalledWith(9);
+    expect(mockGetRunRoute).toHaveBeenCalledWith("9");
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -481,17 +481,17 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(
     ],
     fallbackUsed: false,
     stops: [
-      { stopId: 11, seq: 1, name: "한빛아파트 정문", lat: 37.56, lng: 126.97 },
-      { stopId: 22, seq: 2, name: "그린빌라 입구", lat: 37.55, lng: 126.98 },
+      { stopId: "11", seq: 1, name: "한빛아파트 정문", lat: 37.56, lng: 126.97 },
+      { stopId: "22", seq: 2, name: "그린빌라 입구", lat: 37.55, lng: 126.98 },
     ],
     confirmed: true,
   };
   const 두정차지_명단: RosterItemResponseTypes[] = [
-    { studentId: 1, name: "한빛학생", className: "1반", stopName: "한빛아파트 정문",
+    { studentId: "1", name: "한빛학생", className: "1반", stopName: "한빛아파트 정문",
       guardianPhone: "010-1111-1111", change: null, status: "waiting", note: null },
-    { studentId: 2, name: "그린학생", className: "2반", stopName: "그린빌라 입구",
+    { studentId: "2", name: "그린학생", className: "2반", stopName: "그린빌라 입구",
       guardianPhone: "010-2222-2222", change: null, status: "waiting", note: null },
-    { studentId: 3, name: "한빛둘째", className: "3반", stopName: "한빛아파트 정문",
+    { studentId: "3", name: "한빛둘째", className: "3반", stopName: "한빛아파트 정문",
       guardianPhone: "010-3333-3333", change: null, status: "boarded", note: null },
   ];
 

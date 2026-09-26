@@ -44,10 +44,10 @@ describe("report api — snake_case ↔ camelCase 변환", () => {
 
     expect(result.items).toEqual([
       {
-        reportId: 1,
+        reportId: "1",
         type: "vehicle_issue",
         memo: "브레이크 소음",
-        runId: 7,
+        runId: "7",
         busNo: "1호차",
         studentName: null,
         reportedBy: "이기사",
@@ -80,7 +80,7 @@ describe("report api — snake_case ↔ camelCase 변환", () => {
       ),
     );
 
-    const result = await getReportDetail(2);
+    const result = await getReportDetail("2");
 
     expect(result.studentName).toBe("김바래");
     expect(result.handled).toBe(true);

@@ -7,7 +7,7 @@ export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type RunDirection = "to_academy" | "from_academy";
 
 export type RouteStop = {
-  stopId: number;
+  stopId: string;
   seq: number;
   name: string;
   lat: number;
@@ -15,8 +15,8 @@ export type RouteStop = {
 };
 
 export type RouteListItemResponseTypes = {
-  id: number;
-  busId: number;
+  id: string;
+  busId: string;
   busNo: string;
   weekday: Weekday;
   direction: RunDirection;
@@ -40,12 +40,12 @@ export type RouteDetailResponseTypes = RouteListItemResponseTypes & {
 // POST·PATCH /staff/routes 요청 — stop_ids 를 보내면 기존 정차 순서를 전부 대체한다
 // (§5.9 "부분 수정 경로를 두지 않는다"). 생략하면(undefined) 기존 순서를 유지.
 export type RouteUpsertRequestTypes = {
-  busId: number;
+  busId: string;
   weekday: Weekday;
   direction: RunDirection;
   name?: string;
   active?: boolean;
-  stopIds?: number[];
+  stopIds?: string[];
 };
 
 export type LatLng = { lat: number; lng: number };
@@ -86,7 +86,7 @@ export type StopSuggestionTypes = {
 };
 
 export type NearbyStopTypes = {
-  stopId: number;
+  stopId: string;
   name: string;
   address: string;
   lat: number;
@@ -96,7 +96,7 @@ export type NearbyStopTypes = {
 
 // PUT /staff/routes/{id}/stops 한 항목(2026-09-23) — `stopId` 가 없으면 새로 만든다. 배열 순서가 정차 순서다.
 export type RouteStopSaveItemTypes = {
-  stopId?: number;
+  stopId?: string;
   name: string;
   address?: string;
   lat: number;

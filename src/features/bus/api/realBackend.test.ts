@@ -59,11 +59,11 @@ describe("bus api — 실서버 계약", () => {
 
     const original = { busNo: "2호차", plateNo: "12가5678", capacity: 4, operable: true };
     try {
-      const updated = await updateBus(2, { ...original, capacity: 5 });
+      const updated = await updateBus("2", { ...original, capacity: 5 });
       expect(updated.capacity).toBe(5);
       expect(updated.busNo).toBe("2호차");
     } finally {
-      const restored = await updateBus(2, original);
+      const restored = await updateBus("2", original);
       expect(restored.capacity).toBe(4);
     }
   });

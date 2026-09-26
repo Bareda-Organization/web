@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   AckEmergencyResponseTypes,
   EmergencyItemResponseTypes,
@@ -10,11 +11,11 @@ import type {
 } from "../types";
 
 type RawEmergencyItem = {
-  emergency_id: number;
+  emergency_id: string | number;
   type: EmergencyType;
   memo: string | null;
   raised_by: { name: string | null; role: "driver" | "escort"; phone: string | null };
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
   position: { lat: number; lng: number; recorded_at: string | null };
@@ -47,11 +48,11 @@ const toPosition = (raw: RawEmergencyItem["position"]): EmergencyPositionTypes =
 });
 
 const toItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => ({
-  emergencyId: raw.emergency_id,
+  emergencyId: asIdString(raw.emergency_id),
   type: raw.type,
   memo: raw.memo,
   raisedBy: toPerson(raw.raised_by),
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   direction: raw.direction,
   position: toPosition(raw.position),
@@ -80,10 +81,10 @@ export const getEmergencies = async (
 };
 
 // POST /staff/emergencies/{id}/ack — 이미 확인된 건은 409 ALREADY_ACKED.
-export const ackEmergency = async (emergencyId: number): Promise<AckEmergencyResponseTypes> => {
-  const raw = await apiFetch<{ emergency_id: number; acked_at: string }>(
+export const ackEmergency = async (emergencyId: string): Promise<AckEmergencyResponseTypes> => {
+  const raw = await apiFetch<{ emergency_id: string | number; acked_at: string }>(
     `/staff/emergencies/${emergencyId}/ack`,
     { method: "POST" },
   );
-  return { emergencyId: raw.emergency_id, ackedAt: raw.acked_at };
+  return { emergencyId: asIdString(raw.emergency_id), ackedAt: raw.acked_at };
 };

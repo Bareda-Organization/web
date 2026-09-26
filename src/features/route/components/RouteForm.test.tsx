@@ -27,7 +27,7 @@ describe("RouteForm — 등록 실패 갈래", () => {
 
   it("409 DUPLICATE_ROUTE 로 거부되면 onDone 을 호출하지 않고 전용 안내 문구를 보여준다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: 1, busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
       page: 0,
       size: 100,
       totalCount: 1,

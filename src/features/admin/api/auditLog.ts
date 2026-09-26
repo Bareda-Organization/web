@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   AuditAction,
   AuditLogItemResponseTypes,
@@ -13,7 +14,7 @@ type RawAuditLogItem = {
   actor: string;
   action: AuditAction;
   target_type: string;
-  target_id: number;
+  target_id: string | number;
   academy_name: string | null;
   occurred_at: string;
 };
@@ -30,7 +31,7 @@ const toAuditLogItem = (raw: RawAuditLogItem): AuditLogItemResponseTypes => ({
   actor: raw.actor,
   action: raw.action,
   targetType: raw.target_type,
-  targetId: raw.target_id,
+  targetId: asIdString(raw.target_id),
   academyName: raw.academy_name,
   occurredAt: raw.occurred_at,
 });
@@ -55,7 +56,7 @@ export const getAuditLogs = async (query: AuditQueryTypes = {}): Promise<AuditLo
 };
 
 type RawLoginHistoryItem = {
-  account_id: number;
+  account_id: string | number;
   login_id: string;
   result: LoginHistoryResult;
   ip: string;
@@ -72,7 +73,7 @@ type RawLoginHistoryResponse = {
 };
 
 const toLoginHistoryItem = (raw: RawLoginHistoryItem): LoginHistoryItemResponseTypes => ({
-  accountId: raw.account_id,
+  accountId: asIdString(raw.account_id),
   loginId: raw.login_id,
   result: raw.result,
   ip: raw.ip,

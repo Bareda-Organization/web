@@ -36,7 +36,7 @@ const DIRECTION_OPTIONS: { value: ScheduleDirection; label: string }[] = [
 // 같은 형태이나 이쪽은 depart_time 까지 넷을 묶는다는 점이 다르다).
 export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) => {
   const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<number | undefined>(schedule?.busId);
+  const [busId, setBusId] = useState<string | undefined>(schedule?.busId);
   const [weekday, setWeekday] = useState<ScheduleWeekday>(schedule?.weekday ?? "mon");
   const [direction, setDirection] = useState<ScheduleDirection>(schedule?.direction ?? "to_academy");
   const [departTime, setDepartTime] = useState(schedule?.departTime ?? "");
@@ -123,8 +123,8 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
       <Select
         label="차량"
         options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
-        value={busId !== undefined ? String(busId) : ""}
-        onChange={(event) => setBusId(Number(event.target.value))}
+        value={busId ?? ""}
+        onChange={(event) => setBusId(event.target.value)}
       />
       <Select
         label="요일"

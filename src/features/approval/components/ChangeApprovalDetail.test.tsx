@@ -30,10 +30,10 @@ const mockGetDetail = vi.mocked(getChangeApprovalDetail);
 const mockDecide = vi.mocked(decideChangeApproval);
 
 const baseDetail: ChangeApprovalDetailResponseTypes = {
-  approvalId: 5,
+  approvalId: "5",
   source: "change_request",
   studentName: "이학생",
-  runId: 10,
+  runId: "10",
   busNo: "1호차",
   direction: "to_academy",
   deadlineAt: "2026-09-13T00:00:00Z",
@@ -62,7 +62,7 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   estDistanceAfter: 1500,
   estDurationBefore: 32,
   estDurationAfter: 38,
-  affectedStudents: [{ studentId: 1, name: "이학생" }],
+  affectedStudents: [{ studentId: "1", name: "이학생" }],
   capacity: { studentCapacity: 20, assigned: 12 },
   previewToken: "token-abc",
   previewStale: false,
@@ -82,19 +82,19 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       decidedBy: "staff-1",
       decidedAt: "2026-09-12T00:00:00Z",
     });
-    render(<ChangeApprovalDetail approvalId={5} />);
+    render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
 
     await waitFor(() =>
-      expect(mockDecide).toHaveBeenCalledWith(5, { approve: true, previewToken: "token-abc" }),
+      expect(mockDecide).toHaveBeenCalledWith("5", { approve: true, previewToken: "token-abc" }),
     );
     expect(mockPush).toHaveBeenCalledWith("/change-approval");
   });
 
   it("거절 사유가 없으면 거절 확정 버튼이 비활성 상태다", async () => {
     mockGetDetail.mockResolvedValue(baseDetail);
-    render(<ChangeApprovalDetail approvalId={5} />);
+    render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
 
@@ -104,7 +104,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
   it("409 PREVIEW_STALE 응답을 받으면 오류 문구를 보여주고 상세를 다시 불러온다", async () => {
     mockGetDetail.mockResolvedValue(baseDetail);
     mockDecide.mockRejectedValue(new ApiError(409, "PREVIEW_STALE", "미리보기가 만료됐습니다"));
-    render(<ChangeApprovalDetail approvalId={5} />);
+    render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
 
@@ -126,7 +126,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       estDurationAfter: null,
       previewToken: null,
     });
-    render(<ChangeApprovalDetail approvalId={5} />);
+    render(<ChangeApprovalDetail approvalId="5" />);
 
     expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
@@ -145,7 +145,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
     it("전체 소요시간·출발시간·도착시간을 두 열에 나눠 보여주고, 소요시간 증감은 변경 후 열에만 부호로 낸다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime }); // 32분 → 38분
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       // 전체 소요시간 — 변경 전은 값만, 변경 후는 증감 부호를 덧붙인다.
       expect(await screen.findByText("32분")).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
     it("줄어들면 - 부호로 보여준다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime, estDurationBefore: 40, estDurationAfter: 35 });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findByText("40분")).toBeInTheDocument();
       expect(await screen.findByText("35분 (-5분)")).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
     it("옛 확정 노선이라 전체 소요시간이 없으면 이유를 한 줄 안내하고, 도착시간도 계산 불가로 안내한다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime, estDurationBefore: null });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findByText("- (예전 확정 노선이라 소요시간 정보가 없습니다)")).toBeInTheDocument();
       expect(await screen.findByText("- (출발 또는 소요 정보가 없어 계산할 수 없습니다)")).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
     it("departTime 이 아직 응답에 없으면(r20-a 미병합) 출발·도착시간에 이유를 안내한다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime: null });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findAllByText("- (출발 시각 정보가 아직 없습니다)")).toHaveLength(2);
       expect(await screen.findAllByText("- (출발 또는 소요 정보가 없어 계산할 수 없습니다)")).toHaveLength(2);
@@ -204,7 +204,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
         estDurationAfter: null,
         previewToken: null,
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findByText("이미 결정된 건이라 노선 재계산 결과가 없습니다.")).toBeInTheDocument();
       expect(screen.queryByText("소요 시간")).not.toBeInTheDocument();
@@ -223,7 +223,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
           stopsAfter: [{ seq: 1, stopName: "그린빌라 입구", eta, lat: 37.5, lng: 127 }],
         },
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findByText(formatClock(eta))).toBeInTheDocument();
       expect(screen.queryByText(eta)).not.toBeInTheDocument();
@@ -239,7 +239,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
           ],
         },
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findByText("중앙로 스타빌딩 앞", { exact: false })).toBeInTheDocument();
       expect(screen.getByText("1. 중앙로 스타빌딩 앞").closest("div")).toHaveTextContent("-");
@@ -250,7 +250,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
   describe("전후 경로 지도", () => {
     it("도로 좌표를 좌우 두 지도에 각각의 폴리라인으로 그린다", async () => {
       mockGetDetail.mockResolvedValue(baseDetail);
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
 
@@ -276,7 +276,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
           stopsAfter: [{ seq: 1, stopName: "후문", eta: "08:15", lat: null, lng: null }],
         },
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       expect(await screen.findAllByText("경로 좌표가 아직 없습니다")).toHaveLength(2);
       expect(mockMapSurface).not.toHaveBeenCalled();
@@ -289,7 +289,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
         ...baseDetail,
         routePreview: { ...baseDetail.routePreview!, roadPathBefore: [], roadPathAfter: [] },
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
       const [beforeCall] = mockMapSurface.mock.calls;
@@ -305,10 +305,10 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
         ...baseDetail,
         routePreview: {
           ...baseDetail.routePreview!,
-          removed: [{ stopId: 1, stopName: "정문", lat: 37.55, lng: 126.97 }],
+          removed: [{ stopId: "1", stopName: "정문", lat: 37.55, lng: 126.97 }],
         },
       });
-      render(<ChangeApprovalDetail approvalId={5} />);
+      render(<ChangeApprovalDetail approvalId="5" />);
 
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledTimes(2));
       const [beforeCall] = mockMapSurface.mock.calls;

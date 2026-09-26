@@ -1,11 +1,12 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type { ForcedAddRequestTypes, ForcedAddResponseTypes } from "../types";
 
 type RawForcedAddResponse = {
-  forced_addition_id: number;
-  run_id: number;
-  student_id: number;
-  stop_id: number;
+  forced_addition_id: string | number;
+  run_id: string | number;
+  student_id: string | number;
+  stop_id: string | number;
   status: "staged";
 };
 
@@ -14,7 +15,7 @@ type RawForcedAddResponse = {
 // 되돌릴 수 없는 조작이라 화면 쪽에 확인 단계를 반드시 둔다(BRIEF §3-3).
 // student_id 와 new_student.name 은 배타적 — 서버가 422 VALIDATION_FAILED 로 판정한다.
 export const postForcedAdd = async (
-  runId: number,
+  runId: string,
   payload: ForcedAddRequestTypes,
 ): Promise<ForcedAddResponseTypes> => {
   const body: Record<string, unknown> = {
@@ -32,10 +33,10 @@ export const postForcedAdd = async (
     body,
   });
   return {
-    forcedAdditionId: raw.forced_addition_id,
-    runId: raw.run_id,
-    studentId: raw.student_id,
-    stopId: raw.stop_id,
+    forcedAdditionId: asIdString(raw.forced_addition_id),
+    runId: asIdString(raw.run_id),
+    studentId: asIdString(raw.student_id),
+    stopId: asIdString(raw.stop_id),
     status: raw.status,
   };
 };

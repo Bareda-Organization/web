@@ -1,4 +1,5 @@
 import { apiFetch } from "@/shared/lib/http";
+import { asIdString } from "@/shared/lib/ws";
 import type {
   ChangeApprovalDecideRequestTypes,
   ChangeApprovalDecideResponseTypes,
@@ -11,10 +12,10 @@ import type {
 } from "../types";
 
 type RawChangeApprovalSummary = {
-  approval_id: number;
+  approval_id: string | number;
   source: ChangeApprovalSource;
   student_name: string;
-  run_id: number;
+  run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
   deadline_at: string;
@@ -30,10 +31,10 @@ type RawChangeApprovalsResponse = {
 };
 
 const toSummary = (raw: RawChangeApprovalSummary): ChangeApprovalSummaryResponseTypes => ({
-  approvalId: raw.approval_id,
+  approvalId: asIdString(raw.approval_id),
   source: raw.source,
   studentName: raw.student_name,
-  runId: raw.run_id,
+  runId: asIdString(raw.run_id),
   busNo: raw.bus_no,
   direction: raw.direction,
   deadlineAt: raw.deadline_at,
@@ -74,10 +75,10 @@ const toRouteStop = (raw: RawRouteStop): RouteStopPreviewResponseTypes => ({
 // R21-A 추가 지시 ② — `reordered`·`removed` 는 처음부터 객체였다(타입이 실제 모양과
 // 어긋나 있었다, 아래 `RawRouteStopRef` 참고. 지금까지 화면이 이 필드를 쓴 적이
 // 없어 드러나지 않았다).
-type RawRouteStopRef = { stop_id: number; stop_name: string | null; lat: number | null; lng: number | null };
+type RawRouteStopRef = { stop_id: string | number; stop_name: string | null; lat: number | null; lng: number | null };
 
 const toRouteStopRef = (raw: RawRouteStopRef): RouteStopRefResponseTypes => ({
-  stopId: raw.stop_id,
+  stopId: asIdString(raw.stop_id),
   stopName: raw.stop_name,
   lat: raw.lat,
   lng: raw.lng,
@@ -103,7 +104,7 @@ type RawChangeApprovalDetail = RawChangeApprovalSummary & {
   est_distance_after: number | null;
   est_duration_before: number | null;
   est_duration_after: number | null;
-  affected_students: { student_id: number; name: string }[];
+  affected_students: { student_id: string | number; name: string }[];
   capacity: { student_capacity: number; assigned: number };
   preview_token: string | null;
   preview_stale: boolean;
@@ -121,7 +122,7 @@ type RawChangeApprovalDetail = RawChangeApprovalSummary & {
 // (2026-09-12 확인 — 백엔드 ErrorCode.java:203 에는 실재, HTTP 422). 정본 목록을
 // 임의로 늘리지 말라는 그 파일의 지시를 존중해 여기서 코드를 추가하지 않고,
 // 화면은 ApiError.message 를 그대로 보여주는 방식으로 이 간극을 흡수한다.
-export const getChangeApprovalDetail = async (approvalId: number): Promise<ChangeApprovalDetailResponseTypes> => {
+export const getChangeApprovalDetail = async (approvalId: string): Promise<ChangeApprovalDetailResponseTypes> => {
   const raw = await apiFetch<RawChangeApprovalDetail>(`/staff/approvals/${approvalId}`, { method: "GET" });
   return {
     ...toSummary(raw),
@@ -142,7 +143,7 @@ export const getChangeApprovalDetail = async (approvalId: number): Promise<Chang
     estDistanceAfter: raw.est_distance_after,
     estDurationBefore: raw.est_duration_before,
     estDurationAfter: raw.est_duration_after,
-    affectedStudents: raw.affected_students.map((s) => ({ studentId: s.student_id, name: s.name })),
+    affectedStudents: raw.affected_students.map((s) => ({ studentId: asIdString(s.student_id), name: s.name })),
     capacity: { studentCapacity: raw.capacity.student_capacity, assigned: raw.capacity.assigned },
     previewToken: raw.preview_token,
     previewStale: raw.preview_stale,
@@ -162,7 +163,7 @@ type RawChangeApprovalDecideResponse = {
 // approve=false 면 rejectReason 필수(§8.3 정본 — 없으면 422 VALIDATION_FAILED).
 // 운행 시작 이후 도달한 조작은 403 CHANGE_WINDOW_CLOSED(Ruling 200 정정 — 409 아님).
 export const decideChangeApproval = async (
-  approvalId: number,
+  approvalId: string,
   payload: ChangeApprovalDecideRequestTypes,
 ): Promise<ChangeApprovalDecideResponseTypes> => {
   const body: Record<string, unknown> = { approve: payload.approve };

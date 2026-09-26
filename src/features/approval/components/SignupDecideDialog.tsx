@@ -33,12 +33,11 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parseStudentIds = (): number[] =>
+  const parseStudentIds = (): string[] =>
     studentIdsInput
       .split(/[,\s]+/)
       .map((token) => token.trim())
-      .filter(Boolean)
-      .map(Number);
+      .filter(Boolean);
 
   const canAccept = needsStudentLink(request.role)
     ? parseStudentIds().length > 0
@@ -55,7 +54,7 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
         link: needsStudentLink(request.role)
           ? { studentIds: parseStudentIds() }
           : needsManagerLink(request.role)
-            ? { managerId: Number(managerIdInput) }
+            ? { managerId: managerIdInput.trim() }
             : undefined,
       });
       onDone();

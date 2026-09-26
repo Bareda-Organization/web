@@ -8,7 +8,7 @@ import type { ManagerSummaryResponseTypes } from "../types";
 import { StyledDialogForm, StyledWarningList } from "./ManagerAssignmentDialog.styled";
 
 type ManagerAssignmentDialogProps = {
-  runId: number;
+  runId: string;
   open: boolean;
   onClose: () => void;
   onDone: () => void;
@@ -62,8 +62,8 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
     setError(null);
     try {
       const result = await patchRunAssignment(runId, {
-        driverManagerId: driverManagerId ? Number(driverManagerId) : undefined,
-        escortManagerId: escortManagerId ? Number(escortManagerId) : undefined,
+        driverManagerId: driverManagerId || undefined,
+        escortManagerId: escortManagerId || undefined,
       });
       if (result.warnings.length > 0) {
         setWarnings(result.warnings.map((w) => w.message));
