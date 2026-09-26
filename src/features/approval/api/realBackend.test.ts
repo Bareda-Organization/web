@@ -102,7 +102,8 @@ describe("approval api — 실서버 계약", () => {
 
     const result = await getChangeApprovalDetail("2");
 
-    expect(result.approvalId).toBe(2);
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(result.approvalId).toBe("2");
     expect(result.routePreview).toBeNull();
     expect(result.previewToken).toBeNull();
     expect(result.estTimeBefore).toBeNull();
@@ -153,7 +154,8 @@ describe("approval api — 실서버 계약", () => {
 
     const result = await getChangeApprovalDetail("1");
 
-    expect(result.approvalId).toBe(1);
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(result.approvalId).toBe("1");
     expect(result.previewToken).not.toBeNull();
     expect(result.previewStale).toBe(false);
   });

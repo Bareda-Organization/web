@@ -33,6 +33,7 @@ describe("notification api — 실서버 계약", () => {
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
     expect(typeof result.unackedCount).toBe("number");
-    expect(typeof result.items[0].notificationId).toBe("number");
+    // 응답 식별자는 문자열이다(Ruling 332·357).
+    expect(typeof result.items[0].notificationId).toBe("string");
   });
 });
