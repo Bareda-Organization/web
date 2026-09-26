@@ -225,14 +225,26 @@ describe("auth api — 실서버 계약", () => {
     expect(result.status).toBe("pending");
   });
 
-  it("recoverAccount 는 유효한 요청을 접수한다(§2.9)", async ({ skip }) => {
+  // LC — `Ruling 329`(2026-09-25 백엔드 전체 검사) 로 계약이 바뀌었다: SMS 연동
+  // 전까지 이 엔드포인트는 요청 내용과 무관하게 항상 503 RECOVERY_UNAVAILABLE 을
+  // 낸다(`recover.ts` 주석 · `backend/report/review-2026-09-25/FIX-LCHECK.md`).
+  // 옛 "접수 성공" 기대는 그 이전 계약이다 — 지금 서버로 돌리면 이 시험이 실패한다.
+  it("recoverAccount 는 SMS 연동 전까지 503 RECOVERY_UNAVAILABLE 로 거부된다(§2.9 · Ruling 329)", async ({
+    skip,
+  }) => {
     if (!backendReachable) skip();
     // login() 과 같은 이유 — 이 호출도 미인증 엔드포인트인데, 앞선 changePassword·
     // reapplySignup 시험이 store 에 남긴 rejected 토큰이 그대로 실리면 계정 게이트가
     // 이 요청 자체를 403 AUTH_REJECTED 로 막는다(실측 — 판단 근거, 보고서 §2).
     setAccessToken(null);
 
-    await expect(recoverAccount({ type: "login_id", phone: throwawayPhone })).resolves.toBeUndefined();
+    await expect(recoverAccount({ type: "login_id", phone: throwawayPhone })).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.status).toBe(503);
+      expect(apiError.code).toBe("RECOVERY_UNAVAILABLE");
+      return true;
+    });
   });
 
   it("refresh 는 refresh_token 쿠키를 실으면 새 액세스 토큰을 돌려준다(raw fetch, §2.6)", async ({ skip }) => {
