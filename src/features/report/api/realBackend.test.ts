@@ -22,7 +22,8 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("report api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 학원은 보고 0건(2026-09-14 curl 확인).
+  // 로컬 시드(V2) 기준 — staffA(academy_id=1) 학원은 보고 1건(2026-09-26 R31 BE-B2 가 Swagger 예시용으로 추가).
+  // 개수는 단언하지 않는다 — 봉투 형태만 본다.
   // §5.20 은 §1.8 페이징을 안 쓴다(items 만) — 이 봉투 형태 자체가 검증 대상이다.
 
   it("getReports 는 0건이어도 items 배열 형태를 돌려준다", async ({ skip }) => {
