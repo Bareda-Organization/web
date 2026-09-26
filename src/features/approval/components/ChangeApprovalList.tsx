@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Card, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
+import { AlertBanner, Badge, Card, PageHeader, Pagination, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getChangeApprovals } from "../api";
 import type { ChangeApprovalSummaryResponseTypes } from "../types";
@@ -30,21 +30,28 @@ const STATUS_OPTIONS = [
   { value: "auto_rejected", label: "자동 거절" },
 ];
 
-// §5.5 GET /staff/approvals(A-05) 목록 — ②구간 변경 승인 화면(UF-M-02).
+const PAGE_SIZE = 20;
+
+// §5.5 GET /staff/approvals(A-05) 목록 — ②구간 변경 승인 화면(UF-M-02). §1.8 페이징(Ruling 358).
 export const ChangeApprovalList = () => {
   const router = useRouter();
   const [status, setStatus] = useState("pending");
+  const [page, setPage] = useState(0);
   const [items, setItems] = useState<ChangeApprovalSummaryResponseTypes[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadApprovals = useCallback(async (nextStatus: string) => {
+  const loadApprovals = useCallback(async (nextStatus: string, nextPage: number) => {
     setLoading(true);
     try {
-      const data = await getChangeApprovals(nextStatus);
+      const data = await getChangeApprovals(nextStatus, nextPage, PAGE_SIZE);
       setItems(data.items);
       setPendingCount(data.pendingCount);
+      setTotalCount(data.totalCount);
+      setHasNext(data.hasNext);
       setError(null);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "구간 변경 목록을 불러오지 못했습니다");
@@ -56,9 +63,16 @@ export const ChangeApprovalList = () => {
 
   useEffect(() => {
     (async () => {
-      await loadApprovals(status);
+      await loadApprovals(status, page);
     })();
-  }, [status, loadApprovals]);
+  }, [status, page, loadApprovals]);
+
+  // 상태 필터를 바꾸면 0 페이지로 되돌린다 — 옛 필터의 마지막 페이지가 새 필터에서는
+  // 범위 밖일 수 있다(선례 NotificationList#handleFilterChange 와 같은 근거).
+  const handleStatusChange = (nextStatus: string) => {
+    setStatus(nextStatus);
+    setPage(0);
+  };
 
   const columns: RosterColumn<ChangeApprovalSummaryResponseTypes>[] = [
     { key: "studentName", label: "학생" },
@@ -82,7 +96,7 @@ export const ChangeApprovalList = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={setStatus} />
+      <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={handleStatusChange} />
 
       <Card padding={0} aria-busy={loading}>
         <RosterTable
@@ -92,6 +106,8 @@ export const ChangeApprovalList = () => {
           onRowClick={(row) => router.push(`/change-approval/${row.approvalId}`)}
         />
       </Card>
+
+      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
     </StyledChangeApprovalLayout>
   );
 };

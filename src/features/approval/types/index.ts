@@ -60,9 +60,14 @@ export type ChangeApprovalSummaryResponseTypes = {
   requestedAt: string;
 };
 
+// §1.8 페이징 봉투 + pending_count(Ruling 358) — 선례 NotificationListResponseTypes 와 같은 모양.
 export type ChangeApprovalsResponseTypes = {
   items: ChangeApprovalSummaryResponseTypes[];
   pendingCount: number;
+  page: number;
+  size: number;
+  totalCount: number;
+  hasNext: boolean;
 };
 
 // §5.5 GET /staff/approvals/{id} (상세) — 조회 시점에 재최적화를 정확히 1회 돌린다.

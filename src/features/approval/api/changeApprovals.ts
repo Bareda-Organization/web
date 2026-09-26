@@ -28,6 +28,10 @@ type RawChangeApprovalSummary = {
 type RawChangeApprovalsResponse = {
   items: RawChangeApprovalSummary[];
   pending_count: number;
+  page: number;
+  size: number;
+  total_count: number;
+  has_next: boolean;
 };
 
 const toSummary = (raw: RawChangeApprovalSummary): ChangeApprovalSummaryResponseTypes => ({
@@ -44,15 +48,27 @@ const toSummary = (raw: RawChangeApprovalSummary): ChangeApprovalSummaryResponse
   requestedAt: raw.requested_at,
 });
 
-// GET /staff/approvals (§5.5 목록, A-05) — 요약만 준다. `status` 기본값은 pending.
+// GET /staff/approvals (§5.5 목록, A-05) — 요약만 준다. `status` 기본값은 pending,
+// `page`·`size` 는 §1.8 공통 페이징(Ruling 358, 기본 0·20).
 // rejected·auto_rejected 조회가 500 을 내던 결함은 병합 `ab51f8f` 로 해소됐다(Ruling 264,
 // 2026-09-12 이 좌석이 8081 에서 재확인) — §9.6 4종을 전부 화면 필터로 연다.
-export const getChangeApprovals = async (status?: string): Promise<ChangeApprovalsResponseTypes> => {
+export const getChangeApprovals = async (
+  status?: string,
+  page = 0,
+  size = 20,
+): Promise<ChangeApprovalsResponseTypes> => {
   const raw = await apiFetch<RawChangeApprovalsResponse>("/staff/approvals", {
     method: "GET",
-    query: status ? { status } : undefined,
+    query: { status, page, size },
   });
-  return { items: raw.items.map(toSummary), pendingCount: raw.pending_count };
+  return {
+    items: raw.items.map(toSummary),
+    pendingCount: raw.pending_count,
+    page: raw.page,
+    size: raw.size,
+    totalCount: raw.total_count,
+    hasNext: raw.has_next,
+  };
 };
 
 // R21-A 추가 지시 ② — lat·lng 를 더했다(지도 마커용, 경유 지점만 가리키는 항목은 null).
