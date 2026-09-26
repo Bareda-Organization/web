@@ -63,6 +63,8 @@ export type RunItemResponseTypes = {
   destinationName: string;
   estDurationMin: number | null;
   canceledAt: string | null;
+  // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §5.10`).
+  consecutiveFailures: number;
   assignments: RunAssignmentEntryResponseTypes[];
 };
 

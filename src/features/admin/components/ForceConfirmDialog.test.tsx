@@ -27,6 +27,7 @@ const run: RunLiveItemResponseTypes = {
   destinationEta: null,
   driver: { name: "김기사", phone: "010-0000-0000" },
   escort: { name: "박동승", phone: "010-1111-1111" },
+  consecutiveFailures: 0,
 };
 
 describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 갈래", () => {

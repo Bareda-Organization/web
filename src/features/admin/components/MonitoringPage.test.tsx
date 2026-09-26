@@ -80,6 +80,7 @@ const baseLiveRun: RunLiveItemResponseTypes = {
   destinationEta: null,
   driver: { name: "김기사", phone: "010" },
   escort: { name: "박매니저", phone: "010" },
+  consecutiveFailures: 0,
 };
 
 const envelope = (

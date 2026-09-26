@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable, Select } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademies, getAcademyRunsLive } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes } from "../types";
@@ -76,6 +76,13 @@ export const ForceConfirmPage = () => {
     { key: "direction", label: "구간", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
     { key: "departTime", label: "예정 출발" },
     { key: "estDepartTime", label: "확정 예정" },
+    {
+      // W4 — 확정이 계속 실패하는 회차를 이 목록에서 바로 알아본다(`API_SPEC §6.8`
+      // `consecutive_failures`, BR-047 · `UF-O-07`). 0(성공)이면 표시하지 않는다.
+      key: "consecutiveFailures",
+      label: "",
+      render: (row) => (row.consecutiveFailures > 0 ? <Badge tone="red">확정 {row.consecutiveFailures}회 연속 실패</Badge> : null),
+    },
     {
       key: "action",
       label: "",

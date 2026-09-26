@@ -50,6 +50,10 @@ type RawRun = {
   destination_name: string;
   est_duration_min: number | null;
   canceled_at: string | null;
+  // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §5.10`). 확정이 계속
+  // 실패하는 회차를 골라내는 재료라 강제 확정 화면(`ForceConfirmPage`)과 같은
+  // 값 의미를 이 목록에서도 보여준다.
+  consecutive_failures: number;
   assignments: RawRunAssignment[];
 };
 
@@ -86,6 +90,7 @@ const toRun = (raw: RawRun): RunItemResponseTypes => ({
   destinationName: raw.destination_name,
   estDurationMin: raw.est_duration_min,
   canceledAt: raw.canceled_at,
+  consecutiveFailures: raw.consecutive_failures,
   assignments: raw.assignments.map(toAssignment),
 });
 

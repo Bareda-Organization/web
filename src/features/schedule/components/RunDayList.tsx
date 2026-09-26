@@ -103,6 +103,13 @@ export const RunDayList = () => {
         row.canceledAt ? <Badge tone="removed">취소됨</Badge> : <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>,
     },
     {
+      // W4 — 확정이 계속 실패하는 회차를 목록에서 바로 알아본다(`API_SPEC §5.10`
+      // `consecutive_failures`, BR-047). 0(성공)이면 표시하지 않는다.
+      key: "consecutiveFailures",
+      label: "",
+      render: (row) => (row.consecutiveFailures > 0 ? <Badge tone="red">확정 {row.consecutiveFailures}회 연속 실패</Badge> : null),
+    },
+    {
       key: "cancel",
       label: "",
       align: "right",

@@ -37,6 +37,9 @@ type RawRunLiveItem = {
   destination_eta: string | null;
   driver: RawContact;
   escort: RawContact;
+  // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`). 강제 확정
+  // 대상(§6.14)을 알아보는 재료 — `ForceConfirmPage` 가 이 값으로 문구를 낸다.
+  consecutive_failures: number;
 };
 
 type RawAcademyRunsLiveResponse = { runs: RawRunLiveItem[] };
@@ -74,6 +77,7 @@ const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
   destinationEta: raw.destination_eta,
   driver: toContact(raw.driver),
   escort: toContact(raw.escort),
+  consecutiveFailures: raw.consecutive_failures,
 });
 
 // GET /admin/academies/{id}/runs/live (§6.8, O-05 · O-06). 학원 경계를 넘나드는 화면이라
