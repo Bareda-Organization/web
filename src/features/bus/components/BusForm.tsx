@@ -22,6 +22,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   const [operable, setOperable] = useState(bus?.operable ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const canSubmit = busNo.trim().length > 0 && plateNo.trim().length > 0 && Number(capacity) > 0;
 
@@ -31,7 +32,18 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
     try {
       const request = { busNo: busNo.trim(), plateNo: plateNo.trim(), capacity: Number(capacity), operable };
       if (bus) {
-        await updateBus(bus.id, request);
+        // W5 — 정원 축소로 기배정 인원이 넘치는 회차가 있으면 저장은 이미 됐고
+        // warnings[] 만 실려 온다(§5.12 BR-116). ManagerAssignmentDialog.tsx 와
+        // 같은 판단 — 되돌릴 수 없는 저장 뒤라 재제출 없이 확인만 받는다.
+        const result = await updateBus(bus.id, request);
+        if (result.warnings.length > 0) {
+          setWarnings(
+            result.warnings.map(
+              (w) => `회차 ${w.runId} — 정원 ${w.studentCapacity}명인데 배정 인원이 ${w.assignedCount}명입니다`,
+            ),
+          );
+          return;
+        }
       } else {
         await createBus(request);
       }
@@ -50,14 +62,20 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
       title={bus ? "차량 정보 수정" : "차량 등록"}
       onClose={onClose}
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>
-            취소
+        warnings.length > 0 ? (
+          <Button variant="primary" onClick={onDone}>
+            확인
           </Button>
-          <Button variant="primary" disabled={!canSubmit || submitting} onClick={handleSubmit}>
-            {submitting ? "저장 중..." : "저장"}
-          </Button>
-        </>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={onClose} disabled={submitting}>
+              취소
+            </Button>
+            <Button variant="primary" disabled={!canSubmit || submitting} onClick={handleSubmit}>
+              {submitting ? "저장 중..." : "저장"}
+            </Button>
+          </>
+        )
       }
     >
       <Input label="호차" required value={busNo} onChange={(event) => setBusNo(event.target.value)} />
@@ -75,6 +93,14 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
         checked={operable}
         onChange={(event) => setOperable(event.target.checked)}
       />
+      {warnings.length > 0 ? (
+        <>
+          <AlertBanner tone="moving" title="수정은 반영됐지만 확인할 경고가 있습니다" />
+          {warnings.map((message, index) => (
+            <AlertBanner key={index} tone="moving" title={message} />
+          ))}
+        </>
+      ) : null}
       {error ? <AlertBanner tone="missed" title={error} /> : null}
     </Dialog>
   );

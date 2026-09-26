@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createBus, getBuses } from "./index";
+import { createBus, getBuses, updateBus } from "./index";
 
 // §5.12 BUS-01·02 — snake_case 응답을 camelCase 로 바꾸는 경계(toBus)가 이 계층의
 // 전부다. 필드 하나가 잘못 매핑되면 화면 전체가 엉뚱한 값을 그린다 — 브라우저 없이도
@@ -62,5 +62,29 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
       studentCapacity: 20,
       operable: false,
     });
+  });
+
+  // W5 — API_SPEC §5.12 "PATCH 응답의 warnings[]"(BR-116). 정원 축소로 기배정
+  // 인원이 넘치는 회차마다 CAPACITY_BELOW_ASSIGNED 1건씩 온다.
+  it("updateBus 는 응답의 warnings[] 를 camelCase 로 흡수한다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockJsonResponse(200, {
+        success: true,
+        data: {
+          id: 9,
+          bus_no: "9호차",
+          plate_no: "99나9999",
+          capacity: 10,
+          student_capacity: 8,
+          operable: true,
+          warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", run_id: 3, assigned_count: 12, student_capacity: 8 }],
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await updateBus("9", { busNo: "9호차", plateNo: "99나9999", capacity: 10, operable: true });
+
+    expect(result.warnings).toEqual([{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", assignedCount: 12, studentCapacity: 8 }]);
   });
 });

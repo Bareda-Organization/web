@@ -1,6 +1,12 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
-import type { BusItemResponseTypes, BusListResponseTypes, BusUpsertRequestTypes } from "../types";
+import type {
+  BusCapacityWarningResponseTypes,
+  BusItemResponseTypes,
+  BusListResponseTypes,
+  BusUpdateResponseTypes,
+  BusUpsertRequestTypes,
+} from "../types";
 
 type RawBus = {
   id: string | number;
@@ -10,6 +16,16 @@ type RawBus = {
   student_capacity: number;
   operable: boolean;
 };
+
+// PATCH 전용 — 목록·등록 응답에는 없다(§5.12 본문).
+type RawBusCapacityWarning = {
+  code: "CAPACITY_BELOW_ASSIGNED";
+  run_id: string | number;
+  assigned_count: number;
+  student_capacity: number;
+};
+
+type RawBusUpdateResponse = RawBus & { warnings: RawBusCapacityWarning[] };
 
 type RawBusListResponse = {
   items: RawBus[];
@@ -53,8 +69,17 @@ export const createBus = async (request: BusUpsertRequestTypes): Promise<BusItem
   return toBus(raw);
 };
 
+const toCapacityWarning = (raw: RawBusCapacityWarning): BusCapacityWarningResponseTypes => ({
+  code: raw.code,
+  runId: asIdString(raw.run_id),
+  assignedCount: raw.assigned_count,
+  studentCapacity: raw.student_capacity,
+});
+
 // PATCH /staff/buses/{id} (BUS-03) — 상세 GET 이 사양에 없어(§5.12) 목록 행 데이터로 폼을 채운다.
-export const updateBus = async (id: string, request: BusUpsertRequestTypes): Promise<BusItemResponseTypes> => {
-  const raw = await apiFetch<RawBus>(`/staff/buses/${id}`, { method: "PATCH", body: toRawUpsert(request) });
-  return toBus(raw);
+// warnings[](BR-116) — 정원 축소로 기배정 인원이 넘치는 회차가 있어도 저장은
+// 되고 경고만 실려 온다(§5.14 배치 경고와 같은 축).
+export const updateBus = async (id: string, request: BusUpsertRequestTypes): Promise<BusUpdateResponseTypes> => {
+  const raw = await apiFetch<RawBusUpdateResponse>(`/staff/buses/${id}`, { method: "PATCH", body: toRawUpsert(request) });
+  return { ...toBus(raw), warnings: raw.warnings.map(toCapacityWarning) };
 };
