@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseWsApprovalRequestedPayload,
   parseWsEmergencyRaisedPayload,
+  parseWsEmergencyCanceledPayload,
   parseWsPositionPayload,
   parseWsRiderChangedPayload,
   parseWsRunEndedPayload,
@@ -76,6 +77,15 @@ describe("wsPayloads", () => {
     expect(payload.emergencyId).toBe("9");
     expect(payload.raisedBy).toEqual({ name: "기사", role: "driver", phone: "010" });
     expect(payload.position).toEqual({ lat: 1, lng: 2 });
+  });
+
+  it("emergency_canceled — emergency_id 를 흡수한다", () => {
+    const payload = parseWsEmergencyCanceledPayload({
+      emergency_id: 9,
+      bus_no: "101",
+      canceled_at: "t",
+    });
+    expect(payload).toEqual({ emergencyId: "9", busNo: "101", canceledAt: "t" });
   });
 
   it("approval_requested — approval_id·run_id 를 흡수한다", () => {

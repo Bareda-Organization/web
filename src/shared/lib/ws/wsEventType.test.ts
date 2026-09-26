@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseWsEventType } from "./wsEventType";
 
 describe("parseWsEventType", () => {
-  it("학원·관리자 채널이 실제로 보내는 7종을 전부 인식한다", () => {
+  it("학원·관리자 채널이 실제로 보내는 8종을 전부 인식한다", () => {
     const known = [
       "position",
       "stop_arrived",
@@ -10,6 +10,7 @@ describe("parseWsEventType", () => {
       "run_started",
       "run_ended",
       "emergency_raised",
+      "emergency_canceled",
       "approval_requested",
     ] as const;
     for (const value of known) {

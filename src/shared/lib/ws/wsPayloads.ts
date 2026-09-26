@@ -145,6 +145,23 @@ export const parseWsEmergencyRaisedPayload = (payload: Record<string, unknown>):
   raisedAt: String(payload.raised_at),
 });
 
+// `emergency_canceled` — 관계자·메인 관리자 채널 전용. 발신 후 1분 안 취소
+// (`DELETE /runs/{runId}/emergency/{id}`, §4.14) — `emergency_raised` 를 받은
+// 화면이 같은 신고를 닫는 용도라 위치·발신자 등은 담지 않는다(`API_SPEC §7.1`).
+export type WsEmergencyCanceledPayload = {
+  emergencyId: string;
+  busNo: string;
+  canceledAt: string;
+};
+
+export const parseWsEmergencyCanceledPayload = (
+  payload: Record<string, unknown>,
+): WsEmergencyCanceledPayload => ({
+  emergencyId: asIdString(payload.emergency_id),
+  busNo: String(payload.bus_no),
+  canceledAt: String(payload.canceled_at),
+});
+
 // `approval_requested` — 관계자 채널 전용(REQ-05). 관리자 채널에는 오지 않는다
 // (`wsEventType.ts` 주석 · `docs/API_SPEC.md §7` 채널 표).
 export type WsApprovalRequestedPayload = {

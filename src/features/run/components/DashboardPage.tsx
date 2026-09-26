@@ -7,6 +7,7 @@ import { ApiError } from "@/shared/lib/http";
 import {
   academyLiveDestination,
   parseWsEmergencyRaisedPayload,
+  parseWsEmergencyCanceledPayload,
   parseWsApprovalRequestedPayload,
   parseWsPositionPayload,
   type WebSocketEnvelope,
@@ -265,6 +266,13 @@ export const DashboardPage = () => {
         case "emergency_raised": {
           const payload = parseWsEmergencyRaisedPayload(envelope.payload);
           setLiveAlert(`비상 상황 발생 — ${payload.busNo} (${payload.type})`);
+          return;
+        }
+        // W3 — 발신 후 1분 안 취소(§4.14). 같은 신고를 닫는 통지라 기존 알림을
+        // 취소 문구로 덮어쓴다(별도 배너를 새로 쌓지 않는다).
+        case "emergency_canceled": {
+          const payload = parseWsEmergencyCanceledPayload(envelope.payload);
+          setLiveAlert(`비상 알림 취소 — ${payload.busNo}`);
           return;
         }
         case "approval_requested": {

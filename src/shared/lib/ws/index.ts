@@ -16,6 +16,7 @@ export {
   parseWsRunStartedPayload,
   parseWsRunEndedPayload,
   parseWsEmergencyRaisedPayload,
+  parseWsEmergencyCanceledPayload,
   parseWsApprovalRequestedPayload,
 } from "./wsPayloads";
 export type {
@@ -27,6 +28,7 @@ export type {
   WsEmergencyRaisedBy,
   WsEmergencyPosition,
   WsEmergencyRaisedPayload,
+  WsEmergencyCanceledPayload,
   WsApprovalRequestedPayload,
 } from "./wsPayloads";
 export { WS_BASE_URL } from "./wsUrl";

@@ -200,6 +200,39 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
 
     expect(await screen.findByText("비상 상황 발생 — 2호차 (accident)")).toBeInTheDocument();
   });
+
+  it("W3: emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    act(() => {
+      capturedOnEnvelope?.(
+        envelope("emergency_raised", {
+          emergency_id: 1,
+          type: "accident",
+          bus_no: "2호차",
+          raised_by: { name: "김기사", role: "driver", phone: "010" },
+          position: { lat: 37.5, lng: 127.0 },
+          rider_count: 3,
+          raised_at: "2026-09-13T00:00:00Z",
+        }),
+      );
+    });
+    await screen.findByText("비상 상황 발생 — 2호차 (accident)");
+
+    act(() => {
+      capturedOnEnvelope?.(
+        envelope("emergency_canceled", {
+          emergency_id: 1,
+          bus_no: "2호차",
+          canceled_at: "2026-09-13T00:01:00Z",
+        }),
+      );
+    });
+
+    expect(await screen.findByText("비상 알림 취소 — 2호차")).toBeInTheDocument();
+    expect(screen.queryByText("비상 상황 발생 — 2호차 (accident)")).not.toBeInTheDocument();
+  });
 });
 
 // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. REST 폴링이 채우는

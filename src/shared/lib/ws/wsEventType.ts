@@ -1,5 +1,5 @@
 // `API_SPEC §7` 공통 봉투의 `event` 필드 — 이 앱이 구독하는 두 채널이 방송하는
-// 이벤트 전부(학원 채널 7종, 관리자 채널은 그중 approval_requested 를 뺀 6종 —
+// 이벤트 전부(학원 채널 8종, 관리자 채널은 그중 approval_requested 를 뺀 7종 —
 // `docs/API_SPEC.md §7` 채널 표, BRIEF-W.md 항목 7·8).
 //
 // ⚠ `emergency_acked` 는 여기 없다 — Ruling 277(커밋 19b9c5f5·caeddb8c)로 매니저
@@ -13,6 +13,9 @@ export type WsEventType =
   | "run_started"
   | "run_ended"
   | "emergency_raised"
+  // W3 — 발신 후 1분 안 취소(`DELETE /runs/{runId}/emergency/{id}`, §4.14).
+  // 학원·관리자 채널 전용, `emergency_raised` 를 받은 화면이 같은 신고를 닫는다.
+  | "emergency_canceled"
   | "approval_requested";
 
 const KNOWN_EVENT_TYPES: readonly WsEventType[] = [
@@ -22,6 +25,7 @@ const KNOWN_EVENT_TYPES: readonly WsEventType[] = [
   "run_started",
   "run_ended",
   "emergency_raised",
+  "emergency_canceled",
   "approval_requested",
 ];
 
