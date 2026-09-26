@@ -194,7 +194,8 @@ export type RosterStudentResponseTypes = {
   name: string;
   photoUrl: string | null;
   studentPhone: string | null;
-  guardianPhone: string;
+  // 보호자 미연결 학생은 null(§1.13 목록, Ruling 359) — §4.2·§5.4 와 같은 근거.
+  guardianPhone: string | null;
   status: RosterBoardStatus;
 };
 

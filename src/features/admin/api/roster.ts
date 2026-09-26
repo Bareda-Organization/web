@@ -12,7 +12,8 @@ type RawRosterStudent = {
   name: string;
   photo_url: string | null;
   student_phone: string | null;
-  guardian_phone: string;
+  // 보호자 미연결 학생은 null(§1.13 목록, Ruling 359).
+  guardian_phone: string | null;
   status: RosterBoardStatus;
 };
 
