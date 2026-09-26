@@ -43,7 +43,14 @@ export const ManagerForm = ({ manager, onClose, onDone }: ManagerFormProps) => {
       }
       onDone();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "매니저 저장에 실패했습니다");
+      // W8 — §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling 339`).
+      // 서버 문구가 삭제 전용이라(`ErrorCode.java`) 수정 맥락에 맞게 바꿔 보여준다
+      // (`ManagerDeleteDialog.tsx` 와 같은 판단).
+      if (cause instanceof ApiError && cause.code === "MANAGER_ASSIGNED") {
+        setError("배치 중인 매니저는 역할을 바꿀 수 없습니다 — 배치를 먼저 해제");
+      } else {
+        setError(cause instanceof ApiError ? cause.message : "매니저 저장에 실패했습니다");
+      }
     } finally {
       setSubmitting(false);
     }
