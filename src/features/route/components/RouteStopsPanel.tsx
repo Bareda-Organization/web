@@ -214,7 +214,14 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
       adopt(detail.stops);
     } catch (cause) {
       // 편집한 목록은 그대로 둔다 — 고쳐서 다시 저장할 수 있어야 한다(서버는 아무것도 안 바꿨다).
-      setError(cause instanceof ApiError ? cause.message : "저장하지 못했습니다");
+      // W9 — §5.9 운행 중인 회차가 서는 승하차지의 좌표 수정은 403
+      // CHANGE_WINDOW_CLOSED(`Ruling 338`). 서버 문구는 거부 이유가 안 드러나
+      // 이 화면 전용 문구로 바꾼다.
+      if (cause instanceof ApiError && cause.code === "CHANGE_WINDOW_CLOSED") {
+        setError("운행 중인 회차가 서는 승하차지라 위치를 바꿀 수 없습니다 — 운행이 끝난 뒤 다시");
+      } else {
+        setError(cause instanceof ApiError ? cause.message : "저장하지 못했습니다");
+      }
     } finally {
       setSaving(false);
     }

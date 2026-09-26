@@ -5,6 +5,7 @@ import { RouteStopsPanel } from "./RouteStopsPanel";
 import { getRouteDetail, getRoutePath, optimizeRoute, saveRouteStops, suggestStops } from "../api";
 import type { RouteDetailResponseTypes, RoutePathResponseTypes } from "../types";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { ApiError } from "@/shared/lib/http";
 
 // 고정 노선 편성 — 승하차지 목록·추가·수정·삭제·저장(2026-09-23 사용자 지시 11건 중 1·2·3·4·5·7·8·10).
 // jsdom 에는 지도가 없어 MapSurface 를 목으로 바꾸고, 넘어간 props 로 "지도에 무엇을 그리라고 했는가" 를 본다.
@@ -295,5 +296,23 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
 
     expect(마커("stop").map((marker) => [marker.seq, marker.lat])).toEqual([[1, 37.2], [2, 37.1]]);
     expect(마커("origin")).toEqual([expect.objectContaining({ lat: 37.2, lng: 127.2 })]);
+  });
+
+  // W9 — API_SPEC §5.9 운행 중 회차가 서는 승하차지의 좌표 수정은 403
+  // CHANGE_WINDOW_CLOSED(이름은 허용, `Ruling 338` · BR-052). 서버 문구 "지금은
+  // 변경할 수 없는 시간입니다"(`ErrorCode.java`)는 거부 이유가 안 드러나 이
+  // 화면 전용 문구로 바꾼다.
+  it("저장이 403 CHANGE_WINDOW_CLOSED 로 거부되면 운행 중 승하차지 안내 문구를 보여준다", async () => {
+    mockSave.mockRejectedValue(new ApiError(403, "CHANGE_WINDOW_CLOSED", "지금은 변경할 수 없는 시간입니다"));
+    await 띄운다();
+
+    fireEvent.click(within(행("후문")).getByRole("button", { name: "후문 삭제" }));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("운행 중인 회차가 서는 승하차지라 위치를 바꿀 수 없습니다 — 운행이 끝난 뒤 다시"),
+      ).toBeInTheDocument(),
+    );
   });
 });
