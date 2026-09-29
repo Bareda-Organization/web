@@ -15,6 +15,24 @@ const ADMIN_PATH_SEGMENTS = [
   "/audit-log",
 ] as const;
 
+// `(staff)` 아래 최상위 경로 전부 — 위와 같은 이유로 화면을 추가할 때 이 목록에도 추가한다.
+// `/dashboard` 하나만 검사하던 때는 메인 관리자가 `/student` 등을 직접 치면 관계자 화면이 열렸다.
+const STAFF_PATH_SEGMENTS = [
+  "/dashboard",
+  "/today-run",
+  "/signup-approval",
+  "/change-approval",
+  "/student",
+  "/bus",
+  "/manager",
+  "/route",
+  "/schedule",
+  "/notification",
+  "/academy-settings",
+  "/emergency",
+  "/report",
+] as const;
+
 // 문자열 시작 일치만 쓰면 "/academies-fake" 같은 값이 오탐으로 걸린다 —
 // 정확히 같거나 그 경로 + "/" 로 시작할 때만 그 그룹에 속한다고 본다.
 const matchesPath = (pathname: string, segment: string): boolean =>
@@ -48,7 +66,7 @@ export const decideAuthRedirect = (session: AuthSession | null, pathname: string
   // (`IMPLEMENTATION_PLAN §1` 제품별 사용자 열) — (staff)·(admin) 은 레이아웃을
   // 공유하지 않으므로 역할이 그 그룹과 안 맞으면 자기 홈으로 되돌린다.
   const isAdminPath = ADMIN_PATH_SEGMENTS.some((segment) => matchesPath(pathname, segment));
-  const isStaffPath = pathname.startsWith("/dashboard");
+  const isStaffPath = STAFF_PATH_SEGMENTS.some((segment) => matchesPath(pathname, segment));
 
   if (isAdminPath && session.role !== "system_admin") {
     return session.role === "staff" ? "/dashboard" : "/login";

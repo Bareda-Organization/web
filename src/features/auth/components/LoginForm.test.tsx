@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { LoginForm } from "./LoginForm";
+import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { useAuthSession } from "../hooks/useAuthSession";
 
 // `useAuthSession` 을 모킹해 login() 이 던지는 ApiError 코드별로 화면이 다른 문구를
@@ -75,5 +76,13 @@ describe("LoginForm — 비밀번호 분실 안내", () => {
     render(<LoginForm />);
 
     expect(screen.getByText(/메인 관리자에게 초기화를 요청/)).toBeInTheDocument();
+  });
+});
+
+// R32-W1 — 학부모·학생·매니저 계정은 웹 대신 앱 이용을 안내한다.
+describe("LoginForm — 앱 전용 계정 안내", () => {
+  it("AppOnlyRoleError 는 앱 이용 안내를 보여준다", async () => {
+    await submitLoginForm(new AppOnlyRoleError() as unknown as ApiError);
+    expect(await screen.findByText(/학부모·학생·매니저는 앱을 이용해 주세요/)).toBeInTheDocument();
   });
 });

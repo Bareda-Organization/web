@@ -3,6 +3,7 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, registerAuthGateListener } from "@/shared/lib/http";
 import { getMe, login as loginRequest, logout as logoutRequest, refresh as refreshRequest } from "../api";
+import { AppOnlyRoleError, isWebRole } from "../lib/appOnlyRole";
 import type { AuthSession } from "../types";
 
 export type AuthSessionContextValue = {
@@ -37,6 +38,14 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
     try {
       const me = await getMe();
       const next = toSession(me);
+      if (!isWebRole(next.role)) {
+        // 새로고침으로 되살아난 앱 전용 계정도 같은 이유로 웹 세션을 만들지 않는다.
+        await logoutRequest().catch(() => {});
+        if (mountedRef.current) {
+          setSession(null);
+        }
+        return null;
+      }
       if (mountedRef.current) {
         setSession(next);
       }
@@ -92,6 +101,12 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
 
   const login = useCallback(async (loginId: string, password: string): Promise<AuthSession> => {
     const response = await loginRequest(loginId, password);
+    // 앱 전용 역할은 서버 로그인까지 취소하고 세션을 비운다 — 두면 가드가 `/login` ↔ `/dashboard` 를 오간다.
+    if (!isWebRole(response.role)) {
+      await logoutRequest().catch(() => {});
+      setSession(null);
+      throw new AppOnlyRoleError();
+    }
     const next: AuthSession = {
       accountId: response.accountId,
       role: response.role,

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { DevQuickLogin } from "./DevQuickLogin";
 import { ApiError } from "@/shared/lib/http";
+import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { AlertBanner, Button, Input } from "@/shared/ui";
 import { useAuthSession } from "../hooks/useAuthSession";
 import { StyledBrand, StyledContainer, StyledFooter, StyledForm, StyledLayout, StyledLink, StyledWrapper } from "./LoginForm.styled";
@@ -17,6 +18,7 @@ type LoginFormState =
   | { kind: "invalid-credentials"; remainingAttempts?: number }
   | { kind: "blocked" }
   | { kind: "staff-inactive" }
+  | { kind: "app-only" }
   | { kind: "unknown"; message: string };
 
 export const LoginForm = () => {
@@ -35,7 +37,9 @@ export const LoginForm = () => {
       await login(id, pw);
       // 이동은 여기서 하지 않는다 — AuthGateGuard 가 세션 변화를 보고 한 곳에서 판정한다.
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (error instanceof AppOnlyRoleError) {
+        setState({ kind: "app-only" });
+      } else if (error instanceof ApiError) {
         if (error.code === "INVALID_CREDENTIALS") {
           const remaining = error.details?.remaining_attempts;
           setState({
@@ -86,6 +90,12 @@ export const LoginForm = () => {
           {state.kind === "staff-inactive" ? (
             <AlertBanner tone="missed" title="퇴사 처리된 계정입니다">
               학원 관계자 퇴사 처리로 접근이 제한됐습니다. 학원 데스크에 문의해 주세요.
+            </AlertBanner>
+          ) : null}
+
+          {state.kind === "app-only" ? (
+            <AlertBanner tone="missed" title="학부모·학생·매니저는 앱을 이용해 주세요">
+              이 웹 화면은 학원 관계자와 메인 관리자 전용입니다. 앱을 설치해 같은 계정으로 로그인해 주세요.
             </AlertBanner>
           ) : null}
 

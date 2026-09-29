@@ -85,4 +85,33 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(unknownRoleSession, "/academies")).not.toBeNull();
     expect(decideAuthRedirect(unknownRoleSession, "/monitoring")).not.toBeNull();
   });
+  // R32-W2 — `(staff)` 화면이 `/dashboard` 하나만 걸러져, 메인 관리자가 `/student` 등을 직접 치면
+  // 관계자 화면이 그대로 열렸다. `(staff)` 최상위 경로 13개 전부를 하나씩 확인한다.
+  it("메인 관리자는 관계자(staff) 화면 13개 전부에서 /academies 로 되돌려진다", () => {
+    const admin = baseSession("active", "system_admin");
+    const staffPaths = [
+      "/dashboard",
+      "/today-run",
+      "/signup-approval",
+      "/change-approval",
+      "/student",
+      "/bus",
+      "/manager",
+      "/route",
+      "/schedule",
+      "/notification",
+      "/academy-settings",
+      "/emergency",
+      "/report",
+    ];
+    for (const path of staffPaths) {
+      expect(decideAuthRedirect(admin, path)).toBe("/academies");
+      expect(decideAuthRedirect(admin, `${path}/sub`)).toBe("/academies");
+    }
+  });
+
+  it("관계자 경로와 이름만 비슷한 admin 경로는 관계자 화면으로 오탐하지 않는다", () => {
+    // "/emergency-alerts"(admin) 는 "/emergency"(staff) 로 시작하지만 그 하위 경로가 아니다.
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/emergency-alerts")).toBeNull();
+  });
 });
