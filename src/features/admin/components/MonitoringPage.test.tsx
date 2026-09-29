@@ -12,7 +12,7 @@ import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 // R18-B 목표 2 — `MapSurface` 를 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
 // 컴포넌트에 무엇으로 전달되는지만 검증한다(SDK 렌더링이 아니라 화면의 계산
 // 로직 검증 — TodayRunPage.test.tsx 와 같은 방식).
-const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 // R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
 // 쓴다(순수 함수라 SDK 에 안 걸린다). `MapSurface` 만 목으로 바꾼다.
 vi.mock("@/features/map", async (importOriginal) => {

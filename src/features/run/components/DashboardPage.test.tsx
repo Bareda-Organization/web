@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
 // R18-B2 목표 2 — `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
 // 컴포넌트에 무엇으로 전달되는지 확인한다. `cameraForSelectedBus`·
 // `buildRouteDisplayState` 는 실제 구현 그대로 둔다(순수 함수, SDK 무관).
-const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 vi.mock("@/features/map", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/map")>();
   return {

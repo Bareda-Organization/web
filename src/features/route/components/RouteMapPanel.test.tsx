@@ -12,7 +12,7 @@ vi.mock("../api", () => ({
   getRoutePath: vi.fn(),
 }));
 
-const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 vi.mock("@/features/map", () => ({
   MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));

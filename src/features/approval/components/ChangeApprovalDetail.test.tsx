@@ -21,7 +21,7 @@ vi.mock("../api", () => ({
 
 // `R18-C` 목표 4(Ruling 319) — jsdom 은 실제 지도 SDK 를 못 그리므로(TodayRunPage.test.tsx
 // 와 같은 한계) `MapSurface` 를 목으로 바꿔 이 화면이 계산한 polylines·camera 만 검증한다.
-const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 vi.mock("@/features/map", () => ({
   MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));
