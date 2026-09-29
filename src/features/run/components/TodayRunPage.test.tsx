@@ -23,6 +23,7 @@ vi.mock("../api", () => ({
   getRunRoster: vi.fn(),
   getRunsLive: vi.fn(),
   postForcedAdd: vi.fn(),
+  postTransfer: vi.fn(),
   getManagers: vi.fn(),
   patchRunAssignment: vi.fn(),
 }));
@@ -132,6 +133,60 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(await screen.findByText("표시할 내용이 없습니다")).toBeInTheDocument();
     expect(screen.queryByText("불러오는 중입니다")).not.toBeInTheDocument();
     expect(mockGetRunRoster).not.toHaveBeenCalled();
+  });
+
+  // R34-W1 — A-07 수동 조정은 확정 전(①구간, idle) 회차에서만 진입한다(UF-M-04).
+  describe("다른 버스로 이동(A-07)", () => {
+    const idleRun = (runId: string, busNo: string, direction: "to_academy" | "from_academy", runStatus: "idle" | "confirmed" | "moving") => ({
+      ...baseDashboard.runs[0],
+      runId,
+      busNo,
+      direction,
+      runStatus,
+    });
+    const dashboardOf = (runs: ReturnType<typeof idleRun>[]) => ({ ...baseDashboard, runs });
+
+    it("확정 전 회차의 학생 행에는 [다른 버스로] 버튼이 있고 눌러 도착 회차 후보는 같은 방향·확정 전 다른 버스만 나온다", async () => {
+      mockRunIdParam = "7";
+      mockGetDashboard.mockResolvedValue(
+        dashboardOf([
+          idleRun("7", "2호차", "to_academy", "idle"),
+          idleRun("8", "3호차", "to_academy", "idle"),
+          idleRun("9", "4호차", "to_academy", "confirmed"),
+          idleRun("10", "5호차", "from_academy", "idle"),
+        ]),
+      );
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "다른 버스로" }));
+
+      const select = screen.getByLabelText("도착 회차");
+      const options = within(select).getAllByRole("option").map((option) => option.textContent);
+      expect(options.filter((text) => text?.includes("호차"))).toEqual(["3호차 · 08:10 출발"]);
+    });
+
+    it("확정된 회차에는 [다른 버스로] 버튼이 없다", async () => {
+      mockRunIdParam = "7";
+      mockGetDashboard.mockResolvedValue(
+        dashboardOf([idleRun("7", "2호차", "to_academy", "confirmed"), idleRun("8", "3호차", "to_academy", "idle")]),
+      );
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+
+      await screen.findByText("김학생");
+      expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
+    });
+
+    it("이미 제외로 표시된 학생 행에는 버튼이 없다", async () => {
+      mockRunIdParam = "7";
+      mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]));
+      mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], change: "removed" }]);
+      render(<TodayRunPage />);
+
+      await screen.findByText("김학생");
+      expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
+    });
   });
 
   it("명단 조회에 실패하면 오류 배너를 보여준다", async () => {

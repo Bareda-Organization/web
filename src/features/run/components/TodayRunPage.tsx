@@ -26,6 +26,7 @@ import type {
 } from "../types";
 import { ForcedAddDialog } from "./ForcedAddDialog";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
+import { StudentTransferDialog } from "./StudentTransferDialog";
 import {
   StyledTodayRunLayout,
   StyledMapTopRow,
@@ -101,8 +102,8 @@ const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "i
 };
 
 // §5.4 GET /staff/runs/{runId}/roster(A-06) · §5.7 POST .../forced-add(A-07) ·
-// §5.14 PATCH .../assignment(A-06) — 금일 운행 상세(UF-M-03·UF-M-04). §5.8(전학·이동)은
-// BRIEF-w1 담당 절 목록에 없어 범위 밖이다(A-07 이름이 겹쳐 보이지만 절 목록이 기준).
+// §5.8 POST /staff/students/{id}/transfer(A-07, R34-W1) · §5.14 PATCH .../assignment(A-06) —
+// 금일 운행 상세(UF-M-03·UF-M-04).
 export const TodayRunPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,6 +115,8 @@ export const TodayRunPage = () => {
   const [loading, setLoading] = useState(true);
   const [forcedAddOpen, setForcedAddOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  // A-07 — [다른 버스로]를 누른 학생. null 이면 대화상자가 닫혀 있다.
+  const [transferTarget, setTransferTarget] = useState<RosterItemResponseTypes | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [liveRun, setLiveRun] = useState<RunLiveItemResponseTypes | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른(=지금 화면에 뜬) 회차의 노선.
@@ -138,6 +141,16 @@ export const TodayRunPage = () => {
 
   const selectedRunId = runIdParam ?? (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
+  // A-07(UF-M-04) — 확정 전(①구간, idle) 회차에서만 학생을 다른 버스로 옮길 수 있고, 도착 회차는
+  // 같은 날짜(이 화면은 오늘)·같은 방향의 확정 전 다른 버스다. 확정된 회차는 추가에 해당해 막힌다.
+  const canTransfer = selectedRun?.runStatus === "idle";
+  const transferCandidates = useMemo(
+    () =>
+      selectedRun
+        ? runs.filter((run) => run.runId !== selectedRun.runId && run.direction === selectedRun.direction && run.runStatus === "idle")
+        : [],
+    [runs, selectedRun],
+  );
 
   // R21-A 목표 1~3 — 이 화면은 항상 회차 하나만 보여 그 버스가 곧 "선택된" 버스다
   // (MonitoringPage.tsx·DashboardPage.tsx 와 달리 선택 해제 토글이 없다).
@@ -352,6 +365,16 @@ export const TodayRunPage = () => {
       label: "탑승 현황",
       render: (row) => <StatusPill status={STATUS_PILL[row.status]}>{STATUS_LABEL[row.status]}</StatusPill>,
     },
+    {
+      key: "transfer",
+      label: "조정",
+      render: (row) =>
+        canTransfer && row.change !== "removed" ? (
+          <Button variant="ghost" size="sm" onClick={() => setTransferTarget(row)}>
+            다른 버스로
+          </Button>
+        ) : null,
+    },
   ];
 
   return (
@@ -520,6 +543,20 @@ export const TodayRunPage = () => {
           onDone={() => {
             setForcedAddOpen(false);
             loadRoster(selectedRunId);
+          }}
+        />
+      ) : null}
+
+      {transferTarget && selectedRun ? (
+        <StudentTransferDialog
+          student={transferTarget}
+          fromRun={selectedRun}
+          candidateRuns={transferCandidates}
+          onClose={() => setTransferTarget(null)}
+          onDone={() => {
+            setTransferTarget(null);
+            loadRoster(selectedRun.runId);
+            loadRuns();
           }}
         />
       ) : null}

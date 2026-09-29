@@ -105,6 +105,28 @@ export type ForcedAddResponseTypes = {
   status: "staged";
 };
 
+// §5.8 POST /staff/students/{id}/transfer(A-07) — stopId·address 는 배타적(둘 중 하나 필수).
+export type TransferRequestTypes = {
+  fromRunId: string;
+  toRunId: string;
+  stopId?: string;
+  address?: string;
+  note?: string;
+};
+
+export type TransferResponseTypes = {
+  transferId: string;
+  studentId: string;
+  fromRunId: string;
+  toRunId: string;
+  stopId: string | null;
+  status: "staged";
+  impact: {
+    from: { riderCountBefore: number; riderCountAfter: number };
+    to: { riderCountBefore: number; riderCountAfter: number; capacity: number };
+  };
+};
+
 // §5.13 GET /staff/managers — 배치 대화상자의 후보 목록 조회용(§5.14 를 위한 부수 조회).
 export type ManagerRole = "driver" | "escort";
 
