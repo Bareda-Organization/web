@@ -318,3 +318,57 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     });
   });
 });
+
+// R32-W7 — 처리 기한이 시각만 보여 남은 시간을 관리자가 머릿속으로 계산해야 했다(A-05).
+describe("ChangeApprovalDetail — 처리 기한 남은 시간(R32-W7)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("처리 기한 옆에 남은 분·초를 보여주고 1초마다 줄어든다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:47:30Z"));
+    mockGetDetail.mockResolvedValue(baseDetail); // 기한 2026-09-13T00:00:00Z
+
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByText(/남은 시간 12분 30초/)).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await screen.findByText(/남은 시간 12분 29초/)).toBeInTheDocument();
+  });
+
+  it("기한이 지났으면 지났다고 알린다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-13T00:00:05Z"));
+    mockGetDetail.mockResolvedValue(baseDetail);
+
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByText(/처리 기한이 지났습니다/)).toBeInTheDocument();
+  });
+});
+
+// R32-W8 — "새로고침 후 다시 확인" 안내에 누를 버튼이 없었고, 불러오기 실패에도 재시도가 없었다.
+describe("ChangeApprovalDetail — 다시 불러오기(R32-W8)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("미리보기가 최신이 아니면 '다시 불러오기' 버튼이 상세를 다시 조회한다", async () => {
+    mockGetDetail.mockResolvedValue({ ...baseDetail, previewStale: true });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 불러오기" }));
+
+    await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
+  });
+
+  it("상세 불러오기가 실패하면 '다시 불러오기' 버튼으로 재시도한다", async () => {
+    mockGetDetail.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
+    mockGetDetail.mockResolvedValueOnce(baseDetail);
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 불러오기" }));
+
+    expect(await screen.findByText("이학생 구간 변경")).toBeInTheDocument();
+  });
+});

@@ -7,6 +7,7 @@ import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
+import { formatRemaining, useNowEverySecond } from "../lib/remainingTime";
 import type {
   ChangeApprovalDetailResponseTypes,
   RoutePathPointResponseTypes,
@@ -153,6 +154,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [decideError, setDecideError] = useState<string | null>(null);
+  const now = useNowEverySecond();
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -221,7 +223,17 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     return (
       <StyledDetailLayout>
         <PageHeader title="구간 변경 승인" />
-        {error ? <AlertBanner tone="missed" title={error} /> : null}
+        {error ? (
+          <AlertBanner
+            tone="missed"
+            title={error}
+            action={
+              <Button size="sm" variant="secondary" onClick={loadDetail}>
+                다시 불러오기
+              </Button>
+            }
+          />
+        ) : null}
       </StyledDetailLayout>
     );
   }
@@ -231,16 +243,29 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   // 2026-09-14 F5-W1 실서버 계약 시험에서 처음 드러난 계약). routePreview 유무로
   // "이미 결정됐는가"를 판정해 노선 비교·승인/거절 조작을 감춘다.
   const isAlreadyDecided = detail.routePreview === null;
+  const remaining = formatRemaining(new Date(detail.deadlineAt).getTime(), now);
 
   return (
     <StyledDetailLayout>
       <PageHeader
         title={`${detail.studentName} 구간 변경`}
-        description={`처리 기한 ${formatClockTime(detail.deadlineAt)}`}
+        description={
+          remaining === null
+            ? `처리 기한 ${formatClockTime(detail.deadlineAt)} — 처리 기한이 지났습니다`
+            : `처리 기한 ${formatClockTime(detail.deadlineAt)} · 남은 시간 ${remaining}`
+        }
       />
 
       {detail.previewStale ? (
-        <AlertBanner tone="missed" title="미리보기가 최신이 아닙니다 — 새로고침 후 다시 확인하세요" />
+        <AlertBanner
+          tone="missed"
+          title="미리보기가 최신이 아닙니다 — 다시 불러온 뒤 확인하세요"
+          action={
+            <Button size="sm" variant="secondary" onClick={loadDetail}>
+              다시 불러오기
+            </Button>
+          }
+        />
       ) : null}
       {decideError ? <AlertBanner tone="missed" title={decideError} /> : null}
 
