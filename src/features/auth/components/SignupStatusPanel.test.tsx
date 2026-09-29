@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignupStatusPanel } from "./SignupStatusPanel";
 import { getSignupStatus } from "../api";
@@ -69,5 +69,30 @@ describe("SignupStatusPanel — 승인 상태별 분기", () => {
     expect(screen.getByText("재학증명서 미제출")).toBeInTheDocument();
     expect(screen.getByText("다른 학원으로 재신청")).toBeInTheDocument();
     expect(screen.queryByText("승인 대기 중입니다")).not.toBeInTheDocument();
+  });
+});
+
+// R32-W14 — 승인 상태를 불러오지 못했을 때 화면에 누를 것이 없어, 새로고침 말고는 복구 수단이 없었다.
+describe("SignupStatusPanel — 불러오기 실패(R32-W14)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("불러오기에 실패하면 '다시 시도' 버튼이 있고, 누르면 다시 불러와 상태를 보여준다", async () => {
+    mockGetSignupStatus.mockRejectedValueOnce(new Error("network"));
+    mockGetSignupStatus.mockResolvedValueOnce(baseStatus);
+    mockUseAuthSession.mockReturnValue({
+      bootstrapStatus: "ready",
+      session: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+    render(<SignupStatusPanel />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("승인 대기 중입니다")).toBeInTheDocument();
+    expect(mockGetSignupStatus).toHaveBeenCalledTimes(2);
   });
 });

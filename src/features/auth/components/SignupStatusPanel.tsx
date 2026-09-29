@@ -89,7 +89,16 @@ export const SignupStatusPanel = () => {
     return (
       <StyledLayout>
         <StyledContainer>
-          <AlertBanner tone="missed">{loadError}</AlertBanner>
+          <AlertBanner
+            tone="missed"
+            action={
+              <Button size="sm" variant="secondary" onClick={reloadStatus}>
+                다시 시도
+              </Button>
+            }
+          >
+            {loadError}
+          </AlertBanner>
         </StyledContainer>
       </StyledLayout>
     );
