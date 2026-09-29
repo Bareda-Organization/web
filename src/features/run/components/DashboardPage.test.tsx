@@ -303,7 +303,9 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     },
   );
 
-  it("emergency_raised 이벤트는 비상 배너를 띄운다", async () => {
+  // R32-W5 — 비상 알림은 `(staff)` 레이아웃의 EmergencyAlertProvider 가 전 화면에서 받는다.
+  // 대시보드가 같은 이벤트를 또 처리하면 같은 신고가 한 줄 배너와 팝업으로 두 번 보인다.
+  it("emergency_raised·emergency_canceled 는 대시보드가 처리하지 않는다(레이아웃 팝업 몫)", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
@@ -322,43 +324,11 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
         }),
       );
     });
-
-    expect(await screen.findByText("비상 상황 발생 — 2호차 (accident)")).toBeInTheDocument();
-  });
-
-  it("W3: emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
-    mockGetDashboard.mockResolvedValue(baseDashboard);
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
-    await screen.findByText("1호차");
-
     act(() => {
-      capturedOnEnvelope?.(
-        envelope("emergency_raised", {
-          emergency_id: 9,
-          type: "accident",
-          bus_no: "2호차",
-          raised_by: { name: "김기사", role: "driver", phone: "010" },
-          position: { lat: 1, lng: 1 },
-          rider_count: 3,
-          raised_at: "2026-09-13T00:00:00Z",
-        }),
-      );
-    });
-    await screen.findByText("비상 상황 발생 — 2호차 (accident)");
-
-    act(() => {
-      capturedOnEnvelope?.(
-        envelope("emergency_canceled", {
-          emergency_id: 9,
-          bus_no: "2호차",
-          canceled_at: "2026-09-13T00:01:00Z",
-        }),
-      );
+      capturedOnEnvelope?.(envelope("emergency_canceled", { emergency_id: 9, bus_no: "2호차", canceled_at: "2026-09-13T00:01:00Z" }));
     });
 
-    expect(await screen.findByText("비상 알림 취소 — 2호차")).toBeInTheDocument();
-    expect(screen.queryByText("비상 상황 발생 — 2호차 (accident)")).not.toBeInTheDocument();
+    expect(screen.queryByText(/비상/)).not.toBeInTheDocument();
   });
 
   it("approval_requested 이벤트는 탑승 승인 요청 배너를 띄운다", async () => {

@@ -7,6 +7,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
+import { EmergencyAlertProvider, useEmergencyUnackedCount } from "@/features/emergency";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
@@ -51,11 +52,17 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { session } = useAuthSession();
   const { canGoBack, goBack } = useBackNavigation();
+  const emergencyUnackedCount = useEmergencyUnackedCount();
 
   return (
     <StyledStaffShell>
       <SideNav
-        items={NAV_ITEMS.map((item) => ({ value: item.value, label: item.label, icon: item.icon }))}
+        items={NAV_ITEMS.map((item) => ({
+          value: item.value,
+          label: item.label,
+          icon: item.icon,
+          badge: item.value === "emergency" && emergencyUnackedCount > 0 ? emergencyUnackedCount : undefined,
+        }))}
         value={resolveActiveValue(pathname)}
         onChange={(value) => {
           if (confirmLeave()) router.push(`/${value}`);
@@ -87,7 +94,9 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGateGuard>
-      <StaffShell>{children}</StaffShell>
+      <EmergencyAlertProvider>
+        <StaffShell>{children}</StaffShell>
+      </EmergencyAlertProvider>
     </AuthGateGuard>
   );
 }

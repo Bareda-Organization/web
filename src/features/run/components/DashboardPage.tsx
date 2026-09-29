@@ -6,8 +6,6 @@ import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
 import {
   academyLiveDestination,
-  parseWsEmergencyRaisedPayload,
-  parseWsEmergencyCanceledPayload,
   parseWsApprovalRequestedPayload,
   parseWsPositionPayload,
   type WebSocketEnvelope,
@@ -263,18 +261,8 @@ export const DashboardPage = () => {
         case "run_ended":
           loadLive();
           return;
-        case "emergency_raised": {
-          const payload = parseWsEmergencyRaisedPayload(envelope.payload);
-          setLiveAlert(`비상 상황 발생 — ${payload.busNo} (${payload.type})`);
-          return;
-        }
-        // W3 — 발신 후 1분 안 취소(§4.14). 같은 신고를 닫는 통지라 기존 알림을
-        // 취소 문구로 덮어쓴다(별도 배너를 새로 쌓지 않는다).
-        case "emergency_canceled": {
-          const payload = parseWsEmergencyCanceledPayload(envelope.payload);
-          setLiveAlert(`비상 알림 취소 — ${payload.busNo}`);
-          return;
-        }
+        // 비상 알림(`emergency_raised`·`emergency_canceled`)은 `(staff)` 레이아웃의
+        // EmergencyAlertProvider 가 전 화면에서 받는다(R32-W5) — 여기서 또 처리하면 이중 표시다.
         case "approval_requested": {
           const payload = parseWsApprovalRequestedPayload(envelope.payload);
           setLiveAlert(`탑승 승인 요청 — ${payload.studentName} (${payload.stopName})`);
