@@ -52,3 +52,58 @@ describe("EmergencyList — 확인(ack) 실패 갈래", () => {
     expect(mockGet).toHaveBeenCalledTimes(1);
   });
 });
+
+// R32-W6 — 관계자 비상 목록에 연락처가 없고, 자동 갱신이 없고, 위치가 좌표 숫자뿐이었다.
+describe("EmergencyList — 연락처·자동 갱신·위치", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const WITH_CONTACTS = {
+    ...ITEM,
+    contacts: [
+      { name: "이기사", role: "driver" as const, phone: "010-1111-2222" },
+      { name: "박동승", role: "escort" as const, phone: "010-3333-4444" },
+    ],
+  };
+
+  it("행을 열면 배치 기사·동승자 연락처가 상세 대화상자에 보인다", async () => {
+    mockGet.mockResolvedValue({ items: [WITH_CONTACTS], unackedCount: 1 });
+    render(<EmergencyList />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText(/010-3333-4444/)).toBeInTheDocument();
+    expect(screen.getAllByText(/010-1111-2222/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/동승자/)).toBeInTheDocument();
+  });
+
+  it("발신 위치는 좌표 숫자가 아니라 지도 링크로 보인다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    render(<EmergencyList />);
+
+    const link = await screen.findByRole("link", { name: "지도에서 보기" });
+    expect(link).toHaveAttribute("href", expect.stringContaining("37.5,127"));
+    expect(screen.queryByText(/37\.5000/)).not.toBeInTheDocument();
+  });
+
+  it("발생 시각은 ISO 원문이 아니라 한국 시간 표기다", async () => {
+    mockGet.mockResolvedValue({ items: [{ ...ITEM, raisedAt: "2026-09-12T08:00:00Z" }], unackedCount: 1 });
+    render(<EmergencyList />);
+
+    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    expect(screen.queryByText(/T08:00/)).not.toBeInTheDocument();
+  });
+
+  it("5초마다 목록을 다시 불러온다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGet.mockResolvedValue({ items: [], unackedCount: 0 });
+    render(<EmergencyList />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+});

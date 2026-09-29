@@ -1,0 +1,28 @@
+// 시간대(`Z`·`+09:00`)가 붙어 있는지 — 없으면 서버가 이미 한국 시간으로 준 값이다.
+const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+const LOCAL_DATE_TIME = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/;
+
+const SEOUL_PARTS = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+// R32-W9 — 목록·상세에서 사람에게 보이는 "날짜 + 시각" 은 전부 이 함수 하나를 거친다(`2026-09-30 09:07`).
+// 표시 시간대는 브라우저 설정과 무관하게 한국 시간이고, 초·소수점·ISO 의 `T`·`Z` 는 보이지 않는다.
+// 값이 없거나 읽을 수 없으면 원문을 내지 않고 `-` 로 보여 준다. (시각만 필요한 곳은 `clockTime.ts`)
+export const formatDateTime = (raw: string | null | undefined): string => {
+  if (!raw) return "-";
+  if (!HAS_OFFSET.test(raw)) {
+    const local = LOCAL_DATE_TIME.exec(raw);
+    return local ? `${local[1]} ${local[2]}` : "-";
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  const parts = Object.fromEntries(SEOUL_PARTS.formatToParts(parsed).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+};

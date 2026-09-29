@@ -4,9 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, Input, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ackEmergency, getEmergencies } from "../api";
+import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
+import { emergencyMapUrl } from "../lib/mapLink";
 import type { EmergencyItemResponseTypes, EmergencyStatus } from "../types";
+import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyFilters, StyledEmergencyLayout, StyledEmergencyPosition } from "./EmergencyList.styled";
+
+// 메인 관리자 화면(EmergencyAlertsPage)과 같은 주기.
+const EMERGENCY_POLL_INTERVAL_MS = 5000;
 
 const STATUS_OPTIONS: { value: EmergencyStatus; label: string }[] = [
   { value: "open", label: "미확인" },
@@ -14,20 +21,11 @@ const STATUS_OPTIONS: { value: EmergencyStatus; label: string }[] = [
   { value: "canceled", label: "취소됨" },
 ];
 
-const TYPE_LABEL: Record<EmergencyItemResponseTypes["type"], string> = {
-  accident: "사고",
-  vehicle_fault: "차량 고장",
-  student_emergency: "학생 응급상황",
-  etc: "기타",
-};
-
-const ROLE_LABEL: Record<"driver" | "escort", string> = { driver: "기사", escort: "동승자" };
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
 
-// §5.16 GET·POST /staff/emergencies(EXC-04, A-16) — 비상 알림 수신·확인. 지도는
-// F4 범위라 위치는 좌표 텍스트로만 표시하고(§4 지시 그대로, 판단 근거) 나머지
-// 필드는 전부 노출한다. 실시간 수신(WS emergency_raised)은 F3 범위 밖 — 이
-// 화면은 폴링·수동 새로고침 기반 목록이다(§2 확신 없는 지점).
+// §5.16 GET·POST /staff/emergencies(EXC-04, A-16) — 비상 알림 목록·확인. 실시간 수신 팝업은
+// `(staff)` 레이아웃의 EmergencyAlertProvider 가 맡고(R32-W5), 이 화면은 5초마다 목록을 다시 불러온다.
+// 행을 열면 발신자·배치 인력 연락처·위치가 있는 상세 대화상자가 뜬다(R32-W6).
 export const EmergencyList = () => {
   const [status, setStatus] = useState<EmergencyStatus>("open");
   const [date, setDate] = useState("");
@@ -36,9 +34,11 @@ export const EmergencyList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ackingId, setAckingId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<EmergencyItemResponseTypes | null>(null);
 
-  const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string) => {
-    setLoading(true);
+  const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string, silent = false) => {
+    // 주기 갱신(silent)은 표를 '불러오는 중' 으로 바꾸지 않는다.
+    if (!silent) setLoading(true);
     try {
       const data = await getEmergencies({ status: nextStatus, date: nextDate || undefined });
       setItems(data.items);
@@ -56,8 +56,10 @@ export const EmergencyList = () => {
     (async () => {
       await load(status, date);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+    // 비상 알림은 지연 인지 자체가 위험이라 화면을 열어 둔 동안 5초마다 다시 불러온다.
+    const timer = setInterval(() => void load(status, date, true), EMERGENCY_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [status, date, load]);
 
   const handleAck = async (emergencyId: string) => {
     setAckingId(emergencyId);
@@ -73,8 +75,8 @@ export const EmergencyList = () => {
   };
 
   const columns: RosterColumn<EmergencyItemResponseTypes>[] = [
-    { key: "raisedAt", label: "발생 시각" },
-    { key: "type", label: "종류", render: (row) => <Badge tone="red">{TYPE_LABEL[row.type]}</Badge> },
+    { key: "raisedAt", label: "발생 시각", render: (row) => formatDateTime(row.raisedAt) },
+    { key: "type", label: "종류", render: (row) => <Badge tone="red">{EMERGENCY_TYPE_LABEL[row.type]}</Badge> },
     {
       key: "bus",
       label: "차량·방향",
@@ -83,7 +85,7 @@ export const EmergencyList = () => {
     {
       key: "raisedBy",
       label: "발신자",
-      render: (row) => `${row.raisedBy.name ?? "-"} (${ROLE_LABEL[row.raisedBy.role]})`,
+      render: (row) => `${row.raisedBy.name ?? "-"} (${EMERGENCY_ROLE_LABEL[row.raisedBy.role]})`,
     },
     { key: "riderCount", label: "탑승 인원" },
     { key: "memo", label: "메모", render: (row) => row.memo ?? "-" },
@@ -92,7 +94,9 @@ export const EmergencyList = () => {
       label: "발신 위치",
       render: (row) => (
         <StyledEmergencyPosition>
-          {row.position.lat.toFixed(4)}, {row.position.lng.toFixed(4)}
+          <a href={emergencyMapUrl(row.position)} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+            지도에서 보기
+          </a>
         </StyledEmergencyPosition>
       ),
     },
@@ -133,18 +137,23 @@ export const EmergencyList = () => {
           label="날짜"
           type="date"
           value={date}
-          onChange={(event) => {
-            setDate(event.target.value);
-            load(status, event.target.value);
-          }}
+          onChange={(event) => setDate(event.target.value)}
         />
       </StyledEmergencyFilters>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={items} getRowKey={(row) => row.emergencyId} />
+        <RosterTable
+          columns={columns}
+          rows={items}
+          getRowKey={(row) => row.emergencyId}
+          onRowClick={setDetail}
+          emptyMessage="해당 상태의 비상 알림이 없습니다"
+        />
       </Card>
+
+      {detail ? <EmergencyDetailDialog emergency={detail} onClose={() => setDetail(null)} /> : null}
     </StyledEmergencyLayout>
   );
 };
