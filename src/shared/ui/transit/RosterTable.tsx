@@ -18,6 +18,8 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
   columns?: RosterColumn<T>[];
   rows?: T[];
   onRowClick?: (row: T) => void;
+  /** 행이 0건일 때 머리글 아래에 보일 문구 — 안 주면 기본 문구 */
+  emptyMessage?: string;
   /**
    * 행 고유 키 추출자. 원본은 `key={r.id || i}` 로 id 가 없으면 인덱스를 썼는데,
    * rows 가 제네릭이라 컴포넌트 스스로 내용 기반 키를 보장할 수 없다 — 호출자가
@@ -46,6 +48,7 @@ export const RosterTable = <T,>({
   columns = [],
   rows = [],
   onRowClick,
+  emptyMessage = "표시할 내용이 없습니다",
   getRowKey = defaultRowKey,
   groupBy,
   ...rest
@@ -77,6 +80,15 @@ export const RosterTable = <T,>({
       key={getRowKey(row, index)}
       $clickable={Boolean(onRowClick)}
       onClick={() => onRowClick?.(row)}
+      // 클릭으로 여는 행은 키보드로도 열린다 — 행 안의 버튼에서 누른 키는 그 버튼 몫이라 넘기지 않는다.
+      tabIndex={onRowClick ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (!onRowClick || event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onRowClick(row);
+        }
+      }}
     >
       {columns.map((column) => (
         <StyledRosterTableCell key={column.key} $align={column.align ?? "left"}>
@@ -118,6 +130,13 @@ export const RosterTable = <T,>({
                 );
               })
             : rows.map((row, index) => renderRow(row, index))}
+          {rows.length === 0 ? (
+            <StyledRosterTableRow $clickable={false}>
+              <StyledRosterTableCell $align="center" colSpan={columns.length || 1}>
+                {emptyMessage}
+              </StyledRosterTableCell>
+            </StyledRosterTableRow>
+          ) : null}
         </tbody>
       </StyledRosterTableElement>
     </StyledRosterTable>

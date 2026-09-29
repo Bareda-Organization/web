@@ -35,6 +35,11 @@ export const StyledRosterTableHeadCell = styled.th<{ $align: "left" | "center" |
 export const StyledRosterTableRow = styled.tr<{ $clickable: boolean }>`
   border-top: 1px solid var(--border-subtle);
   cursor: ${(props) => (props.$clickable ? "pointer" : undefined)};
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
 `;
 
 export const StyledRosterTableCell = styled.td<{ $align: "left" | "center" | "right" }>`

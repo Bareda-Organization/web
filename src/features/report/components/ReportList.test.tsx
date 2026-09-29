@@ -28,7 +28,9 @@ describe("ReportList — 조회 갈래", () => {
     await waitFor(() => expect(container.querySelector('[aria-busy="false"]')).toBeTruthy());
 
     expect(screen.getByText("총 0건")).toBeInTheDocument();
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    // 데이터 행은 없고, 머리글 아래에 빈 목록 문구(R32-W10)가 한 줄 있다.
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+    expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
   });
 
   it("조회가 실패하면 화면이 조용히 넘어가지 않고 오류 문구를 보여준다", async () => {
