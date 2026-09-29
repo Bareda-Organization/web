@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Dialog, Input, Textarea } from "@/shared/ui";
-import { decideSignupRequest } from "../api";
+import { AlertBanner, Button, Dialog, Textarea } from "@/shared/ui";
+import { decideSignupRequest, searchManagerCandidates, searchStudentCandidates } from "../api";
+import { SIGNUP_ROLE_LABEL } from "../lib/signupRoleLabel";
 import type { SignupRequestItemResponseTypes } from "../types";
+import { LinkCandidatePicker } from "./LinkCandidatePicker";
 import { StyledDialogForm } from "./SignupDecideDialog.styled";
 
 type SignupDecideDialogProps = {
@@ -22,27 +24,22 @@ const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role 
 
 // §5.2 POST /staff/signup-requests/{id}/decide(A-02). 수락 시 계정↔레코드 연결이
 // 필수라(§5.2, 누락하면 422 LINK_REQUIRED) role 에 따라 studentIds 또는 managerId 를
-// 받는다. 학생·매니저 검색 UI 는 다른 기능(run·student)의 목록 API 가 필요해
-// feature 간 import 금지 규칙(`CONVENTIONS_REACT.md` "지켜야 할 의존 방향")에 걸리므로,
-// 이 라운드에서는 ID 직접 입력으로 좁혀 둔다(판단 근거, 보고서 §1).
+// 받는다. 학생·매니저는 ID 를 직접 입력받지 않고 이름 검색 목록에서 고른다(R32-W3) —
+// 목록 화면에 ID 가 보이지 않아 직접 입력으로는 사실상 승인이 불가능했다.
 export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDialogProps) => {
-  const [studentIdsInput, setStudentIdsInput] = useState("");
-  const [managerIdInput, setManagerIdInput] = useState("");
+  const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [managerIds, setManagerIds] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState("");
   const [mode, setMode] = useState<"accept" | "reject" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parseStudentIds = (): string[] =>
-    studentIdsInput
-      .split(/[,\s]+/)
-      .map((token) => token.trim())
-      .filter(Boolean);
+  const searchManagers = useCallback((q?: string) => searchManagerCandidates(request.role, q), [request.role]);
 
   const canAccept = needsStudentLink(request.role)
-    ? parseStudentIds().length > 0
+    ? studentIds.length > 0
     : needsManagerLink(request.role)
-      ? managerIdInput.trim().length > 0
+      ? managerIds.length > 0
       : true;
 
   const handleAccept = async () => {
@@ -52,9 +49,9 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
       await decideSignupRequest(request.requestId, {
         accept: true,
         link: needsStudentLink(request.role)
-          ? { studentIds: parseStudentIds() }
+          ? { studentIds }
           : needsManagerLink(request.role)
-            ? { managerId: managerIdInput.trim() }
+            ? { managerId: managerIds[0] }
             : undefined,
       });
       onDone();
@@ -119,27 +116,34 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
     >
       <StyledDialogForm>
         <p>
-          {request.role} · {request.phone}
+          {SIGNUP_ROLE_LABEL[request.role]} · {request.phone}
         </p>
         {mode === "accept" && needsStudentLink(request.role) ? (
-          <Input
-            label="연결할 학생 ID (쉼표로 구분)"
-            required
-            value={studentIdsInput}
-            onChange={(event) => setStudentIdsInput(event.target.value)}
-            hint="다자녀는 여러 ID 를 함께 입력합니다"
-          />
+          <>
+            <p>연결할 학생을 이름으로 찾아 고르세요. 다자녀는 여러 명을 고를 수 있습니다.</p>
+            <LinkCandidatePicker
+              search={searchStudentCandidates}
+              selectedIds={studentIds}
+              onChange={setStudentIds}
+              multiple
+              placeholder="학생 이름으로 검색"
+            />
+          </>
         ) : null}
         {mode === "accept" && request.role === "parent" ? (
           <p>자녀 연결은 이 승인과 별도로 학부모 앱에서 진행됩니다(연결 코드 입력).</p>
         ) : null}
         {mode === "accept" && needsManagerLink(request.role) ? (
-          <Input
-            label="연결할 매니저 ID"
-            required
-            value={managerIdInput}
-            onChange={(event) => setManagerIdInput(event.target.value)}
-          />
+          <>
+            <p>이 계정과 연결할 등록된 {SIGNUP_ROLE_LABEL[request.role]}를 골라 주세요.</p>
+            <LinkCandidatePicker
+              search={searchManagers}
+              selectedIds={managerIds}
+              onChange={setManagerIds}
+              multiple={false}
+              placeholder="매니저 이름으로 검색"
+            />
+          </>
         ) : null}
         {mode === "reject" ? (
           <Textarea

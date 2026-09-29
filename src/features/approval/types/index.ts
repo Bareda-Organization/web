@@ -36,6 +36,13 @@ export type SignupDecideRequestTypes = {
   };
 };
 
+// 가입 승인 대화상자가 고르는 연결 대상(학생·매니저 공통) — 이름으로 찾고 ID 는 화면에 보이지 않는다.
+export type LinkCandidateTypes = {
+  id: string;
+  name: string;
+  detail?: string;
+};
+
 export type SignupAccountStatus = "active" | "rejected";
 
 export type SignupDecideResponseTypes = {

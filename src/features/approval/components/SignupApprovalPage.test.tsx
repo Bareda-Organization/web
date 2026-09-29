@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignupApprovalPage } from "./SignupApprovalPage";
-import { getSignupRequests, decideSignupRequest } from "../api";
+import { getSignupRequests, decideSignupRequest, searchStudentCandidates, searchManagerCandidates } from "../api";
 import type { SignupRequestsResponseTypes } from "../types";
 
 // §5.2 는 role=student 수락 시 link.student_ids[] 가 없으면 422 LINK_REQUIRED 다 —
@@ -10,10 +10,14 @@ import type { SignupRequestsResponseTypes } from "../types";
 vi.mock("../api", () => ({
   getSignupRequests: vi.fn(),
   decideSignupRequest: vi.fn(),
+  searchStudentCandidates: vi.fn(),
+  searchManagerCandidates: vi.fn(),
 }));
 
 const mockGetSignupRequests = vi.mocked(getSignupRequests);
 const mockDecideSignupRequest = vi.mocked(decideSignupRequest);
+const mockSearchStudents = vi.mocked(searchStudentCandidates);
+const mockSearchManagers = vi.mocked(searchManagerCandidates);
 
 const baseList: SignupRequestsResponseTypes = {
   items: [
@@ -68,5 +72,69 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
 
     expect(screen.getByRole("button", { name: "거절 확정" })).toBeDisabled();
+  });
+  // R32-W3·W4 — 학생·기사·동승자 승인이 ID 직접 입력이라 목록에 ID 가 안 보이는 화면에서 사실상 승인이 불가능했다.
+  it("role=student 승인은 ID 입력칸 없이 이름 검색 목록에서 골라 그 학생 ID 로 decide 를 호출한다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "5", name: "박학생", role: "student" }],
+    });
+    mockSearchStudents.mockResolvedValue([
+      { id: "77", name: "김철수", detail: "초등 3반" },
+      { id: "78", name: "김영희" },
+    ]);
+    mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    // 역할이 영문(student) 그대로 보이지 않는다
+    expect(screen.queryByText(/student/)).not.toBeInTheDocument();
+    expect(screen.getByText(/학생 · 010-1111-2222/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+
+    expect(screen.queryByLabelText(/학생 ID/)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByLabelText(/김철수/));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    await waitFor(() =>
+      expect(mockDecideSignupRequest).toHaveBeenCalledWith("5", { accept: true, link: { studentIds: ["77"] } }),
+    );
+  });
+
+  it("학생을 하나도 고르지 않으면 승인 확정이 비활성이다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "5", name: "박학생", role: "student" }],
+    });
+    mockSearchStudents.mockResolvedValue([{ id: "77", name: "김철수" }]);
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    await screen.findByLabelText(/김철수/);
+
+    expect(screen.getByRole("button", { name: "승인 확정" })).toBeDisabled();
+  });
+
+  it("role=driver 승인은 매니저 목록에서 골라 그 매니저 ID 로 decide 를 호출한다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "6", name: "최기사", role: "driver" }],
+    });
+    mockSearchManagers.mockResolvedValue([{ id: "31", name: "최기사(등록)", detail: "010-3333-4444" }]);
+    mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    expect(screen.getByText(/기사 · 010-1111-2222/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+
+    expect(screen.queryByLabelText(/매니저 ID/)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByLabelText(/최기사\(등록\)/));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    await waitFor(() =>
+      expect(mockDecideSignupRequest).toHaveBeenCalledWith("6", { accept: true, link: { managerId: "31" } }),
+    );
   });
 });
