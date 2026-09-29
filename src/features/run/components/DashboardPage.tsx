@@ -11,7 +11,7 @@ import {
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
 import { useRealtimeChannel } from "@/shared/hooks";
-import { AlertBanner, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
+import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
@@ -376,6 +376,11 @@ export const DashboardPage = () => {
         <AlertBanner
           tone="missed"
           title={`미탑승 확인 대기 ${noShowRuns.reduce((sum, run) => sum + run.noShowCases.length, 0)}건`}
+          action={noShowRuns.map((run) => (
+            <Button key={run.runId} size="sm" variant="secondary" onClick={() => router.push(`/today-run?runId=${run.runId}`)}>
+              {run.busNo} 확인하러 가기
+            </Button>
+          ))}
         />
       ) : null}
 

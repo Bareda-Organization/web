@@ -10,8 +10,9 @@ import type { MapSurfaceProps } from "@/features/map";
 import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
+const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // R18-B2 목표 2 — `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
@@ -205,6 +206,25 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     render(<DashboardPage />);
 
     expect(await screen.findByText("미탑승 확인 대기 1건")).toBeInTheDocument();
+  });
+
+  // R32-W11 — 미탑승 띠가 건수만 알리고 처리하러 갈 길이 없었다.
+  it("미탑승 확인 대기 띠에서 그 회차의 금일 운행 화면으로 갈 수 있다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [
+        {
+          ...baseDashboard.runs[0],
+          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z" }],
+        },
+      ],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 확인하러 가기" }));
+
+    expect(mockPush).toHaveBeenCalledWith("/today-run?runId=1");
   });
 
   it("대시보드 조회에 실패하면 오류 배너를 보여준다", async () => {
