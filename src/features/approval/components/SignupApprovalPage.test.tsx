@@ -138,3 +138,16 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     );
   });
 });
+
+// R32-W9 — 신청 일시가 서버의 ISO 원문으로 보였다.
+describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("신청 일시를 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList); // requestedAt 2026-09-10T00:00:00Z
+    render(<SignupApprovalPage />);
+
+    expect(await screen.findByText("2026-09-10 09:00")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-10T/)).not.toBeInTheDocument();
+  });
+});

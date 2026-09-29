@@ -47,6 +47,7 @@ import {
   StyledStopRosterHeader,
   StyledRosterScroll,
 } from "./TodayRunPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // DashboardPage.tsx·MonitoringPage.tsx 와 같은 기본 좌표(서울 시청). `DashboardRunResponseTypes`·
 // `RosterItemResponseTypes` 는 좌표 필드가 없지만(승하차지는 `stopName` 문자열만 응답에 실린다 —
@@ -449,7 +450,7 @@ export const TodayRunPage = () => {
                 {liveRun?.position
                   ? `현재 ${liveRun.currentStop ?? "-"} → 다음 ${liveRun.nextStop ?? "-"}`
                   : liveRun?.lastSeenAt
-                    ? `최근 확인 ${liveRun.lastSeenAt}`
+                    ? `최근 확인 ${formatDateTime(liveRun.lastSeenAt)}`
                     : "위치 확인 대기"}
               </span>
             </StyledCrewRow>

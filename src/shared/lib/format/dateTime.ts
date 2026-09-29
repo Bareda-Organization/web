@@ -1,5 +1,7 @@
 // 시간대(`Z`·`+09:00`)가 붙어 있는지 — 없으면 서버가 이미 한국 시간으로 준 값이다.
 const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+// 날짜 없이 시각만 온 값("08:02" · "08:02:30") — 그대로 시:분만 보여 준다.
+const TIME_ONLY = /^(\d{2}:\d{2})(:\d{2})?$/;
 const LOCAL_DATE_TIME = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/;
 
 const SEOUL_PARTS = new Intl.DateTimeFormat("en-CA", {
@@ -17,6 +19,8 @@ const SEOUL_PARTS = new Intl.DateTimeFormat("en-CA", {
 // 값이 없거나 읽을 수 없으면 원문을 내지 않고 `-` 로 보여 준다. (시각만 필요한 곳은 `clockTime.ts`)
 export const formatDateTime = (raw: string | null | undefined): string => {
   if (!raw) return "-";
+  const timeOnly = TIME_ONLY.exec(raw);
+  if (timeOnly) return timeOnly[1];
   if (!HAS_OFFSET.test(raw)) {
     const local = LOCAL_DATE_TIME.exec(raw);
     return local ? `${local[1]} ${local[2]}` : "-";

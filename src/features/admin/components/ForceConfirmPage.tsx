@@ -8,6 +8,7 @@ import { getAcademies, getAcademyRunsLive } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes } from "../types";
 import { ForceConfirmDialog } from "./ForceConfirmDialog";
 import { StyledFilterRow, StyledForceConfirmLayout } from "./ForceConfirmPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §6.14 회차 강제 확정(O-06). 확정이 계속 실패한 회차를 골라내는 화면이라 idle 상태
 // 회차만 대상으로 두고, 실제 confirm_at 도래 여부는 백엔드 판정(409 RUN_NOT_DUE)에
@@ -74,8 +75,8 @@ export const ForceConfirmPage = () => {
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },
     { key: "direction", label: "구간", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
-    { key: "departTime", label: "예정 출발" },
-    { key: "estDepartTime", label: "확정 예정" },
+    { key: "departTime", label: "예정 출발", render: (row) => formatDateTime(row.departTime) },
+    { key: "estDepartTime", label: "확정 예정", render: (row) => formatDateTime(row.estDepartTime) },
     {
       // W4 — 확정이 계속 실패하는 회차를 이 목록에서 바로 알아본다(`API_SPEC §6.8`
       // `consecutive_failures`, BR-047 · `UF-O-07`). 0(성공)이면 표시하지 않는다.

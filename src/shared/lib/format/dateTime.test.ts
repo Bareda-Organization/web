@@ -18,6 +18,11 @@ describe("formatDateTime", () => {
     expect(formatDateTime("2026-09-12T08:00:00")).toBe("2026-09-12 08:00");
   });
 
+  it("날짜 없이 시각만 온 값은 시:분으로 보여 준다", () => {
+    expect(formatDateTime("08:02")).toBe("08:02");
+    expect(formatDateTime("08:02:30")).toBe("08:02");
+  });
+
   it("값이 없거나 읽을 수 없으면 원문을 내지 않고 '-' 를 보여 준다", () => {
     expect(formatDateTime(null)).toBe("-");
     expect(formatDateTime(undefined)).toBe("-");

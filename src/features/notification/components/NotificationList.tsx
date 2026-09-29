@@ -7,6 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getNotifications } from "../api";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
 import { StyledNotificationFilters, StyledNotificationLayout } from "./NotificationList.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 const PAGE_SIZE = 20;
 
@@ -89,7 +90,7 @@ export const NotificationList = () => {
   };
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
-    { key: "sentAt", label: "발송 시각" },
+    { key: "sentAt", label: "발송 시각", render: (row) => formatDateTime(row.sentAt) },
     { key: "busNo", label: "차량", render: (row) => row.busNo ?? "-" },
     {
       key: "recipient",

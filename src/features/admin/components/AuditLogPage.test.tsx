@@ -57,3 +57,20 @@ describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
     await waitFor(() => expect(mockGetLoginHistory).toHaveBeenCalled());
   });
 });
+
+// R32-W9 — 감사·접속 이력의 시각이 서버의 ISO 원문으로 보였다.
+describe("AuditLogPage — 시각 표기(R32-W9)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("감사 이력 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGetAuditLogs.mockResolvedValue({
+      ...emptyResponse,
+      items: [{ auditId: "1", occurredAt: "2026-09-12T08:00:00Z", actor: "관리자", action: "login", targetType: "account", targetId: "3", detail: null }],
+      totalCount: 1,
+    } as never);
+    render(<AuditLogPage />);
+
+    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
+  });
+});

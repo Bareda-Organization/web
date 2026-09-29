@@ -7,6 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getAuditLogs, getLoginHistory } from "../api";
 import type { AuditLogItemResponseTypes, LoginHistoryItemResponseTypes } from "../types";
 import { StyledAuditLogLayout, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 const TAB_OPTIONS = [
   { value: "audit", label: "감사 로그" },
@@ -77,7 +78,7 @@ export const AuditLogPage = () => {
   }, [tab]);
 
   const auditColumns: RosterColumn<AuditLogItemResponseTypes>[] = [
-    { key: "occurredAt", label: "시각" },
+    { key: "occurredAt", label: "시각", render: (row) => formatDateTime(row.occurredAt) },
     { key: "actor", label: "행위자" },
     { key: "action", label: "동작", render: (row) => ACTION_LABEL[row.action] },
     { key: "targetType", label: "대상 종류" },
@@ -86,7 +87,7 @@ export const AuditLogPage = () => {
   ];
 
   const loginColumns: RosterColumn<LoginHistoryItemResponseTypes>[] = [
-    { key: "occurredAt", label: "시각" },
+    { key: "occurredAt", label: "시각", render: (row) => formatDateTime(row.occurredAt) },
     { key: "loginId", label: "아이디" },
     {
       key: "result",

@@ -8,6 +8,7 @@ import { getStaffSignupRequests } from "../api";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 import { MemberApprovalDecideDialog } from "./MemberApprovalDecideDialog";
 import { StyledMemberApprovalsLayout } from "./MemberApprovalsPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §6.4~§6.5 관계자 가입 승인(O-02). 목록마다 소속 학원을 함께 보여 준다 — 메인 관리자는
 // 학원 경계를 넘는 유일한 역할이라(BRIEF-a1.md §2) 어느 학원 요청인지 없이는 처리할 수 없다.
@@ -42,7 +43,7 @@ export const MemberApprovalsPage = () => {
     { key: "phone", label: "연락처" },
     { key: "academy", label: "소속 학원", render: (row) => `${row.academy.name} (${row.academy.region})` },
     { key: "academyStaffCount", label: "현재 관계자 수", align: "right" },
-    { key: "requestedAt", label: "신청 일시" },
+    { key: "requestedAt", label: "신청 일시", render: (row) => formatDateTime(row.requestedAt) },
     {
       key: "action",
       label: "",

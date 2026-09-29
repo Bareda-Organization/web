@@ -7,6 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getReports } from "../api";
 import type { ReportItemResponseTypes, ReportType } from "../types";
 import { StyledReportFilters, StyledReportLayout } from "./ReportList.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 const TYPE_LABEL: Record<ReportType, string> = {
   guardian_absent: "보호자 부재",
@@ -57,7 +58,7 @@ export const ReportList = () => {
   }, [type]);
 
   const columns: RosterColumn<ReportItemResponseTypes>[] = [
-    { key: "reportedAt", label: "신고 시각" },
+    { key: "reportedAt", label: "신고 시각", render: (row) => formatDateTime(row.reportedAt) },
     { key: "type", label: "종류", render: (row) => TYPE_LABEL[row.type] },
     { key: "busNo", label: "차량" },
     { key: "studentName", label: "학생", render: (row) => row.studentName ?? "-" },

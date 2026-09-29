@@ -9,6 +9,7 @@ import { SIGNUP_ROLE_LABEL } from "../lib/signupRoleLabel";
 import type { SignupRequestItemResponseTypes } from "../types";
 import { SignupDecideDialog } from "./SignupDecideDialog";
 import { StyledSignupApprovalLayout } from "./SignupApprovalPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §5.1 은 `status` 값 목록을 열거하지 않고 "기본값 pending" 만 명시한다. §5.2 응답의
 // `account_status`(`active`|`rejected`) 를 근거로 나머지 두 값을 추정해 필터로 뒀다
@@ -55,7 +56,7 @@ export const SignupApprovalPage = () => {
     { key: "name", label: "이름" },
     { key: "role", label: "구분", render: (row) => SIGNUP_ROLE_LABEL[row.role] },
     { key: "phone", label: "연락처" },
-    { key: "requestedAt", label: "신청 일시" },
+    { key: "requestedAt", label: "신청 일시", render: (row) => formatDateTime(row.requestedAt) },
     {
       key: "action",
       label: "",

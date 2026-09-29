@@ -8,6 +8,7 @@ import { getEmergencies } from "../api";
 import type { EmergencyItemResponseTypes, EmergencyType } from "../types";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyAlertsLayout, StyledEmergencyHeaderRow } from "./EmergencyAlertsPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §5.16 이 정의한 실제 쿼리값(open·acked·canceled, 기본 open) — 대문자 enum 이 아니다.
 const STATUS_FILTER_OPTIONS = [
@@ -76,7 +77,7 @@ export const EmergencyAlertsPage = () => {
     { key: "type", label: "유형", render: (row) => toTypeLabel(row.type) },
     { key: "busNo", label: "버스" },
     { key: "raisedBy", label: "발신자", render: (row) => `${row.raisedBy.name ?? "미상"} (${row.raisedBy.role})` },
-    { key: "raisedAt", label: "발신 시각" },
+    { key: "raisedAt", label: "발신 시각", render: (row) => formatDateTime(row.raisedAt) },
     {
       key: "staffAcked",
       label: "학원 확인",

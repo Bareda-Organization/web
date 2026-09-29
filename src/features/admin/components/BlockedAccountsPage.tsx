@@ -8,6 +8,7 @@ import { getBlockedAccounts } from "../api";
 import type { AccountRole, BlockedAccountItemResponseTypes } from "../types";
 import { UnblockConfirmDialog } from "./UnblockConfirmDialog";
 import { StyledBlockedAccountsLayout } from "./BlockedAccountsPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 const ROLE_LABEL: Record<AccountRole, string> = {
   parent: "학부모",
@@ -60,7 +61,7 @@ export const BlockedAccountsPage = () => {
     { key: "loginId", label: "아이디" },
     { key: "role", label: "역할", render: (row) => ROLE_LABEL[row.role] },
     { key: "academyName", label: "소속 학원" },
-    { key: "blockedAt", label: "차단 시각" },
+    { key: "blockedAt", label: "차단 시각", render: (row) => formatDateTime(row.blockedAt) },
     { key: "failedAttempts", label: "실패 횟수", render: (row) => `${row.failedAttempts}회` },
     { key: "reason", label: "사유" },
     {

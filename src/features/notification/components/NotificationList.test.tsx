@@ -42,3 +42,19 @@ describe("NotificationList — 조회 갈래", () => {
     await waitFor(() => expect(screen.getByText("알림 로그를 불러오지 못했습니다")).toBeInTheDocument());
   });
 });
+
+// R32-W9 — 발송 시각이 서버의 ISO 원문으로 보였다.
+describe("NotificationList — 시각 표기(R32-W9)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("발송 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGet.mockResolvedValue({
+      items: [{ notificationId: "1", type: "delay", busNo: "1호차", recipient: { name: "김학부모", role: "parent" }, sentAt: "2026-09-12T08:00:00Z", read: false }],
+      page: 0, size: 20, totalCount: 1, hasNext: false, unackedCount: 1,
+    } as never);
+    render(<NotificationList />);
+
+    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
+  });
+});

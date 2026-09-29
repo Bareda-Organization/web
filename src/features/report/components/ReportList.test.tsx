@@ -41,3 +41,18 @@ describe("ReportList — 조회 갈래", () => {
     await waitFor(() => expect(screen.getByText("운행 리포트를 불러오지 못했습니다")).toBeInTheDocument());
   });
 });
+
+// R32-W9 — 신고 시각이 서버의 ISO 원문으로 보였다.
+describe("ReportList — 시각 표기(R32-W9)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("신고 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGet.mockResolvedValue({
+      items: [{ reportId: "1", type: "absence", busNo: "1호차", studentName: "박학생", reportedBy: "김학부모", reportedAt: "2026-09-12T08:00:00Z" }],
+    } as never);
+    render(<ReportList />);
+
+    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
+  });
+});

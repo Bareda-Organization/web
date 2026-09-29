@@ -41,6 +41,7 @@ import {
   StyledBusListItemMeta,
   StyledMapSurface,
 } from "./DashboardPage.styled";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다(판단 근거, 보고서 §1).
 const LIVE_POLL_INTERVAL_MS = 7000;
@@ -458,7 +459,7 @@ export const DashboardPage = () => {
                       {live?.position
                         ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}`
                         : live?.lastSeenAt
-                          ? `최근 확인 ${live.lastSeenAt}`
+                          ? `최근 확인 ${formatDateTime(live.lastSeenAt)}`
                           : "위치 확인 대기"}
                     </StyledBusListItemMeta>
                   ) : null}
