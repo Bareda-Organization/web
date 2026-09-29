@@ -30,6 +30,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 #   ⚠ 스킴을 빼지 마라 — `shared/lib/ws/wsUrl.ts` 가 `http://`→`ws://` 로 바꿔 WS 주소를 만든다.
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+# 테스트 데이터 초기화 버튼(Ruling 364) — 스테이징 compose 만 "true" 로 준다. 기본은 꺼짐.
+ARG NEXT_PUBLIC_TEST_DATA_RESET=false
+ENV NEXT_PUBLIC_TEST_DATA_RESET=${NEXT_PUBLIC_TEST_DATA_RESET}
 RUN npm run build
 
 # ---- runner: standalone 산출물만 담은 최소 실행 이미지 ----

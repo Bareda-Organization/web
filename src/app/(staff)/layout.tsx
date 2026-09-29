@@ -6,7 +6,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, LogoutButton, useAuthSession } from "@/features/auth";
+import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
@@ -74,6 +74,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
           </StyledStaffHeaderSide>
           <StyledStaffHeaderSide>
             <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
+            <TestDataResetButton />
             <LogoutButton />
           </StyledStaffHeaderSide>
         </StyledStaffHeader>

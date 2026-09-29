@@ -7,7 +7,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, LogoutButton, useAuthSession } from "@/features/auth";
+import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
@@ -71,6 +71,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
           </StyledAdminHeaderSide>
           <StyledAdminHeaderSide>
             <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
+            <TestDataResetButton />
             <LogoutButton />
           </StyledAdminHeaderSide>
         </StyledAdminHeader>
