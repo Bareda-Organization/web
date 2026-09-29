@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { confirmLeave, setLeaveWarning } from "@/shared/lib/navigation/leaveGuard";
 import { StudentForm } from "./StudentForm";
 import { createStudent, getStudentDetail, updateStudent } from "../api";
 
@@ -114,5 +115,42 @@ describe("StudentForm — 비밀번호 초기화 진입점", () => {
 
     expect(screen.getByText("초기화 확인: 최부모")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "학생 계정 비밀번호 초기화" })).toBeInTheDocument();
+  });
+});
+
+// R32-W13 — 학생 등록·수정 폼도 저장하지 않은 채 앱 안에서 떠나면 입력이 조용히 사라졌다.
+describe("StudentForm — 이탈 경고(R32-W13)", () => {
+  afterEach(() => {
+    setLeaveWarning(null);
+    vi.restoreAllMocks();
+  });
+
+  it("아무것도 입력하지 않았으면 묻지 않고 떠난다", () => {
+    const confirm = vi.spyOn(window, "confirm");
+    render(<StudentForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(confirmLeave()).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("입력한 내용이 있으면 떠날 때 묻고, 취소하면 떠나지 않는다", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<StudentForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "김바래" } });
+
+    expect(confirmLeave()).toBe(false);
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("입력한 채 취소를 눌러 창을 닫으려 하면 묻고, 취소하면 닫히지 않는다", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const onClose = vi.fn();
+    render(<StudentForm onClose={onClose} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "김바래" } });
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

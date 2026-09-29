@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { AccountPasswordResetDialog } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
+import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { useLeaveWarning } from "@/shared/lib/navigation/useLeaveWarning";
 import {
   AlertBanner,
   Button,
@@ -113,6 +115,27 @@ export const StudentForm = ({
 
   const canSubmit = name.trim().length > 0 && !loading;
 
+  // 저장하지 않은 입력이 있으면 앱 안 이동·창 닫기·이 대화상자 닫기에서 묻는다(R32-W13).
+  const { dirty } = useLeaveWarning(
+    JSON.stringify([
+      name,
+      studentPhone,
+      gender,
+      birthDate,
+      grade,
+      className,
+      note,
+      canGoAlone,
+      guardians.map((guardian) => guardian.phone),
+      photo?.name ?? null,
+    ]),
+    !loading,
+    "저장하지 않은 학생 정보 입력이 사라집니다. 이 화면을 떠날까요?",
+  );
+  const requestClose = () => {
+    if (!dirty || confirmLeave()) onClose();
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setError(null);
@@ -161,10 +184,10 @@ export const StudentForm = ({
       <Dialog
         title={studentId ? "학생 정보 수정" : "학생 등록"}
         width={480}
-        onClose={onClose}
+        onClose={requestClose}
         footer={
           <>
-            <Button variant="ghost" onClick={onClose} disabled={submitting}>
+            <Button variant="ghost" onClick={requestClose} disabled={submitting}>
               취소
             </Button>
             <Button

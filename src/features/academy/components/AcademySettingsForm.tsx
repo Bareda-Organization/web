@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
+import { useLeaveWarning } from "@/shared/lib/navigation/useLeaveWarning";
 import { AlertBanner, Button, Card, Input, PageHeader } from "@/shared/ui";
 import { getAcademySettings, updateAcademySettings } from "../api";
 import { StyledAcademySettingsActions, StyledAcademySettingsLayout } from "./AcademySettingsForm.styled";
@@ -16,6 +17,7 @@ export const AcademySettingsForm = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { markSaved } = useLeaveWarning(value, !loading, "저장하지 않은 학원 설정 변경이 사라집니다. 이 화면을 떠날까요?");
 
   useEffect(() => {
     (async () => {
@@ -40,6 +42,7 @@ export const AcademySettingsForm = () => {
     try {
       const updated = await updateAcademySettings({ noShowWaitMinutes: minutes });
       setValue(String(updated.noShowWaitMinutes));
+      markSaved(String(updated.noShowWaitMinutes));
       setSaved(true);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "학원 설정 저장에 실패했습니다");
