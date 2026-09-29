@@ -13,7 +13,7 @@ vi.mock("../api", () => ({
 import { useAuthSession } from "../hooks/useAuthSession";
 import { AuthSessionProvider } from "./AuthSessionProvider";
 
-const 세션_표시 = () => {
+const SessionView = () => {
   const { session, logout } = useAuthSession();
   return (
     <>
@@ -31,7 +31,7 @@ describe("AuthSessionProvider — 로그아웃", () => {
   it("서버 호출이 실패해도 이 기기의 세션은 비운다", async () => {
     render(
       <AuthSessionProvider>
-        <세션_표시 />
+        <SessionView />
       </AuthSessionProvider>,
     );
     await screen.findByText("로그인됨");
