@@ -151,6 +151,23 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     );
   });
 
+  // 승하차지를 골랐다가 주소 탭으로 바꿔 입력해도 앞서 고른 stop_id 는 실리지 않아야 한다(§5.8 배타).
+  it("승하차지를 고른 뒤 주소 갈래로 바꾸면 앞서 고른 stopId 는 싣지 않는다", async () => {
+    mockGetRunRoute.mockResolvedValue(routeWithStops);
+    mockPostTransfer.mockResolvedValue(staged);
+    renderDialog();
+
+    await pickDestination();
+    await screen.findByRole("option", { name: "후문" });
+    fireEvent.change(screen.getByLabelText("승하차지"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("tab", { name: "주소 입력" }));
+    fireEvent.change(screen.getByLabelText("승하차 주소"), { target: { value: "서울시 후문로 2" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockPostTransfer).toHaveBeenCalledTimes(1));
+    expect(mockPostTransfer.mock.calls[0][1]).toMatchObject({ stopId: undefined, address: "서울시 후문로 2" });
+  });
+
   it("도착 회차·승하차지(또는 주소)를 고르기 전에는 저장할 수 없다", async () => {
     mockGetRunRoute.mockResolvedValue(routeWithStops);
     renderDialog();
