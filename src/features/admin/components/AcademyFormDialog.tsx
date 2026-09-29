@@ -38,6 +38,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[] | null>(null);
+  const [confirmingInactive, setConfirmingInactive] = useState(false);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -58,6 +59,9 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
       }
     })();
   }, [academyId, isEditMode]);
+
+  // 운영 중 학원을 비활성으로 바꾸는 저장만 확인을 거친다(UF-O-04) — 다른 수정은 바로 저장한다.
+  const isDeactivating = isEditMode && detail?.status === "active" && status === "inactive";
 
   const canSubmit = name.trim().length > 0 && region.trim().length > 0;
 
@@ -98,6 +102,37 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
     }
   };
 
+  if (confirmingInactive && detail) {
+    return (
+      <Dialog
+        title="학원을 비활성으로 바꿀까요?"
+        onClose={() => setConfirmingInactive(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmingInactive(false)}>
+              취소
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setConfirmingInactive(false);
+                void handleSubmit();
+              }}
+            >
+              비활성으로 저장
+            </Button>
+          </>
+        }
+      >
+        <StyledDialogForm>
+          <AlertBanner tone="missed" title={`${detail.name} — 소속 사용자 ${detail.userCount}명 · 관계자 ${detail.staffCount}명`}>
+            비활성으로 바꾸면 가입용 학원 검색에서 빠지고 신규 가입 요청이 막힙니다. 이미 가입한 소속 사용자는 지금처럼 로그인해 계속 쓸 수 있습니다.
+          </AlertBanner>
+        </StyledDialogForm>
+      </Dialog>
+    );
+  }
+
   if (warnings) {
     return (
       <Dialog
@@ -127,7 +162,11 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
             취소
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={submitting || !canSubmit || loadingDetail}>
+          <Button
+            variant="primary"
+            onClick={isDeactivating ? () => setConfirmingInactive(true) : handleSubmit}
+            disabled={submitting || !canSubmit || loadingDetail}
+          >
             {submitting ? "저장 중..." : "저장"}
           </Button>
         </>
