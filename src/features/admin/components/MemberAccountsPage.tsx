@@ -70,7 +70,7 @@ export const MemberAccountsPage = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={accounts} getRowKey={(row) => row.accountId} />
+        <RosterTable columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
       </Card>
 
       {target ? (

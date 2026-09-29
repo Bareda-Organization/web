@@ -91,7 +91,7 @@ export const BlockedAccountsPage = () => {
         {!loading && accounts.length === 0 ? (
           <EmptyState icon="shield-check" title="차단된 계정이 없습니다" />
         ) : (
-          <RosterTable columns={columns} rows={accounts} getRowKey={(row) => row.accountId} />
+          <RosterTable columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
         )}
       </Card>
 

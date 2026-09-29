@@ -101,7 +101,7 @@ export const AcademiesPage = () => {
       </StyledAcademiesFilterRow>
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={academies} getRowKey={(row) => row.id} />
+        <RosterTable columns={columns} loading={loading} rows={academies} getRowKey={(row) => row.id} />
       </Card>
 
       {dialogTarget ? (

@@ -157,6 +157,7 @@ export const ManagerList = () => {
       <Card padding={0} aria-busy={loading}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={items}
           getRowKey={(row) => row.id}
           onRowClick={setEditing}

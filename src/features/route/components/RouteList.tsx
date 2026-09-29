@@ -77,6 +77,7 @@ export const RouteList = () => {
       <Card padding={0} aria-busy={loading}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={items}
           getRowKey={(row) => row.id}
           onRowClick={(row) => router.push(`/route/${row.id}`)}

@@ -92,7 +92,7 @@ export const ReportList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={items} getRowKey={(row) => row.reportId} />
+        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />
       </Card>
     </StyledReportLayout>
   );

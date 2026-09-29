@@ -453,7 +453,7 @@ export const MonitoringPage = () => {
         ) : !error && runs.length === 0 && !loadingRuns ? (
           <EmptyState icon="bus" title="지금 운행 중인 회차가 없습니다" />
         ) : (
-          <RosterTable columns={columns} rows={runs} getRowKey={(row) => row.runId} />
+          <RosterTable columns={columns} loading={loadingRuns} rows={runs} getRowKey={(row) => row.runId} />
         )}
       </Card>
 

@@ -478,6 +478,7 @@ export const DashboardPage = () => {
       <Card padding={0}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={runs}
           getRowKey={(row) => row.runId}
           onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}

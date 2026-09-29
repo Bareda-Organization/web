@@ -115,7 +115,7 @@ export const ForceConfirmPage = () => {
         {!loadingRuns && runs.length === 0 ? (
           <EmptyState icon="clock" title="대기(idle) 상태인 회차가 없습니다" />
         ) : (
-          <RosterTable columns={columns} rows={runs} getRowKey={(row) => row.runId} />
+          <RosterTable columns={columns} loading={loadingRuns} rows={runs} getRowKey={(row) => row.runId} />
         )}
       </Card>
 

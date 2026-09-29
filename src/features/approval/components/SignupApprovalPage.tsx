@@ -77,7 +77,7 @@ export const SignupApprovalPage = () => {
       <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={setStatus} />
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={requests} getRowKey={(row) => row.requestId} />
+        <RosterTable columns={columns} loading={loading} rows={requests} getRowKey={(row) => row.requestId} />
       </Card>
 
       {target ? (

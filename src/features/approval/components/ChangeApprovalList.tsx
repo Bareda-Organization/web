@@ -101,6 +101,7 @@ export const ChangeApprovalList = () => {
       <Card padding={0} aria-busy={loading}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={items}
           getRowKey={(row) => row.approvalId}
           onRowClick={(row) => router.push(`/change-approval/${row.approvalId}`)}

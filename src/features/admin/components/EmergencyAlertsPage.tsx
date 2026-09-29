@@ -109,7 +109,7 @@ export const EmergencyAlertsPage = () => {
         {!loading && emergencies.length === 0 ? (
           <EmptyState icon="siren" title="해당 상태의 비상 알림이 없습니다" />
         ) : (
-          <RosterTable columns={columns} rows={emergencies} getRowKey={(row) => row.emergencyId} />
+          <RosterTable columns={columns} loading={loading} rows={emergencies} getRowKey={(row) => row.emergencyId} />
         )}
       </Card>
 

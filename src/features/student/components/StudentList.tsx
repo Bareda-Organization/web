@@ -112,6 +112,7 @@ export const StudentList = () => {
       <Card padding={0} aria-busy={loading}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={items}
           getRowKey={(row) => row.studentId}
           onRowClick={(row) => setEditingId(row.studentId)}

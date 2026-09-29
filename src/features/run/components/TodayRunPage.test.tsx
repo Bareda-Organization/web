@@ -37,7 +37,7 @@ vi.mock("@/features/route", () => ({
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
 // `MapSurface` 자체를 목으로 바꿔 TodayRunPage 가 계산한 markers·camera 값이 그 컴포넌트에
 // 무엇으로 전달되는지만 검증한다 — SDK 렌더링이 아니라 "이 화면의 계산 로직"의 검증이다.
-const mockMapSurface = vi.fn((_props: MapSurfaceProps) => null);
+const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 // R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
 // 쓴다(순수 함수, SDK 무관). `MapSurface` 만 목으로 바꾼다.
 vi.mock("@/features/map", async (importOriginal) => {
@@ -122,6 +122,16 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 
     expect(await screen.findByText("미등원")).toBeInTheDocument();
     expect(screen.queryByText("결석")).not.toBeInTheDocument();
+  });
+
+  // R34-W2 — 오늘 회차가 하나도 없으면 명단을 부를 일이 없다. 불러오는 중 표시가 그대로 남으면 안 된다.
+  it("오늘 회차가 없으면 불러오는 중 문구가 남지 않고 빈 목록 문구로 바뀐다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("표시할 내용이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("불러오는 중입니다")).not.toBeInTheDocument();
+    expect(mockGetRunRoster).not.toHaveBeenCalled();
   });
 
   it("명단 조회에 실패하면 오류 배너를 보여준다", async () => {

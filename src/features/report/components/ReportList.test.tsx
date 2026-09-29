@@ -33,6 +33,16 @@ describe("ReportList — 조회 갈래", () => {
     expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
   });
 
+  // R34-W2 — 응답이 오기 전에는 빈 목록 문구가 아니라 불러오는 중 문구가 보여야 한다.
+  it("응답이 오기 전에는 빈 목록 문구 대신 불러오는 중 문구를 보여준다", async () => {
+    mockGet.mockReturnValue(new Promise(() => {}));
+
+    render(<ReportList />);
+
+    expect(screen.getByText("불러오는 중입니다")).toBeInTheDocument();
+    expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();
+  });
+
   it("조회가 실패하면 화면이 조용히 넘어가지 않고 오류 문구를 보여준다", async () => {
     mockGet.mockRejectedValue(new Error("네트워크 요청이 실패했습니다"));
 

@@ -17,6 +17,20 @@ describe("RosterTable — 빈 목록과 키보드", () => {
     expect(screen.getByText("등록된 차량이 없습니다")).toBeInTheDocument();
   });
 
+  // R34-W2 — 목록을 불러오는 순간 "표시할 내용이 없습니다" 가 잠깐 보였다(K15).
+  it("불러오는 중이면 빈 목록 문구 대신 불러오는 중 문구를 보여 준다", () => {
+    render(<RosterTable<Row> columns={columns} rows={[]} loading />);
+    expect(screen.getByText("불러오는 중입니다")).toBeInTheDocument();
+    expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();
+  });
+
+  it("불러오기가 끝나 행이 0건이면 빈 목록 문구로 바뀐다", () => {
+    const { rerender } = render(<RosterTable<Row> columns={columns} rows={[]} loading />);
+    rerender(<RosterTable<Row> columns={columns} rows={[]} loading={false} />);
+    expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("불러오는 중입니다")).not.toBeInTheDocument();
+  });
+
   it("행이 있으면 빈 목록 문구를 내지 않는다", () => {
     render(<RosterTable<Row> columns={columns} rows={[{ id: "1", name: "김철수" }]} />);
     expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();

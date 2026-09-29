@@ -208,9 +208,13 @@ export const TodayRunPage = () => {
       setRuns(data.runs);
       if (!runIdParam && data.runs[0]) {
         router.replace(`/today-run?runId=${data.runs[0].runId}`);
+      } else if (!runIdParam) {
+        // 오늘 회차가 없으면 명단을 부를 일이 없어 불러오는 중 표시를 여기서 끈다.
+        setLoading(false);
       }
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
+      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -434,6 +438,7 @@ export const TodayRunPage = () => {
           <StyledRosterScroll>
             <RosterTable
               columns={columns}
+              loading={loading}
               rows={roster}
               getRowKey={(row) => row.studentId}
               groupBy={(row) => row.stopName ?? "승하차지 미지정"}

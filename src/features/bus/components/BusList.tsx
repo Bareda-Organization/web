@@ -78,7 +78,7 @@ export const BusList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
       <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

@@ -143,7 +143,7 @@ export const NotificationList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} rows={items} getRowKey={(row) => row.notificationId} />
+        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
       </Card>
 
       <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

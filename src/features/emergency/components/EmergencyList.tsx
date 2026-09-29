@@ -146,6 +146,7 @@ export const EmergencyList = () => {
       <Card padding={0} aria-busy={loading}>
         <RosterTable
           columns={columns}
+          loading={loading}
           rows={items}
           getRowKey={(row) => row.emergencyId}
           onRowClick={setDetail}
