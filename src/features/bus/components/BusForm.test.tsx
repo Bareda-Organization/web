@@ -75,4 +75,35 @@ describe("BusForm — 등록 실패 갈래", () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
+
+  // F02-16 — 경고가 뜬 시점에 수정은 이미 저장됐다. 확인 버튼이 아니라 바깥 클릭으로 닫아도 목록이 갱신돼야 한다.
+  it("경고 화면에서 [확인] 대신 창 바깥을 눌러 닫아도 onDone(목록 갱신)을 부른다", async () => {
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", assignedCount: 12, studentCapacity: 8 }],
+    });
+    const onDone = vi.fn();
+    const onClose = vi.fn();
+
+    render(<BusForm bus={existingBus} onClose={onClose} onDone={onDone} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await screen.findByText(/정원.*8명.*12명/);
+
+    fireEvent.click(screen.getByText("차량 정보 수정").parentElement!.parentElement!);
+
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("경고 문구는 내부 번호만 던지지 않고 무엇이 넘쳤는지 말한다", async () => {
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", assignedCount: 12, studentCapacity: 8 }],
+    });
+
+    render(<BusForm bus={existingBus} onClose={vi.fn()} onDone={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText("정원 8명을 넘는 회차가 있습니다 — 배정 인원 12명 (회차 번호 3, 일일 회차 목록에서 확인)")).toBeInTheDocument();
+  });
 });
