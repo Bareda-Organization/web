@@ -639,7 +639,6 @@ export const TodayRunPage = () => {
       {cancelTarget && selectedRun ? (
         <TransferCancelDialog
           student={cancelTarget}
-          fromBusNo={selectedRun.busNo}
           onClose={() => setCancelTarget(null)}
           onDone={() => {
             setCancelTarget(null);
