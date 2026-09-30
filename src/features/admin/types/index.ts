@@ -38,11 +38,11 @@ export type AcademyDetailResponseTypes = AcademySummaryResponseTypes & {
   stats: { movingBusCount: number };
 };
 
-// §6.2 POST /admin/academies. code 는 서버 생성값이라 요청에 없다.
+// §6.2 POST /admin/academies. code 는 서버 생성값이라 요청에 없다. address 는 필수(Ruling 450).
 export type CreateAcademyRequestTypes = {
   name: string;
   region: string;
-  address?: string;
+  address: string;
   contact?: string;
   memo?: string;
 };
