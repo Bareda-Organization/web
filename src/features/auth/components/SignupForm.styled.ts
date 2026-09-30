@@ -11,7 +11,14 @@ export const StyledResultList = styled.ul`
   overflow-y: auto;
 `;
 
-export const StyledResultItem = styled.li<{ $selected: boolean }>`
+export const StyledResultItem = styled.li`
+  list-style: none;
+`;
+
+// 결과 한 줄은 버튼이다 — 마우스 없이 Tab·Enter·Space 로도 고를 수 있다(F03-14).
+export const StyledResultButton = styled.button<{ $selected: boolean }>`
+  width: 100%;
+  text-align: left;
   border-radius: var(--radius-control);
   border: 1px solid ${({ $selected }) => ($selected ? "var(--border-strong)" : "var(--border-subtle)")};
   background: ${({ $selected }) => ($selected ? "var(--accent-primary-soft)" : "var(--surface-card)")};

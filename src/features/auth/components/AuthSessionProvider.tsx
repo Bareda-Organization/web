@@ -51,10 +51,12 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
       }
       return next;
     } catch (error) {
-      if (mountedRef.current) {
-        setSession(null);
-      }
-      if (error instanceof ApiError && (error.code === "TOKEN_EXPIRED" || error.code === "UNAUTHORIZED")) {
+      // 인증이 풀렸다는 뜻(401)일 때만 세션을 비운다. 네트워크 오류·5xx 는 일시적일 수 있어 이전 세션을 지키고
+      // 오류를 호출자에게 넘긴다 — 서버가 잠깐 안 뜬 사이 새로고침해도 로그인 화면으로 밀려나지 않는다.
+      if (error instanceof ApiError && (error.status === 401 || error.code === "TOKEN_EXPIRED" || error.code === "UNAUTHORIZED")) {
+        if (mountedRef.current) {
+          setSession(null);
+        }
         return null;
       }
       throw error;
@@ -94,7 +96,8 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
         return;
       }
       // "auth-pending" — 최신 상태를 다시 물어 화면(레이아웃 가드)이 대기 화면으로 옮기게 한다.
-      void refreshSession();
+      // 일시 오류는 이전 세션을 유지한 채 넘어간다 — 처리되지 않은 Promise 거절로 남기지 않는다.
+      refreshSession().catch(() => {});
     });
     return unregister;
   }, [refreshSession]);
