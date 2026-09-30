@@ -107,8 +107,8 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
   };
 
   const closeAcked = (emergencyId: string) => {
-    requestSeq.current += 1;
     setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== emergencyId));
+    // load() 가 요청 번호를 올려, ack 전에 나간 폴링의 옛 응답은 이 시점부터 버려진다.
     void load();
   };
 
