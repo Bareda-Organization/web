@@ -19,6 +19,7 @@ vi.mock("../api", () => ({
 
 const mapProps: MapSurfaceProps[] = [];
 vi.mock("@/features/map", () => ({
+  MAP_SURFACE_HEIGHT: "480px",
   MapSurface: (props: MapSurfaceProps) => {
     mapProps.push(props);
     return null;

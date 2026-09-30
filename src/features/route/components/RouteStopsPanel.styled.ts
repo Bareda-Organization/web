@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT } from "@/features/map/mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "@/features/map";
 
 // 목록 칸의 폭 — 이름·배지·버튼 네 개가 한 줄에 들어가는 만큼만(지시 1: 가로로 길 필요 없다).
 const LIST_COLUMN_WIDTH_PX = 380;

@@ -23,6 +23,7 @@ vi.mock("../api", () => ({
 // 와 같은 한계) `MapSurface` 를 목으로 바꿔 이 화면이 계산한 polylines·camera 만 검증한다.
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 vi.mock("@/features/map", () => ({
+  MAP_SURFACE_HEIGHT: "480px",
   MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));
 
