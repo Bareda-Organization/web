@@ -76,6 +76,7 @@ const baseLiveRun: RunLiveItemResponseTypes = {
   position: null,
   lastSeenAt: null,
   departTime: "08:00",
+  confirmAt: "07:30",
   estDepartTime: "08:00",
   stops: [],
   destinationEta: null,
@@ -624,9 +625,10 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
   });
 });
 
-const raised = (id: number, busNo: string, type = "accident") =>
+const raised = (id: number, busNo: string, type = "accident", academyName?: string) =>
   envelope("emergency_raised", {
     emergency_id: id, type, bus_no: busNo,
+    ...(academyName ? { academy_id: 7, academy_name: academyName } : {}),
     raised_by: { name: "김기사", role: "driver", phone: "010" },
     position: { lat: 37.5, lng: 127.0 }, rider_count: 3, raised_at: "2026-09-13T00:00:00Z",
   });
@@ -642,6 +644,17 @@ describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
   });
   afterEach(() => vi.clearAllMocks());
+
+  // Ruling 395 — 메인 관리자는 여러 학원의 신고를 한 채널로 받으므로 배너가 학원명을 보여 준다.
+  it("비상 배너가 이벤트의 academy_name 을 보여 준다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    act(() => {
+      capturedOnEnvelope?.(raised(3, "3호차", "accident", "별빛학원"));
+    });
+    expect(await screen.findByText("비상 상황 발생 — 별빛학원 · 3호차 (사고)")).toBeInTheDocument();
+  });
 
   it("두 버스의 비상이 함께 보이고, 다른 버스의 취소가 진행 중인 비상을 가리지 않는다", async () => {
     render(<MonitoringPage />);

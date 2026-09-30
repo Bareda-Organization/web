@@ -126,6 +126,9 @@ const parseWsEmergencyPosition = (value: Record<string, unknown>): WsEmergencyPo
 // `emergency_raised` — 관계자·메인 관리자 채널 전용(C-17).
 export type WsEmergencyRaisedPayload = {
   emergencyId: string;
+  // 그 회차의 학원 — 메인 관리자 배너가 어느 학원 신고인지 보이려고 싣는다(Ruling 395). 구 서버 응답이면 null.
+  academyId: string | null;
+  academyName: string | null;
   type: string;
   busNo: string;
   raisedBy: WsEmergencyRaisedBy;
@@ -136,6 +139,8 @@ export type WsEmergencyRaisedPayload = {
 
 export const parseWsEmergencyRaisedPayload = (payload: Record<string, unknown>): WsEmergencyRaisedPayload => ({
   emergencyId: asIdString(payload.emergency_id),
+  academyId: payload.academy_id == null ? null : asIdString(payload.academy_id),
+  academyName: payload.academy_name == null ? null : String(payload.academy_name),
   type: String(payload.type),
   busNo: String(payload.bus_no),
   raisedBy: parseWsEmergencyRaisedBy((payload.raised_by as Record<string, unknown>) ?? {}),

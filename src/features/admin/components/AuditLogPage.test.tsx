@@ -90,3 +90,27 @@ describe("AuditLogPage — 시각 표기(R32-W9)", () => {
     expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
   });
 });
+
+// Ruling 394 — block_event 는 차단 행과 해제 행 양쪽에 붙어 화면이 "차단·해제" 로만 쓸 수 있었다.
+describe("AuditLogPage — 차단/해제 구분(Ruling 394)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("접속 이력 표가 차단 행과 해제 행을 다른 문구로 보여준다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetLoginHistory.mockResolvedValue({
+      ...emptyResponse,
+      items: [
+        { accountId: "5", loginId: "unblocked", result: null, ip: "-", occurredAt: "2026-09-12T08:05:00Z", blockEvent: true, blockAction: "unblock" },
+        { accountId: "5", loginId: "blocked", result: null, ip: "-", occurredAt: "2026-09-12T08:00:00Z", blockEvent: true, blockAction: "block" },
+      ],
+      totalCount: 2,
+    } as never);
+    render(<AuditLogPage />);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
+
+    expect(await screen.findByText("차단")).toBeInTheDocument();
+    expect(screen.getByText("해제")).toBeInTheDocument();
+    expect(screen.queryByText("차단·해제")).not.toBeInTheDocument();
+  });
+});

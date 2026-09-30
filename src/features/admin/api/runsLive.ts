@@ -32,6 +32,7 @@ type RawRunLiveItem = {
   position: RawPosition;
   last_seen_at: string | null;
   depart_time: string;
+  confirm_at: string;
   est_depart_time: string;
   stops: RawLiveStop[];
   destination_eta: string | null;
@@ -72,6 +73,7 @@ const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
   position: toPosition(raw.position),
   lastSeenAt: raw.last_seen_at,
   departTime: raw.depart_time,
+  confirmAt: raw.confirm_at,
   estDepartTime: raw.est_depart_time,
   stops: raw.stops.map(toStop),
   destinationEta: raw.destination_eta,

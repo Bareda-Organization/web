@@ -171,6 +171,8 @@ export type RunLiveItemResponseTypes = {
   position: LivePositionResponseTypes;
   lastSeenAt: string | null;
   departTime: string;
+  // 확정 판정 시각(출발 30분 전, run.confirm_at 저장값 — §6.8, Ruling 393). 강제 확정 표의 "확정 예정".
+  confirmAt: string;
   estDepartTime: string;
   stops: LiveStopResponseTypes[];
   destinationEta: string | null;
@@ -319,13 +321,18 @@ export type AuditLogsResponseTypes = {
 
 export type LoginHistoryResult = "success" | "fail";
 
+// block_event 행이 차단인지 해제인지(Ruling 394). block_event 가 아닌 행은 null.
+export type LoginHistoryBlockAction = "block" | "unblock";
+
 export type LoginHistoryItemResponseTypes = {
   accountId: string;
   loginId: string;
-  result: LoginHistoryResult;
+  // 차단·해제 행은 로그인 결과 축이 아니라 null(§6.13).
+  result: LoginHistoryResult | null;
   ip: string;
   occurredAt: string;
   blockEvent: boolean;
+  blockAction: LoginHistoryBlockAction | null;
 };
 
 export type LoginHistoryResponseTypes = {

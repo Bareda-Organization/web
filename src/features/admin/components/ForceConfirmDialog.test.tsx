@@ -22,6 +22,7 @@ const run: RunLiveItemResponseTypes = {
   position: null,
   lastSeenAt: null,
   departTime: "08:00",
+  confirmAt: "07:30",
   estDepartTime: "08:00",
   stops: [],
   destinationEta: null,
