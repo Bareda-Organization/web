@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import {
   adminLiveDestination,
@@ -340,7 +341,8 @@ export const MonitoringPage = () => {
     {
       key: "lastSeenAt",
       label: "위치",
-      render: (row) => (row.position ? `수신 ${row.position.receivedAt}` : row.lastSeenAt ?? "위치 확인 대기"),
+      render: (row) =>
+        row.position ? `수신 ${formatDateTime(row.position.receivedAt)}` : row.lastSeenAt ? formatDateTime(row.lastSeenAt) : "위치 확인 대기",
     },
     {
       key: "action",

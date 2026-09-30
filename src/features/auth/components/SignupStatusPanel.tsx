@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { AlertBanner, Button, Card, EmptyState, SearchField } from "@/shared/ui";
 import { getSignupStatus, reapplySignup, searchAcademies } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { AcademySummaryResponseTypes, SignupStatusResponseTypes } from "../types";
 import { StyledResultItem, StyledResultList, StyledResultMeta } from "./SignupForm.styled";
 import { StyledActions, StyledContainer, StyledField, StyledFieldList, StyledLayout, StyledTitle, StyledWrapper } from "./SignupStatusPanel.styled";
-
-const formatDateTime = (iso: string): string => {
-  try {
-    return new Date(iso).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" });
-  } catch {
-    return iso;
-  }
-};
 
 // 승인 대기 · 거절 화면 (UF-X-02). pending 은 문의처만, rejected 는 사유 + 재신청 진입점까지 보여준다.
 export const SignupStatusPanel = () => {

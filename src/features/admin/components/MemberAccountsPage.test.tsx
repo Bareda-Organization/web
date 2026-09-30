@@ -25,3 +25,26 @@ describe("MemberAccountsPage — 목록 조회 실패", () => {
     expect(screen.getByText("전체 0개 계정")).toBeInTheDocument();
   });
 });
+
+// F03-07 — 최근 로그인이 ISO 원문(`…Z`)으로 보였다.
+describe("MemberAccountsPage — 최근 로그인 시각 표기", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("최근 로그인은 한국 시간으로, 기록이 없으면 '기록 없음' 으로 보인다", async () => {
+    mockGetAccounts.mockResolvedValue({
+      items: [
+        { accountId: "1", name: "김관계", loginId: "a", phone: "010", academyName: "가 학원", lastLoginAt: "2026-09-30T05:10:22Z", status: "active" },
+        { accountId: "2", name: "이관계", loginId: "b", phone: "010", academyName: "나 학원", lastLoginAt: null, status: "active" },
+      ],
+      page: 1,
+      size: 20,
+      totalCount: 2,
+      hasNext: false,
+    } as never);
+    render(<MemberAccountsPage />);
+
+    expect(await screen.findByText("2026-09-30 14:10")).toBeInTheDocument();
+    expect(screen.getByText("기록 없음")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-30T/)).not.toBeInTheDocument();
+  });
+});

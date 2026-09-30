@@ -7,7 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getAuditLogs, getLoginHistory } from "../api";
 import type { AuditLogItemResponseTypes, LoginHistoryItemResponseTypes } from "../types";
 import { StyledAuditLogLayout, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatDateTime, todayInSeoul } from "@/shared/lib/format/dateTime";
 
 const TAB_OPTIONS = [
   { value: "audit", label: "감사 로그" },
@@ -20,8 +20,6 @@ const ACTION_LABEL: Record<AuditLogItemResponseTypes["action"], string> = {
   delete: "삭제",
 };
 
-const todayDateInput = () => new Date().toISOString().slice(0, 10);
-
 // §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
 // 이 화면은 §1.12 가 마스킹하는 필드(보호자 연락처 등)를 응답에 아예 담지 않지만, 대신
 // 계정별 로그인 IP·시각 전체를 무제한으로 펼쳐 보이는 것 자체가 노출 범위 문제라
@@ -31,7 +29,7 @@ export const AuditLogPage = () => {
   const [tab, setTab] = useState<"audit" | "login">("audit");
   const [academyId, setAcademyId] = useState("");
   const [accountId, setAccountId] = useState("");
-  const [from, setFrom] = useState(todayDateInput());
+  const [from, setFrom] = useState(todayInSeoul());
   const [to, setTo] = useState("");
 
   const [auditItems, setAuditItems] = useState<AuditLogItemResponseTypes[]>([]);

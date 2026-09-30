@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, Input, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getRuns } from "../api";
-import { seoulToday } from "../lib/seoulToday";
 import type { RunItemResponseTypes, RunStatus, ScheduleDirection } from "../types";
 import { RunAddForm } from "./RunAddForm";
 import { RunCancelDialog } from "./RunCancelDialog";
@@ -39,7 +39,7 @@ const STATUS_TONE: Record<RunStatus, "neutral" | "brand" | "amber" | "added"> = 
 // 결과 확인 + 임시 회차 추가·취소(SCH-03) 를 한 화면에서 다룬다. 페이징 없음(실측
 // 확인, types/index.ts 주석) — 맨 배열을 그대로 전부 그린다.
 export const RunDayList = () => {
-  const [serviceDate, setServiceDate] = useState(seoulToday());
+  const [serviceDate, setServiceDate] = useState(todayInSeoul());
   const [items, setItems] = useState<RunItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

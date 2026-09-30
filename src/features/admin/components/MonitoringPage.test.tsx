@@ -163,7 +163,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
       capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:01Z" }));
     });
 
-    await screen.findByText("수신 2026-09-13T00:00:01Z");
+    await screen.findByText("수신 2026-09-13 09:00");
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore);
   });
 
@@ -349,6 +349,21 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     });
 
     await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledWith("run-a1"));
+  });
+
+  // F03-07 — "위치" 열이 수신 시각·마지막 확인 시각을 ISO 원문(`…Z`)으로 그렸다.
+  it("위치 열은 수신·마지막 확인 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: "1", position: { lat: 37.1, lng: 127.1, receivedAt: "2026-09-30T05:10:22Z" } },
+        { ...baseLiveRun, runId: "2", busNo: "2호차", position: null, lastSeenAt: "2026-09-30T05:11:00Z" },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    expect(await screen.findByText("수신 2026-09-30 14:10")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30 14:11")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-30T/)).not.toBeInTheDocument();
   });
 
   it("버스 목록 항목을 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내한다", async () => {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuditLogPage } from "./AuditLogPage";
 import { getAuditLogs, getLoginHistory } from "../api";
+import { todayInSeoul } from "@/shared/lib/format/dateTime";
 
 // §6.13, BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다". 판단 근거(코드 주석)는
 // 무제한 로그인·접속 이력을 기본으로 펼치지 않는 것이므로, 이 검사는 "오늘"로 좁힌
@@ -25,10 +26,25 @@ describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
-    const today = new Date().toISOString().slice(0, 10);
     await waitFor(() =>
-      expect(mockGetAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ from: today })),
+      expect(mockGetAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ from: todayInSeoul() })),
     );
+  });
+
+  // F03-07 — UTC 날짜로 뽑으면 한국 시간 00:00~09:00 에 어제가 들어가 "오늘만" 이라는 화면 의도가 어긋난다.
+  it("한국 시간 새벽(UTC 로는 전날)에도 from 은 서울의 오늘 날짜다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-30T16:00:00Z")); // 서울 2026-10-01 01:00
+    try {
+      mockGetAuditLogs.mockResolvedValue(emptyResponse);
+      render(<AuditLogPage />);
+
+      await waitFor(() =>
+        expect(mockGetAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ from: "2026-10-01" })),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("'전체 기간 보기'를 누르면 from 이 비워진 채로 재조회한다", async () => {

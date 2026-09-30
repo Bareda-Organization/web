@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -42,7 +43,7 @@ export const MemberAccountsPage = () => {
     { key: "loginId", label: "아이디" },
     { key: "phone", label: "연락처" },
     { key: "academyName", label: "소속 학원" },
-    { key: "lastLoginAt", label: "최근 로그인", render: (row) => row.lastLoginAt ?? "기록 없음" },
+    { key: "lastLoginAt", label: "최근 로그인", render: (row) => (row.lastLoginAt ? formatDateTime(row.lastLoginAt) : "기록 없음") },
     {
       key: "status",
       label: "재직 상태",

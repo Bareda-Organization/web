@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Dialog, Textarea } from "@/shared/ui";
 import { forceConfirmRun } from "../api";
@@ -55,7 +56,7 @@ export const ForceConfirmDialog = ({ run, onClose, onDone }: ForceConfirmDialogP
         <StyledResultList>
           <p>회차 ID: {result.runId}</p>
           <p>새 노선 버전 ID: {result.routeVersionId}</p>
-          <p>확정 시각: {result.confirmedAt}</p>
+          <p>확정 시각: {formatDateTime(result.confirmedAt)}</p>
           <p>
             <Badge tone="amber">폴백 계산 사용</Badge>
           </p>

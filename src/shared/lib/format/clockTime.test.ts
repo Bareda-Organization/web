@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { formatClockTime, formatClockTimeWithSeconds } from "./clockTime";
 
 describe("formatClockTime", () => {
@@ -35,5 +35,22 @@ describe("formatClockTimeWithSeconds", () => {
 
   it("이미 짧은 시각 문자열이면(Date 파싱 실패) 원본을 그대로 돌려준다", () => {
     expect(formatClockTimeWithSeconds("08:10:00")).toBe("08:10:00");
+  });
+});
+
+// F01-10·F04-06 — 브라우저(PC) 시간대가 서울이 아니어도 같은 순간은 같은 서울 시각으로 보여야 한다.
+describe("서울 시간대 고정", () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it("PC 시간대가 UTC·미국 서부여도 같은 순간을 서울 시각(시:분·시:분:초)으로 낸다", () => {
+    for (const tz of ["UTC", "America/Los_Angeles", "Asia/Seoul"]) {
+      process.env.TZ = tz;
+      expect(formatClockTime("2026-09-30T15:05:09Z")).toBe("00:05");
+      expect(formatClockTimeWithSeconds("2026-09-30T15:05:09Z")).toBe("00:05:09");
+    }
   });
 });

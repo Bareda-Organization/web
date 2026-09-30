@@ -58,6 +58,8 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     await waitFor(() => expect(screen.getByText("강제 확정 완료")).toBeInTheDocument());
 
     expect(mockForceConfirmRun).toHaveBeenCalledWith("42", "노선 계산 3회 연속 실패");
+    // F03-07 — 확정 시각도 ISO 원문이 아니라 한국 시간(UTC 08:00 = 서울 17:00)
+    expect(screen.getByText("확정 시각: 2026-09-12 17:00")).toBeInTheDocument();
     // 결과 화면에는 폼 요소(사유 입력창·실행 버튼)가 존재하지 않고 "닫기"만 있다.
     expect(screen.queryByLabelText("강제 확정 사유")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "강제 확정 실행" })).not.toBeInTheDocument();
