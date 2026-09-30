@@ -181,6 +181,22 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
     });
 
+    // F01-07 — 강제 추가는 ①구간(확정 전) 전용이다(§5.7). 확정된 회차에서 끝까지 입력하고서야 403 을 받게 하지 않는다.
+    it("확정된 회차에서는 [강제 승하차지 추가] 를 누를 수 없고, 확정 전 회차에서는 누를 수 있다", async () => {
+      mockRunIdParam = "7";
+      mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "confirmed")]));
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      const { unmount } = render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      expect(screen.getByRole("button", { name: "강제 승하차지 추가" })).toBeDisabled();
+      unmount();
+
+      mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]));
+      render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      expect(screen.getByRole("button", { name: "강제 승하차지 추가" })).toBeEnabled();
+    });
+
     it("이미 제외로 표시된 학생 행에는 버튼이 없다", async () => {
       mockRunIdParam = "7";
       mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]));

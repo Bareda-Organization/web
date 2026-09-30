@@ -405,7 +405,13 @@ export const TodayRunPage = () => {
               <Button variant="secondary" onClick={() => setAssignmentOpen(true)}>
                 매니저 배치 변경
               </Button>
-              <Button variant="primary" onClick={() => setForcedAddOpen(true)}>
+              {/* §5.7 — 강제 추가는 ①구간(확정 전) 전용이다. 확정된 회차는 끝까지 입력한 뒤에야 403 을 받게 되므로 미리 막는다. */}
+              <Button
+                variant="primary"
+                disabled={!canTransfer}
+                title={canTransfer ? undefined : "확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)"}
+                onClick={() => setForcedAddOpen(true)}
+              >
                 강제 승하차지 추가
               </Button>
             </>
