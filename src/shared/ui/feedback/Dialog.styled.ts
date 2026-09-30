@@ -1,13 +1,13 @@
 import styled from "@emotion/styled";
 
 export const StyledDialogOverlay = styled.div`
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: var(--overlay-scrim);
   display: grid;
-  place-items: center;
   padding: 20px;
   z-index: 40;
+  overflow-y: auto;
 `;
 
 export const StyledDialogPanel = styled.div<{ $width: number }>`
@@ -17,6 +17,9 @@ export const StyledDialogPanel = styled.div<{ $width: number }>`
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-raised);
   padding: 24px;
+  outline: none;
+  /* 화면보다 큰 패널은 위쪽이 잘리지 않고 오버레이 안에서 스크롤된다 */
+  margin: auto;
 `;
 
 export const StyledDialogTitle = styled.div`
