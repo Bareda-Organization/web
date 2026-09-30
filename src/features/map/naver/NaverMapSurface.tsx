@@ -103,13 +103,23 @@ export const NaverMapSurface = ({
       // 고정된 계약 형태(`onAuthFailed(exception)`)를 지키기 위해 여기서
       // `Error` 를 만들어 전달한다.
       onAuthFailed?.(new Error("네이버 지도 인증에 실패했다"));
+      // 인증에 실패하면 SDK 가 `window.naver.maps` 를 비운다 — 지도 참조를 버리고 준비 상태를 꺼서
+      // 세 effect(카메라·마커·노선)가 죽은 SDK 를 건드리지 않게 한다. 대체 화면은 `onAuthFailed` 가 띄운다.
+      mapRef.current = null;
+      setMapReady(false);
     });
 
     loadNaverMapsScript(clientId)
       .then(() => {
         if (cancelled || !containerRef.current) return;
-        const map = new window.naver!.maps.Map(containerRef.current, {
-          center: new window.naver!.maps.LatLng(camera.lat, camera.lng),
+        const naverMaps = window.naver?.maps;
+        if (!naverMaps) {
+          // 적재는 끝났는데 인증 실패로 `maps` 가 비어 있다 — 위 실패 콜백과 같은 안내로 맞춘다.
+          onAuthFailed?.(new Error("네이버 지도 인증에 실패했다"));
+          return;
+        }
+        const map = new naverMaps.Map(containerRef.current, {
+          center: new naverMaps.LatLng(camera.lat, camera.lng),
           zoom: camera.zoom,
         });
         mapRef.current = map;
@@ -319,7 +329,8 @@ export const NaverMapSurface = ({
   // 같은 버스를 계속 보고 있는 동안의 위치 갱신은 여기에 안 걸린다(위 focusKey 참고).
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.naver) return;
+    const naverMaps = window.naver?.maps;
+    if (!map || !naverMaps) return;
     // R25 목표 2 — **버스를 고르면 그 버스를 정중앙에 놓는다**(사용자 지시). 노선 전체를
     // 담는 배율(R22 목표 2)은 고른 버스가 화면 어디에 있는지 알기 어려웠다 — 노선이 8km 를
     // 넘으면 버스가 점만 해진다. 고른 버스가 있으면 화면이 넘긴 `camera`(그 버스 좌표 +
@@ -336,7 +347,7 @@ export const NaverMapSurface = ({
       if (fitToPoints(map, markers.filter((marker) => marker.kind === "bus"))) return;
     }
     const cam = cameraRef.current;
-    map.setCenter(new window.naver.maps.LatLng(cam.lat, cam.lng));
+    map.setCenter(new naverMaps.LatLng(cam.lat, cam.lng));
     map.setZoom(cam.zoom);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fitToPoints 는 매 렌더 새로 만들어지는 지역 함수라 의존성에 넣으면 카메라가 매번 되돌아간다(위 focusKey 주석의 바로 그 결함)
   }, [focusKey, mapReady]);
@@ -345,8 +356,8 @@ export const NaverMapSurface = ({
   // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다 — COMMON-B2 §2).
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.naver) return;
-    const naverMaps = window.naver.maps;
+    const naverMaps = window.naver?.maps;
+    if (!map || !naverMaps) return;
     const existing = markerRefs.current;
     const nextIds = new Set(markers.map((marker) => marker.id));
 
@@ -418,8 +429,8 @@ export const NaverMapSurface = ({
   // 새로 오므로(보간 대상 아님) 기존 id 가 남아 있으면 경로만 다시 그린다.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.naver) return;
-    const naverMaps = window.naver.maps;
+    const naverMaps = window.naver?.maps;
+    if (!map || !naverMaps) return;
     const existing = polylineRefs.current;
     const nextIds = new Set(polylines.map((polyline) => polyline.id));
 

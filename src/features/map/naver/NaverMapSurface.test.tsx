@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // 이 파일이 잡는 것 — **지도가 준비되기 전에 이미 자료가 들어와 있는 경우.**
@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // 기존 검사는 전부 순수 함수(`markerIcon`·`routeColor`·`markerInterpolation`)다.
 const { loadNaverMapsScript, onNaverAuthFailure } = vi.hoisted(() => ({
   loadNaverMapsScript: vi.fn(),
-  onNaverAuthFailure: vi.fn(() => () => {}),
+  onNaverAuthFailure: vi.fn<(listener: () => void) => () => void>(() => () => {}),
 }));
 
 vi.mock("./loadNaverMapsScript", () => ({ loadNaverMapsScript, onNaverAuthFailure }));
@@ -84,6 +84,47 @@ describe("NaverMapSurface — 지도 생성이 늦을 때", () => {
     // 🔴 지도가 생긴 뒤에는 **다시 그려져야 한다.** 고치기 전에는 여기서 0건이었다 —
     // 노선 effect 가 `[polylines]` 에만 걸려 있어 지도 준비를 신호로 받지 못했다.
     await waitFor(() => expect(polylineCtor).toHaveBeenCalledTimes(1));
+  });
+});
+
+// R35-W1 — 지도 키 인증이 실패하면(서비스 URL 미등록 주소) SDK 가 `window.naver.maps` 를 비운다.
+// 카메라·마커·선 effect 가 `window.naver` 만 확인하고 `.maps` 를 읽어 `LatLng` 를 던졌고,
+// 화면 전체가 죽었다(2026-09-30 조율자 브라우저 실측). 대체 문구는 `onAuthFailed` 로 화면이 띄운다.
+describe("NaverMapSurface — 인증 실패로 SDK 지도 객체가 비워질 때(R35-W1)", () => {
+  it("실패 신호 뒤 자료가 바뀌어도 예외 없이 인증 실패만 알린다", async () => {
+    const releaseScript = heldScriptLoad();
+    const onAuthFailed = vi.fn();
+    const props = { camera: { lat: 37.5, lng: 127, zoom: 14 }, onAuthFailed };
+    const { rerender } = render(<NaverMapSurface {...props} markers={[]} polylines={[]} />);
+    await releaseScript();
+    await waitFor(() => expect(window.naver?.maps.Map).toHaveBeenCalledTimes(1));
+
+    // SDK 가 인증 실패를 알리고 `maps` 를 비운다 — 구독한 콜백을 그대로 불러 그 순간을 흉내 낸다.
+    (window as unknown as { naver: { maps: unknown } }).naver.maps = null;
+    const authFailureListener = onNaverAuthFailure.mock.calls[0][0];
+    act(() => authFailureListener());
+
+    expect(onAuthFailed).toHaveBeenCalledTimes(1);
+    expect(() =>
+      rerender(
+        <NaverMapSurface
+          {...props}
+          markers={[{ id: "1", lat: 37.5, lng: 127, kind: "bus", selected: true }]}
+          polylines={[{ id: "r", kind: "planned", points: [{ lat: 37.5, lng: 127 }, { lat: 37.6, lng: 127.1 }] }]}
+        />,
+      ),
+    ).not.toThrow();
+  });
+
+  it("적재가 끝났는데 maps 가 이미 비어 있으면 쉬운 안내 문구로 인증 실패를 알린다", async () => {
+    const releaseScript = heldScriptLoad();
+    const onAuthFailed = vi.fn();
+    render(<NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 14 }} markers={[]} onAuthFailed={onAuthFailed} />);
+    (window as unknown as { naver: { maps: unknown } }).naver.maps = null;
+    await releaseScript();
+
+    await waitFor(() => expect(onAuthFailed).toHaveBeenCalledTimes(1));
+    expect((onAuthFailed.mock.calls[0][0] as Error).message).toBe("네이버 지도 인증에 실패했다");
   });
 });
 
