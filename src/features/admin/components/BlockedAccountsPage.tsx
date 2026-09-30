@@ -74,11 +74,11 @@ export const BlockedAccountsPage = () => {
         {!loading && !error && accounts.length === 0 ? (
           <EmptyState icon="shield-check" title="차단된 계정이 없습니다" />
         ) : (
-          <RosterTable columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
+          <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
         )}
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {target ? (
         <UnblockConfirmDialog

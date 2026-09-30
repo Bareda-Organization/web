@@ -96,10 +96,10 @@ export const AcademiesPage = () => {
       </StyledAcademiesFilterRow>
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={academies} getRowKey={(row) => row.id} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={academies} getRowKey={(row) => row.id} />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {dialogTarget ? (
         <AcademyFormDialog

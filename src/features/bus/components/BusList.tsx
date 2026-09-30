@@ -78,10 +78,10 @@ export const BusList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {editing ? <BusForm bus={editing} onClose={() => setEditing(undefined)} onDone={handleDone} /> : null}
       {creating ? <BusForm onClose={() => setCreating(false)} onDone={handleDone} /> : null}

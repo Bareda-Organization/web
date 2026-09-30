@@ -539,7 +539,7 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
       </StyledMapTopRow>
 
       <Card padding={0}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={runs}

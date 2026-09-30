@@ -74,14 +74,14 @@ export const NotificationList = () => {
     { key: "body", label: "내용" },
     {
       key: "acked",
-      label: "확인",
+      label: "수신자 확인",
       render: (row) => <Badge tone={row.acked ? "added" : "amber"}>{row.acked ? "확인됨" : "미확인"}</Badge>,
     },
   ];
 
   return (
     <StyledNotificationLayout>
-      <PageHeader title="알림 로그" description={`총 ${totalCount}건 · 미확인 ${unackedCount}건`} />
+      <PageHeader title="알림 로그" description={`총 ${totalCount}건 · 수신자 미확인 ${unackedCount}건`} />
 
       <StyledNotificationFilters>
         <Select
@@ -97,7 +97,7 @@ export const NotificationList = () => {
           onChange={(event) => setDate(event.target.value)}
         />
         <Select
-          label="확인 여부"
+          label="수신자 확인 여부"
           value={acked}
           options={ACKED_OPTIONS}
           onChange={(event) => setAcked(event.target.value)}
@@ -107,10 +107,10 @@ export const NotificationList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
     </StyledNotificationLayout>
   );
 };

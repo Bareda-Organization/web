@@ -13,6 +13,7 @@ import { useAttentionSignals } from "@/shared/hooks";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
 import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
 import {
@@ -67,6 +68,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <StyledStaffShell>
+      <SkipLink />
       <SideNav
         items={NAV_ITEMS.map((item) => ({
           value: item.value,
@@ -75,12 +77,13 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
           badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
         }))}
         value={resolveActiveValue(pathname)}
+        getHref={(value) => `/${value}`}
         onChange={(value) => {
           if (confirmLeave()) router.push(`/${value}`);
         }}
         academy={session?.academy?.name}
       />
-      <StyledStaffMain>
+      <StyledStaffMain id={MAIN_CONTENT_ID} tabIndex={-1}>
         <StyledStaffHeader>
           <StyledStaffHeaderSide>
             {canGoBack ? (

@@ -136,7 +136,7 @@ export const ManagerList = () => {
     <StyledManagerLayout>
       <PageHeader
         title="매니저 관리"
-        description={`총 ${totalCount}명`}
+        description={q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
         actions={
           <Button
             variant="primary"
@@ -155,7 +155,7 @@ export const ManagerList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}
           columns={columns}
           loading={loading}
           rows={items}
@@ -164,7 +164,7 @@ export const ManagerList = () => {
         />
       </Card>
 
-      <Pagination
+      <Pagination hasError={Boolean(error)}
         page={page}
         size={PAGE_SIZE}
         totalCount={totalCount}

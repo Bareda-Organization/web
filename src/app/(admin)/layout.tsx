@@ -16,6 +16,7 @@ import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggl
 import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import { adminLiveDestination } from "@/shared/lib/ws";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
 import {
@@ -65,6 +66,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <StyledAdminShell>
+      <SkipLink />
       <SideNav
         items={NAV_ITEMS.map((item) => ({
           value: item.value,
@@ -73,12 +75,13 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
           badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
         }))}
         value={resolveActiveValue(pathname)}
+        getHref={(value) => `/${value}`}
         onChange={(value) => {
           if (confirmLeave()) router.push(`/${value}`);
         }}
         academy="전체 학원"
       />
-      <StyledAdminMain>
+      <StyledAdminMain id={MAIN_CONTENT_ID} tabIndex={-1}>
         <StyledAdminHeader>
           <StyledAdminHeaderSide>
             {canGoBack ? (

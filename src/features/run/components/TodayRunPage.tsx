@@ -475,6 +475,8 @@ export const TodayRunPage = () => {
               >
                 강제 승하차지 추가
               </Button>
+              {/* 비활성 버튼의 사유가 title 툴팁뿐이면 키보드·터치로는 읽을 수 없다(B1 #25) — 글자로도 보인다. */}
+              {canTransfer ? null : <StyledCrewLabel>확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)</StyledCrewLabel>}
             </>
           ) : null
         }
@@ -543,18 +545,6 @@ export const TodayRunPage = () => {
         {/* 사용자 지시(2026-09-22) — 승하차지별로 묶어 접고 펼 수 있게, 길면 스크롤로.
             한 회차에 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지
             눈으로 좇기 어렵다. 스크롤 상자는 표 머리줄을 고정한다(styled 의 sticky). */}
-        <Card padding={0} aria-busy={isLoading}>
-          <StyledRosterScroll>
-            <RosterTable
-              columns={columns}
-              loading={isLoading}
-              rows={roster}
-              getRowKey={(row) => row.studentId}
-              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
-            />
-          </StyledRosterScroll>
-        </Card>
-
         <StyledSidePanel>
           <Card>
             <p>현재 위치</p>
@@ -619,6 +609,18 @@ export const TodayRunPage = () => {
             </Card>
           ) : null}
         </StyledSidePanel>
+
+        <Card padding={0} aria-busy={isLoading}>
+          <StyledRosterScroll>
+            <RosterTable
+              columns={columns}
+              loading={isLoading}
+              rows={roster}
+              getRowKey={(row) => row.studentId}
+              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
+            />
+          </StyledRosterScroll>
+        </Card>
       </StyledContentGrid>
 
       {selectedRunId != null ? (

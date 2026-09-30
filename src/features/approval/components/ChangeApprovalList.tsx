@@ -118,7 +118,7 @@ export const ChangeApprovalList = () => {
       <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={handleStatusChange} />
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={items}
@@ -127,7 +127,7 @@ export const ChangeApprovalList = () => {
         />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
     </StyledChangeApprovalLayout>
   );
 };

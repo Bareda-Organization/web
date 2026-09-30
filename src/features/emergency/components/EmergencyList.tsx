@@ -155,7 +155,7 @@ export const EmergencyList = () => {
       ) : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={items}

@@ -2,7 +2,7 @@
 
 import { AlertBanner, Checkbox, Input } from "@/shared/ui";
 import type { WorkHours } from "../types";
-import { StyledWorkHoursRow, StyledWorkHoursWrap } from "./WorkHoursEditor.styled";
+import { StyledWorkHoursHead, StyledWorkHoursRow, StyledWorkHoursTitle, StyledWorkHoursWrap } from "./WorkHoursEditor.styled";
 
 const DAYS: Array<{ key: keyof WorkHours; label: string }> = [
   { key: "mon", label: "월" },
@@ -40,6 +40,12 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
 
   return (
     <StyledWorkHoursWrap>
+      <StyledWorkHoursTitle>근무 시간</StyledWorkHoursTitle>
+      <StyledWorkHoursHead aria-hidden="true">
+        <span>요일</span>
+        <span>출근</span>
+        <span>퇴근</span>
+      </StyledWorkHoursHead>
       {hasInvalidWorkHours(value) ? <AlertBanner tone="missed" title="근무 시작이 끝보다 빨라야 합니다" /> : null}
       {DAYS.map(({ key, label }) => {
         const range = value[key]?.[0];
@@ -53,12 +59,14 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
             />
             <Input
               type="time"
+              aria-label={`${label}요일 출근 시각`}
               disabled={!enabled}
               value={range?.start ?? ""}
               onChange={(event) => setDay(key, true, event.target.value, range?.end ?? "18:00")}
             />
             <Input
               type="time"
+              aria-label={`${label}요일 퇴근 시각`}
               disabled={!enabled}
               value={range?.end ?? ""}
               onChange={(event) => setDay(key, true, range?.start ?? "09:00", event.target.value)}

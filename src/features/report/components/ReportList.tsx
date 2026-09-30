@@ -113,7 +113,7 @@ export const ReportList = () => {
       ) : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />
       </Card>
     </StyledReportLayout>
   );

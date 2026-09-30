@@ -55,7 +55,7 @@ export const AcademySettingsForm = () => {
 
   return (
     <StyledAcademySettingsLayout>
-      <PageHeader title="학원 설정" description="무응답 대기 시간 외 다른 정책 값은 이 화면의 범위 밖입니다" />
+      <PageHeader title="학원 설정" description="무응답 대기 시간 외의 다른 정책은 이 화면에서 바꿀 수 없습니다" />
       <Card padding={16}>
         {error ? <AlertBanner tone="missed" title={error} /> : null}
         {saved ? <AlertBanner tone="boarded" title="저장됐습니다" /> : null}

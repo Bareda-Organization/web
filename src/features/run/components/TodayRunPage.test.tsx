@@ -189,12 +189,15 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       const { unmount } = render(<TodayRunPage />);
       await screen.findByText("김학생");
       expect(screen.getByRole("button", { name: "강제 승하차지 추가" })).toBeDisabled();
+      // B1 #25 — 사유가 툴팁뿐이면 키보드·터치로 못 읽는다. 글자로도 보인다.
+      expect(screen.getByText("확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)")).toBeInTheDocument();
       unmount();
 
       mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]));
       render(<TodayRunPage />);
       await screen.findByText("김학생");
       expect(screen.getByRole("button", { name: "강제 승하차지 추가" })).toBeEnabled();
+      expect(screen.queryByText("확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)")).not.toBeInTheDocument();
     });
 
     it("이미 제외로 표시된 학생 행에는 버튼이 없다", async () => {

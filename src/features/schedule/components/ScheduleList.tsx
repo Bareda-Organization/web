@@ -114,10 +114,10 @@ export const ScheduleList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {editing ? <ScheduleForm schedule={editing} onClose={() => setEditing(undefined)} onDone={handleDone} /> : null}
       {creating ? <ScheduleForm onClose={() => setCreating(false)} onDone={handleDone} /> : null}

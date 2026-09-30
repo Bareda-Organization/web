@@ -105,7 +105,7 @@ export const StudentList = () => {
     <StyledStudentLayout>
       <PageHeader
         title="학생 관리"
-        description={`총 ${totalCount}명`}
+        description={q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
             학생 등록
@@ -120,7 +120,7 @@ export const StudentList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}
           columns={columns}
           loading={loading}
           rows={items}
@@ -129,7 +129,7 @@ export const StudentList = () => {
         />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {editingId ? (
         <StudentForm studentId={editingId} onClose={() => setEditingId(undefined)} onDone={handleDone} />

@@ -81,17 +81,20 @@ export const StyledBusListItemHeader = styled.div`
   font-weight: var(--fw-bold);
 `;
 
+// 명단 표를 전체 폭으로 쓴다(B1 #2·#13) — 옆 칸(2fr:1fr)에 두면 1440px 에서도 표가 750px 라 이름이 글자 단위로 줄바꿈되고
+// 1024px 에서는 가로로 넘친다. 현재 위치·승하차지 카드는 표 위에 가로로 나란히 둔다.
 export const StyledContentGrid = styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
+  min-width: 0;
 `;
 
 export const StyledSidePanel = styled.div`
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
+  align-items: start;
 `;
 
 // F4 — 자리표시(점선 테두리)를 걷어내고 실제 `MapSurface` 를 담는 크기 지정 컨테이너로 바꾼다.
@@ -160,4 +163,10 @@ export const StyledStopRosterHeader = styled.div`
 export const StyledRosterScroll = styled.div`
   max-height: min(60vh, 720px);
   overflow: auto;
+
+  /* 이름·반·상태 칩이 글자 단위로 꺾이지 않게 한다 — 폭이 모자라면 줄이 아니라 이 상자가 가로로 스크롤한다. */
+  th,
+  td {
+    white-space: nowrap;
+  }
 `;

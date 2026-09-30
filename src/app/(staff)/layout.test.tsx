@@ -36,8 +36,8 @@ describe("(staff) 레이아웃 — 비상 알림 건수", () => {
       </StaffLayout>,
     );
 
-    expect(screen.getByRole("button", { name: /비상 알림/ })).toHaveTextContent("3");
-    expect(screen.getByRole("button", { name: /운행 관리/ })).not.toHaveTextContent("3");
+    expect(screen.getByRole("link", { name: /비상 알림/ })).toHaveTextContent("3");
+    expect(screen.getByRole("link", { name: /운행 관리/ })).not.toHaveTextContent("3");
   });
 });
 
@@ -50,8 +50,8 @@ describe("(staff) 레이아웃 — 승인 대기 건수", () => {
       </StaffLayout>,
     );
 
-    expect(screen.getByRole("button", { name: /가입 승인/ })).toHaveTextContent("2");
-    expect(screen.getByRole("button", { name: /구간 변경 승인/ })).toHaveTextContent("1");
+    expect(screen.getByRole("link", { name: /가입 승인/ })).toHaveTextContent("2");
+    expect(screen.getByRole("link", { name: /구간 변경 승인/ })).toHaveTextContent("1");
     expect(document.title).toBe("(6) 비상 발생 · 바래다 관계자 웹"); // 비상 3 + 승인 3
   });
 
@@ -78,5 +78,20 @@ describe("(staff) 레이아웃 — 그룹 역할", () => {
     );
 
     expect(screen.getByTestId("guard")).toHaveAttribute("data-required-role", "staff");
+  });
+});
+
+// B1 #22 — 본문으로 가려면 사이드바 메뉴를 전부 Tab 으로 지나야 했다.
+describe("(staff) 레이아웃 — 본문 바로가기", () => {
+  it("첫 번째로 초점을 받는 '본문 바로가기' 링크가 본문(main)을 가리킨다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    const skip = screen.getByRole("link", { name: "본문 바로가기" });
+    expect(skip).toHaveAttribute("href", "#main-content");
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
   });
 });
