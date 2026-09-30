@@ -15,6 +15,10 @@ export type RouteStop = {
   // W7 — §4.3·§5.19 `is_destination`(등원 회차의 마지막 항목, 학원). RTE-01 편성
   // 조회에는 이 필드가 없어(학원 자체를 정차지로 다루지 않는다) 기본값 false.
   isDestination?: boolean;
+  // R39 Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
+  isWaypoint?: boolean;
+  // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
+  change?: "added" | "skipped" | null;
 };
 
 export type RouteListItemResponseTypes = {

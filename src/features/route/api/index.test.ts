@@ -63,7 +63,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
 
     const result = await getRouteDetail("1");
 
-    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1, isDestination: false }]);
+    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1, isDestination: false, isWaypoint: false, change: null }]);
     expect(result.busNo).toBe("1호차");
   });
 
@@ -158,6 +158,36 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.fallbackUsed).toBe(true);
   });
 
+  // R39 Ruling 400 — 경유 지점은 다른 필드가 승하차지와 같은 모양이라 `is_waypoint` 로만 가른다.
+  // 미경유(`change=skipped`)도 함께 읽는다. 둘 다 없는 응답(고정 노선 등)은 false·null 이다.
+  it("getRunRoute 는 stops[].is_waypoint·change 를 읽고, 없으면 false·null 로 둔다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            road_path: [],
+            fallback_used: false,
+            stops: [
+              { stop_id: 11, seq: 1, name: "가", lat: 37.5, lng: 127.0, change: "skipped", is_waypoint: false },
+              { stop_id: 12, seq: 2, name: "주유소", lat: 37.51, lng: 127.01, change: null, is_waypoint: true },
+              { stop_id: 13, seq: 3, name: "나", lat: 37.52, lng: 127.02 },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const result = await getRunRoute("7");
+
+    expect(result.stops.map((s) => [s.name, s.isWaypoint, s.change])).toEqual([
+      ["가", false, "skipped"],
+      ["주유소", true, null],
+      ["나", false, null],
+    ]);
+  });
+
   // R19 목표 1 — stops[] 도 다른 정차지 조회(getRouteDetail)와 같은 규칙(stop_id→stopId)
   // 으로 camelCase 로 바꾼다. id 값 자체를 대조해 "몇 개인가" 가 아니라 "어느 정차지인가"
   // 를 확인한다(phase-goal-loop — 개수만 세는 단언은 범위 조건을 못 잡는다).
@@ -180,7 +210,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
 
     const result = await getRunRoute("7");
 
-    expect(result.stops).toEqual([{ stopId: "3", seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98, isDestination: false }]);
+    expect(result.stops).toEqual([{ stopId: "3", seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98, isDestination: false, isWaypoint: false, change: null }]);
   });
 
   // R27-B — GET /staff/routes/{id}/path. getRunRoute 와 같은 road_path·fallback_used·
@@ -210,6 +240,6 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
       { lat: 37.2, lng: 127.2 },
     ]);
     expect(result.fallbackUsed).toBe(true);
-    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1, isDestination: false }]);
+    expect(result.stops).toEqual([{ stopId: "10", seq: 1, name: "정문", lat: 37.1, lng: 127.1, isDestination: false, isWaypoint: false, change: null }]);
   });
 });

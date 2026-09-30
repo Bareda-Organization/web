@@ -113,9 +113,10 @@ describe("buildRouteDisplayState", () => {
       confirmed: true,
     });
 
+    // R39 Ruling 400 — 번호는 서버 seq 값이 아니라 seq 순서의 순위다(경유 지점을 뺀 연속 번호). 순서대로 나온다.
     expect(state.stopMarkers).toEqual([
-      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 2 },
       { id: "stop-4", lat: 37.5695, lng: 126.981, kind: "stop", seq: 1 },
+      { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 2 },
     ]);
   });
 
@@ -175,5 +176,70 @@ describe("buildRouteDisplayState", () => {
 
     expect(oneS.stopMarkers).toEqual([]);
     expect(none.stopMarkers).toEqual([]);
+  });
+});
+
+// R39 Ruling 400 — 강제 경유 지점·미경유 표기와 번호 규칙.
+describe("buildRouteDisplayState — 경유 지점 · 미경유 · 번호", () => {
+  const route = (stops: Parameters<typeof buildRouteDisplayState>[2]["stops"]) => ({
+    roadPath: [],
+    fallbackUsed: false,
+    stops,
+    confirmed: true,
+  });
+
+  it("경유 지점은 번호 없는 waypoint 마커가 되고, 승하차지 번호는 경유 지점을 건너뛰고 연속으로 매긴다", () => {
+    // 서버 seq 는 경유 지점 자리(2)를 비운 채 1 · 3 · 4 로 온다 — 명단(§4.2)은 경유 지점을 빼므로
+    // 지도가 서버 seq 를 그대로 쓰면 명단의 1 · 2 · 3 과 번호가 어긋난다.
+    const { stopMarkers } = buildRouteDisplayState(
+      "9",
+      "confirmed",
+      route([
+        { stopId: "11", seq: 1, lat: 37.5, lng: 127.0 },
+        { stopId: "12", seq: 2, lat: 37.51, lng: 127.01, isWaypoint: true },
+        { stopId: "13", seq: 3, lat: 37.52, lng: 127.02 },
+        { stopId: "14", seq: 4, lat: 37.53, lng: 127.03 },
+      ]),
+    );
+
+    const stops = stopMarkers.filter((m) => m.kind === "stop");
+    expect(stops.map((m) => [m.id, m.seq])).toEqual([
+      ["stop-11", 1],
+      ["stop-13", 2],
+      ["stop-14", 3],
+    ]);
+    const waypoints = stopMarkers.filter((m) => m.kind === "waypoint");
+    expect(waypoints).toEqual([{ id: "waypoint-12", lat: 37.51, lng: 127.01, kind: "waypoint" }]);
+  });
+
+  it("미경유(change=skipped) 승하차지는 skipped 를 켜고 번호는 그대로 세며, 그 밖은 켜지 않는다", () => {
+    const { stopMarkers } = buildRouteDisplayState(
+      "9",
+      "moving",
+      route([
+        { stopId: "11", seq: 1, lat: 37.5, lng: 127.0, change: "skipped" },
+        { stopId: "13", seq: 2, lat: 37.52, lng: 127.02, change: null },
+      ]),
+    );
+
+    const stops = stopMarkers.filter((m) => m.kind === "stop");
+    expect(stops.map((m) => [m.seq, m.skipped ?? false])).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+  });
+
+  it("좌표가 없는 경유 지점(배포 뒤 제거된 행)은 마커를 만들지 않고 승하차지 번호도 밀지 않는다", () => {
+    const { stopMarkers } = buildRouteDisplayState(
+      "9",
+      "confirmed",
+      route([
+        { stopId: "12", seq: 1, lat: null as unknown as number, lng: null as unknown as number, isWaypoint: true },
+        { stopId: "13", seq: 2, lat: 37.52, lng: 127.02 },
+      ]),
+    );
+
+    expect(stopMarkers.map((m) => m.id)).toEqual(["stop-13"]);
+    expect(stopMarkers[0].seq).toBe(1);
   });
 });

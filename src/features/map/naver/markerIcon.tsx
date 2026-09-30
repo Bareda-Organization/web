@@ -14,6 +14,9 @@ const MARKER_COLOR: Record<MapMarkerKind, string> = {
   // "상태를 뜻하는 색"으로 오인될 여지가 없다).
   origin: "#2A312E",
   destination: "#2A312E",
+  // R39 Ruling 400 — 강제 경유 지점은 채운 색이 아니라 **흰 바탕 + 회색 테두리** 로 그린다(출발·도착의 어두운 채움과
+  // 정차지 초록 핀 어느 쪽과도 모양이 다르다). 이 값은 테두리·글자 색이다.
+  waypoint: "#57534E",
 };
 
 // R18-B 목표 1 — 세 종류의 크기 관계. 버스는 이 화면에서 유일하게 클릭해 고르는
@@ -32,6 +35,8 @@ export const MARKER_SIZE_PX: Record<MapMarkerKind, number> = {
   // 출발점이고, 첫 승차지·마지막 하차지와 같은 자리에 겹쳐 찍히므로 더 커야 위로 보인다.
   origin: 24,
   destination: 24,
+  // R39 — 경유 지점 칩의 높이. 출발·도착 칩보다 작아 노선의 끝이 아니라 중간 지점임이 읽힌다.
+  waypoint: 20,
 };
 
 // R19 목표 3 — 버스는 정차지·학생과 색·크기뿐 아니라 형태로도 구별돼야 한다(사용자
@@ -105,6 +110,8 @@ export type MarkerIconOptions = {
   busNo?: string;
   /** 정차지 순번(R27 사용자 지시 — 각 정차지 표기). 주면 원 핀 대신 숫자 칩을 그린다. */
   seq?: number;
+  /** R39 Ruling 400 — 오늘 서지 않는 승하차지. 흐리게 + 회색 핀 + 번호 취소선(색만으로 가르지 않는다). */
+  skipped?: boolean;
   direction?: MapMarkerDirection;
   /** W2-01 — 비상 회차의 버스 칩. 테두리를 붉게 하고 바깥에 옅은 붉은 띠를 둘러 흰 테두리 칩과 구별한다. */
   emergency?: boolean;
@@ -163,7 +170,9 @@ const STOP_PIN_HEIGHT_PX = Math.round((MARKER_SIZE_PX.stop * STOP_PIN_VIEWBOX.he
  * 선택 강조는 핀 윤곽을 따라 종류 색의 굵은 선을 먼저 긋는다 — box-shadow 는 사각형으로 그려져
  * 핀 모양을 따라가지 못한다. `overflow="visible"` 이 그 굵은 선이 viewBox 밖으로 나가도 보이게 한다.
  */
-const stopPinHtml = (seq: number | undefined, selected: boolean, markerId?: string): string => {
+const SKIPPED_PIN_COLOR = "#9ca3af";
+
+const stopPinHtml = (seq: number | undefined, selected: boolean, markerId?: string, skipped = false): string => {
   const { x, y, width, height } = STOP_PIN_VIEWBOX;
   const ring = selected
     ? `<path d="${STOP_PIN_PATH}" fill="none" stroke="${MARKER_COLOR.stop}" stroke-width="9" stroke-linejoin="round"/>`
@@ -171,14 +180,26 @@ const stopPinHtml = (seq: number | undefined, selected: boolean, markerId?: stri
   const label =
     seq == null
       ? ""
-      : `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="13" font-weight="700">${seq}</text>`;
-  return `<span${markerIdAttr(markerId)} style="display:block;width:${MARKER_SIZE_PX.stop}px;height:${STOP_PIN_HEIGHT_PX}px;"><svg width="${MARKER_SIZE_PX.stop}" height="${STOP_PIN_HEIGHT_PX}" viewBox="${x} ${y} ${width} ${height}" overflow="visible" style="display:block;">${ring}<path d="${STOP_PIN_PATH}" fill="${MARKER_COLOR.stop}" stroke="#fff" stroke-width="${selected ? 4 : 2}" stroke-linejoin="round"/>${label}</svg></span>`;
+      : `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="13" font-weight="700"${skipped ? ' text-decoration="line-through"' : ""}>${seq}</text>`;
+  const fill = skipped ? SKIPPED_PIN_COLOR : MARKER_COLOR.stop;
+  const dim = skipped ? "opacity:0.55;" : "";
+  const title = skipped ? ' title="오늘 서지 않는 승하차지"' : "";
+  return `<span${markerIdAttr(markerId)}${title} style="display:block;${dim}width:${MARKER_SIZE_PX.stop}px;height:${STOP_PIN_HEIGHT_PX}px;"><svg width="${MARKER_SIZE_PX.stop}" height="${STOP_PIN_HEIGHT_PX}" viewBox="${x} ${y} ${width} ${height}" overflow="visible" style="display:block;">${ring}<path d="${STOP_PIN_PATH}" fill="${fill}" stroke="#fff" stroke-width="${selected ? 4 : 2}" stroke-linejoin="round"/>${label}</svg></span>`;
 };
 
 /** R22 목표 2 — 노선의 양 끝(출발지·도착지)을 글자 핀으로 찍는다. */
 const endpointChipHtml = (kind: MapMarkerKind, selected: boolean, markerId?: string): string => {
   const ring = selected ? selectedRingOf(kind) : "";
   return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;height:${MARKER_SIZE_PX[kind]}px;padding:0 7px;border-radius:999px;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;">${ENDPOINT_LABEL[kind]}</span>`;
+};
+
+/**
+ * R39 Ruling 400 — 강제 경유 지점. 번호 없는 흰 바탕·회색 점선 테두리 칩 + "경유" 글자다. 승하차지 핀(초록 물방울 + 번호)과
+ * 출발·도착 칩(어두운 채움)과 모양이 달라, 색을 못 보는 사람도 글자와 모양으로 가른다.
+ */
+const waypointChipHtml = (selected: boolean, markerId?: string): string => {
+  const ring = selected ? selectedRingOf("waypoint") : "";
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;justify-content:center;height:${MARKER_SIZE_PX.waypoint}px;padding:0 6px;border-radius:5px;background:#fff;border:2px dashed ${MARKER_COLOR.waypoint};${ring}color:${MARKER_COLOR.waypoint};font-size:11px;font-weight:700;line-height:1;white-space:nowrap;">경유</span>`;
 };
 
 /**
@@ -204,8 +225,11 @@ export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOpti
   if (kind === "origin" || kind === "destination") {
     return centeredOnPoint(endpointChipHtml(kind, options.selected ?? false, options.markerId));
   }
+  if (kind === "waypoint") {
+    return centeredOnPoint(waypointChipHtml(options.selected ?? false, options.markerId));
+  }
   if (kind === "stop") {
-    return tipOnPoint(stopPinHtml(options.seq, options.selected ?? false, options.markerId));
+    return tipOnPoint(stopPinHtml(options.seq, options.selected ?? false, options.markerId, options.skipped ?? false));
   }
   if (kind === "bus" && options.busNo) {
     return centeredOnPoint(

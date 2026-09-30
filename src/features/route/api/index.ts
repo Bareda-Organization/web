@@ -22,6 +22,8 @@ type RawRouteStop = {
   lat: number;
   lng: number;
   is_destination?: boolean;
+  is_waypoint?: boolean;
+  change?: "added" | "skipped" | null;
 };
 
 type RawRouteListItem = {
@@ -51,6 +53,8 @@ const toStop = (raw: RawRouteStop): RouteStop => ({
   lat: raw.lat,
   lng: raw.lng,
   isDestination: raw.is_destination ?? false,
+  isWaypoint: raw.is_waypoint ?? false,
+  change: raw.change ?? null,
 });
 
 const toListItem = (raw: RawRouteListItem) => ({

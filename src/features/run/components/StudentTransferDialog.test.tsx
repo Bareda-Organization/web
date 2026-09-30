@@ -109,6 +109,20 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     expect(screen.queryByRole("option", { name: "학원" })).not.toBeInTheDocument();
   });
 
+  // R39 Ruling 400 — 노선(§5.19)의 stops[] 는 경유 지점도 싣는다. 태울 학생이 없는 지점이라 승하차지 선택지가 아니다.
+  it("경유 지점은 승하차지 선택지에서 빠진다", async () => {
+    mockGetRunRoute.mockResolvedValue({
+      ...routeWithStops,
+      stops: [{ stopId: "9", seq: 1, name: "주유소", lat: 37.55, lng: 127.05, isWaypoint: true }, ...routeWithStops.stops],
+    });
+    renderDialog();
+
+    await pickDestination();
+
+    expect(await screen.findByRole("option", { name: "후문" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "주유소" })).not.toBeInTheDocument();
+  });
+
   it("기존 승하차지를 고르면 stopId 만 싣고 address 는 undefined 다", async () => {
     mockGetRunRoute.mockResolvedValue(routeWithStops);
     mockPostTransfer.mockResolvedValue(staged);

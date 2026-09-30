@@ -243,3 +243,28 @@ describe("markerIcon — 비상 강조(W2-01)", () => {
     );
   });
 });
+
+// R39 Ruling 400 — 강제 경유 지점은 승하차지 핀과 모양이 다른 번호 없는 칩 + "경유" 글자이고, 미경유 승하차지는
+// 흐리게(불투명도 · 회색) + 번호 취소선이다. 색만으로 가르지 않는다(글자·모양·취소선이 수단).
+describe("markerIcon — 경유 지점 · 미경유 표기(R39 Ruling 400)", () => {
+  it("경유 지점은 '경유' 글자가 있고 승하차지 핀(svg)이나 번호가 아니다", () => {
+    const html = buildMarkerIconHtml("waypoint", { markerId: "waypoint-12", seq: 5 });
+
+    expect(html).toContain("경유");
+    expect(html).toContain('data-marker-id="waypoint-12"');
+    expect(html).not.toContain("<svg");
+    // seq 를 실수로 넘겨도 번호를 그리지 않는다 — 경유 지점은 번호를 세지 않는다.
+    expect(html).not.toContain(">5<");
+  });
+
+  it("미경유 승하차지는 흐리고 번호에 취소선이 있으며, 정상 승하차지와 아이콘이 다르다", () => {
+    const normal = buildMarkerIconHtml("stop", { seq: 2 });
+    const skipped = buildMarkerIconHtml("stop", { seq: 2, skipped: true });
+
+    expect(skipped).not.toBe(normal);
+    expect(skipped).toContain("opacity");
+    expect(skipped).toContain("line-through");
+    expect(normal).not.toContain("line-through");
+    expect(normal).not.toContain("opacity");
+  });
+});

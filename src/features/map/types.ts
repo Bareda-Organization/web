@@ -4,7 +4,9 @@
 // R22 목표 2 — `origin`·`destination` 은 노선의 양 끝이다(사용자 지시 — 출발지·목적지가
 // 지도에 안 보인다). 등원은 첫 승차지 → 학원, 하원은 학원 → 마지막 하차지이고(Ruling 190),
 // 학원 쪽 끝은 `stops[]` 에 없어 지금까지 어떤 마커로도 안 그려졌다.
-export type MapMarkerKind = "bus" | "stop" | "student" | "origin" | "destination";
+// R39 Ruling 400 — "waypoint" 는 강제 경유 지점(§5.15)이다. 승하차지와 모양이 다른 번호 없는 칩 +
+// "경유" 글자로 그린다 — 태울 학생이 없는 지점이라 번호를 세지 않는다.
+export type MapMarkerKind = "bus" | "stop" | "student" | "origin" | "destination" | "waypoint";
 
 export type MapCamera = {
   lat: number;
@@ -33,6 +35,9 @@ export type MapMarker = {
   // R27 사용자 지시 — 고정 노선 편성 지도에서 "각 정차지를 표기" 한다. 정차지가 가까이
   // 붙어 있으면 원 핀만으로는 어느 것이 몇 번째인지 알 수 없다. 정차지에만 뜻이 있다.
   seq?: number;
+  // R39 Ruling 400 — 오늘 서지 않는 승하차지(`change=skipped`, C-05). 흐리게 + 번호 취소선으로 그린다.
+  // 명단의 빨강 취소선과 같은 뜻이다. 정차지에만 뜻이 있다.
+  skipped?: boolean;
   // 2026-09-23 사용자 지시 — 마우스로 끌어 자리를 정한다(고정 노선 편성의 승하차지). 끝나면
   // `MapSurface.onMarkerDragEnd` 가 새 좌표를 받는다.
   draggable?: boolean;

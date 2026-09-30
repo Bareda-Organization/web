@@ -20,7 +20,16 @@ type RouteQueryResult = {
   fallbackUsed: boolean;
   // W7 — `is_destination=true`(등원 회차의 마지막 항목, 학원)은 road_path 끝점
   // (destination 마커)과 같은 자리라 정차지 마커 산출에서 뺀다(`API_SPEC §4.3·§5.19`).
-  stops: { stopId: string; seq: number; lat: number; lng: number; isDestination?: boolean }[];
+  // R39 Ruling 400 — `isWaypoint`(§4.3·§5.19 `is_waypoint`)는 강제 경유 지점, `change=skipped` 는 오늘 서지 않는 승하차지.
+  stops: {
+    stopId: string;
+    seq: number;
+    lat: number;
+    lng: number;
+    isDestination?: boolean;
+    isWaypoint?: boolean;
+    change?: "added" | "skipped" | null;
+  }[];
   confirmed: boolean;
 };
 
@@ -68,6 +77,33 @@ const endpointMarkersOf = (runId: string, roadPath: { lat: number; lng: number }
   ];
 };
 
+// R39 Ruling 400 — 승하차지 마커와 경유 지점 마커. 서버 `seq` 는 경유 지점 자리를 비운 채 1·3·4 로 오는데
+// 명단(§4.2)은 경유 지점을 싣지 않으므로(Ruling 398), 핀 번호는 **경유 지점을 뺀 순번**으로 다시 매겨 명단과 같게 한다.
+// 배포 뒤 제거된 경유 지점은 좌표가 null 인 채로 stops[] 에 남는다(§1.13) — 마커를 만들지 않는다.
+const stopMarkersOf = (stops: RouteQueryResult["stops"]): MapMarker[] => {
+  const markers: MapMarker[] = [];
+  let boardingOrder = 0;
+  for (const stop of [...stops].sort((a, b) => a.seq - b.seq)) {
+    if (stop.isWaypoint) {
+      if (stop.lat == null || stop.lng == null) continue;
+      markers.push({ id: `waypoint-${stop.stopId}`, lat: stop.lat, lng: stop.lng, kind: "waypoint" });
+      continue;
+    }
+    boardingOrder += 1;
+    // 도착지(학원)는 출발·도착 칩이 따로 그린다(W7) — 번호는 세지만 마커는 만들지 않는다.
+    if (stop.isDestination) continue;
+    markers.push({
+      id: `stop-${stop.stopId}`,
+      lat: stop.lat,
+      lng: stop.lng,
+      kind: "stop",
+      seq: boardingOrder,
+      ...(stop.change === "skipped" ? { skipped: true } : {}),
+    });
+  }
+  return markers;
+};
+
 export const buildRouteDisplayState = (
   runId: string,
   runStatus: RunStatusForRoute,
@@ -86,17 +122,6 @@ export const buildRouteDisplayState = (
     missing: !hasRoute && route.confirmed,
     noPlannedRoute: !hasRoute && !route.confirmed,
     planned: hasRoute && !route.confirmed,
-    stopMarkers: [
-      ...route.stops
-        .filter((stop) => !stop.isDestination)
-        .map((stop) => ({
-          id: `stop-${stop.stopId}`,
-          lat: stop.lat,
-          lng: stop.lng,
-          kind: "stop" as const,
-          seq: stop.seq,
-        })),
-      ...endpointMarkersOf(runId, route.roadPath),
-    ],
+    stopMarkers: [...stopMarkersOf(route.stops), ...endpointMarkersOf(runId, route.roadPath)],
   };
 };

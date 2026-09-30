@@ -70,7 +70,7 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
       try {
         const route = await getRunRoute(toRunId);
         if (stale) return;
-        setStops(route.stops.filter((stop) => !stop.isDestination).map((stop) => ({ stopId: stop.stopId, name: stop.name })));
+        setStops(route.stops.filter((stop) => !stop.isDestination && !stop.isWaypoint).map((stop) => ({ stopId: stop.stopId, name: stop.name })));
       } catch (cause) {
         if (stale) return;
         setStops([]);

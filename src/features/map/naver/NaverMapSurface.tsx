@@ -383,6 +383,7 @@ export const NaverMapSurface = ({
           direction: markerData.direction,
           emergency: markerData.emergency,
           seq: markerData.seq,
+          skipped: markerData.skipped,
           markerId: markerData.id,
         });
         const created = new naverMaps.Marker({
@@ -411,6 +412,7 @@ export const NaverMapSurface = ({
         direction: markerData.direction,
         emergency: markerData.emergency,
         seq: markerData.seq,
+        skipped: markerData.skipped,
         markerId: markerData.id,
       });
       if (renderedIcons.current.get(markerData.id) !== content) {
