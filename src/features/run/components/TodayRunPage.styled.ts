@@ -14,9 +14,14 @@ export const StyledTodayRunLayout = styled.div`
 // 스위처(StyledBusSwitcher/Button)는 이 목록이 같은 역할(회차 선택)을 대신하며 대체됐다.
 export const StyledMapTopRow = styled.div`
   display: grid;
-  grid-template-columns: 3fr 1fr;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+
+  /* 1100px 이하에서는 오른쪽 목록이 좁아 회차 이름·상태 칩이 글자 단위로 꺾인다(B1 #13) — 지도 아래로 내려 쌓는다. */
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 export const StyledMapPane = styled.div`
@@ -78,7 +83,9 @@ export const StyledBusListItemHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   font-weight: var(--fw-bold);
+  white-space: nowrap;
 `;
 
 // 명단 표를 전체 폭으로 쓴다(B1 #2·#13) — 옆 칸(2fr:1fr)에 두면 1440px 에서도 표가 750px 라 이름이 글자 단위로 줄바꿈되고
@@ -92,7 +99,7 @@ export const StyledContentGrid = styled.div`
 
 export const StyledSidePanel = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
   align-items: start;
 `;
