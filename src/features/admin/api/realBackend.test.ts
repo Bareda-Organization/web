@@ -10,6 +10,7 @@ import {
   getAcademies,
   getAcademy,
   getAcademyRunsLive,
+  getAuditActors,
   getAuditLogs,
   getBlockedAccounts,
   getEmergencies,
@@ -232,6 +233,17 @@ describe("admin api — 실서버 계약", () => {
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  it("getAuditActors 는 이름·아이디 일부로 계정을 찾고, 동작 필터는 그 동작만 돌려준다(§6.13 · Ruling 446·447)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    const actors = await getAuditActors("staffA");
+    const updates = await getAuditLogs({ action: "update" });
+
+    expect(actors.some((actor) => actor.loginId === "staffA")).toBe(true);
+    expect(updates.items.every((item) => item.action === "update")).toBe(true);
   });
 
   it("getLoginHistory 는 접속 이력 목록을 돌려준다(§6.13)", async ({ skip }) => {

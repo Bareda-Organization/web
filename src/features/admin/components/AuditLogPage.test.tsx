@@ -149,7 +149,7 @@ describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R4
     ]);
     render(<AuditLogPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("이름 또는 아이디로 행위자 찾기"), { target: { value: "김관" } });
+    fireEvent.change(screen.getByPlaceholderText("이름 또는 아이디"), { target: { value: "김관" } });
     fireEvent.click(screen.getByRole("button", { name: "검색" }));
     await screen.findByRole("option", { name: /김관계/ });
     expect(mockGetAuditActors).toHaveBeenCalledWith("김관");

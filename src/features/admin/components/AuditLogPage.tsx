@@ -14,7 +14,7 @@ import type {
   LoginHistoryItemResponseTypes,
   LoginHistoryResponseTypes,
 } from "../types";
-import { StyledAuditLogLayout, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
+import { StyledActorSearchField, StyledAuditLogLayout, StyledFieldLabel, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
 import { formatDateTime, todayInSeoul } from "@/shared/lib/format/dateTime";
 
 const PAGE_SIZE = 20;
@@ -153,9 +153,10 @@ export const AuditLogPage = () => {
             options={[{ value: "", label: "전체 학원" }, ...academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))]}
           />
         </StyledFilterField>
-        <StyledFilterField>
-          <SearchField value={actorQuery} onChange={(event) => setActorQuery(event.target.value)} onSubmit={searchActors} placeholder="이름 또는 아이디로 행위자 찾기" />
-        </StyledFilterField>
+        <StyledActorSearchField>
+          <StyledFieldLabel>행위자 찾기</StyledFieldLabel>
+          <SearchField value={actorQuery} onChange={(event) => setActorQuery(event.target.value)} onSubmit={searchActors} placeholder="이름 또는 아이디" />
+        </StyledActorSearchField>
         <StyledFilterField>
           <Select
             label="행위자"
