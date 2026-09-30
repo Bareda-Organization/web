@@ -316,3 +316,25 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     );
   });
 });
+
+describe("RouteStopsPanel — F02-10 상세를 못 불러오면 편집을 열지 않는다", () => {
+  it("불러오기 실패 시 오류와 [다시 불러오기] 만 보이고 승하차지 추가·저장은 없다", async () => {
+    mockGetDetail.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
+    render(<RouteStopsPanel routeId="1" direction="to_academy" />);
+
+    expect(await screen.findByText("서버 오류")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승하차지 추가" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
+  });
+
+  it("[다시 불러오기] 가 성공하면 서버의 승하차지로 편집기가 열린다", async () => {
+    mockGetDetail.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
+    render(<RouteStopsPanel routeId="1" direction="to_academy" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 불러오기" }));
+
+    expect(await screen.findByText("정문")).toBeInTheDocument();
+    expect(screen.queryByText("서버 오류")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "승하차지 추가" })).toBeInTheDocument();
+  });
+});

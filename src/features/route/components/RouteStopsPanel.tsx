@@ -81,6 +81,10 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
   const [saved, setSaved] = useState<EditableStop[]>([]);
   const [stops, setStops] = useState<EditableStop[]>([]);
   const [loading, setLoading] = useState(true);
+  // 상세를 못 불러왔으면 `saved` 를 믿을 수 없다 — 이 상태에서 저장하면 PUT 이 서버의 정차 목록 전체를 새로 추가한
+  // 것만으로 바꾼다. 그래서 성공하기 전에는 편집기를 열지 않고 [다시 불러오기] 만 둔다.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<StopFormState | null>(null);
@@ -110,14 +114,21 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
     (async () => {
       try {
         adopt((await getRouteDetail(routeId)).stops);
+        setLoadFailed(false);
         setError(null);
       } catch (cause) {
+        setLoadFailed(true);
         setError(cause instanceof ApiError ? cause.message : "승하차지를 불러오지 못했습니다");
       } finally {
         setLoading(false);
       }
     })();
-  }, [routeId]);
+  }, [routeId, reloadKey]);
+
+  const handleReload = () => {
+    setLoading(true);
+    setReloadKey((key) => key + 1);
+  };
 
   // 앱 안에서 떠날 때(뒤로·사이드바·로그아웃)도 묻는다 — 아래 beforeunload 는 창을 닫을 때만 불린다.
   useEffect(() => {
@@ -241,6 +252,17 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
   };
 
   if (loading) return <p>불러오는 중...</p>;
+
+  if (loadFailed) {
+    return (
+      <StyledListColumn>
+        {error ? <AlertBanner tone="missed" title={error} /> : null}
+        <Button variant="secondary" onClick={handleReload}>
+          다시 불러오기
+        </Button>
+      </StyledListColumn>
+    );
+  }
 
   return (
     <StyledEditor>
