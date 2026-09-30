@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Dialog } from "@/shared/ui";
 import { unblockAccount } from "../api";
@@ -55,7 +56,7 @@ export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfir
         </StyledUnblockConfirmRow>
         <StyledUnblockConfirmRow>
           <span>차단 시각</span>
-          <span>{account.blockedAt}</span>
+          <span>{formatDateTime(account.blockedAt)}</span>
         </StyledUnblockConfirmRow>
         <StyledUnblockConfirmRow>
           <span>로그인 실패 횟수</span>

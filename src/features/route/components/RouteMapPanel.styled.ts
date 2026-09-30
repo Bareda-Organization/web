@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT } from "@/features/map/mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "@/features/map";
 
 // ChangeApprovalDetail.styled.ts 의 StyledMapSurface 와 같은 크기·테두리 규칙.
 export const StyledMapSurface = styled.div`

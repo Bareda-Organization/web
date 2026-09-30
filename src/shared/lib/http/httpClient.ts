@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { NetworkError, parseApiError } from "./apiError";
+import { ApiError, NetworkError, parseApiError } from "./apiError";
 import { getAccessToken } from "./accessTokenStore";
 import { refreshAccessToken } from "./refreshClient";
 import { notifyAuthGate } from "./authGate";
@@ -109,8 +109,12 @@ const handleResponse = async <T>(
       try {
         await refreshAccessToken();
       } catch (refreshFailure) {
-        // refresh 토큰까지 무효화된 것 — 재로그인이 필요하다는 것을 화면에 알린다.
-        notifyAuthGate({ type: "session-expired" });
+        // 재발급이 401 로 거절돼야 refresh 토큰까지 무효화된 것이다 — 재로그인이
+        // 필요하다는 것을 화면에 알린다. 네트워크 오류·5xx 는 일시적일 수 있어
+        // 세션을 지키고 원래 오류만 던진다(화면이 "다시 시도" 를 보인다).
+        if (refreshFailure instanceof ApiError && refreshFailure.status === 401) {
+          notifyAuthGate({ type: "session-expired" });
+        }
         throw refreshFailure;
       }
       response = await retry();

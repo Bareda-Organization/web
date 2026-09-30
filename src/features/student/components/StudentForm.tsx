@@ -33,6 +33,9 @@ type StudentFormProps = {
   onDone: () => void;
 };
 
+// §5.11 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
+const NOTE_MAX_LENGTH = 200;
+
 const GENDER_OPTIONS = [
   { value: "", label: "선택 안 함" },
   { value: "male", label: "남" },
@@ -67,6 +70,15 @@ export const StudentForm = ({
     {},
   );
   const [note, setNote] = useState("");
+  // 수정 폼이 처음 받은 값 — 지운 항목을 가려내는 기준이다(아래 handleSubmit).
+  const [original, setOriginal] = useState({
+    studentPhone: "",
+    gender: "",
+    birthDate: "",
+    grade: "",
+    className: "",
+    note: "",
+  });
   const [canGoAlone, setCanGoAlone] = useState(false);
   const [photo, setPhoto] = useState<File | null | undefined>(undefined);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | undefined>(
@@ -98,6 +110,14 @@ export const StudentForm = ({
           ),
         );
         setNote(detail.note ?? "");
+        setOriginal({
+          studentPhone: detail.studentPhone ?? "",
+          gender: detail.gender ?? "",
+          birthDate: detail.birthDate ?? "",
+          grade: detail.grade ?? "",
+          className: detail.className ?? "",
+          note: detail.note ?? "",
+        });
         setCanGoAlone(detail.canGoAlone);
         setExistingPhotoUrl(detail.photoUrl ?? undefined);
         setError(null);
@@ -136,17 +156,22 @@ export const StudentForm = ({
     if (!dirty || confirmLeave()) onClose();
   };
 
+  // PATCH(§5.11 · Ruling 390)는 키가 없으면 "그대로 둔다"이고 선택 항목의 `null` 이 "지운다"이다. 그래서
+  // 수정에서 지운 항목만 `null` 로 보내고, 원래 비어 있던 항목은 키를 뺀다(그사이 다른 관계자가 넣은 값을 덮지 않는다).
+  const clearable = (current: string, before: string): string | null | undefined =>
+    current.trim() || (studentId !== undefined && before !== "" ? null : undefined);
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setError(null);
     try {
       const request: StudentUpsertRequestTypes = {
         name: name.trim(),
-        studentPhone: studentPhone.trim() || undefined,
-        gender: gender || undefined,
-        birthDate: birthDate || undefined,
-        grade: grade.trim() || undefined,
-        className: className.trim() || undefined,
+        studentPhone: clearable(studentPhone, original.studentPhone),
+        gender: clearable(gender, original.gender) as StudentGender | null | undefined,
+        birthDate: clearable(birthDate, original.birthDate),
+        grade: clearable(grade, original.grade),
+        className: clearable(className, original.className),
         guardians: studentId
           ? guardians
               .filter(
@@ -158,7 +183,7 @@ export const StudentForm = ({
                 phone: guardian.phone.trim(),
               }))
           : undefined,
-        note: note.trim() || undefined,
+        note: clearable(note, original.note),
         canGoAlone,
         photo,
       };
@@ -301,6 +326,7 @@ export const StudentForm = ({
               label="메모"
               value={note}
               onChange={(event) => setNote(event.target.value)}
+              maxLength={NOTE_MAX_LENGTH}
             />
             <Checkbox
               checked={canGoAlone}

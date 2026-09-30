@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotificationList } from "./NotificationList";
 import { getNotifications } from "../api";
@@ -56,5 +56,50 @@ describe("NotificationList — 시각 표기(R32-W9)", () => {
 
     expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
+  });
+});
+
+const row = (id: number) => ({
+  notificationId: String(id), sentAt: "2026-09-30T05:00:00Z", busNo: "1호차", recipientName: `수신${id}`, recipientRole: "parent" as const,
+  type: "no_show_escalated" as const, body: `내용${id}`, acked: false,
+});
+const pageOf = (items: ReturnType<typeof row>[], page: number, hasNext: boolean) => ({ items, page, size: 20, totalCount: 45, hasNext, unackedCount: 3 });
+
+describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("2쪽에서 필터를 바꾸면 조회 요청은 한 번, 0쪽으로 나간다", async () => {
+    mockGet.mockImplementation(async (page) => pageOf([row(page + 1)], page, page === 0));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    await screen.findByText("내용2");
+    mockGet.mockClear();
+
+    fireEvent.change(screen.getByLabelText("확인 여부"), { target: { value: "false" } });
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+    expect(mockGet).toHaveBeenCalledWith(0, 20, expect.objectContaining({ acked: false }));
+  });
+
+  it("쪽 조회가 실패해도 보이던 목록을 지우지 않고 오류만 알린다", async () => {
+    mockGet.mockResolvedValueOnce(pageOf([row(1)], 0, true)).mockRejectedValueOnce(new Error("네트워크"));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+
+    expect(await screen.findByText("알림 로그를 불러오지 못했습니다")).toBeInTheDocument();
+    expect(screen.getByText("내용1")).toBeInTheDocument();
+  });
+
+  it("수신자 역할과 알림 종류를 영문 원문이 아니라 한글로 보여준다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+
+    expect(await screen.findByText("수신1 (학부모)")).toBeInTheDocument();
+    expect(screen.getAllByText(/미승차 무응답/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/escalation/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\(parent\)/)).not.toBeInTheDocument();
   });
 });

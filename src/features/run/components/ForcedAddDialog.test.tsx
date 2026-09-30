@@ -72,6 +72,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     ["CAPACITY_EXCEEDED", 409, "버스 정원이 가득 차 추가할 수 없습니다"],
     ["ADDRESS_VERIFICATION_FAILED", 422, "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요"],
     ["RUN_CANCELED", 409, "취소된 회차라 추가할 수 없습니다"],
+    ["FORCED_ADDITION_ALREADY_STAGED", 409, "이 학생은 이 회차에 이미 강제 추가 대기 중입니다"],
   ])("%s 는 서버 원문이 아니라 쉬운 한국어 문구로 알린다", async (code, status, message) => {
     mockPostForcedAdd.mockRejectedValue(new ApiError(status, code, "서버 원문"));
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
@@ -82,6 +83,13 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
 
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
+  });
+
+  // N-06 — 메모는 200자까지(서버가 넘으면 422). 입력칸에서 먼저 막는다.
+  it("메모 입력칸은 200자까지만 받는다", async () => {
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
   });
 
   it("신규 학생 모드로 전환하면 newStudentName 을 싣고 studentId 는 undefined 다", async () => {

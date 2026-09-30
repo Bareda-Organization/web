@@ -6,10 +6,14 @@
 // 입력이 "이미 짧은 시각 문자열"(예: "08:10")이면 `Date` 파싱이 실패(Invalid Date)하므로
 // 원본을 그대로 돌려준다 — 실제 백엔드는 `timestamptz` 를 전체 ISO 로 주지만, 시험
 // 픽스처나 앞으로 백엔드가 짧은 형태로 바꾸는 경우까지 함께 견딘다.
+// 표시 시간대는 브라우저(PC) 설정과 무관하게 한국 시간이다(`dateTime.ts` 의 `formatDateTime` 과 같은 규칙).
+// `hourCycle: "h23"` — `hour12: false` 는 옛 규칙에서 자정을 `24:05` 로 낼 수 있다.
+const SEOUL_TIME = { timeZone: "Asia/Seoul", hourCycle: "h23" } as const;
+
 export const formatClockTime = (raw: string): string => {
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return raw;
-  return parsed.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return parsed.toLocaleTimeString("ko-KR", { ...SEOUL_TIME, hour: "2-digit", minute: "2-digit" });
 };
 
 // R21-B — `formatClockTime` 과 이 함수는 용도가 다르다. `formatClockTime` 은 위 자바독이
@@ -19,5 +23,5 @@ export const formatClockTime = (raw: string): string => {
 export const formatClockTimeWithSeconds = (raw: string): string => {
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return raw;
-  return parsed.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  return parsed.toLocaleTimeString("ko-KR", { ...SEOUL_TIME, hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };

@@ -154,3 +154,85 @@ describe("StudentForm — 이탈 경고(R32-W13)", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+// F02-01 — PATCH 는 키가 없으면 "그대로 둔다"(Student.update). 지운 값을 키째 빼면 저장은 성공하는데 값이 남는다.
+describe("StudentForm — F02-01 수정에서 값 지우기", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const filled = {
+    studentId: "1",
+    name: "김바래",
+    studentPhone: "010-1111-2222",
+    photoUrl: null,
+    gender: "male" as const,
+    birthDate: "2015-03-02",
+    grade: "3학년",
+    className: "2반",
+    note: "알레르기",
+    canGoAlone: false,
+    guardians: [],
+    accountId: null,
+  };
+
+  it("메모·학년·반을 지우고 저장하면 null 을 보내 서버 값을 지운다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue(filled);
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(await screen.findByDisplayValue("알레르기"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("3학년"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("2반"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.note).toBeNull();
+    expect(request.grade).toBeNull();
+    expect(request.className).toBeNull();
+  });
+
+  it("원래 비어 있던 항목은 요청에 싣지 않는다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue({ ...filled, note: null, grade: null, className: null });
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    await screen.findByDisplayValue("김바래");
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.note).toBeUndefined();
+    expect(request.grade).toBeUndefined();
+    expect(request.className).toBeUndefined();
+  });
+
+  it("학생 연락처·성별·생년월일을 지우고 저장하면 null 을 보내 서버 값을 지운다(Ruling 390)", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue(filled);
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(await screen.findByDisplayValue("010-1111-2222"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("2015-03-02"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.studentPhone).toBeNull();
+    expect(request.birthDate).toBeNull();
+    expect(request.gender).toBe("male");
+  });
+});
+
+// N-06 — 학생 메모는 200자까지(서버가 넘으면 422). 입력칸에서 먼저 막는다.
+describe("StudentForm — 메모 길이", () => {
+  it("메모 입력칸은 200자까지만 받는다", () => {
+    render(<StudentForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
+  });
+});

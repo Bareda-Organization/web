@@ -20,6 +20,10 @@ export type BusItemResponseTypes = {
 export type BusCapacityWarningResponseTypes = {
   code: "CAPACITY_BELOW_ASSIGNED";
   runId: string;
+  // 어느 회차인지 관리자가 찾게 하는 재료(Ruling 391).
+  serviceDate: string;
+  departTime: string;
+  direction: "to_academy" | "from_academy";
   assignedCount: number;
   studentCapacity: number;
 };

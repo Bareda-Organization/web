@@ -38,7 +38,8 @@ export type ScheduleUpsertRequestTypes = {
   departTime: string;
   originName: string;
   destinationName: string;
-  estDurationMin?: number;
+  // 선택 항목: 키 없음(undefined) = 유지, `null` = 지움(수정 전용, Ruling 390).
+  estDurationMin?: number | null;
   active?: boolean;
 };
 

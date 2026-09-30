@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, SearchField, SegmentedControl } from "@/shared/ui";
+import { useState } from "react";
+import { usePagedList } from "@/shared/hooks";
+import { AlertBanner, Badge, Button, Card, PageHeader, Pagination, RosterTable, SearchField, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademies } from "../api";
 import type { AcademyStatus, AcademySummaryResponseTypes } from "../types";
 import { AcademyFormDialog } from "./AcademyFormDialog";
 import { StyledAcademiesFilterRow, StyledAcademiesLayout } from "./AcademiesPage.styled";
+
+const PAGE_SIZE = 20;
 
 const STATUS_FILTER_OPTIONS = [
   { value: "all", label: "전체" },
@@ -21,31 +23,24 @@ const STATUS_FILTER_OPTIONS = [
 export const AcademiesPage = () => {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [dialogTarget, setDialogTarget] = useState<{ academyId?: string } | null>(null);
 
-  const load = useCallback(async (q: string, status: string) => {
-    setLoading(true);
-    try {
-      const data = await getAcademies(q || undefined, status === "all" ? undefined : (status as AcademyStatus));
-      setAcademies(data.items);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "학원 목록을 불러오지 못했습니다");
-      setAcademies([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await load(query, statusFilter);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  // 검색은 [검색] 을 눌러야 적용된다 — 입력 중인 값(query)과 조회에 쓰는 값(appliedQuery)을 나눈다.
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const {
+    items: academies,
+    totalCount,
+    hasNext,
+    page,
+    setPage,
+    loading,
+    error,
+    reload,
+  } = usePagedList(
+    (targetPage) =>
+      getAcademies(appliedQuery || undefined, statusFilter === "all" ? undefined : (statusFilter as AcademyStatus), { page: targetPage, size: PAGE_SIZE }),
+    { resetKey: `${appliedQuery}|${statusFilter}`, errorMessage: "학원 목록을 불러오지 못했습니다" },
+  );
 
   const columns: RosterColumn<AcademySummaryResponseTypes>[] = [
     { key: "code", label: "코드" },
@@ -77,7 +72,7 @@ export const AcademiesPage = () => {
     <StyledAcademiesLayout>
       <PageHeader
         title="학원 관리"
-        description={`총 ${academies.length}개 학원`}
+        description={`총 ${totalCount}개 학원`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setDialogTarget({})}>
             학원 등록
@@ -94,7 +89,7 @@ export const AcademiesPage = () => {
           onChange={(event) => setQuery(event.target.value)}
           onSubmit={(value) => {
             setQuery(value);
-            load(value, statusFilter);
+            setAppliedQuery(value);
           }}
         />
         <SegmentedControl options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
@@ -104,13 +99,15 @@ export const AcademiesPage = () => {
         <RosterTable columns={columns} loading={loading} rows={academies} getRowKey={(row) => row.id} />
       </Card>
 
+      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+
       {dialogTarget ? (
         <AcademyFormDialog
           academyId={dialogTarget.academyId}
           onClose={() => setDialogTarget(null)}
           onDone={() => {
             setDialogTarget(null);
-            load(query, statusFilter);
+            reload();
           }}
         />
       ) : null}

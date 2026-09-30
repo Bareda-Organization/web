@@ -65,3 +65,65 @@ describe("ManagerForm — 등록 실패 갈래", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 });
+
+// F02-12 — 하루 두 구간을 가진 매니저를 수정할 때 첫 구간만 남기고 나머지를 지우면 배치 충돌 경고의 근거가 조용히 줄어든다.
+describe("ManagerForm — F02-12 근무 시간 편집", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const twoRanges: ManagerItemResponseTypes = {
+    ...existingManager,
+    workHours: {
+      mon: [
+        { start: "06:00", end: "09:00" },
+        { start: "14:00", end: "18:00" },
+      ],
+    },
+  };
+
+  it("첫 구간의 시간을 고쳐도 같은 요일의 둘째 구간은 그대로 저장된다", async () => {
+    mockUpdate.mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<ManagerForm manager={twoRanges} onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(screen.getByDisplayValue("06:00"), { target: { value: "07:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1].workHours?.mon).toEqual([
+      { start: "07:00", end: "09:00" },
+      { start: "14:00", end: "18:00" },
+    ]);
+  });
+
+  it("시작이 끝보다 늦으면 이유를 보이고 저장을 막는다", () => {
+    render(<ManagerForm manager={twoRanges} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByDisplayValue("06:00"), { target: { value: "10:00" } });
+
+    expect(screen.getByText("근무 시작이 끝보다 빨라야 합니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+  });
+});
+
+// N-07 — 수정 폼에서 이름·전화번호를 지운 채 저장하면 서버가 422 로 거부한다. 요청이 나가기 전에 저장 버튼이 막혀야 한다.
+describe("ManagerForm — 수정 폼의 빈 값", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("이름이나 전화번호를 공백으로 지우면 저장 버튼이 잠기고 요청이 나가지 않는다", () => {
+    render(<ManagerForm manager={existingManager} onClose={vi.fn()} onDone={vi.fn()} />);
+    const [nameInput, phoneInput] = screen.getAllByRole("textbox");
+    const save = screen.getByRole("button", { name: "저장" });
+    expect(save).toBeEnabled();
+
+    fireEvent.change(nameInput, { target: { value: "   " } });
+    expect(save).toBeDisabled();
+    fireEvent.change(nameInput, { target: { value: "김기사" } });
+    fireEvent.change(phoneInput, { target: { value: "" } });
+    expect(save).toBeDisabled();
+
+    fireEvent.click(save);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { formatDateTime } from "./dateTime";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime, todayInSeoul } from "./dateTime";
 
 // R32-W9 — 목록 11곳 이상이 서버가 준 ISO 원문(`2026-09-12T08:00:00Z`)을 그대로 보여 줬다.
 describe("formatDateTime", () => {
@@ -28,5 +28,21 @@ describe("formatDateTime", () => {
     expect(formatDateTime(undefined)).toBe("-");
     expect(formatDateTime("")).toBe("-");
     expect(formatDateTime("아무 문자열")).toBe("-");
+  });
+});
+
+// F04-06·F03-07 — 서비스 기준 "오늘" 은 서울 날짜다. `toISOString().slice(0, 10)` 은 UTC 날짜라
+// 한국 시간 00:00~09:00 에 어제를 낸다.
+describe("todayInSeoul", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("한국 시간 자정~09시(UTC 로는 전날)에도 서울의 오늘 날짜를 낸다", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T16:00:00Z")); // 서울 2026-10-01 01:00
+    expect(todayInSeoul()).toBe("2026-10-01");
+    vi.setSystemTime(new Date("2026-09-30T14:59:00Z")); // 서울 2026-09-30 23:59
+    expect(todayInSeoul()).toBe("2026-09-30");
   });
 });

@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useState } from "react";
+import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Badge, Card, Input, PageHeader, Pagination, RosterTable, Select } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getNotifications } from "../api";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
 import { StyledNotificationFilters, StyledNotificationLayout } from "./NotificationList.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatRole } from "@/shared/lib/format/roleLabel";
 
 const PAGE_SIZE = 20;
 
-// §9.7 21종 라벨 — types/index.ts 의 유니언과 항목 수가 반드시 같아야 한다.
+// §9.7 20종 라벨 — types/index.ts 의 유니언과 항목 수가 반드시 같아야 한다.
 const TYPE_LABEL: Record<NotificationType, string> = {
   boarding: "승차",
   alighting: "하차",
@@ -29,7 +30,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   intent_changed: "의사 변경",
   route_changed: "노선 변경",
   assignment_changed: "배치 변경",
-  no_show_escalated: "미승차 escalation",
+  no_show_escalated: "미승차 무응답(3분 경과)",
   exception_reported: "예외 상황 신고",
   emergency: "비상 알림",
   emergency_canceled: "비상 알림 해제",
@@ -45,49 +46,21 @@ const ACKED_OPTIONS = [
 // §5.17 GET /staff/notifications(NTF-10·11, A-13) — 알림 로그, 조회 전용.
 // 푸시가 off 로 막힌 건도 레코드로 남으므로 이 화면은 "발송 시도 전수" 를 보여준다.
 export const NotificationList = () => {
-  const [page, setPage] = useState(0);
   const [type, setType] = useState("");
   const [date, setDate] = useState("");
   const [acked, setAcked] = useState("");
-  const [items, setItems] = useState<NotificationListItemResponseTypes[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [unackedCount, setUnackedCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async (nextPage: number, filters: { type: string; date: string; acked: string }) => {
-    setLoading(true);
-    try {
-      const data = await getNotifications(nextPage, PAGE_SIZE, {
-        type: filters.type ? (filters.type as NotificationType) : undefined,
-        date: filters.date || undefined,
-        acked: filters.acked ? filters.acked === "true" : undefined,
-      });
-      setItems(data.items);
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setUnackedCount(data.unackedCount);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "알림 로그를 불러오지 못했습니다");
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await load(page, { type, date, acked });
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  const handleFilterChange = (next: { type: string; date: string; acked: string }) => {
-    setPage(0);
-    load(0, next);
-  };
+  // 필터가 바뀌면 0쪽부터 다시 읽는다 — 쪽 번호와 필터를 한 곳(usePagedList)에서 다뤄 요청이 한 번만 나가고,
+  // 늦게 온 옛 응답은 무시하며, 조회가 실패해도 보이던 목록은 그대로 둔다.
+  const { items, data, totalCount, hasNext, page, setPage, loading, error } = usePagedList(
+    (targetPage) =>
+      getNotifications(targetPage, PAGE_SIZE, {
+        type: type ? (type as NotificationType) : undefined,
+        date: date || undefined,
+        acked: acked ? acked === "true" : undefined,
+      }),
+    { resetKey: `${type}|${date}|${acked}`, errorMessage: "알림 로그를 불러오지 못했습니다" },
+  );
+  const unackedCount = data?.unackedCount ?? 0;
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
     { key: "sentAt", label: "발송 시각", render: (row) => formatDateTime(row.sentAt) },
@@ -95,7 +68,7 @@ export const NotificationList = () => {
     {
       key: "recipient",
       label: "수신자",
-      render: (row) => `${row.recipientName} (${row.recipientRole})`,
+      render: (row) => `${row.recipientName} (${formatRole(row.recipientRole)})`,
     },
     { key: "type", label: "종류", render: (row) => TYPE_LABEL[row.type] },
     { key: "body", label: "내용" },
@@ -115,28 +88,19 @@ export const NotificationList = () => {
           label="종류"
           value={type}
           options={TYPE_OPTIONS}
-          onChange={(event) => {
-            setType(event.target.value);
-            handleFilterChange({ type: event.target.value, date, acked });
-          }}
+          onChange={(event) => setType(event.target.value)}
         />
         <Input
           label="날짜"
           type="date"
           value={date}
-          onChange={(event) => {
-            setDate(event.target.value);
-            handleFilterChange({ type, date: event.target.value, acked });
-          }}
+          onChange={(event) => setDate(event.target.value)}
         />
         <Select
           label="확인 여부"
           value={acked}
           options={ACKED_OPTIONS}
-          onChange={(event) => {
-            setAcked(event.target.value);
-            handleFilterChange({ type, date, acked: event.target.value });
-          }}
+          onChange={(event) => setAcked(event.target.value)}
         />
       </StyledNotificationFilters>
 

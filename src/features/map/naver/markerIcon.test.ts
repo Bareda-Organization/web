@@ -214,3 +214,32 @@ describe("markerIcon — 사용자 입력 이스케이프(F01-02)", () => {
     expect(html).toContain('data-marker-id="7&quot; onmouseover=&quot;x"');
   });
 });
+
+// W2-01(F03-05·F03-11) — 관제 지도에서 비상 회차의 버스를 강조한다. 색은 C-09 회차 상태 4색을
+// 새로 만들 수 없어 기존 버스 색은 그대로 두고 **테두리만** 붉게 바꾼다.
+describe("markerIcon — 비상 강조(W2-01)", () => {
+  const EMERGENCY_BORDER = "border:3px solid #dc2626";
+
+  it("emergency:true 인 버스 칩은 붉은 테두리가 붙고, 버스 색(배경)은 그대로다", () => {
+    const html = buildMarkerIconHtml("bus", { busNo: "3호차", emergency: true });
+    expect(html).toContain(EMERGENCY_BORDER);
+    expect(html).toContain(`background:${busColorOf("3호차")}`);
+  });
+
+  it("emergency 가 없거나 false 면 붉은 테두리가 없다", () => {
+    expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).not.toContain("#dc2626");
+    expect(buildMarkerIconHtml("bus", { busNo: "3호차", emergency: false })).not.toContain("#dc2626");
+  });
+
+  it("고른 버스가 비상이어도 선택 띠와 붉은 테두리가 함께 남는다", () => {
+    const html = buildMarkerIconHtml("bus", { busNo: "3호차", emergency: true, selected: true });
+    expect(html).toContain(EMERGENCY_BORDER);
+    expect(html).toContain(`0 0 0 6px ${busColorOf("3호차")}`);
+  });
+
+  it("비상 여부가 바뀌면 아이콘 문자열이 달라져 지도가 아이콘을 다시 그린다", () => {
+    expect(buildMarkerIconHtml("bus", { busNo: "3호차", emergency: true })).not.toBe(
+      buildMarkerIconHtml("bus", { busNo: "3호차" }),
+    );
+  });
+});

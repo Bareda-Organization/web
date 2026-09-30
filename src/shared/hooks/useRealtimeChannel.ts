@@ -38,6 +38,8 @@ const releaseClient = (): void => {
 
 export type UseRealtimeChannelResult = {
   connectionState: WsConnectionState;
+  // 재연결을 포기(`gaveUp`)한 연결을 사용자가 다시 여는 창구 — 화면의 "다시 연결" 버튼용.
+  reconnect: () => void;
 };
 
 // `destination` 을 구독하고 봉투가 올 때마다 `onEnvelope` 를 부른다.
@@ -85,7 +87,17 @@ export const useRealtimeChannel = (
     const unsubscribeState = client.onConnectionStateChange(() => {
       setConnectionState(client.getSnapshot());
     });
+    // 재연결을 포기한 뒤(서버·사무실 망이 약 1분 넘게 끊김)에는 스스로 살아나는
+    // 경로가 없다 — 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때 한 번 더 연다.
+    const reopenIfGaveUp = () => {
+      if (document.visibilityState === "hidden") return;
+      if (client.getSnapshot() === "gaveUp") client.connect();
+    };
+    window.addEventListener("online", reopenIfGaveUp);
+    document.addEventListener("visibilitychange", reopenIfGaveUp);
     return () => {
+      window.removeEventListener("online", reopenIfGaveUp);
+      document.removeEventListener("visibilitychange", reopenIfGaveUp);
       unsubscribeState();
       clientRef.current = null;
       releaseClient();
@@ -100,5 +112,7 @@ export const useRealtimeChannel = (
     return unsubscribe;
   }, [connectionState, destination]);
 
-  return { connectionState };
+  const reconnect = () => clientRef.current?.connect();
+
+  return { connectionState, reconnect };
 };

@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignupStatusPanel } from "./SignupStatusPanel";
-import { getSignupStatus } from "../api";
+import { getSignupStatus, reapplySignup, searchAcademies } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { SignupStatusResponseTypes } from "../types";
 
@@ -94,5 +94,113 @@ describe("SignupStatusPanel — 불러오기 실패(R32-W14)", () => {
 
     expect(await screen.findByText("승인 대기 중입니다")).toBeInTheDocument();
     expect(mockGetSignupStatus).toHaveBeenCalledTimes(2);
+  });
+});
+
+const setupSession = (overrides: Partial<ReturnType<typeof useAuthSession>> = {}) => {
+  const value = {
+    bootstrapStatus: "ready" as const,
+    session: null,
+    login: vi.fn(),
+    logout: vi.fn().mockResolvedValue(undefined),
+    refreshSession: vi.fn().mockResolvedValue(null),
+    ...overrides,
+  };
+  mockUseAuthSession.mockReturnValue(value);
+  return value;
+};
+
+// F03-02 — UF-X-02: 대기·거절 화면에서 [상태 다시 확인] 으로 승인 여부를 다시 묻는다.
+describe("SignupStatusPanel — 상태 다시 확인", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("[상태 다시 확인] 은 세션(/me)과 가입 상태를 다시 조회한다 — 승인되면 세션 갱신으로 가드가 홈으로 옮긴다", async () => {
+    mockGetSignupStatus.mockResolvedValue(baseStatus);
+    const session = setupSession();
+    render(<SignupStatusPanel />);
+    await screen.findByText("승인 대기 중입니다");
+
+    fireEvent.click(screen.getByRole("button", { name: "상태 다시 확인" }));
+
+    await waitFor(() => expect(session.refreshSession).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockGetSignupStatus).toHaveBeenCalledTimes(2));
+  });
+
+  it("다시 확인이 실패하면 오류를 알리고, 이미 승인(active)이면 '승인 대기 중' 을 그리지 않는다", async () => {
+    mockGetSignupStatus.mockResolvedValueOnce(baseStatus).mockResolvedValueOnce({ ...baseStatus, status: "active" });
+    setupSession();
+    render(<SignupStatusPanel />);
+    await screen.findByText("승인 대기 중입니다");
+
+    fireEvent.click(screen.getByRole("button", { name: "상태 다시 확인" }));
+
+    expect(await screen.findByText("승인되었습니다")).toBeInTheDocument();
+    expect(screen.queryByText("승인 대기 중입니다")).not.toBeInTheDocument();
+  });
+});
+
+// F03-03·F03-14 — 재신청: 검색 오류 처리 · 확인 한 단계 · 키보드 선택 · 로그아웃 오류
+describe("SignupStatusPanel — 재신청", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const openReapply = async (session = setupSession()) => {
+    mockGetSignupStatus.mockResolvedValue({ ...baseStatus, status: "rejected", rejectReason: "사유" });
+    render(<SignupStatusPanel />);
+    fireEvent.click(await screen.findByRole("button", { name: "다른 학원으로 재신청" }));
+    return session;
+  };
+  const search = async () => {
+    fireEvent.change(screen.getByPlaceholderText("학원명 또는 학원 코드로 검색"), { target: { value: "학" } });
+    fireEvent.click(screen.getByRole("button", { name: "검색" }));
+  };
+
+  it("학원 검색이 실패하면 오류 문구를 보여준다", async () => {
+    await openReapply();
+    vi.mocked(searchAcademies).mockRejectedValue(new Error("network"));
+    await search();
+
+    expect(await screen.findByText("학원 검색에 실패했습니다. 잠시 후 다시 시도해 주세요.")).toBeInTheDocument();
+  });
+
+  it("결과 행을 눌러도 바로 재신청하지 않고 확인을 한 번 거친다 — 취소하면 요청이 나가지 않는다", async () => {
+    await openReapply();
+    vi.mocked(searchAcademies).mockResolvedValue([{ id: "9", name: "새학원", region: "서울", code: "N9" }]);
+    await search();
+
+    fireEvent.click(await screen.findByRole("button", { name: /새학원/ }));
+    expect(vi.mocked(reapplySignup)).not.toHaveBeenCalled();
+    expect(screen.getByText("이 학원으로 재신청할까요?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    expect(vi.mocked(reapplySignup)).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /새학원/ }));
+    fireEvent.click(screen.getByRole("button", { name: "재신청" }));
+    await waitFor(() => expect(vi.mocked(reapplySignup)).toHaveBeenCalledWith("9"));
+  });
+
+  it("재신청은 들어갔는데 뒤이은 상태 재조회만 실패하면 '재신청 실패' 라고 하지 않는다", async () => {
+    const session = await openReapply(setupSession({ refreshSession: vi.fn().mockRejectedValue(new Error("일시 오류")) }));
+    vi.mocked(searchAcademies).mockResolvedValue([{ id: "9", name: "새학원", region: "서울", code: "N9" }]);
+    vi.mocked(reapplySignup).mockResolvedValue({ status: "pending", requestedAt: "t" });
+    await search();
+    fireEvent.click(await screen.findByRole("button", { name: /새학원/ }));
+    fireEvent.click(screen.getByRole("button", { name: "재신청" }));
+
+    await waitFor(() => expect(session.refreshSession).toHaveBeenCalled());
+    expect(screen.queryByText(/재신청에 실패했습니다/)).not.toBeInTheDocument();
+  });
+
+  it("로그아웃이 던져도 처리되지 않은 거절로 남지 않는다", async () => {
+    setupSession({ logout: vi.fn().mockRejectedValue(new Error("network")) });
+    mockGetSignupStatus.mockResolvedValue(baseStatus);
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    render(<SignupStatusPanel />);
+    fireEvent.click(await screen.findByRole("button", { name: "로그아웃" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    process.off("unhandledRejection", unhandled);
+
+    expect(unhandled).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,7 @@ import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
+import { toDecideFailure } from "../lib/decideErrorMessage";
 import { formatRemaining, useNowEverySecond } from "../lib/remainingTime";
 import type {
   ChangeApprovalDetailResponseTypes,
@@ -186,12 +187,10 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       await decideChangeApproval(approvalId, { approve: true, previewToken: detail.previewToken });
       router.push("/change-approval");
     } catch (cause) {
-      // 409 PREVIEW_STALE 은 조회 시점 재최적화가 낡았다는 뜻이라, 새 미리보기를 다시
-      // 받아 오는 것이 유일한 복구 경로다(§5.6 주석).
-      setDecideError(cause instanceof ApiError ? cause.message : "승인 처리에 실패했습니다");
-      if (cause instanceof ApiError && cause.code === "PREVIEW_STALE") {
-        loadDetail();
-      }
+      // 예전 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
+      const failure = toDecideFailure(cause, "승인 처리에 실패했습니다");
+      setDecideError(failure.message);
+      if (failure.shouldReload) loadDetail();
     } finally {
       setSubmitting(false);
     }
@@ -205,7 +204,9 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       await decideChangeApproval(approvalId, { approve: false, rejectReason: rejectReason.trim() });
       router.push("/change-approval");
     } catch (cause) {
-      setDecideError(cause instanceof ApiError ? cause.message : "거절 처리에 실패했습니다");
+      const failure = toDecideFailure(cause, "거절 처리에 실패했습니다");
+      setDecideError(failure.message);
+      if (failure.shouldReload) loadDetail();
     } finally {
       setSubmitting(false);
     }
@@ -247,6 +248,10 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   // 서버는 처리 기한에 대기 건을 자동 거절한다(Ruling 306, API_SPEC §9.6) — 기한이 지난 대기 건은
   // 눌러도 소용이 없어 조작을 끈다. `now` 가 1초마다 갱신돼 화면을 열어 둔 채 넘겨도 바뀐다.
   const isExpired = !isAlreadyDecided && remaining === null;
+  // 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 가입 승인·거절처럼 확인 단계를 한 번 둔다(F02-14).
+  const removedStopCount = detail.routePreview?.removed.length ?? 0;
+  const approveConfirmText =
+    removedStopCount > 0 ? `이 변경을 승인합니다 (삭제 예정 승하차지 ${removedStopCount}곳)` : "이 변경을 승인합니다";
 
   return (
     <StyledDetailLayout>
@@ -411,13 +416,25 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
                 </Button>
               </StyledActionRow>
             </>
+          ) : mode === "approve" ? (
+            <>
+              <p>{approveConfirmText}</p>
+              <StyledActionRow>
+                <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
+                  뒤로
+                </Button>
+                <Button variant="primary" onClick={handleApprove} disabled={submitting || isExpired}>
+                  {submitting ? "처리 중..." : "승인 확정"}
+                </Button>
+              </StyledActionRow>
+            </>
           ) : (
             <StyledActionRow>
               <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting || isExpired}>
                 거절
               </Button>
-              <Button variant="primary" onClick={handleApprove} disabled={submitting || isExpired}>
-                {submitting ? "처리 중..." : "승인"}
+              <Button variant="primary" onClick={() => setMode("approve")} disabled={submitting || isExpired}>
+                승인
               </Button>
             </StyledActionRow>
           )}

@@ -50,6 +50,20 @@ describe("ReportList — 조회 갈래", () => {
     expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();
   });
 
+  // Z-04(Ruling 379 ①) — 서버는 최근 200건까지만 준다. 200건이 오면 "전체" 로 읽히지 않게 상한을 알린다.
+  it("200건이 오면 최근 200건까지만 표시한다고 알리고, 그보다 적으면 알리지 않는다", async () => {
+    const row = { reportId: "1", type: "etc" as const, memo: "m", runId: "1", busNo: "1호차", studentName: null, reportedBy: "이기사", reportedAt: "2026-09-30T08:00:00", handled: false, handledAt: null };
+    mockGet.mockResolvedValue({ items: Array.from({ length: 200 }, (_, i) => ({ ...row, reportId: String(i) })) });
+    const { unmount } = render(<ReportList />);
+    expect(await screen.findByText(/최근 200건까지만 표시합니다/)).toBeInTheDocument();
+    unmount();
+
+    mockGet.mockResolvedValue({ items: [row] });
+    render(<ReportList />);
+    await screen.findByText("총 1건");
+    expect(screen.queryByText(/최근 200건까지만/)).not.toBeInTheDocument();
+  });
+
   it("조회가 실패하면 화면이 조용히 넘어가지 않고 오류 문구를 보여준다", async () => {
     mockGet.mockRejectedValue(new Error("네트워크 요청이 실패했습니다"));
 

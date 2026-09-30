@@ -32,8 +32,9 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // 로딩 표시는 첫 조회 때만 켠다 — 편성 정보를 저장한 뒤 다시 불러올 때 켜면 화면 전체가 "불러오는 중" 으로
+  // 바뀌어 아직 저장하지 않은 승하차지 편집(RouteStopsPanel)이 언마운트로 사라진다.
   const load = async () => {
-    setLoading(true);
     try {
       const detail = await getRouteDetail(routeId);
       setRoute(detail);

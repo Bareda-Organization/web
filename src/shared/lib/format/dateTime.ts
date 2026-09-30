@@ -30,3 +30,9 @@ export const formatDateTime = (raw: string | null | undefined): string => {
   const parts = Object.fromEntries(SEOUL_PARTS.formatToParts(parsed).map((part) => [part.type, part.value]));
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 };
+
+const SEOUL_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" });
+
+// 서비스 기준 날짜(ERD §2)로 본 오늘 — `YYYY-MM-DD`. `new Date().toISOString().slice(0, 10)` 은 UTC 날짜라
+// 한국 시간 00:00~09:00 에 어제를 낸다(등원 회차가 몰린 시간대). 날짜 입력칸의 기본값은 전부 이 함수를 거친다.
+export const todayInSeoul = (): string => SEOUL_DATE.format(new Date());

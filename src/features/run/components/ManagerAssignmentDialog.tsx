@@ -82,7 +82,11 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
         handleDone();
       }
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "배치 변경에 실패했습니다");
+      if (cause instanceof ApiError && cause.code === "RUN_CANCELED") {
+        setError("임시 취소된 회차라 배치를 바꿀 수 없습니다");
+      } else {
+        setError(cause instanceof ApiError ? cause.message : "배치 변경에 실패했습니다");
+      }
     } finally {
       setSubmitting(false);
     }

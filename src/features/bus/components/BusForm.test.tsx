@@ -55,7 +55,7 @@ describe("BusForm — 등록 실패 갈래", () => {
     mockUpdate.mockResolvedValue({
       ...existingBus,
       capacity: 10,
-      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", assignedCount: 12, studentCapacity: 8 }],
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", serviceDate: "2026-09-30", departTime: "2026-09-30T08:00:00+09:00", direction: "to_academy", assignedCount: 12, studentCapacity: 8 }],
     });
     const onDone = vi.fn();
 
@@ -74,5 +74,36 @@ describe("BusForm — 등록 실패 갈래", () => {
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  });
+
+  // F02-16 — 경고가 뜬 시점에 수정은 이미 저장됐다. 확인 버튼이 아니라 Esc(대화상자의 onClose)로 닫아도 목록이 갱신돼야 한다.
+  it("경고 화면에서 [확인] 대신 Esc 로 닫아도 onDone(목록 갱신)을 부른다", async () => {
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", serviceDate: "2026-09-30", departTime: "2026-09-30T08:00:00+09:00", direction: "to_academy", assignedCount: 12, studentCapacity: 8 }],
+    });
+    const onDone = vi.fn();
+    const onClose = vi.fn();
+
+    render(<BusForm bus={existingBus} onClose={onClose} onDone={onDone} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await screen.findByText(/정원.*8명.*12명/);
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("경고 문구는 내부 번호만 던지지 않고 무엇이 넘쳤는지 말한다", async () => {
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", serviceDate: "2026-09-30", departTime: "2026-09-30T08:00:00+09:00", direction: "to_academy", assignedCount: 12, studentCapacity: 8 }],
+    });
+
+    render(<BusForm bus={existingBus} onClose={vi.fn()} onDone={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText("정원 8명을 넘는 회차가 있습니다 — 배정 인원 12명 (2026-09-30 08:00 등원 회차, 회차 번호 3)")).toBeInTheDocument();
   });
 });

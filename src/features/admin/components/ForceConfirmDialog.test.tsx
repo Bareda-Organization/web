@@ -58,6 +58,8 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     await waitFor(() => expect(screen.getByText("강제 확정 완료")).toBeInTheDocument());
 
     expect(mockForceConfirmRun).toHaveBeenCalledWith("42", "노선 계산 3회 연속 실패");
+    // F03-07 — 확정 시각도 ISO 원문이 아니라 한국 시간(UTC 08:00 = 서울 17:00)
+    expect(screen.getByText("확정 시각: 2026-09-12 17:00")).toBeInTheDocument();
     // 결과 화면에는 폼 요소(사유 입력창·실행 버튼)가 존재하지 않고 "닫기"만 있다.
     expect(screen.queryByLabelText("강제 확정 사유")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "강제 확정 실행" })).not.toBeInTheDocument();
@@ -94,5 +96,17 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     expect(
       screen.queryByText("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요."),
     ).not.toBeInTheDocument();
+  });
+
+  // N-01 — §6.14 임시 취소된 회차는 409 RUN_CANCELED(Ruling 375).
+  it("RUN_CANCELED 오류는 취소된 회차라는 문구로 보여준다", async () => {
+    mockForceConfirmRun.mockRejectedValue(new ApiError(409, "RUN_CANCELED", "서버 원문"));
+    render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+
+    await waitFor(() => expect(screen.getByText("임시 취소된 회차라 강제 확정할 수 없습니다.")).toBeInTheDocument());
+    expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
   });
 });

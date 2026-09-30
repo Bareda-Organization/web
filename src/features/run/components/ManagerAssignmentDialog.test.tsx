@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
+import { ApiError } from "@/shared/lib/http";
 import { getManagers, patchRunAssignment } from "../api";
 import type { ManagerSummaryResponseTypes } from "../types";
 
@@ -31,6 +32,19 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
 
     expect(await screen.findByText("김기사")).toBeInTheDocument();
     expect(screen.getByText("박매니저")).toBeInTheDocument();
+  });
+
+  // N-01 — §5.14 임시 취소된 회차의 배치 변경은 409 RUN_CANCELED(Ruling 376).
+  it("RUN_CANCELED 는 서버 원문이 아니라 취소된 회차라는 한국어 문구로 알린다", async () => {
+    mockGetManagers.mockResolvedValue(managers);
+    mockPatchRunAssignment.mockRejectedValue(new ApiError(409, "RUN_CANCELED", "서버 원문"));
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText("임시 취소된 회차라 배치를 바꿀 수 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
   });
 
   it("경고 없이 저장되면 onDone 을 곧바로 호출한다", async () => {

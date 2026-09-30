@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
-import { getAcademies, getAcademyRunsLive } from "../api";
+import { getAcademyRunsLive, getAllAcademies } from "../api";
 import { getRunRoute } from "@/features/route";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
@@ -32,7 +32,7 @@ vi.mock("@/features/map", async (importOriginal) => {
 // 가드, 두 갈래 모두). 아래 두 검사가 그 가드를 고정한다 — 가드를 지우면 이 검사들만
 // 실패해야 한다.
 vi.mock("../api", () => ({
-  getAcademies: vi.fn(),
+  getAllAcademies: vi.fn(),
   getAcademyRunsLive: vi.fn(),
 }));
 
@@ -41,7 +41,7 @@ vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
 }));
 
-const mockGetAcademies = vi.mocked(getAcademies);
+const mockGetAcademies = vi.mocked(getAllAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
 
@@ -50,9 +50,10 @@ const mockGetRunRoute = vi.mocked(getRunRoute);
 // 훅 내부는 `useRealtimeChannel.test.ts` 가 따로 검증한다).
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
+const mockReconnect = vi.fn();
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
   capturedOnEnvelope = onEnvelope;
-  return { connectionState: mockConnectionState };
+  return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
 vi.mock("@/shared/hooks", () => ({
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
@@ -123,13 +124,7 @@ describe("MonitoringPage — 실시간 회차 조회 실패", () => {
   });
 
   it("회차 조회가 실패하면 EmptyState 는 뜨지 않는다 — '정말 0건' 과 '조회 실패' 를 구별한다", async () => {
-    mockGetAcademies.mockResolvedValue({
-      items: [{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }],
-      page: 1,
-      size: 20,
-      totalCount: 1,
-      hasNext: false,
-    });
+    mockGetAcademies.mockResolvedValue([{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }]);
     mockGetRunsLive.mockRejectedValue(new ApiError(500, "UNKNOWN", "실시간 회차 조회 중 오류가 발생했습니다"));
     render(<MonitoringPage />);
 
@@ -145,7 +140,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
   beforeEach(() => {
     mockConnectionState = "connected";
     capturedOnEnvelope = undefined;
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
   });
 
@@ -162,7 +157,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
       capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:01Z" }));
     });
 
-    await screen.findByText("수신 2026-09-13T00:00:01Z");
+    await screen.findByText("수신 2026-09-13 09:00");
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore);
   });
 
@@ -199,7 +194,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
       );
     });
 
-    expect(await screen.findByText("비상 상황 발생 — 2호차 (accident)")).toBeInTheDocument();
+    expect(await screen.findByText("비상 상황 발생 — 2호차 (사고)")).toBeInTheDocument();
   });
 
   it("W3: emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
@@ -219,7 +214,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
         }),
       );
     });
-    await screen.findByText("비상 상황 발생 — 2호차 (accident)");
+    await screen.findByText("비상 상황 발생 — 2호차 (사고)");
 
     act(() => {
       capturedOnEnvelope?.(
@@ -232,7 +227,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     });
 
     expect(await screen.findByText("비상 알림 취소 — 2호차")).toBeInTheDocument();
-    expect(screen.queryByText("비상 상황 발생 — 2호차 (accident)")).not.toBeInTheDocument();
+    expect(screen.queryByText("비상 상황 발생 — 2호차 (사고)")).not.toBeInTheDocument();
   });
 });
 
@@ -241,7 +236,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
 describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [] });
   });
 
@@ -255,6 +250,14 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
 
     expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(await screen.findByText("지금 운행 중인 회차가 없습니다")).toBeInTheDocument();
+  });
+
+  it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다 — 권한 거부(forbidden)에는 버튼이 없다", async () => {
+    mockConnectionState = "gaveUp";
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 연결" }));
+    expect(mockReconnect).toHaveBeenCalledTimes(1);
   });
 
   it("forbidden 이면 '실시간 조회 권한 없음' 배너가 뜬다", async () => {
@@ -287,7 +290,7 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   // 두 조건이 서로 무관함을 고정한다.
   it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, EmptyState 는 뜨지 않는다", async () => {
     mockConnectionState = "gaveUp";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<MonitoringPage />);
 
@@ -307,7 +310,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
@@ -340,6 +343,21 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     });
 
     await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledWith("run-a1"));
+  });
+
+  // F03-07 — "위치" 열이 수신 시각·마지막 확인 시각을 ISO 원문(`…Z`)으로 그렸다.
+  it("위치 열은 수신·마지막 확인 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: "1", position: { lat: 37.1, lng: 127.1, receivedAt: "2026-09-30T05:10:22Z" } },
+        { ...baseLiveRun, runId: "2", busNo: "2호차", position: null, lastSeenAt: "2026-09-30T05:11:00Z" },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    expect(await screen.findByText("수신 2026-09-30 14:10")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30 14:11")).toBeInTheDocument();
+    expect(screen.queryByText(/2026-09-30T/)).not.toBeInTheDocument();
   });
 
   it("버스 목록 항목을 클릭하면 그 회차의 §5.19 노선을 조회하고, 근사 경로면 안내한다", async () => {
@@ -468,14 +486,14 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
   // Ruling 321 — idle 회차인데 백엔드가 confirmed:false·좌표 0개(고정 노선 자체가
   // 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
-  it("고정 노선이 없는 idle 회차를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
+  it("고정 노선이 없는 idle 회차를 고르면 이 회차의 고정 노선이 없습니다 안내를 보여준다", async () => {
     mockGetRunsLive.mockResolvedValue({ runs: [{ ...baseLiveRun, runStatus: "idle" }] });
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<MonitoringPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText("이 회차의 고정 노선이 없습니다 — 고정 노선 편성에서 등록하세요")).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
   });
 
@@ -510,7 +528,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
@@ -565,7 +583,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
@@ -603,5 +621,217 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     const item = await screen.findByRole("button", { name: /9호차/ });
     expect(item).toHaveTextContent("종료");
     expect(screen.queryByText("표시할 버스가 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+const raised = (id: number, busNo: string, type = "accident") =>
+  envelope("emergency_raised", {
+    emergency_id: id, type, bus_no: busNo,
+    raised_by: { name: "김기사", role: "driver", phone: "010" },
+    position: { lat: 37.5, lng: 127.0 }, rider_count: 3, raised_at: "2026-09-13T00:00:00Z",
+  });
+const canceled = (id: number, busNo: string) =>
+  envelope("emergency_canceled", { emergency_id: id, bus_no: busNo, canceled_at: "2026-09-13T00:01:00Z" });
+
+// F03-05 — 비상 배너가 한 줄짜리 상태라 나중 이벤트가 앞 이벤트를 덮었다.
+describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("두 버스의 비상이 함께 보이고, 다른 버스의 취소가 진행 중인 비상을 가리지 않는다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    act(() => {
+      capturedOnEnvelope?.(raised(1, "3호차"));
+      capturedOnEnvelope?.(raised(2, "5호차", "vehicle_fault"));
+    });
+    expect(await screen.findByText("비상 상황 발생 — 3호차 (사고)")).toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (차량 고장)")).toBeInTheDocument();
+
+    act(() => {
+      capturedOnEnvelope?.(canceled(1, "3호차"));
+    });
+
+    expect(screen.getByText("비상 알림 취소 — 3호차")).toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (차량 고장)")).toBeInTheDocument();
+  });
+
+  it("[닫기] 로 그 알림만 지운다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    act(() => {
+      capturedOnEnvelope?.(raised(1, "3호차"));
+      capturedOnEnvelope?.(raised(2, "5호차"));
+    });
+    const banner = (await screen.findByText("비상 상황 발생 — 3호차 (사고)")).closest('[role="alert"], [role="status"]') as HTMLElement;
+
+    fireEvent.click(within(banner).getByRole("button", { name: "닫기" }));
+
+    expect(screen.queryByText("비상 상황 발생 — 3호차 (사고)")).not.toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (사고)")).toBeInTheDocument();
+  });
+});
+
+// W2-01(F03-05·F03-11) — 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
+// 로 잇는다(payload 의 `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원의
+// 같은 이름 버스를 붉게 만든다).
+describe("MonitoringPage — 지도 마커 비상 강조(W2-01)", () => {
+  const at = { lat: 37.5, lng: 127.0, receivedAt: "2026-09-13T00:00:00Z" };
+  const liveRuns = [
+    { ...baseLiveRun, runId: "11", busNo: "3호차", position: at },
+    { ...baseLiveRun, runId: "12", busNo: "5호차", position: at },
+  ];
+  const lastMarkers = () => mockMapSurface.mock.calls.at(-1)?.[0].markers ?? [];
+  const emergencyIds = () => lastMarkers().filter((marker) => marker.emergency).map((marker) => marker.id);
+
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: liveRuns });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  const raisedFor = (id: number, busNo: string, runId: string) => ({ ...raised(id, busNo), runId });
+  const canceledFor = (id: number, busNo: string, runId: string) => ({ ...canceled(id, busNo), runId });
+
+  it("비상을 발신한 회차의 버스 마커만 emergency 가 켜진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+    expect(emergencyIds()).toEqual([]);
+
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "11"));
+    });
+
+    await waitFor(() => expect(emergencyIds()).toEqual(["11"]));
+  });
+
+  it("다른 학원의 회차(이 목록에 없는 run_id)가 같은 버스 이름으로 비상을 내도 이 학원 마커는 안 켜진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "999"));
+    });
+
+    await screen.findByText("비상 상황 발생 — 3호차 (사고)");
+    expect(emergencyIds()).toEqual([]);
+  });
+
+  it("비상이 취소되거나 배너를 닫으면 마커 강조가 꺼진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "11"));
+      capturedOnEnvelope?.(raisedFor(2, "5호차", "12"));
+    });
+    await waitFor(() => expect(emergencyIds()).toEqual(["11", "12"]));
+
+    act(() => {
+      capturedOnEnvelope?.(canceledFor(1, "3호차", "11"));
+    });
+    await waitFor(() => expect(emergencyIds()).toEqual(["12"]));
+
+    const banner = screen.getByText("비상 상황 발생 — 5호차 (사고)").closest('[role="alert"], [role="status"]') as HTMLElement;
+    fireEvent.click(within(banner).getByRole("button", { name: "닫기" }));
+    await waitFor(() => expect(emergencyIds()).toEqual([]));
+  });
+});
+
+// F03-10 — 전 학원 방송의 이벤트마다 선택 학원 회차를 재조회했다.
+describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("지금 보는 학원 목록에 없는 회차의 이벤트는 재조회하지 않고, 있는 회차의 잇단 이벤트는 한 번만 재조회한다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    const before = mockGetRunsLive.mock.calls.length;
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "999"));
+      capturedOnEnvelope?.(envelope("stop_arrived", {}, "999"));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(mockGetRunsLive.mock.calls.length).toBe(before);
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "1"));
+      capturedOnEnvelope?.(envelope("stop_arrived", {}, "1"));
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "1"));
+    });
+    await waitFor(() => expect(mockGetRunsLive.mock.calls.length).toBe(before + 1));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
+  });
+});
+
+// F03-09 — 겹친 요청에서 늦은 응답이 새 선택을 덮었다.
+describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09)", () => {
+  const academyB = { id: "2", code: "B002", name: "둘째 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("학원을 A→B 로 바꾼 뒤에 A 의 회차 응답이 늦게 와도 B 의 회차를 유지한다", async () => {
+    mockGetAcademies.mockResolvedValue([...baseAcademies.items, academyB]);
+    let resolveA: (value: { runs: RunLiveItemResponseTypes[] }) => void = () => {};
+    mockGetRunsLive.mockImplementation((academyId: string) =>
+      academyId === "1"
+        ? new Promise((resolve) => (resolveA = resolve))
+        : Promise.resolve({ runs: [{ ...baseLiveRun, runId: "20", busNo: "B학원 버스" }] }),
+    );
+    render(<MonitoringPage />);
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("1"));
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    expect(await screen.findByText("B학원 버스")).toBeInTheDocument();
+    await act(async () => {
+      resolveA({ runs: [{ ...baseLiveRun, runId: "10", busNo: "A학원 버스" }] });
+    });
+
+    expect(screen.getByText("B학원 버스")).toBeInTheDocument();
+    expect(screen.queryByText("A학원 버스")).not.toBeInTheDocument();
+  });
+
+  it("버스 1 의 노선 응답이 버스 2 뒤에 도착해도 지도에는 버스 2 의 경로를 그린다", async () => {
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: "1", busNo: "1호차" },
+        { ...baseLiveRun, runId: "2", busNo: "2호차" },
+      ],
+    });
+    let resolveFirst: (value: never) => void = () => {};
+    mockGetRunRoute.mockImplementation((runId: string) =>
+      runId === "1"
+        ? new Promise((resolve) => (resolveFirst = resolve as never))
+        : Promise.resolve({ roadPath: [{ lat: 2, lng: 2 }, { lat: 2.1, lng: 2.1 }], fallbackUsed: false, stops: [], confirmed: true }),
+    );
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByText("2호차 · 등원"));
+    await waitFor(() => expect(mockMapSurface.mock.calls.at(-1)?.[0].polylines?.length).toBeGreaterThan(0));
+
+    await act(async () => {
+      resolveFirst({ roadPath: [{ lat: 1, lng: 1 }, { lat: 1.1, lng: 1.1 }], fallbackUsed: false, stops: [], confirmed: true } as never);
+    });
+
+    const polylines = mockMapSurface.mock.calls.at(-1)?.[0].polylines ?? [];
+    expect(polylines.every((line) => line.points[0].lat === 2)).toBe(true);
   });
 });

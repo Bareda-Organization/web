@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { SignupApprovalPage } from "./SignupApprovalPage";
@@ -42,7 +42,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
 
     expect(await screen.findByText("김보호")).toBeInTheDocument();
     expect(screen.getByText("처리 대기 1건")).toBeInTheDocument();
-    expect(mockGetSignupRequests).toHaveBeenCalledWith("pending");
+    expect(mockGetSignupRequests).toHaveBeenCalledWith("pending", 0, 20);
   });
 
   it("role=parent 승인은 학생 ID 입력 없이 link 없이 decide 를 호출한다(Ruling 324)", async () => {
@@ -205,5 +205,86 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
     fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     expect(await screen.findByText("이미 연결된 자녀가 있습니다")).toBeInTheDocument();
+  });
+});
+
+// F02-04 — 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
+describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("처리 대기 응답이 거절됨 응답보다 늦게 와도 표에는 거절됨 목록이 남는다", async () => {
+    let resolvePending!: (value: SignupRequestsResponseTypes) => void;
+    mockGetSignupRequests.mockImplementationOnce(
+      () => new Promise<SignupRequestsResponseTypes>((resolve) => (resolvePending = resolve)),
+    );
+    mockGetSignupRequests.mockResolvedValueOnce({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "2", name: "거절된사람" }],
+    });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(screen.getByText("거절됨"));
+    await screen.findByText("거절된사람");
+    await act(async () => resolvePending(baseList));
+
+    expect(screen.getByText("거절된사람")).toBeInTheDocument();
+    expect(screen.queryByText("김보호")).not.toBeInTheDocument();
+  });
+});
+
+// F02-03 — 20건을 넘는 요청은 다음 쪽으로 넘겨 볼 수 있어야 한다(§5.1 페이징).
+describe("SignupApprovalPage — F02-03 페이징", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("다음 쪽이 있으면 [다음] 으로 1쪽을 요청하고, 탭을 바꾸면 0쪽으로 돌아간다", async () => {
+    mockGetSignupRequests.mockResolvedValue({ ...baseList, totalCount: 45, hasNext: true });
+    render(<SignupApprovalPage />);
+
+    await screen.findByText("김보호");
+    fireEvent.click(screen.getByRole("button", { name: /다음/ }));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("pending", 1, 20));
+
+    fireEvent.click(screen.getByText("거절됨"));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("rejected", 0, 20));
+  });
+});
+
+// F02-06 — 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 예전 목록에 그 요청이 남지 않게 닫으면서 목록을 새로 받는다.
+describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("409 APPROVAL_ALREADY_DECIDED 면 한국어 안내를 보이고, [닫기] 가 목록을 다시 불러온다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "APPROVAL_ALREADY_DECIDED", "Already decided"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승인 확정" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("김보호 가입 요청 처리")).not.toBeInTheDocument();
+  });
+
+  it("409 SIGNUP_TARGET_BLOCKED 면 차단된 계정이라 승인할 수 없다고 알린다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "SIGNUP_TARGET_BLOCKED", "blocked"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다")).toBeInTheDocument();
   });
 });

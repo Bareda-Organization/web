@@ -29,3 +29,28 @@ describe("SearchField — 제출 값", () => {
     expect(onSubmit).toHaveBeenCalledWith("박서연");
   });
 });
+
+// F03-01 — 다른 `<form>` 안에 넣을 때는 자기 `<form>` 을 그리면 form 이 중첩된다(브라우저는 안쪽 태그를 버리고,
+// React 는 submit 이벤트를 바깥 폼의 핸들러까지 올려 보낸다). `inForm` 이면 form 없이 Enter·버튼으로만 제출한다.
+describe("SearchField — 다른 form 안에서 쓸 때(inForm)", () => {
+  it("form 요소를 그리지 않고, Enter 와 [검색] 버튼으로 값을 제출하며 이벤트가 바깥으로 새지 않는다", () => {
+    const onSubmit = vi.fn();
+    const onOuterSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    const { container } = render(
+      <form onSubmit={onOuterSubmit}>
+        <SearchField inForm onSubmit={onSubmit} placeholder="학원 검색" />
+      </form>,
+    );
+    expect(container.querySelectorAll("form form")).toHaveLength(0);
+    expect(container.querySelectorAll("form")).toHaveLength(1);
+
+    const input = screen.getByPlaceholderText("학원 검색");
+    fireEvent.change(input, { target: { value: "바래다" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "검색" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+    expect(onSubmit).toHaveBeenLastCalledWith("바래다");
+    expect(onOuterSubmit).not.toHaveBeenCalled();
+  });
+});

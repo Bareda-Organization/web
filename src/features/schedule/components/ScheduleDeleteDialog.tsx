@@ -11,9 +11,9 @@ type ScheduleDeleteDialogProps = {
   onDeleted: () => void;
 };
 
-// §5.10 DELETE /staff/schedules/{id} — "행을 지운다(soft delete 부재)". 이미 만들어진
-// 회차는 schedule_id 가 NULL 로 남아 그대로 유지된다(ERD FK SET NULL) — 삭제해도
-// 과거·확정된 운행 기록이 사라지지 않는다는 점을 확인창 문구에 명시한다.
+// §5.10 DELETE /staff/schedules/{id} — "행을 지운다(soft delete 부재)". 만들어진 회차 행은
+// 지워지지 않고(ERD FK SET NULL) 과거·확정된 운행 기록이 남는다. 다만 Ruling 366 ② 로 삭제 전에
+// 내일 이후 · idle · 미취소 회차는 취소 표시되므로 확인창이 그 결과를 알린다(오늘 회차는 그대로).
 export const ScheduleDeleteDialog = ({ scheduleId, onCancel, onDeleted }: ScheduleDeleteDialogProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export const ScheduleDeleteDialog = ({ scheduleId, onCancel, onDeleted }: Schedu
         </>
       }
     >
-      <p>이 스케줄은 다음 회차 생성부터 제외됩니다. 이미 만들어진 회차는 그대로 남습니다.</p>
+      <p>이 스케줄은 다음 회차 생성부터 제외되고, 내일 이후 시작 전 회차는 취소 표시됩니다(오늘 회차와 이미 확정·시작된 회차는 그대로).</p>
       {error ? <AlertBanner tone="missed" title={error} /> : null}
     </Dialog>
   );

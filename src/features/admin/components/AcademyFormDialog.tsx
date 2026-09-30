@@ -14,6 +14,22 @@ type AcademyFormDialogProps = {
   onDone: () => void;
 };
 
+// §6.2 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
+const MEMO_MAX_LENGTH = 200;
+
+// §6.2·§6.3 주소를 좌표로 옮기지 못하면 저장이 보류된다(Ruling 374) — 서버 원문 대신 고칠 자리를 알린다.
+const saveErrorMessage = (cause: unknown): string => {
+  if (!(cause instanceof ApiError)) return "저장에 실패했습니다";
+  switch (cause.code) {
+    case "ADDRESS_VERIFICATION_FAILED":
+      return "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요";
+    case "ADDRESS_VERIFICATION_UNAVAILABLE":
+      return "주소 확인 서비스에 연결하지 못했습니다. 잠시 뒤 다시 저장해 주세요";
+    default:
+      return cause.message;
+  }
+};
+
 const STATUS_OPTIONS = [
   { value: "active", label: "운영 중" },
   { value: "inactive", label: "비활성" },
@@ -96,7 +112,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
       }
       onDone();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "저장에 실패했습니다");
+      setError(saveErrorMessage(cause));
     } finally {
       setSubmitting(false);
     }
@@ -183,7 +199,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
             </StyledDialogFormRow>
             <Input label="주소" value={address} onChange={(event) => setAddress(event.target.value)} />
             <Input label="연락처" value={contact} onChange={(event) => setContact(event.target.value)} />
-            <Textarea label="메모" value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} />
+            <Textarea label="메모" value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} maxLength={MEMO_MAX_LENGTH} />
             {isEditMode ? (
               <SegmentedControl
                 options={STATUS_OPTIONS}

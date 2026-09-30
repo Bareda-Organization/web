@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Switch } from "@/shared/ui";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { createBus, updateBus } from "../api";
 import type { BusItemResponseTypes } from "../types";
+
+const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
 
 type BusFormProps = {
   /** 있으면 수정, 없으면 등록. §5.12 에는 상세 GET 이 없어 목록 행 데이터를 그대로 받는다. */
@@ -39,7 +42,8 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
         if (result.warnings.length > 0) {
           setWarnings(
             result.warnings.map(
-              (w) => `회차 ${w.runId} — 정원 ${w.studentCapacity}명인데 배정 인원이 ${w.assignedCount}명입니다`,
+              (w) =>
+                `정원 ${w.studentCapacity}명을 넘는 회차가 있습니다 — 배정 인원 ${w.assignedCount}명 (${formatDateTime(w.departTime)} ${DIRECTION_LABEL[w.direction]} 회차, 회차 번호 ${w.runId})`,
             ),
           );
           return;
@@ -60,7 +64,8 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   return (
     <Dialog
       title={bus ? "차량 정보 수정" : "차량 등록"}
-      onClose={onClose}
+      // 경고가 떠 있다는 것은 수정이 이미 저장됐다는 뜻이다 — 어떻게 닫아도 목록이 새 값을 다시 받아야 한다.
+      onClose={warnings.length > 0 ? onDone : onClose}
       footer={
         warnings.length > 0 ? (
           <Button variant="primary" onClick={onDone}>

@@ -29,7 +29,7 @@ const ALERT_TONE = {
 export const AlertBanner = ({ tone = "info", title, children, action, ...rest }: AlertBannerProps) => {
   const toneStyle = ALERT_TONE[tone] ?? ALERT_TONE.info;
   return (
-    <StyledAlertBanner $background={toneStyle.background} {...rest}>
+    <StyledAlertBanner $background={toneStyle.background} role={tone === "missed" ? "alert" : "status"} {...rest}>
       <StyledAlertBannerIcon $foreground={toneStyle.foreground}>
         <Icon name={toneStyle.icon} size={18} />
       </StyledAlertBannerIcon>

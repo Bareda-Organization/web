@@ -41,6 +41,8 @@ const toQuery = (query: AuditQueryTypes) => ({
   account_id: query.accountId,
   from: query.from,
   to: query.to,
+  page: query.page,
+  size: query.size,
 });
 
 // GET /admin/audit-logs (§6.13, SYS-01, O-04).

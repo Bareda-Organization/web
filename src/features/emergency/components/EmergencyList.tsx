@@ -11,6 +11,7 @@ import { emergencyMapUrl } from "../lib/mapLink";
 import type { EmergencyItemResponseTypes, EmergencyStatus } from "../types";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyFilters, StyledEmergencyLayout, StyledEmergencyPosition } from "./EmergencyList.styled";
+import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
 // 메인 관리자 화면(EmergencyAlertsPage)과 같은 주기.
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
@@ -149,6 +150,9 @@ export const EmergencyList = () => {
       </StyledEmergencyFilters>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {items.length >= RECENT_LIST_CAP ? (
+        <AlertBanner tone="info" title={`최근 ${RECENT_LIST_CAP}건까지만 표시합니다 — 이전 기록은 날짜로 좁혀 확인하세요`} />
+      ) : null}
 
       <Card padding={0} aria-busy={loading}>
         <RosterTable

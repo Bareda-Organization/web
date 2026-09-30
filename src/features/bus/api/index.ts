@@ -21,6 +21,9 @@ type RawBus = {
 type RawBusCapacityWarning = {
   code: "CAPACITY_BELOW_ASSIGNED";
   run_id: string | number;
+  service_date: string;
+  depart_time: string;
+  direction: "to_academy" | "from_academy";
   assigned_count: number;
   student_capacity: number;
 };
@@ -72,6 +75,9 @@ export const createBus = async (request: BusUpsertRequestTypes): Promise<BusItem
 const toCapacityWarning = (raw: RawBusCapacityWarning): BusCapacityWarningResponseTypes => ({
   code: raw.code,
   runId: asIdString(raw.run_id),
+  serviceDate: raw.service_date,
+  departTime: raw.depart_time,
+  direction: raw.direction,
   assignedCount: raw.assigned_count,
   studentCapacity: raw.student_capacity,
 });

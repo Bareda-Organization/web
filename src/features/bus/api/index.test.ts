@@ -77,7 +77,7 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
           capacity: 10,
           student_capacity: 8,
           operable: true,
-          warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", run_id: 3, assigned_count: 12, student_capacity: 8 }],
+          warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", run_id: 3, service_date: "2026-09-30", depart_time: "2026-09-30T08:00:00+09:00", direction: "from_academy", assigned_count: 12, student_capacity: 8 }],
         },
       }),
     );
@@ -85,6 +85,16 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
 
     const result = await updateBus("9", { busNo: "9호차", plateNo: "99나9999", capacity: 10, operable: true });
 
-    expect(result.warnings).toEqual([{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", assignedCount: 12, studentCapacity: 8 }]);
+    expect(result.warnings).toEqual([
+      {
+        code: "CAPACITY_BELOW_ASSIGNED",
+        runId: "3",
+        serviceDate: "2026-09-30",
+        departTime: "2026-09-30T08:00:00+09:00",
+        direction: "from_academy",
+        assignedCount: 12,
+        studentCapacity: 8,
+      },
+    ]);
   });
 });

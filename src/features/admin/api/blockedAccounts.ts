@@ -1,6 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type {
+  PagingRequest,
   AccountRole,
   BlockedAccountItemResponseTypes,
   BlockedAccountsResponseTypes,
@@ -41,8 +42,11 @@ const toBlockedAccountItem = (raw: RawBlockedAccountItem): BlockedAccountItemRes
 
 // GET /admin/blocked-accounts (§6.10, O-03). BRIEF-a1.md §4.2 — 누가 왜 차단됐는지
 // (failedAttempts·reason) 없이는 해제 여부를 판단할 수 없어 목록에 그대로 노출한다.
-export const getBlockedAccounts = async (): Promise<BlockedAccountsResponseTypes> => {
-  const raw = await apiFetch<RawBlockedAccountsResponse>("/admin/blocked-accounts", { method: "GET" });
+export const getBlockedAccounts = async (paging: PagingRequest = {}): Promise<BlockedAccountsResponseTypes> => {
+  const raw = await apiFetch<RawBlockedAccountsResponse>("/admin/blocked-accounts", {
+    method: "GET",
+    query: { page: paging.page, size: paging.size },
+  });
   return {
     items: raw.items.map(toBlockedAccountItem),
     page: raw.page,

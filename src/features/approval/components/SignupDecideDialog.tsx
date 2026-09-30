@@ -24,8 +24,17 @@ const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role 
 
 // §5.2 409 ALREADY_LINKED — 고른 학생·매니저가 이미 다른 계정과 연결됐거나(학부모는 이미 연결된 자녀) 해서 거절된 경우.
 // 영문 코드·서버 원문은 화면에 내지 않고, 역할에 맞게 다시 고를 방향을 알려 준다. 계정은 pending 그대로다.
+// 예전 목록이라 거절된 경우(다른 관계자가 먼저 처리했거나 요청이 없음)와 차단된 계정은 서버 원문 대신 한국어로 알린다(F02-06).
+const STALE_REQUEST_CODES = ["APPROVAL_ALREADY_DECIDED", "SIGNUP_REQUEST_NOT_FOUND"];
+const STALE_REQUEST_MESSAGE = "이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다";
+const BLOCKED_TARGET_MESSAGE = "승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다";
+
+const isStaleRequest = (cause: unknown): boolean => cause instanceof ApiError && STALE_REQUEST_CODES.includes(cause.code);
+
 const acceptErrorMessage = (cause: unknown, role: SignupRequestItemResponseTypes["role"]): string => {
   if (!(cause instanceof ApiError)) return "승인 처리에 실패했습니다";
+  if (isStaleRequest(cause)) return STALE_REQUEST_MESSAGE;
+  if (cause.code === "SIGNUP_TARGET_BLOCKED") return BLOCKED_TARGET_MESSAGE;
   if (cause.code !== "ALREADY_LINKED") return cause.message;
   if (needsStudentLink(role)) return "이미 다른 계정과 연결된 학생입니다 — 다른 학생을 고르세요";
   if (needsManagerLink(role)) return "이미 다른 계정과 연결된 매니저입니다 — 다른 매니저를 고르세요";
@@ -41,6 +50,8 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
   const [managerIds, setManagerIds] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState("");
   const [mode, setMode] = useState<"accept" | "reject" | null>(null);
+  // 이미 처리된 요청이라 더 결정할 수 없다 — [닫기] 가 목록을 새로 받게 한다.
+  const [stale, setStale] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +78,7 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
       onDone();
     } catch (cause) {
       setError(acceptErrorMessage(cause, request.role));
+      setStale(isStaleRequest(cause));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +92,14 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
       await decideSignupRequest(request.requestId, { accept: false, rejectReason: rejectReason.trim() });
       onDone();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "거절 처리에 실패했습니다");
+      setError(
+        isStaleRequest(cause)
+          ? STALE_REQUEST_MESSAGE
+          : cause instanceof ApiError
+            ? cause.message
+            : "거절 처리에 실패했습니다",
+      );
+      setStale(isStaleRequest(cause));
     } finally {
       setSubmitting(false);
     }
@@ -89,9 +108,13 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
   return (
     <Dialog
       title={`${request.name} 가입 요청 처리`}
-      onClose={onClose}
+      onClose={stale ? onDone : onClose}
       footer={
-        mode === "reject" ? (
+        stale ? (
+          <Button variant="primary" onClick={onDone}>
+            닫기
+          </Button>
+        ) : mode === "reject" ? (
           <>
             <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
               뒤로

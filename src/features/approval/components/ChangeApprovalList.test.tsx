@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChangeApprovalList } from "./ChangeApprovalList";
 import { getChangeApprovals } from "../api";
@@ -84,5 +84,31 @@ describe("ChangeApprovalList — 상태 필터", () => {
     render(<ChangeApprovalList />);
 
     expect(await screen.findByText("삭제 예정")).toBeInTheDocument();
+  });
+});
+
+// F02-04 — 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
+describe("ChangeApprovalList — F02-04 늦게 온 옛 응답", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("처리 대기 응답이 거절 응답보다 늦게 와도 표에는 거절 목록이 남는다", async () => {
+    let resolvePending!: (value: ChangeApprovalsResponseTypes) => void;
+    mockGetChangeApprovals.mockImplementationOnce(
+      () => new Promise<ChangeApprovalsResponseTypes>((resolve) => (resolvePending = resolve)),
+    );
+    mockGetChangeApprovals.mockResolvedValueOnce({
+      ...baseList,
+      items: [{ ...baseList.items[0], approvalId: "6", studentName: "거절학생" }],
+    });
+    render(<ChangeApprovalList />);
+
+    fireEvent.click(screen.getByText("거절"));
+    await screen.findByText("거절학생");
+    await act(async () => resolvePending(baseList));
+
+    expect(screen.getByText("거절학생")).toBeInTheDocument();
+    expect(screen.queryByText("이학생")).not.toBeInTheDocument();
   });
 });

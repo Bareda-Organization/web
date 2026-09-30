@@ -216,6 +216,7 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     [409, "CAPACITY_EXCEEDED", { current: 10, capacity: 10 }, "도착 버스가 가득 차 옮길 수 없습니다 (현재 10명 / 정원 10명)"],
     [409, "STUDENT_NOT_IN_RUN", undefined, "이 학생이 출발 버스 명단에 없습니다"],
     [409, "TRANSFER_ALREADY_STAGED", undefined, "이 학생은 이미 옮기기로 저장된 건이 있습니다"],
+    [409, "STUDENT_ALREADY_IN_RUN", undefined, "이 학생은 이미 도착 회차 명단에 있어 옮길 수 없습니다"],
   ])("%i %s 는 쉬운 문구로 보여 주고 영문 코드는 화면에 내지 않는다", async (status, code, details, message) => {
     mockGetRunRoute.mockResolvedValue(routeWithStops);
     mockPostTransfer.mockRejectedValue(new ApiError(status, code, "서버 원문", details));

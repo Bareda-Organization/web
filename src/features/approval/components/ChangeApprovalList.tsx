@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Card, PageHeader, Pagination, RosterTable, SegmentedControl } from "@/shared/ui";
@@ -44,20 +44,26 @@ export const ChangeApprovalList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
+  const requestSeq = useRef(0);
+
   const loadApprovals = useCallback(async (nextStatus: string, nextPage: number) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     try {
       const data = await getChangeApprovals(nextStatus, nextPage, PAGE_SIZE);
+      if (seq !== requestSeq.current) return;
       setItems(data.items);
       setPendingCount(data.pendingCount);
       setTotalCount(data.totalCount);
       setHasNext(data.hasNext);
       setError(null);
     } catch (cause) {
+      if (seq !== requestSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "구간 변경 목록을 불러오지 못했습니다");
       setItems([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, []);
 

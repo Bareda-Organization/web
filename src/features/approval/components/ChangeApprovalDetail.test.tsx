@@ -23,6 +23,7 @@ vi.mock("../api", () => ({
 // 와 같은 한계) `MapSurface` 를 목으로 바꿔 이 화면이 계산한 polylines·camera 만 검증한다.
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
 vi.mock("@/features/map", () => ({
+  MAP_SURFACE_HEIGHT: "480px",
   MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));
 
@@ -96,6 +97,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     await waitFor(() =>
       expect(mockDecide).toHaveBeenCalledWith("5", { approve: true, previewToken: "token-abc" }),
@@ -118,6 +120,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     expect(await screen.findByText("미리보기가 만료됐습니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
@@ -440,5 +443,92 @@ describe("ChangeApprovalDetail — 다시 불러오기(R32-W8)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "다시 불러오기" }));
 
     expect(await screen.findByText("이학생 구간 변경")).toBeInTheDocument();
+  });
+});
+
+// F02-14 — 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다(재결정은 409). 거절·가입 승인처럼 확인 단계를 둔다.
+describe("ChangeApprovalDetail — F02-14 승인 확인 단계", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("[승인] 을 눌러도 바로 확정되지 않고 [승인 확정] 을 눌러야 요청이 나간다", async () => {
+    mockGetDetail.mockResolvedValue(baseDetail);
+    mockDecide.mockResolvedValue({
+      status: "approved", stopRemoved: false, routeVersion: 2, decidedBy: "staff-1", decidedAt: "2026-09-12T00:00:00Z",
+    });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+
+    expect(mockDecide).not.toHaveBeenCalled();
+    expect(screen.getByText("이 변경을 승인합니다")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    await waitFor(() => expect(mockDecide).toHaveBeenCalledTimes(1));
+  });
+
+  it("승하차지가 삭제되는 건은 확인 문구에 삭제될 곳 수를 보이고, [뒤로] 로 확인을 접는다", async () => {
+    mockGetDetail.mockResolvedValue({
+      ...baseDetail,
+      willRemoveStop: true,
+      routePreview: {
+        ...baseDetail.routePreview!,
+        removed: [{ stopId: "2", stopName: "후문", lat: 37.5, lng: 127.0 }],
+      },
+    });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    expect(screen.getByText("이 변경을 승인합니다 (삭제 예정 승하차지 1곳)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "뒤로" }));
+    expect(screen.getByRole("button", { name: "승인" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승인 확정" })).not.toBeInTheDocument();
+  });
+});
+
+// F02-06 — 다른 관계자가 먼저 결정했거나 기한이 지난 뒤 결정하면 서버가 거절한다. 옛 화면에 버튼이 그대로 남으면 같은 오류가 반복된다.
+describe("ChangeApprovalDetail — F02-06 결정 실패 뒤 최신 상태로", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const decided = { ...baseDetail, routePreview: null, previewToken: null };
+
+  it("409 APPROVAL_ALREADY_DECIDED 면 한국어 안내를 보이고 상세를 다시 불러와 승인·거절 버튼이 사라진다", async () => {
+    mockGetDetail.mockResolvedValueOnce(baseDetail).mockResolvedValueOnce(decided);
+    mockDecide.mockRejectedValue(new ApiError(409, "APPROVAL_ALREADY_DECIDED", "Already decided"));
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 다른 관계자가 처리한 요청입니다 — 최신 상태로 새로 불러옵니다")).toBeInTheDocument();
+    await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument());
+  });
+
+  it("거절에서도 403 CHANGE_WINDOW_CLOSED 면 안내 후 상세를 다시 불러온다", async () => {
+    mockGetDetail.mockResolvedValueOnce(baseDetail).mockResolvedValueOnce(decided);
+    mockDecide.mockRejectedValue(new ApiError(403, "CHANGE_WINDOW_CLOSED", "지금은 변경할 수 없는 시간입니다"));
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "거절" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+
+    expect(await screen.findByText("처리할 수 있는 시간이 지났습니다 — 기한이 지나 자동 거절됐거나 운행이 시작됐습니다")).toBeInTheDocument();
+    await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
   });
 });

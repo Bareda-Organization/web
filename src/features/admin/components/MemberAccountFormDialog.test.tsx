@@ -1,0 +1,77 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MemberAccountFormDialog } from "./MemberAccountFormDialog";
+import { updateStaffAccount } from "../api";
+import type { StaffAccountItemResponseTypes } from "../types";
+
+vi.mock("../api", () => ({ updateStaffAccount: vi.fn() }));
+const mockUpdate = vi.mocked(updateStaffAccount);
+
+const account: StaffAccountItemResponseTypes = {
+  accountId: "5", name: "김관계", loginId: "staffA", phone: "010-1111-2222", academyName: "바래다 학원", lastLoginAt: null, status: "active",
+};
+
+const setup = (overrides: Partial<StaffAccountItemResponseTypes> = {}) => {
+  const onDone = vi.fn();
+  render(<MemberAccountFormDialog account={{ ...account, ...overrides }} onClose={vi.fn()} onDone={onDone} />);
+  return { onDone };
+};
+
+// F03-08 — 재직 해제(로그인 즉시 차단)·비밀번호 초기화는 되돌릴 수 없는 조작이라 확인 한 단계를 거친다.
+describe("MemberAccountFormDialog — 확인·성공 표시·빈 값", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("[재직 해제] 는 확인 창을 거치고, 취소하면 요청이 나가지 않는다", async () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "재직 해제" }));
+
+    expect(screen.getByText(/로그인할 수 없게 됩니다/)).toBeInTheDocument();
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "재직 해제" })).toBeInTheDocument();
+  });
+
+  it("확인하면 재직 해제를 보내고, 성공 문구를 보이며 버튼이 [재직 전환] 으로 바뀌어 같은 요청을 또 보내지 않는다", async () => {
+    mockUpdate.mockResolvedValue({ accountId: "5" } as never);
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "재직 해제" }));
+    fireEvent.click(screen.getByRole("button", { name: "해제 확정" }));
+
+    expect(await screen.findByText("처리되었습니다")).toBeInTheDocument();
+    expect(mockUpdate).toHaveBeenCalledWith("5", { status: "inactive" });
+    expect(screen.getByRole("button", { name: "재직 전환" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "재직 해제" })).not.toBeInTheDocument();
+  });
+
+  it("[비밀번호 초기화] 도 확인을 거친 뒤 임시 비밀번호를 보여 준다", async () => {
+    mockUpdate.mockResolvedValue({ accountId: "5", temporaryPassword: "Tmp-1234" } as never);
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "비밀번호 초기화" }));
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "초기화 확정" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("5", { resetPassword: true }));
+    expect(await screen.findByText(/Tmp-1234/)).toBeInTheDocument();
+  });
+
+  it("정보 저장이 성공하면 처리되었다고 알리고, 이름·연락처가 공백이면 저장할 수 없다", async () => {
+    mockUpdate.mockResolvedValue({ accountId: "5" } as never);
+    setup();
+    const save = screen.getByRole("button", { name: "정보 저장" });
+    const [nameInput, phoneInput] = screen.getAllByRole("textbox").filter((input) => !(input as HTMLInputElement).disabled);
+
+    fireEvent.change(nameInput, { target: { value: "  " } });
+    expect(save).toBeDisabled();
+    fireEvent.change(nameInput, { target: { value: "김새이름" } });
+    fireEvent.change(phoneInput, { target: { value: "" } });
+    expect(save).toBeDisabled();
+    fireEvent.change(phoneInput, { target: { value: "010-9999-0000" } });
+    fireEvent.click(save);
+
+    expect(await screen.findByText("처리되었습니다")).toBeInTheDocument();
+    expect(mockUpdate).toHaveBeenCalledWith("5", { name: "김새이름", phone: "010-9999-0000", email: undefined });
+  });
+});

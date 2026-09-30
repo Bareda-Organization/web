@@ -20,8 +20,8 @@ import {
   StyledAdminHeaderSide,
 } from "./layout.styled";
 
-// features/auth/lib/navigation.ts 의 ADMIN_PATH_SEGMENTS 와 반드시 같은 8개를 유지한다 —
-// 화면을 추가·삭제할 때 두 목록을 함께 고친다.
+// 사이드바 메뉴 — 화면을 추가·삭제하면 이 목록을 고친다. 접근 판정은 목록이 아니라 이 그룹의
+// AuthGateGuard(requiredRole)가 맡으므로 새 화면 폴더는 자동으로 system_admin 만 연다.
 const NAV_ITEMS = [
   { value: "academies", label: "학원 관리", icon: "building-2" },
   { value: "member-approvals", label: "가입 승인", icon: "user-check" },
@@ -83,7 +83,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGateGuard>
+    <AuthGateGuard requiredRole="system_admin">
       <AdminShell>{children}</AdminShell>
     </AuthGateGuard>
   );

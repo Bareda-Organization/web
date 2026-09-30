@@ -1,4 +1,5 @@
 import { getAccessToken, refreshAccessToken as defaultRefreshAccessToken } from "../http";
+import { ApiError } from "../http/apiError";
 import { notifyAuthGate } from "../http/authGate";
 import { WsBackoffPolicy } from "./wsBackoffPolicy";
 import type { WsConnectionState } from "./wsConnectionState";
@@ -28,6 +29,9 @@ export type AcademyRealtimeClientOptions = {
 };
 
 type ConnectionStateListener = () => void;
+
+// 남의 학원 채널을 구독했을 때 서버가 STOMP ERROR `message` 헤더에 싣는 코드.
+const SCOPE_VIOLATION_MESSAGE = "ACADEMY_SCOPE_VIOLATION";
 
 // `/ws/location` 하나에 STOMP 로 붙는 클라이언트 — `baraeda_core` 의
 // `BaraedaWebSocketClient`(Dart) 를 이 저장소가 웹에서도 쓸 수 있도록 옮긴
@@ -143,7 +147,13 @@ export class AcademyRealtimeClient {
     });
     return () => {
       this.pendingDestinations.delete(destination);
-      subscription.unsubscribe();
+      // 소켓이 이미 닫혔으면 stompjs 의 unsubscribe() 가 `_checkConnection()` 에서
+      // TypeError 를 던진다 — 재연결로 상태가 바뀔 때 effect 정리 단계가 이 함수를
+      // 부르므로, 던지면 화면이 오류 경계로 떨어진다. 연결이 없으면 서버 쪽 구독도
+      // 이미 사라졌으니 해제할 것이 없다.
+      if (client.connected) {
+        subscription.unsubscribe();
+      }
     };
   }
 
@@ -180,9 +190,10 @@ export class AcademyRealtimeClient {
   private handleStompError(frame: StompFrameLike): void {
     const message = frame.headers.message;
     // `StompAuthChannelInterceptor` 의 SUBSCRIBE 거부 경로는 전부
-    // `BusinessException(ErrorCode.FORBIDDEN)` 을 던진다 — 이 문자열이
-    // 구독 거부를 나타내는 유일한 값이다(Dart 원본과 동일 근거).
-    if (message === "FORBIDDEN") {
+    // `BusinessException(ErrorCode.FORBIDDEN)` 을 던진다 — 이 문자열과, 남의
+    // 학원 채널을 구독했을 때의 `ACADEMY_SCOPE_VIOLATION` 이 구독 거부를
+    // 나타내는 값이다(후자는 `wsRealBackendAuth.test.ts` 가 실서버로 확인).
+    if (message === "FORBIDDEN" || message === SCOPE_VIOLATION_MESSAGE) {
       this.forbidden = true;
       this.setState("forbidden");
     }
@@ -220,6 +231,11 @@ export class AcademyRealtimeClient {
       return;
     }
 
+    this.scheduleReconnect();
+  }
+
+  // 백오프 횟수를 하나 쓰고 다음 재연결을 예약한다 — 한도에 닿으면 `gaveUp`.
+  private scheduleReconnect(): void {
     this.reconnectAttempt += 1;
     if (this.backoffPolicy.shouldGiveUp(this.reconnectAttempt)) {
       this.setState("gaveUp");
@@ -234,18 +250,29 @@ export class AcademyRealtimeClient {
 
   // TOKEN_EXPIRED 로 끊긴 뒤의 처리 — 재발급에 성공하면 곧바로 새 토큰으로
   // 재연결하고(백오프 횟수를 소모하지 않는다 — 예정된 갱신이지 네트워크
-  // 실패가 아니다), 실패하면 `gaveUp` 이 아니라 로그인 만료로 넘긴다(같은
+  // 실패가 아니다), 재발급이 401 로 거절되면 `gaveUp` 이 아니라 로그인 만료로 넘긴다(같은
   // 토큰으로 재시도해 봐야 다시 거부되므로 "재시도"가 뜻을 잃는다).
   private async handleTokenExpired(): Promise<void> {
     this.setState("reconnecting");
+    let newToken: string;
     try {
-      const newToken = await this.refreshAccessToken();
-      this.reconnectAttempt = 0;
-      this.doConnect(newToken);
-    } catch {
-      this.onSessionExpired();
-      this.setState("disconnected");
+      newToken = await this.refreshAccessToken();
+    } catch (failure) {
+      // 재발급이 401 로 거절돼야 refresh 토큰이 무효라는 뜻이다 — 네트워크 오류·5xx
+      // 는 일시적일 수 있으니 로그인 만료로 넘기지 않고 일반 재연결 경로를 탄다.
+      if (failure instanceof ApiError && failure.status === 401) {
+        this.onSessionExpired();
+        this.setState("disconnected");
+      } else if (!this.manuallyDisconnected) {
+        this.scheduleReconnect();
+      }
+      return;
     }
+    // 재발급을 기다리는 사이 화면이 떠났으면(disconnect) 새 소켓을 열지 않는다 —
+    // 열면 아무도 닫지 못하는 소켓이 남는다.
+    if (this.manuallyDisconnected) return;
+    this.reconnectAttempt = 0;
+    this.doConnect(newToken);
   }
 
   private clearReconnectTimer(): void {

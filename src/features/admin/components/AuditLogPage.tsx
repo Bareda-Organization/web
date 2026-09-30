@@ -1,13 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, EmptyState, Input, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
+import { useState } from "react";
+import { usePagedList } from "@/shared/hooks";
+import { AlertBanner, Badge, Button, Card, EmptyState, Input, PageHeader, Pagination, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAuditLogs, getLoginHistory } from "../api";
-import type { AuditLogItemResponseTypes, LoginHistoryItemResponseTypes } from "../types";
+import type {
+  AuditLogItemResponseTypes,
+  AuditLogsResponseTypes,
+  LoginHistoryItemResponseTypes,
+  LoginHistoryResponseTypes,
+} from "../types";
 import { StyledAuditLogLayout, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatDateTime, todayInSeoul } from "@/shared/lib/format/dateTime";
+
+const PAGE_SIZE = 20;
 
 const TAB_OPTIONS = [
   { value: "audit", label: "감사 로그" },
@@ -20,8 +27,6 @@ const ACTION_LABEL: Record<AuditLogItemResponseTypes["action"], string> = {
   delete: "삭제",
 };
 
-const todayDateInput = () => new Date().toISOString().slice(0, 10);
-
 // §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
 // 이 화면은 §1.12 가 마스킹하는 필드(보호자 연락처 등)를 응답에 아예 담지 않지만, 대신
 // 계정별 로그인 IP·시각 전체를 무제한으로 펼쳐 보이는 것 자체가 노출 범위 문제라
@@ -31,51 +36,24 @@ export const AuditLogPage = () => {
   const [tab, setTab] = useState<"audit" | "login">("audit");
   const [academyId, setAcademyId] = useState("");
   const [accountId, setAccountId] = useState("");
-  const [from, setFrom] = useState(todayDateInput());
+  const [from, setFrom] = useState(todayInSeoul());
   const [to, setTo] = useState("");
 
-  const [auditItems, setAuditItems] = useState<AuditLogItemResponseTypes[]>([]);
-  const [loginItems, setLoginItems] = useState<LoginHistoryItemResponseTypes[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const buildQuery = useCallback(
-    () => ({
-      academyId: academyId || undefined,
-      accountId: accountId || undefined,
-      from: from || undefined,
-      to: to || undefined,
-    }),
-    [academyId, accountId, from, to],
+  // 조회 조건은 [조회] 를 눌러야 적용된다 — 입력 중인 값과 서버에 보내는 값(applied)을 나눈다.
+  const [applied, setApplied] = useState({ academyId: "", accountId: "", from: todayInSeoul(), to: "" });
+  const query = {
+    academyId: applied.academyId || undefined,
+    accountId: applied.accountId || undefined,
+    from: applied.from || undefined,
+    to: applied.to || undefined,
+  };
+  const paging = usePagedList<AuditLogsResponseTypes | LoginHistoryResponseTypes>(
+    (page) => (tab === "audit" ? getAuditLogs({ ...query, page, size: PAGE_SIZE }) : getLoginHistory({ ...query, page, size: PAGE_SIZE })),
+    { resetKey: `${tab}|${JSON.stringify(applied)}`, errorMessage: "이력을 불러오지 못했습니다" },
   );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const query = buildQuery();
-      if (tab === "audit") {
-        const data = await getAuditLogs(query);
-        setAuditItems(data.items);
-      } else {
-        const data = await getLoginHistory(query);
-        setLoginItems(data.items);
-      }
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "이력을 불러오지 못했습니다");
-      setAuditItems([]);
-      setLoginItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildQuery, tab]);
-
-  useEffect(() => {
-    (async () => {
-      await load();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  const { loading, error } = paging;
+  const auditItems = tab === "audit" ? (paging.items as AuditLogItemResponseTypes[]) : [];
+  const loginItems = tab === "login" ? (paging.items as LoginHistoryItemResponseTypes[]) : [];
 
   const auditColumns: RosterColumn<AuditLogItemResponseTypes>[] = [
     { key: "occurredAt", label: "시각", render: (row) => formatDateTime(row.occurredAt) },
@@ -97,8 +75,9 @@ export const AuditLogPage = () => {
     { key: "ip", label: "IP" },
     {
       key: "blockEvent",
-      label: "차단 발생",
-      render: (row) => (row.blockEvent ? <Badge tone="amber">차단됨</Badge> : "-"),
+      // block_event 는 차단 행과 해제 행 양쪽에 붙는다(§6.13, BR-219) — 어느 쪽인지 응답이 구분하지 않으므로 중립 문구로 쓴다.
+      label: "차단·해제 이벤트",
+      render: (row) => (row.blockEvent ? <Badge tone="amber">차단·해제</Badge> : "-"),
     },
   ];
 
@@ -126,24 +105,26 @@ export const AuditLogPage = () => {
         <Button variant="secondary" onClick={() => setFrom("")}>
           전체 기간 보기
         </Button>
-        <Button variant="primary" onClick={load}>
+        <Button variant="primary" onClick={() => setApplied({ academyId, accountId, from, to })}>
           조회
         </Button>
       </StyledFilterRow>
 
       <Card padding={0} aria-busy={loading}>
         {tab === "audit" ? (
-          auditItems.length === 0 && !loading ? (
+          auditItems.length === 0 && !loading && !error ? (
             <EmptyState icon="file-search" title="조건에 맞는 감사 로그가 없습니다" />
           ) : (
             <RosterTable columns={auditColumns} loading={loading} rows={auditItems} getRowKey={(row, index) => `${row.targetType}-${row.targetId}-${index}`} />
           )
-        ) : loginItems.length === 0 && !loading ? (
+        ) : loginItems.length === 0 && !loading && !error ? (
           <EmptyState icon="file-search" title="조건에 맞는 접속 이력이 없습니다" />
         ) : (
           <RosterTable columns={loginColumns} loading={loading} rows={loginItems} getRowKey={(row, index) => `${row.accountId}-${index}`} />
         )}
       </Card>
+
+      <Pagination page={paging.page} size={PAGE_SIZE} totalCount={paging.totalCount} hasNext={paging.hasNext} onPageChange={paging.setPage} />
     </StyledAuditLogLayout>
   );
 };

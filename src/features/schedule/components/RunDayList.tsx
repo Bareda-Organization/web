@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, Input, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -23,6 +25,9 @@ const STATUS_LABEL: Record<RunStatus, string> = {
   finished: "종료",
 };
 
+// §5.10 DELETE — `idle`·`confirmed` 만 취소된다(운행이 시작된 회차는 409 RUN_ALREADY_STARTED).
+const CANCELABLE_STATUS: RunStatus[] = ["idle", "confirmed"];
+
 const STATUS_TONE: Record<RunStatus, "neutral" | "brand" | "amber" | "added"> = {
   idle: "neutral",
   confirmed: "brand",
@@ -30,13 +35,11 @@ const STATUS_TONE: Record<RunStatus, "neutral" | "brand" | "amber" | "added"> = 
   finished: "added",
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 // §5.10 GET /staff/runs?service_date=(SCH-02) — 특정일 회차 목록. 정규 스케줄 배치
 // 결과 확인 + 임시 회차 추가·취소(SCH-03) 를 한 화면에서 다룬다. 페이징 없음(실측
 // 확인, types/index.ts 주석) — 맨 배열을 그대로 전부 그린다.
 export const RunDayList = () => {
-  const [serviceDate, setServiceDate] = useState(today());
+  const [serviceDate, setServiceDate] = useState(todayInSeoul());
   const [items, setItems] = useState<RunItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,11 +79,11 @@ export const RunDayList = () => {
   const columns: RosterColumn<RunItemResponseTypes>[] = [
     { key: "busNo", label: "차량" },
     { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
-    { key: "departTime", label: "출발 시각", render: (row) => new Date(row.departTime).toLocaleTimeString("ko-KR") },
+    { key: "departTime", label: "출발 시각", render: (row) => formatClockTime(row.departTime) },
     {
       key: "confirmAt",
       label: "확정 시각",
-      render: (row) => new Date(row.confirmAt).toLocaleTimeString("ko-KR"),
+      render: (row) => formatClockTime(row.confirmAt),
     },
     { key: "route", label: "출발지 · 도착지", render: (row) => `${row.originName} → ${row.destinationName}` },
     {
@@ -114,7 +117,7 @@ export const RunDayList = () => {
       label: "",
       align: "right",
       render: (row) =>
-        row.canceledAt ? null : (
+        row.canceledAt || !CANCELABLE_STATUS.includes(row.status) ? null : (
           <Button
             variant="ghost"
             size="sm"

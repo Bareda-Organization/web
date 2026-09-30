@@ -381,6 +381,7 @@ export const NaverMapSurface = ({
           selected: markerData.selected,
           busNo: markerData.busNo,
           direction: markerData.direction,
+          emergency: markerData.emergency,
           seq: markerData.seq,
           markerId: markerData.id,
         });
@@ -408,6 +409,7 @@ export const NaverMapSurface = ({
         selected: markerData.selected,
         busNo: markerData.busNo,
         direction: markerData.direction,
+        emergency: markerData.emergency,
         seq: markerData.seq,
         markerId: markerData.id,
       });

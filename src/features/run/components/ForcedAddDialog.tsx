@@ -9,6 +9,9 @@ import { StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
 
 type Mode = "existing" | "new";
 
+// §5.7 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
+const NOTE_MAX_LENGTH = 200;
+
 // §5.7 에러 코드별 문구 — 영문 코드·서버 원문은 화면에 내지 않는다(StudentTransferDialog 와 같은 방침).
 const forcedAddErrorMessage = (cause: unknown): string => {
   if (!(cause instanceof ApiError)) return "승하차지 추가에 실패했습니다. 잠시 뒤 다시 시도해 주세요";
@@ -21,6 +24,8 @@ const forcedAddErrorMessage = (cause: unknown): string => {
       return "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요";
     case "RUN_CANCELED":
       return "취소된 회차라 추가할 수 없습니다";
+    case "FORCED_ADDITION_ALREADY_STAGED":
+      return "이 학생은 이 회차에 이미 강제 추가 대기 중입니다";
     default:
       return cause.message;
   }
@@ -201,7 +206,7 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
           value={address}
           onChange={(event) => setAddress(event.target.value)}
         />
-        <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} />
+        <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} maxLength={NOTE_MAX_LENGTH} />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledDialogForm>
     </Dialog>
