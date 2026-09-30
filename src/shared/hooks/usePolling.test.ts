@@ -58,6 +58,20 @@ describe("usePolling", () => {
     expect(task).toHaveBeenCalledTimes(2);
   });
 
+  it("요청이 진행 중일 때 탭이 숨으면, 응답이 와도 다음 요청을 예약하지 않는다", async () => {
+    let finish: () => void = () => {};
+    const task = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    renderHook(() => usePolling(task, INTERVAL));
+    await advance(INTERVAL);
+    expect(task).toHaveBeenCalledTimes(1);
+
+    act(() => setHidden(true));
+    await act(async () => finish());
+    await advance(INTERVAL * 10);
+
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
   it("실패하면 간격이 늘어나고 성공하면 원래 간격으로 돌아온다", async () => {
     const results = [false, false, true];
     const task = vi.fn(async () => results.shift() ?? true);
