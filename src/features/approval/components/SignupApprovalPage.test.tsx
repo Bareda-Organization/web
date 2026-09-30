@@ -42,7 +42,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
 
     expect(await screen.findByText("김보호")).toBeInTheDocument();
     expect(screen.getByText("처리 대기 1건")).toBeInTheDocument();
-    expect(mockGetSignupRequests).toHaveBeenCalledWith("pending");
+    expect(mockGetSignupRequests).toHaveBeenCalledWith("pending", 0, 20);
   });
 
   it("role=parent 승인은 학생 ID 입력 없이 link 없이 decide 를 호출한다(Ruling 324)", async () => {
@@ -231,5 +231,24 @@ describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
 
     expect(screen.getByText("거절된사람")).toBeInTheDocument();
     expect(screen.queryByText("김보호")).not.toBeInTheDocument();
+  });
+});
+
+// F02-03 — 20건을 넘는 요청은 다음 쪽으로 넘겨 볼 수 있어야 한다(§5.1 페이징).
+describe("SignupApprovalPage — F02-03 페이징", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("다음 쪽이 있으면 [다음] 으로 1쪽을 요청하고, 탭을 바꾸면 0쪽으로 돌아간다", async () => {
+    mockGetSignupRequests.mockResolvedValue({ ...baseList, totalCount: 45, hasNext: true });
+    render(<SignupApprovalPage />);
+
+    await screen.findByText("김보호");
+    fireEvent.click(screen.getByRole("button", { name: /다음/ }));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("pending", 1, 20));
+
+    fireEvent.click(screen.getByText("거절됨"));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("rejected", 0, 20));
   });
 });

@@ -35,10 +35,15 @@ const toItem = (raw: RawSignupRequestItem): SignupRequestItemResponseTypes => ({
 
 // GET /staff/signup-requests (§5.1, A-02) — status 기본값은 pending. role=staff 는
 // 관리자(§6.5) 몫이라 이 목록에 나오지 않는다.
-export const getSignupRequests = async (status?: string): Promise<SignupRequestsResponseTypes> => {
+// `page`·`size` 는 §1.8 공통 페이징(기본 0·20) — 안 넘기면 첫 쪽만 오므로 화면이 Pagination 으로 넘겨 본다.
+export const getSignupRequests = async (
+  status?: string,
+  page = 0,
+  size = 20,
+): Promise<SignupRequestsResponseTypes> => {
   const raw = await apiFetch<RawSignupRequestsResponse>("/staff/signup-requests", {
     method: "GET",
-    query: status ? { status } : undefined,
+    query: { status, page, size },
   });
   return {
     items: raw.items.map(toItem),
