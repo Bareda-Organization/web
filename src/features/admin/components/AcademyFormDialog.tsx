@@ -30,6 +30,9 @@ const saveErrorMessage = (cause: unknown): string => {
   }
 };
 
+// Ruling 450 — 주소가 없으면 그 학원의 회차 확정이 전부 ACADEMY_COORDINATES_MISSING 으로 실패해 등록·수정 때 막는다.
+const ADDRESS_REQUIRED_MESSAGE = "주소를 입력해 주세요. 주소가 없으면 이 학원의 운행 회차를 확정할 수 없습니다";
+
 const STATUS_OPTIONS = [
   { value: "active", label: "운영 중" },
   { value: "inactive", label: "비활성" },
@@ -79,7 +82,8 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
   // 운영 중 학원을 비활성으로 바꾸는 저장만 확인을 거친다(UF-O-04) — 다른 수정은 바로 저장한다.
   const isDeactivating = isEditMode && detail?.status === "active" && status === "inactive";
 
-  const canSubmit = name.trim().length > 0 && region.trim().length > 0;
+  const isAddressMissing = address.trim().length === 0;
+  const canSubmit = name.trim().length > 0 && region.trim().length > 0 && !isAddressMissing;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -89,7 +93,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
         await updateAcademy(academyId, {
           name: name.trim(),
           region: region.trim(),
-          address: address.trim() || undefined,
+          address: address.trim(),
           contact: contact.trim() || undefined,
           memo: memo.trim() || undefined,
           status,
@@ -100,7 +104,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
       const created = await createAcademy({
         name: name.trim(),
         region: region.trim(),
-        address: address.trim() || undefined,
+        address: address.trim(),
         contact: contact.trim() || undefined,
         memo: memo.trim() || undefined,
       });
@@ -199,9 +203,12 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
             </StyledDialogFormRow>
             <Input
               label="주소"
+              required
               value={address}
               onChange={(event) => setAddress(event.target.value)}
-              hint={address.trim() ? undefined : "주소를 비워 두면 이 학원의 회차 확정이 시작되지 않습니다. 등록 뒤에라도 주소를 넣어 주세요"}
+              // 수정 화면에서 비어 있으면 주소 없이 저장돼 있던 학원이라 처음부터 오류 색으로, 등록은 입력 안내로 보인다.
+              error={isAddressMissing && isEditMode ? ADDRESS_REQUIRED_MESSAGE : undefined}
+              hint={isAddressMissing && !isEditMode ? ADDRESS_REQUIRED_MESSAGE : undefined}
             />
             <Input label="연락처" value={contact} onChange={(event) => setContact(event.target.value)} />
             <Textarea label="메모" value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} maxLength={MEMO_MAX_LENGTH} />

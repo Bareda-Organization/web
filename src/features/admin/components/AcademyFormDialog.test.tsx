@@ -18,7 +18,7 @@ const DETAIL = {
   staffCount: 1,
   userCount: 12,
   status: "active" as const,
-  address: null,
+  address: "서울 강동구 천호대로 1",
   contact: null,
   memo: null,
   staffAccounts: [],
@@ -93,6 +93,7 @@ describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
     render(<AcademyFormDialog onClose={vi.fn()} onDone={onDone} />);
     fireEvent.change(screen.getByLabelText(/학원명/), { target: { value: "새 학원" } });
     fireEvent.change(screen.getByLabelText(/지역/), { target: { value: "서울" } });
+    fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: "서울 강동구 천호대로 1" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
     expect(await screen.findByText(message)).toBeInTheDocument();
@@ -107,17 +108,61 @@ describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
   });
 });
 
-// A#10(R46-WEB) — 주소는 선택 입력(§6.2)이지만 비우면 그 학원의 회차 확정이 전부 ACADEMY_COORDINATES_MISSING 으로 막힌다.
-// 막히는 원인이 화면에서 보이도록 주소를 비워 둔 동안 경고를 보여 준다.
-describe("AcademyFormDialog — 주소 비움 경고", () => {
-  it("주소가 비어 있으면 회차 확정이 시작되지 않는다는 경고를 보이고, 주소를 넣으면 사라진다", () => {
-    render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
-    const warning = "주소를 비워 두면 이 학원의 회차 확정이 시작되지 않습니다. 등록 뒤에라도 주소를 넣어 주세요";
+// Ruling 450 — 학원 주소는 필수다. 주소가 없으면 그 학원의 회차 확정이 전부 ACADEMY_COORDINATES_MISSING 으로 실패하므로
+// 첫 운행 날이 아니라 등록·수정 때 막는다. 주소 없이 좌표만 있는 시드 학원도 주소를 넣어야 저장된다.
+describe("AcademyFormDialog — 주소 필수(Ruling 450)", () => {
+  const MESSAGE = /주소를 입력해 주세요/;
+  const fillNameAndRegion = () => {
+    fireEvent.change(screen.getByLabelText(/학원명/), { target: { value: "새 학원" } });
+    fireEvent.change(screen.getByLabelText(/지역/), { target: { value: "서울" } });
+  };
 
-    expect(screen.getByText(warning)).toBeInTheDocument();
+  afterEach(() => vi.clearAllMocks());
+
+  it("등록 — 주소가 비어 있으면 문구를 보이고 저장할 수 없다. 공백만 넣어도 같다", () => {
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
+    fillNameAndRegion();
+
+    expect(screen.getByText(MESSAGE)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("등록 — 주소를 채우면 문구가 사라지고 그 주소로 저장한다", async () => {
+    mockCreate.mockResolvedValue({ academyId: "9", code: "C9", name: "새 학원", region: "서울", warnings: [] });
+    const onDone = vi.fn();
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={onDone} />);
+    fillNameAndRegion();
+
+    fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: " 서울 강동구 천호대로 1 " } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(screen.queryByText(MESSAGE)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ address: "서울 강동구 천호대로 1" })),
+    );
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it("수정 — 주소 없이 저장된 학원(시드)은 열자마자 주소를 넣으라고 알리고, 넣기 전에는 저장할 수 없다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, address: null });
+    mockUpdate.mockResolvedValue(undefined as never);
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("바래다 학원");
+
+    expect(screen.getByText(MESSAGE)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: "서울 강동구 천호대로 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith("3", expect.objectContaining({ address: "서울 강동구 천호대로 1" })),
+    );
   });
 });
