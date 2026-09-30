@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Switch } from "@/shared/ui";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { createBus, updateBus } from "../api";
 import type { BusItemResponseTypes } from "../types";
+
+const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
 
 type BusFormProps = {
   /** 있으면 수정, 없으면 등록. §5.12 에는 상세 GET 이 없어 목록 행 데이터를 그대로 받는다. */
@@ -40,7 +43,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
           setWarnings(
             result.warnings.map(
               (w) =>
-                `정원 ${w.studentCapacity}명을 넘는 회차가 있습니다 — 배정 인원 ${w.assignedCount}명 (회차 번호 ${w.runId}, 일일 회차 목록에서 확인)`,
+                `정원 ${w.studentCapacity}명을 넘는 회차가 있습니다 — 배정 인원 ${w.assignedCount}명 (${formatDateTime(w.departTime)} ${DIRECTION_LABEL[w.direction]} 회차, 회차 번호 ${w.runId})`,
             ),
           );
           return;

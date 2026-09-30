@@ -6,8 +6,7 @@ const CANDIDATE_PAGE_SIZE = 20;
 
 type RawStudentList = { items: { student_id: string | number; name: string; class_name: string | null }[] };
 type RawManagerList = {
-  items: { id: string | number; name: string; phone: string; role: SignupRole; account_id: string | number | null }[];
-  has_next: boolean;
+  items: { id: string | number; name: string; phone: string }[];
 };
 
 // GET /staff/students?q= (§5.11, STU-01) — 가입 승인의 학생 연결 후보. 학생 관리 화면과 같은 엔드포인트라
@@ -20,26 +19,15 @@ export const searchStudentCandidates = async (q?: string): Promise<LinkCandidate
   return raw.items.map((s) => ({ id: asIdString(s.student_id), name: s.name, detail: s.class_name ?? undefined }));
 };
 
-// GET /staff/managers?q= (§5.13, MGR-01) — 기사·동승자 승인의 매니저 연결 후보. 신청한 역할과 같고 아직 다른 계정에
-// 연결되지 않은 매니저만 남긴다(이미 연결된 레코드를 고르면 서버가 연결 충돌로 거절한다).
-// 서버에 역할·연결 여부 필터가 없어 한 쪽(20건)만 받아 거르면 연결 가능한 매니저가 다음 쪽에 있을 때 목록에서 사라진다 —
-// 그래서 다음 쪽이 없을 때까지(최대 MANAGER_SCAN_PAGES 쪽) 받아 거른다.
-const MANAGER_SCAN_SIZE = 100;
-const MANAGER_SCAN_PAGES = 10;
+// GET /staff/managers?q=&role=&linked=false (§5.13, MGR-01 · Ruling 391) — 기사·동승자 승인의 매니저 연결 후보.
+// 신청한 역할과 같고 아직 계정에 연결되지 않은 매니저만 서버가 걸러 준다(이미 연결된 레코드를 고르면 연결 충돌로 거절된다).
+// ponytail: 한 쪽(100건)만 받는다 — 미연결 기사·동승자가 100명을 넘으면 검색어(q)로 좁힌다.
+const MANAGER_CANDIDATE_SIZE = 100;
 
 export const searchManagerCandidates = async (role: SignupRole, q?: string): Promise<LinkCandidateTypes[]> => {
-  const candidates: LinkCandidateTypes[] = [];
-  for (let page = 0; page < MANAGER_SCAN_PAGES; page += 1) {
-    const raw = await apiFetch<RawManagerList>("/staff/managers", {
-      method: "GET",
-      query: { page, size: MANAGER_SCAN_SIZE, q: q || undefined },
-    });
-    candidates.push(
-      ...raw.items
-        .filter((m) => m.role === role && m.account_id == null)
-        .map((m) => ({ id: asIdString(m.id), name: m.name, detail: m.phone })),
-    );
-    if (!raw.has_next) break;
-  }
-  return candidates;
+  const raw = await apiFetch<RawManagerList>("/staff/managers", {
+    method: "GET",
+    query: { page: 0, size: MANAGER_CANDIDATE_SIZE, q: q || undefined, role, linked: false },
+  });
+  return raw.items.map((m) => ({ id: asIdString(m.id), name: m.name, detail: m.phone }));
 };
