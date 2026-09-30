@@ -227,6 +227,20 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         expect(screen.queryByRole("button", { name: "이동 취소하기" })).not.toBeInTheDocument();
       });
 
+      // C00-05 — 취소하면 학생은 출발 회차 예정 명단에서 빠져 있던 것이 되돌아온다. "그대로 남는다" 는
+      // 옮겨진 적이 없는 것처럼 읽혀 결과를 흐린다.
+      it("확인 문구가 학생이 원래 버스(호차) 명단으로 돌아간다고 말한다", async () => {
+        mockRunIdParam = "7";
+        mockGetDashboard.mockResolvedValue(idleDashboard());
+        mockGetRunRoster.mockResolvedValue([stagedRow]);
+        render(<TodayRunPage />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+
+        expect(screen.getByText(/원래 버스\(2호차\) 명단으로 돌아갑니다/)).toBeInTheDocument();
+        expect(screen.queryByText(/그대로 남습니다/)).not.toBeInTheDocument();
+      });
+
       it("확인하면 DELETE 를 정확히 1회 보내고 성공하면 명단을 다시 불러온다", async () => {
         mockRunIdParam = "7";
         mockGetDashboard.mockResolvedValue(idleDashboard());

@@ -10,6 +10,8 @@ import { StyledConfirmBody } from "./ForcedAddDialog.styled";
 type TransferCancelDialogProps = {
   /** 이동 대기 행 — `transferId` 가 있는 학생 */
   student: RosterItemResponseTypes & { transferId: string };
+  /** 학생이 되돌아갈 원래(출발) 버스 호차 — 지금 화면에 뜬 회차 */
+  fromBusNo: string;
   onClose: () => void;
   onDone: () => void;
 };
@@ -28,8 +30,8 @@ const cancelErrorMessage = (cause: unknown): string => {
 };
 
 // §5.8.1 DELETE /staff/transfers/{transferId}(A-07, Ruling 369) — 저장해 둔 이동 대기를 확정 전에 되돌린다.
-// 되돌리면 학생은 원래 버스 명단으로 남고 도착 버스 예정 명단에서 빠지므로 확인 단계를 한 번 거친다.
-export const TransferCancelDialog = ({ student, onClose, onDone }: TransferCancelDialogProps) => {
+// 되돌리면 학생은 원래 버스 명단으로 돌아오고 도착 버스 예정 명단에서 빠지므로 확인 단계를 한 번 거친다.
+export const TransferCancelDialog = ({ student, fromBusNo, onClose, onDone }: TransferCancelDialogProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +63,7 @@ export const TransferCancelDialog = ({ student, onClose, onDone }: TransferCance
       }
     >
       <StyledConfirmBody>
-        <p>{student.name} 학생을 다른 버스로 옮기기로 저장한 건을 취소합니다. 학생은 원래 버스 명단에 그대로 남습니다.</p>
+        <p>{student.name} 학생을 다른 버스로 옮기기로 저장한 건을 취소합니다. 학생은 원래 버스({fromBusNo}) 명단으로 돌아갑니다.</p>
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledConfirmBody>
     </Dialog>

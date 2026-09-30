@@ -56,6 +56,8 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // C00-02 — 도착 회차의 승하차지 목록이 비는 이유(고정 노선 없음 · 조회 실패). 말없이 비면 고장으로 읽힌다.
+  const [stopsNotice, setStopsNotice] = useState<string | null>(null);
   const [result, setResult] = useState<TransferResponseTypes | null>(null);
 
   // 도착 회차를 고르면 그 노선의 기존 승하차지를 불러온다(도착지=학원은 승하차지가 아니라 뺀다).
@@ -67,8 +69,16 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
         const route = await getRunRoute(toRunId);
         if (stale) return;
         setStops(route.stops.filter((stop) => !stop.isDestination).map((stop) => ({ stopId: stop.stopId, name: stop.name })));
-      } catch {
-        if (!stale) setStops([]);
+      } catch (cause) {
+        if (stale) return;
+        setStops([]);
+        // §5.19 — 확정 전 회차는 고정 노선이 있으면 예정 경로로 200, 없을 때만 409 RUN_NOT_CONFIRMED.
+        if (cause instanceof ApiError && cause.code === "RUN_NOT_CONFIRMED") {
+          setStopsNotice("이 회차는 고정 노선이 없어 주소로만 지정할 수 있습니다");
+          setMode("address");
+        } else {
+          setStopsNotice("승하차지 목록을 불러오지 못했습니다. 주소로 지정하거나 다시 골라 주세요");
+        }
       }
     })();
     return () => {
@@ -80,6 +90,7 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
     setToRunId(value);
     setStops([]);
     setStopId("");
+    setStopsNotice(null);
   };
 
   const canSubmit = toRunId !== "" && (mode === "stop" ? stopId !== "" : address.trim().length > 0);
@@ -157,6 +168,7 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
           value={mode}
           onChange={(value) => setMode(value as Mode)}
         />
+        {stopsNotice ? <AlertBanner tone="info" title={stopsNotice} /> : null}
         {mode === "stop" ? (
           <Select
             label="승하차지"
