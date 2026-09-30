@@ -37,11 +37,16 @@ const toAuditLogItem = (raw: RawAuditLogItem): AuditLogItemResponseTypes => ({
   occurredAt: raw.occurred_at,
 });
 
+// 화면의 날짜 칸(YYYY-MM-DD)을 서울 기준 그날의 시작·끝 시각으로 — 서버(§1 "ISO-8601 + 오프셋")는 날짜만 받으면 422 다.
+const SEOUL_OFFSET = "+09:00";
+const toSeoulStart = (date?: string) => (date ? `${date}T00:00:00${SEOUL_OFFSET}` : undefined);
+const toSeoulEnd = (date?: string) => (date ? `${date}T23:59:59${SEOUL_OFFSET}` : undefined);
+
 const toQuery = (query: AuditQueryTypes) => ({
   academy_id: query.academyId,
   account_id: query.accountId,
-  from: query.from,
-  to: query.to,
+  from: toSeoulStart(query.from),
+  to: toSeoulEnd(query.to),
   page: query.page,
   size: query.size,
 });
