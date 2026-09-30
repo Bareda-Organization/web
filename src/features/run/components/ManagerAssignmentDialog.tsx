@@ -46,12 +46,23 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
 
   if (!open) return null;
 
-  const handleClose = () => {
+  // F01-06 — 부모가 이 대화상자를 항상 마운트해 두므로 어떤 경로로 닫혀도(취소·경고 확인·저장 성공)
+  // 상태를 비워야 다시 열 때 이전 경고 화면·선택값이 남지 않는다.
+  const resetState = () => {
     setDriverManagerId("");
     setEscortManagerId("");
     setWarnings([]);
     setError(null);
+  };
+
+  const handleClose = () => {
+    resetState();
     onClose();
+  };
+
+  const handleDone = () => {
+    resetState();
+    onDone();
   };
 
   // ⚠ warnings[] 가 와도 요청 자체는 이미 200 으로 성공해 배치가 반영된 뒤다
@@ -68,7 +79,7 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
       if (result.warnings.length > 0) {
         setWarnings(result.warnings.map((w) => w.message));
       } else {
-        onDone();
+        handleDone();
       }
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "배치 변경에 실패했습니다");
@@ -83,7 +94,7 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
       onClose={handleClose}
       footer={
         warnings.length > 0 ? (
-          <Button variant="primary" onClick={onDone}>
+          <Button variant="primary" onClick={handleDone}>
             확인
           </Button>
         ) : (

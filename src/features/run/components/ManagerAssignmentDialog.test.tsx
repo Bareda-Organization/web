@@ -67,4 +67,43 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     expect(await screen.findByText("근무 시간과 맞지 않습니다")).toBeInTheDocument();
     expect(onDone).not.toHaveBeenCalled();
   });
+
+  // F01-06 — 부모는 이 대화상자를 항상 마운트해 두고 `open` 만 바꾼다. 닫혔다 다시 열 때 이전 저장의
+  // 경고 화면(확인 버튼만)이나 고른 값이 남아 있으면 안 된다.
+  it("경고를 확인하고 닫은 뒤 다시 열면 저장 버튼이 있는 새 입력 화면이다", async () => {
+    mockGetManagers.mockResolvedValue(managers);
+    mockPatchRunAssignment.mockResolvedValue({
+      runId: "7",
+      assignments: [{ managerId: "1", name: "김기사", role: "driver" }],
+      warnings: [{ code: "WORK_HOURS_MISMATCH", managerId: "1", role: "driver", message: "근무 시간과 맞지 않습니다" }],
+    });
+    const { rerender } = render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={() => rerender(<ManagerAssignmentDialog runId="7" open={false} onClose={vi.fn()} onDone={vi.fn()} />)} />);
+    await screen.findByText("김기사");
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    fireEvent.click(await screen.findByRole("button", { name: "확인" }));
+
+    rerender(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByRole("button", { name: "저장" })).toBeInTheDocument();
+    expect(screen.queryByText("근무 시간과 맞지 않습니다")).not.toBeInTheDocument();
+  });
+
+  it("저장에 성공하면 고른 기사·동승 매니저 값을 비워, 다른 회차에서 열어도 이전 선택이 남지 않는다", async () => {
+    mockGetManagers.mockResolvedValue(managers);
+    mockPatchRunAssignment.mockResolvedValue({
+      runId: "7",
+      assignments: [{ managerId: "1", name: "김기사", role: "driver" }],
+      warnings: [],
+    });
+    const { rerender } = render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+    fireEvent.change(screen.getByLabelText("기사"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(mockPatchRunAssignment).toHaveBeenCalled());
+
+    rerender(<ManagerAssignmentDialog runId="8" open={false} onClose={vi.fn()} onDone={vi.fn()} />);
+    rerender(<ManagerAssignmentDialog runId="8" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect((await screen.findByLabelText("기사")) as HTMLSelectElement).toHaveProperty("value", "");
+  });
 });
