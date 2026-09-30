@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, PageHeader, Pagination, RosterTable, SearchField } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -27,19 +27,25 @@ export const StudentList = () => {
   const [creating, setCreating] = useState(false);
   const [withdrawing, setWithdrawing] = useState<StudentListItemResponseTypes | undefined>(undefined);
 
+  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
+  const requestSeq = useRef(0);
+
   const load = useCallback(async (nextPage: number, query: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     try {
       const data = await getStudents(nextPage, PAGE_SIZE, query || undefined);
+      if (seq !== requestSeq.current) return;
       setItems(data.items);
       setTotalCount(data.totalCount);
       setHasNext(data.hasNext);
       setError(null);
     } catch (cause) {
+      if (seq !== requestSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "학생 목록을 불러오지 못했습니다");
       setItems([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, []);
 
@@ -52,7 +58,11 @@ export const StudentList = () => {
 
   const handleSearch = (value: string) => {
     setQ(value);
-    setPage(0);
+    // 0쪽이 아니면 쪽이 바뀌며 아래 effect 가 이 검색어로 조회한다 — 여기서도 부르면 같은 요청이 두 번 나간다.
+    if (page !== 0) {
+      setPage(0);
+      return;
+    }
     load(0, value);
   };
 

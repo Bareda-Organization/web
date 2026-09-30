@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -31,18 +31,24 @@ export const SignupApprovalPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<SignupRequestItemResponseTypes | null>(null);
 
+  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
+  const requestSeq = useRef(0);
+
   const loadRequests = useCallback(async (nextStatus: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     try {
       const data = await getSignupRequests(nextStatus);
+      if (seq !== requestSeq.current) return;
       setRequests(data.items);
       setPendingCount(data.pendingCount);
       setError(null);
     } catch (cause) {
+      if (seq !== requestSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "가입 요청 목록을 불러오지 못했습니다");
       setRequests([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, []);
 

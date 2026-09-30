@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { SignupApprovalPage } from "./SignupApprovalPage";
@@ -205,5 +205,31 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
     fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     expect(await screen.findByText("이미 연결된 자녀가 있습니다")).toBeInTheDocument();
+  });
+});
+
+// F02-04 — 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
+describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("처리 대기 응답이 거절됨 응답보다 늦게 와도 표에는 거절됨 목록이 남는다", async () => {
+    let resolvePending!: (value: SignupRequestsResponseTypes) => void;
+    mockGetSignupRequests.mockImplementationOnce(
+      () => new Promise<SignupRequestsResponseTypes>((resolve) => (resolvePending = resolve)),
+    );
+    mockGetSignupRequests.mockResolvedValueOnce({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "2", name: "거절된사람" }],
+    });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(screen.getByText("거절됨"));
+    await screen.findByText("거절된사람");
+    await act(async () => resolvePending(baseList));
+
+    expect(screen.getByText("거절된사람")).toBeInTheDocument();
+    expect(screen.queryByText("김보호")).not.toBeInTheDocument();
   });
 });
