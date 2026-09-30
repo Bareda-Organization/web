@@ -93,7 +93,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGateGuard>
+    <AuthGateGuard requiredRole="staff">
       <EmergencyAlertProvider>
         <StaffShell>{children}</StaffShell>
       </EmergencyAlertProvider>

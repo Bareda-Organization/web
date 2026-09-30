@@ -7,7 +7,11 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@/features/auth", () => ({
-  AuthGateGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthGateGuard: ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) => (
+    <div data-testid="guard" data-required-role={requiredRole}>
+      {children}
+    </div>
+  ),
   LogoutButton: () => null,
   TestDataResetButton: () => null,
   useAuthSession: () => ({ session: { academy: { id: "7", name: "바래다" } } }),
@@ -29,5 +33,18 @@ describe("(staff) 레이아웃 — 비상 알림 건수", () => {
 
     expect(screen.getByRole("button", { name: /비상 알림/ })).toHaveTextContent("3");
     expect(screen.getByRole("button", { name: /운행 관리/ })).not.toHaveTextContent("3");
+  });
+});
+
+// F03-12 — 접근 판정은 경로 목록이 아니라 라우트 그룹이 맡는다. (staff) 그룹은 staff 역할을 요구한다.
+describe("(staff) 레이아웃 — 그룹 역할", () => {
+  it("가드에 staff 역할을 요구한다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    expect(screen.getByTestId("guard")).toHaveAttribute("data-required-role", "staff");
   });
 });

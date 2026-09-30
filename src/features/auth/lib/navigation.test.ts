@@ -45,73 +45,27 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(session, "/academies")).toBeNull();
   });
 
-  it("active 인데 역할과 안 맞는 경로면 자기 홈으로 되돌린다", () => {
-    expect(decideAuthRedirect(baseSession("active", "staff"), "/academies")).toBe("/dashboard");
-    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/dashboard")).toBe("/academies");
+  // F03-12 — 접근 판정의 단위는 경로 목록이 아니라 라우트 그룹이다. (admin) 레이아웃은 system_admin,
+  // (staff) 레이아웃은 staff 를 요구한다고 알리고, 이 함수는 세션 역할이 그와 다르면 자기 홈으로 보낸다.
+  it("active 인데 그룹이 요구하는 역할과 다르면 자기 홈으로 되돌린다", () => {
+    expect(decideAuthRedirect(baseSession("active", "staff"), "/academies", "system_admin")).toBe("/dashboard");
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/dashboard", "staff")).toBe("/academies");
+    expect(decideAuthRedirect(baseSession("active", "staff"), "/dashboard", "staff")).toBeNull();
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/academies", "system_admin")).toBeNull();
   });
 
   // BRIEF-a1.md §2 — "관계자가 주소를 직접 쳐서 (admin) 에 들어가는지" 가 가장 위험한 자리.
-  // `/academies` 하나만 걸러내던 옛 구현에서는 아래 7개가 전부 통과(null)됐다 — 8화면
-  // 전부를 개별로 확인해야 그 회귀가 다시 나도 잡힌다.
-  it("관계자(staff) 는 admin 화면 8개 전부에서 되돌려진다", () => {
-    const staff = baseSession("active", "staff");
-    const adminPaths = [
-      "/academies",
-      "/member-approvals",
-      "/member-accounts",
-      "/monitoring",
-      "/blocked-accounts",
-      "/emergency-alerts",
-      "/force-confirm",
-      "/audit-log",
-    ];
-    for (const path of adminPaths) {
-      expect(decideAuthRedirect(staff, path)).toBe("/dashboard");
-      // 하위 경로(예: /academies/[id])도 같은 그룹으로 걸려야 한다.
-      expect(decideAuthRedirect(staff, `${path}/sub`)).toBe("/dashboard");
-    }
+  // 경로 목록에 등록하지 않은 새 화면 폴더도 그 그룹 안에 있으면 자동으로 막혀야 한다(기본은 거부).
+  it("경로 목록에 없는 새 화면도 그룹 역할이 다르면 닫힌다", () => {
+    expect(decideAuthRedirect(baseSession("active", "staff"), "/brand-new-admin-screen", "system_admin")).toBe("/dashboard");
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/brand-new-staff-screen/sub", "staff")).toBe("/academies");
   });
 
-  it("admin 경로와 이름이 비슷할 뿐인 관계자 경로는 걸러내지 않는다 (오탐 방지)", () => {
-    const staff = baseSession("active", "staff");
-    // "/academies-report" 는 "/academies" 로 시작하지만 그 하위 경로가 아니다.
-    expect(decideAuthRedirect(staff, "/academies-report")).toBeNull();
-  });
-
-  it("역할을 알 수 없는 세션은 admin 화면에서 열리지 않고 닫힌다 (기본값은 거부)", () => {
+  it("역할을 알 수 없는 세션은 어느 그룹에서도 열리지 않고 닫힌다 (기본값은 거부)", () => {
     // AccountRole 타입 밖의 값이 들어오는 방어적 상황을 가정한다 — 권한을 판정할 수
     // 없을 때 열리는 쪽(null)이 아니라 닫히는 쪽(리다이렉트)이어야 한다.
     const unknownRoleSession = baseSession("active", "unknown_role" as AuthSession["role"]);
-    expect(decideAuthRedirect(unknownRoleSession, "/academies")).not.toBeNull();
-    expect(decideAuthRedirect(unknownRoleSession, "/monitoring")).not.toBeNull();
-  });
-  // R32-W2 — `(staff)` 화면이 `/dashboard` 하나만 걸러져, 메인 관리자가 `/student` 등을 직접 치면
-  // 관계자 화면이 그대로 열렸다. `(staff)` 최상위 경로 13개 전부를 하나씩 확인한다.
-  it("메인 관리자는 관계자(staff) 화면 13개 전부에서 /academies 로 되돌려진다", () => {
-    const admin = baseSession("active", "system_admin");
-    const staffPaths = [
-      "/dashboard",
-      "/today-run",
-      "/signup-approval",
-      "/change-approval",
-      "/student",
-      "/bus",
-      "/manager",
-      "/route",
-      "/schedule",
-      "/notification",
-      "/academy-settings",
-      "/emergency",
-      "/report",
-    ];
-    for (const path of staffPaths) {
-      expect(decideAuthRedirect(admin, path)).toBe("/academies");
-      expect(decideAuthRedirect(admin, `${path}/sub`)).toBe("/academies");
-    }
-  });
-
-  it("관계자 경로와 이름만 비슷한 admin 경로는 관계자 화면으로 오탐하지 않는다", () => {
-    // "/emergency-alerts"(admin) 는 "/emergency"(staff) 로 시작하지만 그 하위 경로가 아니다.
-    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/emergency-alerts")).toBeNull();
+    expect(decideAuthRedirect(unknownRoleSession, "/academies", "system_admin")).not.toBeNull();
+    expect(decideAuthRedirect(unknownRoleSession, "/dashboard", "staff")).not.toBeNull();
   });
 });
