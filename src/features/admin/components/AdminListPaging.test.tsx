@@ -127,6 +127,8 @@ describe("감사·접속 이력 — 다음 쪽과 실패 시 목록 유지", () 
     render(<AuditLogPage />);
     await waitFor(() => expect(getAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ page: 0 })), { timeout: 3000 });
 
+    // 첫 응답이 와서 has_next 가 반영돼야 [다음] 이 켜진다.
+    await waitFor(() => expect(screen.getByRole("button", { name: "다음" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })), { timeout: 3000 });
 
