@@ -3,10 +3,28 @@
 import { useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl } from "@/shared/ui";
-import { postForcedAdd } from "../api";
+import { postForcedAdd, searchStudents } from "../api";
+import type { StudentSearchItemTypes } from "../types";
 import { StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
 
 type Mode = "existing" | "new";
+
+// §5.7 에러 코드별 문구 — 영문 코드·서버 원문은 화면에 내지 않는다(StudentTransferDialog 와 같은 방침).
+const forcedAddErrorMessage = (cause: unknown): string => {
+  if (!(cause instanceof ApiError)) return "승하차지 추가에 실패했습니다. 잠시 뒤 다시 시도해 주세요";
+  switch (cause.code) {
+    case "CHANGE_WINDOW_CLOSED":
+      return "출발 30분 전이 지나 추가할 수 없습니다";
+    case "CAPACITY_EXCEEDED":
+      return "버스 정원이 가득 차 추가할 수 없습니다";
+    case "ADDRESS_VERIFICATION_FAILED":
+      return "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요";
+    case "RUN_CANCELED":
+      return "취소된 회차라 추가할 수 없습니다";
+    default:
+      return cause.message;
+  }
+};
 
 type ForcedAddDialogProps = {
   runId: string;
@@ -20,7 +38,11 @@ type ForcedAddDialogProps = {
 // 배타적이라(§5.7) 라디오로 갈라 한쪽만 서버에 보낸다.
 export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialogProps) => {
   const [mode, setMode] = useState<Mode>("existing");
-  const [studentIdInput, setStudentIdInput] = useState("");
+  // F01-07 — 기존 학생은 내부 ID 를 입력받지 않고 이름으로 찾아 고른다.
+  const [studentQuery, setStudentQuery] = useState("");
+  const [candidates, setCandidates] = useState<StudentSearchItemTypes[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<StudentSearchItemTypes | null>(null);
   const [newStudentName, setNewStudentName] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
@@ -30,7 +52,9 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
 
   const reset = () => {
     setMode("existing");
-    setStudentIdInput("");
+    setStudentQuery("");
+    setCandidates(null);
+    setSelectedStudent(null);
     setNewStudentName("");
     setAddress("");
     setNote("");
@@ -46,14 +70,27 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
 
   const canSubmit =
     address.trim().length > 0 &&
-    (mode === "existing" ? studentIdInput.trim().length > 0 : newStudentName.trim().length > 0);
+    (mode === "existing" ? selectedStudent != null : newStudentName.trim().length > 0);
+
+  const handleSearch = async () => {
+    setSearching(true);
+    setError(null);
+    try {
+      setCandidates(await searchStudents(studentQuery.trim()));
+    } catch (cause) {
+      setCandidates(null);
+      setError(cause instanceof ApiError ? cause.message : "학생을 검색하지 못했습니다");
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const handleConfirm = async () => {
     setSubmitting(true);
     setError(null);
     try {
       await postForcedAdd(runId, {
-        studentId: mode === "existing" ? studentIdInput.trim() : undefined,
+        studentId: mode === "existing" ? selectedStudent?.studentId : undefined,
         newStudentName: mode === "new" ? newStudentName.trim() : undefined,
         address: address.trim(),
         note: note.trim() || undefined,
@@ -61,7 +98,7 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
       reset();
       onDone();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "승하차지 추가에 실패했습니다");
+      setError(forcedAddErrorMessage(cause));
       setConfirming(false);
     } finally {
       setSubmitting(false);
@@ -89,7 +126,7 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
         <StyledConfirmBody>
           <p>이 작업은 되돌릴 수 없습니다. 확정하면 다음 확정 배치 때 명단에 반영됩니다.</p>
           <p>
-            대상: {mode === "existing" ? `학생 ID ${studentIdInput}` : `신규 학생 · ${newStudentName}`}
+            대상: {mode === "existing" ? `${selectedStudent?.name} 학생` : `신규 학생 · ${newStudentName}`}
           </p>
           <p>승하차지: {address}</p>
         </StyledConfirmBody>
@@ -123,12 +160,33 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
           onChange={(value) => setMode(value as Mode)}
         />
         {mode === "existing" ? (
-          <Input
-            label="학생 ID"
-            required
-            value={studentIdInput}
-            onChange={(event) => setStudentIdInput(event.target.value)}
-          />
+          <>
+            <Input
+              label="학생 이름 검색"
+              value={studentQuery}
+              onChange={(event) => setStudentQuery(event.target.value)}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSearch}
+              disabled={searching || studentQuery.trim().length === 0}
+            >
+              검색
+            </Button>
+            {candidates?.length === 0 ? <p>검색 결과가 없습니다</p> : null}
+            {candidates?.map((student) => (
+              <Button
+                key={student.studentId}
+                variant={selectedStudent?.studentId === student.studentId ? "primary" : "ghost"}
+                size="sm"
+                aria-pressed={selectedStudent?.studentId === student.studentId}
+                onClick={() => setSelectedStudent(student)}
+              >
+                {`${student.name} · ${student.className ?? "-"}`}
+              </Button>
+            ))}
+          </>
         ) : (
           <Input
             label="학생 이름"

@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
+import { ApiError } from "@/shared/lib/http";
 import { useRealtimeChannel } from "@/shared/hooks";
 import {
   academyLiveDestination,
@@ -34,12 +35,17 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
   const router = useRouter();
   const [alerts, setAlerts] = useState<EmergencyAlert[]>([]);
   const [ackingId, setAckingId] = useState<string | null>(null);
-  const [ackError, setAckError] = useState<string | null>(null);
+  // 실패 문구는 실패한 알림 id 에 묶는다 — 그 알림이 사라지면 문구도 함께 사라져 새 비상 건 옆에 남지 않는다(F01-12).
+  const [ackFailedId, setAckFailedId] = useState<string | null>(null);
+  // 요청 번호 — ack 성공 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리지 못하게 한다(F01-12).
+  const requestSeq = useRef(0);
 
   // 서버의 미확인(open) 목록이 기준이다 — 통지를 놓쳤거나 새로고침한 뒤에도 미확인 신고가 다시 뜬다.
   const load = useCallback(async () => {
+    const mine = ++requestSeq.current;
     try {
       const data = await getEmergencies({ status: "open" });
+      if (mine !== requestSeq.current) return;
       setAlerts(
         data.items.map((item) => ({
           emergencyId: item.emergencyId,
@@ -87,16 +93,23 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
 
   const handleAck = async (emergencyId: string) => {
     setAckingId(emergencyId);
-    setAckError(null);
+    setAckFailedId(null);
     try {
       await ackEmergency(emergencyId);
-      setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== emergencyId));
-      void load();
-    } catch {
-      setAckError("확인 처리에 실패했습니다. 다시 눌러 주세요.");
+      closeAcked(emergencyId);
+    } catch (cause) {
+      // 다른 관계자가 먼저 확인한 건(409)은 이미 처리된 것이라 실패로 안내하지 않는다 — 다시 눌러도 같은 결과다.
+      if (cause instanceof ApiError && cause.code === "ALREADY_ACKED") closeAcked(emergencyId);
+      else setAckFailedId(emergencyId);
     } finally {
       setAckingId(null);
     }
+  };
+
+  const closeAcked = (emergencyId: string) => {
+    setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== emergencyId));
+    // load() 가 요청 번호를 올려, ack 전에 나간 폴링의 옛 응답은 이 시점부터 버려진다.
+    void load();
   };
 
   const count = useMemo(() => alerts.length, [alerts]);
@@ -125,7 +138,9 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
               {alert.raisedByName ? `${alert.raisedByName} 님이 신고했습니다. ` : ""}확인하기 전까지 이 알림은 계속 표시됩니다.
             </AlertBanner>
           ))}
-          {ackError ? <AlertBanner tone="missed" title={ackError} /> : null}
+          {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
+            <AlertBanner tone="missed" title="확인 처리에 실패했습니다. 다시 눌러 주세요." />
+          ) : null}
         </StyledEmergencyPopupStack>
       ) : null}
     </EmergencyAlertContext.Provider>

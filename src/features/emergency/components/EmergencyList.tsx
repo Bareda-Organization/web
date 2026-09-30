@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, Input, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -36,19 +36,26 @@ export const EmergencyList = () => {
   const [ackingId, setAckingId] = useState<string | null>(null);
   const [detail, setDetail] = useState<EmergencyItemResponseTypes | null>(null);
 
+  // 요청 번호 — 필터를 바꾸기 전에 나간 요청의 늦은 응답이 새 필터의 목록을 덮지 않게 최신 요청만 반영한다(F01-05).
+  const requestSeq = useRef(0);
+
   const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string, silent = false) => {
+    const mine = ++requestSeq.current;
     // 주기 갱신(silent)은 표를 '불러오는 중' 으로 바꾸지 않는다.
     if (!silent) setLoading(true);
     try {
       const data = await getEmergencies({ status: nextStatus, date: nextDate || undefined });
+      if (mine !== requestSeq.current) return;
       setItems(data.items);
       setUnackedCount(data.unackedCount);
       setError(null);
     } catch (cause) {
+      if (mine !== requestSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "비상 알림 목록을 불러오지 못했습니다");
-      setItems([]);
+      // F01-08 — 주기 갱신이 한 번 실패했다고 보이던 미확인 건을 지우면 "없다" 로 읽힌다. 오류 배너만 띄운다.
+      if (!silent) setItems([]);
     } finally {
-      setLoading(false);
+      if (mine === requestSeq.current) setLoading(false);
     }
   }, []);
 

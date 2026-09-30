@@ -106,8 +106,13 @@ export type MarkerIconOptions = {
   markerId?: string;
 };
 
-/** 클릭 위임이 마커를 되찾는 표식. 마커 id 는 내부 값(회차 번호·`stop-7`)이라 따옴표가 섞이지 않는다. */
-const markerIdAttr = (markerId?: string): string => (markerId ? ` data-marker-id="${markerId}"` : "");
+// F01-02 — SDK 는 아이콘 문자열을 그대로 DOM 에 넣는다. 관계자가 입력하는 호차명이 태그로 살아나지 않게
+// 문자열로 끼우는 값은 전부 이 함수를 거친다.
+const escapeHtml = (raw: string): string =>
+  raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+/** 클릭 위임이 마커를 되찾는 표식. 마커 id 는 내부 값(회차 번호·`stop-7`)이지만 속성 값이라 이스케이프한다. */
+const markerIdAttr = (markerId?: string): string => (markerId ? ` data-marker-id="${escapeHtml(markerId)}"` : "");
 
 /**
  * R22 목표 1 — 버스를 서로 구별한다(사용자 지시 — 전부 같은 파란 원이라 어느 버스인지
@@ -122,7 +127,7 @@ const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boo
   // 선택 강조는 그 버스의 색으로 두른다 — 종류별 색을 쓰는 `selectedRingOf` 와 같은 규칙을
   // 버스에만 한 단계 좁힌 것이다(테두리가 "그 마커의 색" 이라는 뜻은 그대로다).
   const ring = selected ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};` : "";
-  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${busNo}</span></span>`;
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${escapeHtml(busNo)}</span></span>`;
 };
 
 // 물방울 핀 윤곽 — 머리는 (12,12) 중심 반지름 12 의 원, 끝점은 (12,32). viewBox 를 흰 테두리

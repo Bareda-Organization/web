@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch } from "./httpClient";
+import { apiFetch, apiFetchBlob } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
 import { ApiError } from "./apiError";
 
@@ -59,5 +59,28 @@ describe("apiFetch — 계정 상태 게이트 이벤트 전달", () => {
 
     expect(listener).not.toHaveBeenCalled();
     unregister();
+  });
+});
+
+// Ruling 377 — 사진 GET 은 봉투가 아니라 이미지 바이트가 온다. 에러 변환은 apiFetch 와 같아야 한다.
+describe("apiFetchBlob", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("성공하면 응답 본문을 Blob 으로 돌려준다", async () => {
+    const blob = new Blob(["img"]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => blob } as Response));
+
+    await expect(apiFetchBlob("/files/photos/a.jpg")).resolves.toBe(blob);
+  });
+
+  it("404 는 ApiError 로 던진다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(mockJsonResponse(404, { error: { code: "STUDENT_NOT_FOUND", message: "없음" } })),
+    );
+
+    await expect(apiFetchBlob("/files/photos/a.jpg")).rejects.toBeInstanceOf(ApiError);
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useProtectedImageUrl } from "../../hooks/useProtectedImageUrl";
 import { Icon } from "../core/Icon";
 import { Button } from "../core/Button";
 import { StyledHelperText, StyledHiddenInput, StyledLabel, StyledPreview, StyledRow, StyledWrap } from "./PhotoUploadField.styled";
@@ -25,7 +26,12 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
   // 우리가 createObjectURL 로 만든 blob: URL만 추적한다 — existingPhotoUrl(서버 URL)은
   // 우리가 만든 것이 아니라 해제 대상이 아니다.
   const objectUrlRef = useRef<string | undefined>(undefined);
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>(existingPhotoUrl);
+  // 기존 사진은 로그인 토큰으로 받아 온다(Ruling 377) — 받기 전·실패 땐 undefined 라 "사진 없음" 표시.
+  const existingSrc = useProtectedImageUrl(existingPhotoUrl);
+  // 사용자가 새로 고른 파일의 미리보기 blob: URL. 없으면 기존 사진을 그린다.
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | undefined>(undefined);
+  const [removed, setRemoved] = useState(false);
+  const previewUrl = removed ? undefined : (localPreviewUrl ?? existingSrc);
   const [localError, setLocalError] = useState<string | undefined>(undefined);
 
   // 언마운트 갈래 — 마지막으로 만든 blob: URL 을 해제한다. 안 하면 화면을 오래 쓸수록
@@ -63,7 +69,8 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
     objectUrlRef.current = nextUrl;
 
     setLocalError(undefined);
-    setPreviewUrl(nextUrl);
+    setRemoved(false);
+    setLocalPreviewUrl(nextUrl);
     onChange(file);
   };
 
@@ -73,7 +80,8 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
       objectUrlRef.current = undefined;
     }
     setLocalError(undefined);
-    setPreviewUrl(undefined);
+    setLocalPreviewUrl(undefined);
+    setRemoved(true);
     onChange(null);
     if (inputRef.current) {
       inputRef.current.value = "";

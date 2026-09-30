@@ -618,13 +618,13 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 
   // Ruling 321 — idle(1호차)인데 백엔드가 confirmed:false·좌표 0개(고정 노선 자체가
   // 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
-  it("고정 노선이 없는 idle 회차를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
+  it("고정 노선이 없는 idle 회차를 고르면 고정 노선이 없다는 안내(편성 화면 링크 포함)를 보여준다", async () => {
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<DashboardPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
   });
 
@@ -668,5 +668,156 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     const idlePill = within(idleCard).getByText("대기");
     const confirmedPill = within(confirmedCard).getByText("확정");
     expect(idlePill.className).not.toBe(confirmedPill.className);
+  });
+});
+
+// F01-01·F01-05·F01-09·C00-03 — 지표·표의 자동 갱신 · 늦은 노선 응답 차단 · 승인 요청 배너 처리 경로.
+describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", () => {
+  const runOf = (runId: string, overrides: Partial<DashboardResponseTypes["runs"][number]> = {}) => ({
+    ...baseDashboard.runs[0],
+    runId,
+    busNo: `${runId}호차`,
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    mockUseAuthSession.mockReturnValue({
+      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
+    });
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // F01-01 — getDashboard 는 마운트 때 한 번뿐이라 지표·표·미탑승 배너가 진입 시점 값에서 굳었다.
+  it("7초 주기 갱신이 지표·회차 상태·미탑승 배너를 새로 그린다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValueOnce({ ...baseDashboard, runs: [runOf("1", { runStatus: "confirmed" })] });
+    render(<DashboardPage />);
+    expect(await screen.findByText("42")).toBeInTheDocument();
+    expect(screen.queryByText(/미탑승 확인 대기/)).not.toBeInTheDocument();
+
+    mockGetDashboard.mockResolvedValue({
+      metrics: { ...baseDashboard.metrics, boarded: 50 },
+      runs: [
+        runOf("1", {
+          runStatus: "moving",
+          noShowCases: [{ studentName: "박학생", stopName: "정문", expiresAt: "2026-09-13T00:10:00Z" }] as never,
+        }),
+      ],
+    });
+    await vi.advanceTimersByTimeAsync(7000);
+
+    expect(await screen.findByText("50")).toBeInTheDocument();
+    expect(screen.getByText("미탑승 확인 대기 1건")).toBeInTheDocument();
+  });
+
+  it.each(["rider_changed", "run_started", "run_ended"] as const)("%s 이벤트는 지표·회차 표도 다시 불러온다", async (eventType) => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+    const callsBefore = mockGetDashboard.mock.calls.length;
+
+    await act(async () => {
+      capturedOnEnvelope?.(envelope(eventType, {}));
+    });
+
+    await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBeGreaterThan(callsBefore));
+  });
+
+  it("주기 갱신이 한 번 실패해도 이미 보이던 지표·표를 지우거나 오류로 덮지 않는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValueOnce(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+
+    mockGetDashboard.mockRejectedValue(new ApiError(500, "INTERNAL", "서버 오류"));
+    await vi.advanceTimersByTimeAsync(7000);
+
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.queryByText("서버 오류")).not.toBeInTheDocument();
+  });
+
+  // F01-05 — 버스 A 를 고른 직후 B 를 고르면 A 의 노선 응답이 늦게 와서 B 의 지도를 A 의 값으로 되돌렸다.
+  it("버스를 바꾸기 전에 보낸 노선 요청의 늦은 응답이 새로 고른 버스의 노선 안내를 덮지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [runOf("1", { runStatus: "idle" }), runOf("2", { runStatus: "idle" })],
+    });
+    let resolveFirst: (value: Awaited<ReturnType<typeof getRunRoute>>) => void = () => {};
+    mockGetRunRoute.mockImplementation((runId) =>
+      runId === "1"
+        ? new Promise((resolve) => (resolveFirst = resolve))
+        : Promise.resolve({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false }),
+    );
+    render(<DashboardPage />);
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(screen.getByText("2호차 · 등원"));
+    await screen.findByText(/이 회차의 고정 노선이 없습니다/);
+
+    resolveFirst({
+      roadPath: [{ lat: 37.5, lng: 127.0 }, { lat: 37.6, lng: 127.1 }],
+      fallbackUsed: false,
+      stops: [],
+      confirmed: false,
+    });
+
+    await waitFor(() => expect(mockMapSurface.mock.calls.at(-1)![0].polylines ?? []).toHaveLength(0));
+    expect(screen.getByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
+  });
+
+  // C00-03 — TodayRunPage 와 같은 형태의 노선 조회다. 고정 노선이 없어 409 RUN_NOT_CONFIRMED 면 원문 오류 띠 대신 안내.
+  it("고정 노선이 없어 노선 조회가 RUN_NOT_CONFIRMED 면 오류 띠 대신 고정 노선 없음 안내를 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [runOf("1", { runStatus: "idle" })] });
+    mockGetRunRoute.mockRejectedValue(new ApiError(409, "RUN_NOT_CONFIRMED", "확정되지 않은 회차입니다"));
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+
+    expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
+    expect(screen.queryByText("확정되지 않은 회차입니다")).not.toBeInTheDocument();
+  });
+
+  // F01-09 — 승인 요청 배너가 지워지지도, 승인 화면으로 가지도 못했고, 다음 요청이 오면 앞 건이 사라졌다.
+  describe("탑승 승인 요청 배너", () => {
+    const approval = (approvalId: number, studentName: string, stopName: string) =>
+      envelope("approval_requested", {
+        approval_id: approvalId,
+        student_name: studentName,
+        run_id: 1,
+        stop_name: stopName,
+        deadline_at: "2026-09-13T00:10:00Z",
+      });
+
+    it("[승인 화면으로] 로 승인 목록에 가고, [닫기] 로 배너를 지운다", async () => {
+      mockGetDashboard.mockResolvedValue(baseDashboard);
+      render(<DashboardPage />);
+      await screen.findByText("1호차");
+      act(() => capturedOnEnvelope?.(approval(5, "박학생", "정문")));
+
+      fireEvent.click(await screen.findByRole("button", { name: "승인 화면으로" }));
+      expect(mockPush).toHaveBeenCalledWith("/change-approval");
+
+      fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+      expect(screen.queryByText(/탑승 승인 요청/)).not.toBeInTheDocument();
+    });
+
+    it("요청이 여러 건이면 앞 건을 덮지 않고 건수로 합친다", async () => {
+      mockGetDashboard.mockResolvedValue(baseDashboard);
+      render(<DashboardPage />);
+      await screen.findByText("1호차");
+
+      act(() => capturedOnEnvelope?.(approval(5, "박학생", "정문")));
+      act(() => capturedOnEnvelope?.(approval(6, "김학생", "후문")));
+      // 같은 요청이 다시 오면(재전송) 건수가 늘지 않는다.
+      act(() => capturedOnEnvelope?.(approval(6, "김학생", "후문")));
+
+      expect(await screen.findByText("탑승 승인 요청 2건 — 김학생 (후문) 외")).toBeInTheDocument();
+    });
   });
 });

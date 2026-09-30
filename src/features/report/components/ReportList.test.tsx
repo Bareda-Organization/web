@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportList } from "./ReportList";
 import { getReports } from "../api";
+import { getDashboard } from "@/features/run";
 
 // §5.20 EXC-02·03 · API_SPEC §1.9 — 조회 전용 화면이라 두 갈래만 고정한다:
 // (1) 빈 목록이면 총 0건을 보여주고 표에 행이 없어야 한다.
@@ -10,7 +11,13 @@ vi.mock("../api", () => ({
   getReports: vi.fn(),
 }));
 
+// 회차 필터 후보(오늘 회차)는 run 기능의 대시보드 조회에서 온다.
+vi.mock("@/features/run", () => ({
+  getDashboard: vi.fn(),
+}));
+
 const mockGet = vi.mocked(getReports);
+const mockGetDashboard = vi.mocked(getDashboard);
 
 describe("ReportList — 조회 갈래", () => {
   afterEach(() => {
@@ -64,5 +71,57 @@ describe("ReportList — 시각 표기(R32-W9)", () => {
 
     expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
+  });
+});
+
+// F01-05·F01-14 — 종류·날짜·회차 필터가 조회 하나로 모이고, 앞선 요청의 늦은 응답은 버려진다.
+describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
+  const REPORT = (reportId: string, memo: string) =>
+    ({ reportId, type: "etc", busNo: "1호차", studentName: null, reportedBy: "김기사", reportedAt: "2026-09-12T08:00:00Z", memo, handled: false }) as never;
+
+  beforeEach(() => {
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [{ runId: "7", busNo: "2호차", direction: "to_academy" }] } as never);
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("회차를 고르면 그 run_id 로 조회한다", async () => {
+    mockGet.mockResolvedValue({ items: [] });
+    render(<ReportList />);
+    await screen.findByRole("option", { name: "2호차 · 등원" });
+
+    fireEvent.change(screen.getByLabelText("회차"), { target: { value: "7" } });
+
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ runId: "7" })));
+  });
+
+  it("날짜를 바꾸면 조회는 새 날짜로 한 번 나간다", async () => {
+    mockGet.mockResolvedValue({ items: [] });
+    render(<ReportList />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("날짜"), { target: { value: "2026-09-12" } });
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+    expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12" }));
+  });
+
+  it("조건을 바꾸기 전에 보낸 요청의 늦은 응답이 새 조건의 목록을 덮지 않는다", async () => {
+    let resolveFirst: (value: { items: never[] }) => void = () => {};
+    mockGet.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    mockGet.mockResolvedValue({ items: [REPORT("2", "새 조건의 보고")] });
+    render(<ReportList />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("종류"), { target: { value: "etc" } });
+    await screen.findByText("새 조건의 보고");
+    resolveFirst({ items: [REPORT("1", "옛 조건의 보고")] });
+
+    await waitFor(() => expect(screen.queryByText("옛 조건의 보고")).not.toBeInTheDocument());
+    expect(screen.getByText("새 조건의 보고")).toBeInTheDocument();
   });
 });

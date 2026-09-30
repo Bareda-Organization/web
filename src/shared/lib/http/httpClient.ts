@@ -89,7 +89,18 @@ const isAccountGateCode = (code: string): boolean => code === "AUTH_PENDING" || 
 // 401 재발급·계정 게이트 통지·에러 변환·봉투 벗기기 — apiFetch·apiFetchMultipart
 // 둘 다 이 응답 처리 규약을 똑같이 따라야 하므로 여기 한 곳으로 모은다. 요청을
 // 다시 보내는 방법(JSON 재전송 vs multipart 재전송)만 `retry` 로 갈라 받는다.
-const handleResponse = async <T>(response: Response, retry: () => Promise<Response>): Promise<T> => {
+const readEnvelope = async <T>(response: Response): Promise<T> => {
+  // §1.1.1 — 성공 응답은 항상 `{success,data,message}` 로 온다. API_SPEC 각 절이
+  // 서술하는 필드는 전부 `data` 안에 있다. 이 봉투를 벗기는 자리는 여기 한 곳뿐이다.
+  const envelope = (await response.json()) as SuccessEnvelope<T>;
+  return envelope.data;
+};
+
+const handleResponse = async <T>(
+  response: Response,
+  retry: () => Promise<Response>,
+  read: (response: Response) => Promise<T> = readEnvelope,
+): Promise<T> => {
   if (!response.ok && response.status === 401) {
     const failure = await parseApiError(response);
     // TOKEN_EXPIRED 만 재발급 대상이다 — UNAUTHORIZED(토큰 자체가 없음)는
@@ -120,10 +131,7 @@ const handleResponse = async <T>(response: Response, retry: () => Promise<Respon
     return undefined as T;
   }
 
-  // §1.1.1 — 성공 응답은 항상 `{success,data,message}` 로 온다. API_SPEC 각 절이
-  // 서술하는 필드는 전부 `data` 안에 있다. 이 봉투를 벗기는 자리는 여기 한 곳뿐이다.
-  const envelope = (await response.json()) as SuccessEnvelope<T>;
-  return envelope.data;
+  return read(response);
 };
 
 // API_SPEC §1 공통 규약(토큰 부착 · 401 재발급 · 클라이언트 타입 · 에러 변환 ·
@@ -181,4 +189,11 @@ export const apiFetchMultipart = async <T = void>(
 ): Promise<T> => {
   const response = await rawFetchMultipart(path, options);
   return handleResponse<T>(response, () => rawFetchMultipart(path, options));
+};
+
+// §5.11.1 학생 사진처럼 봉투가 아니라 이미지 바이트가 오는 GET 전용 창구 — 토큰 부착·401 재발급·
+// 에러 변환은 apiFetch 와 같은 규약을 타고, 성공 본문만 Blob 으로 읽는다.
+export const apiFetchBlob = async (path: string, options: Pick<ApiFetchOptions, "signal"> = {}): Promise<Blob> => {
+  const response = await rawFetch(path, options);
+  return handleResponse<Blob>(response, () => rawFetch(path, options), (ok) => ok.blob());
 };

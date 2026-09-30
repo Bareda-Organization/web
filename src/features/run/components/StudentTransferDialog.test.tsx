@@ -231,3 +231,28 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
   });
 });
+
+// C00-02 — 도착 회차에 고정 노선이 없으면 §5.19 가 `409 RUN_NOT_CONFIRMED` 를 준다. 예전엔 catch 가
+// 목록을 말없이 비워, 관계자는 목록이 고장 난 줄 알았다.
+describe("StudentTransferDialog — 도착 회차의 승하차지 조회 실패(C00-02)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("고정 노선이 없는 회차(RUN_NOT_CONFIRMED)면 이유를 알리고 주소 입력으로 바꾼다", async () => {
+    mockGetRunRoute.mockRejectedValue(new ApiError(409, "RUN_NOT_CONFIRMED", "서버 원문"));
+    renderDialog();
+
+    await pickDestination();
+
+    expect(await screen.findByText("이 회차는 고정 노선이 없어 주소로만 지정할 수 있습니다")).toBeInTheDocument();
+    expect(screen.getByLabelText("승하차 주소")).toBeInTheDocument();
+  });
+
+  it("그 밖의 조회 실패는 목록이 빈 이유를 오류 문구로 알린다", async () => {
+    mockGetRunRoute.mockRejectedValue(new ApiError(500, "INTERNAL", "서버 원문"));
+    renderDialog();
+
+    await pickDestination();
+
+    expect(await screen.findByText("승하차지 목록을 불러오지 못했습니다. 주소로 지정하거나 다시 골라 주세요")).toBeInTheDocument();
+  });
+});

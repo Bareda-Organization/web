@@ -92,6 +92,13 @@ export type RosterItemResponseTypes = {
   note: string | null;
 };
 
+// 강제 승하차지 추가에서 기존 학생을 이름으로 찾은 결과 한 건(§5.11 GET /staff/students?q=).
+export type StudentSearchItemTypes = {
+  studentId: string;
+  name: string;
+  className: string | null;
+};
+
 // §5.7 POST /staff/runs/{runId}/forced-add.
 export type ForcedAddRequestTypes = {
   studentId?: string;
