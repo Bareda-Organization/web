@@ -76,7 +76,7 @@ const DIRECTION_LABEL: Record<RunLiveItemResponseTypes["direction"], string> = {
 // 유일한 역할이라(BRIEF-a1.md §2) 학원 선택 드롭다운이 이 화면의 진입점이다 — 관계자
 // 대시보드처럼 학원 하나로 고정된 화면이 아니다.
 // 실시간 비상 알림 한 건 — 발생(raised)과 취소(canceled) 모두 그 신고(emergencyId) 자리에 남는다.
-type LiveEmergencyAlert = { emergencyId: string; state: "raised" | "canceled"; busNo: string; type?: string };
+type LiveEmergencyAlert = { emergencyId: string; runId: string; state: "raised" | "canceled"; busNo: string; type?: string };
 
 // 방송 이벤트로 회차 목록을 다시 읽을 때 겹친 이벤트를 한 번으로 묶는 대기 시간.
 const RUNS_REFRESH_DEBOUNCE_MS = 300;
@@ -115,6 +115,12 @@ export const MonitoringPage = () => {
   // 지금 보이는 회차들이 화면 안에 들어오게 하고, 하나도 없으면 기본 좌표를 쓴다.
   // R21-A 목표 1~3 — 고른 버스만 강조(selected)하고, 번호(busNo)·등원하원
   // (direction)을 마커에 실어 버스끼리·같은 버스의 구간끼리 구별한다.
+  // W2-01 — 진행 중인 비상(`raised`)을 발신한 회차. 회차는 WS 봉투의 `run_id` 로 잇는다 — payload 의
+  // `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원 버스를 붉게 만든다.
+  const emergencyRunIds = useMemo(
+    () => new Set(liveAlerts.filter((alert) => alert.state === "raised").map((alert) => alert.runId)),
+    [liveAlerts],
+  );
   const mapMarkers: MapMarker[] = useMemo(
     () =>
       runs
@@ -127,8 +133,9 @@ export const MonitoringPage = () => {
           selected: run.runId === selectedRunId,
           busNo: run.busNo,
           direction: run.direction,
+          emergency: emergencyRunIds.has(String(run.runId)),
         })),
-    [runs, selectedRunId],
+    [runs, selectedRunId, emergencyRunIds],
   );
   // R19 목표 1 — 지도에 실제로 그리는 마커 = 버스 + 선택된 회차의 정차지.
   // R23 목표 4 — 버스를 고르면 그 버스와 그 노선만 남긴다(여러 대가 동시에 움직이면
@@ -318,7 +325,7 @@ export const MonitoringPage = () => {
           const payload = parseWsEmergencyRaisedPayload(envelope.payload);
           setLiveAlerts((prev) => [
             ...prev.filter((alert) => alert.emergencyId !== payload.emergencyId),
-            { emergencyId: payload.emergencyId, state: "raised", busNo: payload.busNo, type: payload.type },
+            { emergencyId: payload.emergencyId, runId: envelope.runId, state: "raised", busNo: payload.busNo, type: payload.type },
           ]);
           return;
         }
@@ -329,7 +336,7 @@ export const MonitoringPage = () => {
           setLiveAlerts((prev) =>
             prev.some((alert) => alert.emergencyId === payload.emergencyId)
               ? prev.map((alert) => (alert.emergencyId === payload.emergencyId ? { ...alert, state: "canceled" as const } : alert))
-              : [...prev, { emergencyId: payload.emergencyId, state: "canceled", busNo: payload.busNo }],
+              : [...prev, { emergencyId: payload.emergencyId, runId: envelope.runId, state: "canceled", busNo: payload.busNo }],
           );
           return;
         }

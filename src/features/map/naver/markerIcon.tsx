@@ -72,6 +72,11 @@ const ENDPOINT_LABEL: Partial<Record<MapMarkerKind, string>> = {
 // 상태를 뜻하는 것은 노선 선 색이다(`routeColor.ts` — 초록 종료 · 앰버 이동중 · 레드 확정 ·
 // 스톤 대기). 아래 6색은 그 4색과도, 정차지 초록(#16a34a)·학생 주황(#f97316)·출발도착
 // 스톤(#2A312E)과도 계열이 겹치지 않는 파랑~보라~청록 대역이다.
+// W2-01 — 비상 강조 색. 버스 색 대역(파랑~보라~청록)과 겹치지 않고, 칩 **배경이 아니라 테두리에만**
+// 쓴다 — 회차 상태를 뜻하는 노선 선 색(레드 = 확정)과 "상태 색" 으로 오인되지 않게 칩 모양으로 구별한다.
+const EMERGENCY_COLOR = "#dc2626";
+const EMERGENCY_GLOW = "rgba(220,38,38,0.35)";
+
 const BUS_COLORS = [
   "#2563eb", // 파랑 — 수정 전 모든 버스가 쓰던 색. 첫 자리에 둬서 1호차가 예전과 같아 보이게 한다.
   "#7C3AED", // 보라
@@ -101,6 +106,8 @@ export type MarkerIconOptions = {
   /** 정차지 순번(R27 사용자 지시 — 각 정차지 표기). 주면 원 핀 대신 숫자 칩을 그린다. */
   seq?: number;
   direction?: MapMarkerDirection;
+  /** W2-01 — 비상 회차의 버스 칩. 테두리를 붉게 하고 바깥에 옅은 붉은 띠를 둘러 흰 테두리 칩과 구별한다. */
+  emergency?: boolean;
   // R23 목표 4 — 지도 위 마커를 눌러 고른다. 누가 눌렸는지는 이 속성으로 되찾는다
   // (SDK 의 마커 클릭 이벤트가 이 아이콘 형태에서는 안 걸렸다 — NaverMapSurface 주석 참고).
   markerId?: string;
@@ -122,12 +129,25 @@ const markerIdAttr = (markerId?: string): string => (markerId ? ` data-marker-id
  * <p>R22 추가 지시 — 번호에 더해 <b>색</b>도 버스마다 다르다({@link busColorOf}). 상태를 뜻하는
  * 색과 겹치지 않는 대역에서만 고른다 — 근거는 {@code BUS_COLORS} 주석.
  */
-const busChipHtml = (busNo: string, direction: MapMarkerDirection, selected: boolean, markerId?: string): string => {
+const busChipHtml = (
+  busNo: string,
+  direction: MapMarkerDirection,
+  selected: boolean,
+  emergency: boolean,
+  markerId?: string,
+): string => {
   const color = busColorOf(busNo);
   // 선택 강조는 그 버스의 색으로 두른다 — 종류별 색을 쓰는 `selectedRingOf` 와 같은 규칙을
   // 버스에만 한 단계 좁힌 것이다(테두리가 "그 마커의 색" 이라는 뜻은 그대로다).
-  const ring = selected ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};` : "";
-  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:2px solid #fff;${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${escapeHtml(busNo)}</span></span>`;
+  // W2-01 — 비상이면 테두리를 붉게 하고, 고르지 않은 칩에는 옅은 붉은 띠를 더한다. 고른 칩은 선택
+  // 띠를 그대로 두어 두 표시(선택 · 비상)가 함께 읽힌다.
+  const ring = selected
+    ? `box-shadow:0 0 0 3px #ffffff,0 0 0 6px ${color};`
+    : emergency
+      ? `box-shadow:0 0 0 4px ${EMERGENCY_GLOW};`
+      : "";
+  const border = emergency ? `3px solid ${EMERGENCY_COLOR}` : "2px solid #fff";
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:${border};${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${escapeHtml(busNo)}</span></span>`;
 };
 
 // 물방울 핀 윤곽 — 머리는 (12,12) 중심 반지름 12 의 원, 끝점은 (12,32). viewBox 를 흰 테두리
@@ -189,7 +209,13 @@ export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOpti
   }
   if (kind === "bus" && options.busNo) {
     return centeredOnPoint(
-      busChipHtml(options.busNo, options.direction ?? "to_academy", options.selected ?? false, options.markerId),
+      busChipHtml(
+        options.busNo,
+        options.direction ?? "to_academy",
+        options.selected ?? false,
+        options.emergency ?? false,
+        options.markerId,
+      ),
     );
   }
   const size = MARKER_SIZE_PX[kind];

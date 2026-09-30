@@ -382,6 +382,45 @@ describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목�
   });
 });
 
+// W2-01 — 관제 지도의 비상 강조. 비상은 버스가 이미 지도에 떠 있는 동안 WS 로 들어오므로
+// "이미 있는 마커의 아이콘이 바뀐다" 가 주된 경로이고, 비상 중에 화면을 연 경우가 생성 경로다.
+describe("NaverMapSurface — 비상 마커 강조(W2-01)", () => {
+  const busMarker = { id: "11", lat: 37.5, lng: 127, kind: "bus" as const, busNo: "3호차" };
+
+  it("이미 떠 있던 버스에 emergency 가 켜지면 아이콘을 붉은 테두리로 다시 굳힌다", async () => {
+    const releaseScript = heldScriptLoad();
+    const setIcon = vi.fn();
+    const Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon }));
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = Marker;
+    const camera = { lat: 37.5, lng: 127, zoom: 14 };
+
+    const { rerender } = render(<NaverMapSurface camera={camera} markers={[busMarker]} />);
+    await releaseScript();
+    await waitFor(() => expect(Marker).toHaveBeenCalled());
+    setIcon.mockClear();
+
+    rerender(<NaverMapSurface camera={camera} markers={[{ ...busMarker, emergency: true }]} />);
+
+    await waitFor(() => expect(setIcon).toHaveBeenCalledTimes(1));
+    expect(setIcon.mock.calls[0][0].content).toContain("#dc2626");
+  });
+
+  it("비상 중에 처음 그려지는 버스도 붉은 테두리로 만들어진다", async () => {
+    const releaseScript = heldScriptLoad();
+    const Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() }));
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = Marker;
+
+    render(
+      <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 14 }} markers={[{ ...busMarker, emergency: true }]} />,
+    );
+    await releaseScript();
+
+    await waitFor(() => expect(Marker).toHaveBeenCalled());
+    const options = (Marker.mock.calls as unknown as Array<[{ icon: { content: string } }]>)[0][0];
+    expect(options.icon.content).toContain("#dc2626");
+  });
+});
+
 // R25 목표 2 — 버스를 고르면 그 버스가 정중앙에 온다. 노선 전체를 담는 배율(R22)은
 // 8km 노선에서 버스가 점만 해져 "어디 있는지" 를 못 읽는다.
 describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {

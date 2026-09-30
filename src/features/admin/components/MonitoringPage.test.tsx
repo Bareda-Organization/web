@@ -678,6 +678,73 @@ describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
   });
 });
 
+// W2-01(F03-05·F03-11) — 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
+// 로 잇는다(payload 의 `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원의
+// 같은 이름 버스를 붉게 만든다).
+describe("MonitoringPage — 지도 마커 비상 강조(W2-01)", () => {
+  const at = { lat: 37.5, lng: 127.0, receivedAt: "2026-09-13T00:00:00Z" };
+  const liveRuns = [
+    { ...baseLiveRun, runId: "11", busNo: "3호차", position: at },
+    { ...baseLiveRun, runId: "12", busNo: "5호차", position: at },
+  ];
+  const lastMarkers = () => mockMapSurface.mock.calls.at(-1)?.[0].markers ?? [];
+  const emergencyIds = () => lastMarkers().filter((marker) => marker.emergency).map((marker) => marker.id);
+
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: liveRuns });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  const raisedFor = (id: number, busNo: string, runId: string) => ({ ...raised(id, busNo), runId });
+  const canceledFor = (id: number, busNo: string, runId: string) => ({ ...canceled(id, busNo), runId });
+
+  it("비상을 발신한 회차의 버스 마커만 emergency 가 켜진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+    expect(emergencyIds()).toEqual([]);
+
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "11"));
+    });
+
+    await waitFor(() => expect(emergencyIds()).toEqual(["11"]));
+  });
+
+  it("다른 학원의 회차(이 목록에 없는 run_id)가 같은 버스 이름으로 비상을 내도 이 학원 마커는 안 켜진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "999"));
+    });
+
+    await screen.findByText("비상 상황 발생 — 3호차 (사고)");
+    expect(emergencyIds()).toEqual([]);
+  });
+
+  it("비상이 취소되거나 배너를 닫으면 마커 강조가 꺼진다", async () => {
+    render(<MonitoringPage />);
+    await waitFor(() => expect(lastMarkers()).toHaveLength(2));
+    act(() => {
+      capturedOnEnvelope?.(raisedFor(1, "3호차", "11"));
+      capturedOnEnvelope?.(raisedFor(2, "5호차", "12"));
+    });
+    await waitFor(() => expect(emergencyIds()).toEqual(["11", "12"]));
+
+    act(() => {
+      capturedOnEnvelope?.(canceledFor(1, "3호차", "11"));
+    });
+    await waitFor(() => expect(emergencyIds()).toEqual(["12"]));
+
+    const banner = screen.getByText("비상 상황 발생 — 5호차 (사고)").closest('[role="alert"], [role="status"]') as HTMLElement;
+    fireEvent.click(within(banner).getByRole("button", { name: "닫기" }));
+    await waitFor(() => expect(emergencyIds()).toEqual([]));
+  });
+});
+
 // F03-10 — 전 학원 방송의 이벤트마다 선택 학원 회차를 재조회했다.
 describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
   beforeEach(() => {
