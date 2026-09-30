@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { AcademyRealtimeClient } from "./academyRealtimeClient";
 import { WsBackoffPolicy } from "./wsBackoffPolicy";
+import { ApiError, NetworkError } from "../http/apiError";
 import type { StompClientConfig, StompClientLike, StompMessageLike } from "./stompClient";
 
 // 실제 WebSocket 없이 `AcademyRealtimeClient` 의 재연결·FORBIDDEN 처리를
@@ -45,7 +46,13 @@ const createFakeClientFactory = () => {
       subscribe: (destination, callback) => {
         handle.subscribedDestinations.push(destination);
         callbacksByDestination.set(destination, callback);
-        return { unsubscribe: () => callbacksByDestination.delete(destination) };
+        return {
+          unsubscribe: () => {
+            // @stomp/stompjs 7.x — 연결이 없으면 구독 해제가 던진다(`_checkConnection`).
+            if (!handle.connected) throw new TypeError("There is no underlying STOMP connection");
+            callbacksByDestination.delete(destination);
+          },
+        };
       },
       get connected() {
         return handle.connected;
@@ -230,9 +237,9 @@ describe("AcademyRealtimeClient", () => {
     expect(handles[1].config.connectHeaders).toEqual({ Authorization: "Bearer new-token" });
   });
 
-  it("W2: TOKEN_EXPIRED 뒤 재발급이 실패하면 재연결하지 않고 로그인 만료를 알린다", async () => {
+  it("W2: TOKEN_EXPIRED 뒤 재발급이 401 로 거절되면 재연결하지 않고 로그인 만료를 알린다", async () => {
     const { factory, handles } = createFakeClientFactory();
-    const refreshAccessToken = vi.fn().mockRejectedValue(new Error("refresh 실패"));
+    const refreshAccessToken = vi.fn().mockRejectedValue(new ApiError(401, "TOKEN_EXPIRED", "refresh 토큰 무효"));
     const onSessionExpired = vi.fn();
     const client = new AcademyRealtimeClient({
       url: "ws://x",
@@ -278,5 +285,82 @@ describe("AcademyRealtimeClient", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("F04-01: 소켓이 끊긴 뒤에 구독 해제 함수를 불러도 던지지 않는다", () => {
+    const { factory, handles } = createFakeClientFactory();
+    const client = new AcademyRealtimeClient({ url: "ws://x", createClient: factory, readAccessToken: () => null });
+    client.connect();
+    handles[0].connected = true;
+    handles[0].config.onConnect({ headers: {}, body: "" });
+    const unsubscribe = client.subscribe("/topic/admin/live", () => {});
+
+    // 서버 재기동·Wi-Fi 끊김 — stompjs 는 연결 표시를 먼저 내린 뒤 소켓 종료 콜백을 부른다.
+    handles[0].connected = false;
+    handles[0].config.onWebSocketClose({});
+
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it("F04-03: 재발급을 기다리는 사이 disconnect() 가 불리면 재발급이 끝나도 새 소켓을 열지 않는다", async () => {
+    const { factory, handles } = createFakeClientFactory();
+    let resolveRefresh: (token: string) => void = () => {};
+    const refreshAccessToken = vi.fn(() => new Promise<string>((resolve) => (resolveRefresh = resolve)));
+    const client = new AcademyRealtimeClient({
+      url: "ws://x",
+      createClient: factory,
+      readAccessToken: () => "old-token",
+      refreshAccessToken,
+    });
+    client.connect();
+    handles[0].config.onStompError({ headers: { message: "TOKEN_EXPIRED" }, body: "" });
+    handles[0].config.onWebSocketClose({});
+
+    client.disconnect();
+    resolveRefresh("new-token");
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(handles).toHaveLength(1);
+    expect(client.getSnapshot()).toBe("disconnected");
+  });
+
+  it("F04-02: TOKEN_EXPIRED 뒤 재발급이 네트워크 오류로 실패하면 로그인 만료로 알리지 않고 일반 재연결 경로로 넘긴다", async () => {
+    vi.useFakeTimers();
+    try {
+      const { factory, handles } = createFakeClientFactory();
+      const refreshAccessToken = vi.fn().mockRejectedValue(new NetworkError(new TypeError("Failed to fetch")));
+      const onSessionExpired = vi.fn();
+      const client = new AcademyRealtimeClient({
+        url: "ws://x",
+        createClient: factory,
+        readAccessToken: () => "old-token",
+        refreshAccessToken,
+        onSessionExpired,
+      });
+      client.connect();
+      handles[0].config.onStompError({ headers: { message: "TOKEN_EXPIRED" }, body: "" });
+      handles[0].config.onWebSocketClose({});
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onSessionExpired).not.toHaveBeenCalled();
+      expect(client.getSnapshot()).toBe("reconnecting");
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(handles.length).toBeGreaterThan(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("F04-09: 다른 학원 채널 구독 거부(ACADEMY_SCOPE_VIOLATION)도 forbidden 으로 멈춘다", () => {
+    const { factory, handles } = createFakeClientFactory();
+    const client = new AcademyRealtimeClient({ url: "ws://x", createClient: factory, readAccessToken: () => null });
+    client.connect();
+
+    handles[0].config.onStompError({ headers: { message: "ACADEMY_SCOPE_VIOLATION" }, body: "" });
+    handles[0].config.onWebSocketClose({});
+
+    expect(client.getSnapshot()).toBe("forbidden");
+    expect(handles).toHaveLength(1);
   });
 });

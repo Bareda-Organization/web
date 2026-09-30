@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
-import { ApiError } from "./apiError";
+import { ApiError, NetworkError } from "./apiError";
 
 // 게이트 리뷰 Important 1건 — TOKEN_EXPIRED → refreshAccessToken() → 재요청 경로.
 // 이 경로는 앱의 모든 API 호출이 거치는 공통 관문이라, 재발급 성공인데 session-expired 를
@@ -63,5 +63,25 @@ describe("apiFetch — TOKEN_EXPIRED 재발급 경로", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({ type: "session-expired" });
     unregister();
+  });
+
+  it("재발급이 네트워크 오류나 5xx 로 실패하면 로그인 만료로 다루지 않고 그 오류를 그대로 던진다", async () => {
+    const { refreshAccessToken } = await import("./refreshClient");
+    const transient = [new NetworkError(new TypeError("Failed to fetch")), new ApiError(503, "UNKNOWN", "점검 중")];
+
+    for (const failure of transient) {
+      vi.mocked(refreshAccessToken).mockRejectedValue(failure);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(mockJsonResponse(401, { error: { code: "TOKEN_EXPIRED", message: "만료" } })),
+      );
+      const listener = vi.fn();
+      const unregister = registerAuthGateListener(listener);
+
+      await expect(apiFetch("/staff/dashboard")).rejects.toBe(failure);
+
+      expect(listener).not.toHaveBeenCalledWith({ type: "session-expired" });
+      unregister();
+    }
   });
 });
