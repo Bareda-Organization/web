@@ -177,3 +177,53 @@ describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
     expect(mockUpdate.mock.calls[0][1].estDurationMin).toBeNull();
   });
 });
+
+// B1 #7 — 월~금 운영 학원이 스케줄 폼을 요일마다 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
+describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const fillAndSubmit = async (container: HTMLElement, weekdayLabels: string[]) => {
+    mockGetBuses.mockResolvedValue({
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      page: 0, size: 100, totalCount: 1, hasNext: false,
+    });
+    await waitFor(() => expect(screen.getAllByRole("textbox")).toHaveLength(2));
+    const timeInput = container.querySelector('input[type="time"]');
+    if (timeInput) fireEvent.change(timeInput, { target: { value: "08:00" } });
+    const [originInput, destinationInput] = screen.getAllByRole("textbox");
+    fireEvent.change(originInput, { target: { value: "정문" } });
+    fireEvent.change(destinationInput, { target: { value: "학원" } });
+    for (const label of weekdayLabels) fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  };
+
+  it("월~금을 고르고 저장하면 요일마다 1건씩 5건을 만든다", async () => {
+    mockGetBuses.mockResolvedValue({
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      page: 0, size: 100, totalCount: 1, hasNext: false,
+    });
+    mockCreate.mockResolvedValue({} as Awaited<ReturnType<typeof createSchedule>>);
+    const onDone = vi.fn();
+    const { container } = render(<ScheduleForm onClose={vi.fn()} onDone={onDone} />);
+
+    await fillAndSubmit(container, ["화", "수", "목", "금"]);
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(mockCreate.mock.calls.map(([request]) => request.weekday)).toEqual(["mon", "tue", "wed", "thu", "fri"]);
+  });
+
+  it("한 요일이 이미 있으면 그 요일만 실패로 보이고 나머지는 저장된다", async () => {
+    mockCreate.mockImplementation(async (request) => {
+      if (request.weekday === "tue") throw new ApiError(409, "DUPLICATE_SCHEDULE", "이미 있는 스케줄입니다");
+      return {} as Awaited<ReturnType<typeof createSchedule>>;
+    });
+    const onDone = vi.fn();
+    const { container } = render(<ScheduleForm onClose={vi.fn()} onDone={onDone} />);
+
+    await fillAndSubmit(container, ["화", "수"]);
+
+    expect(await screen.findByText(/화요일 — 같은 차량·요일·방향·출발 시각의 스케줄이 이미 있습니다/)).toBeInTheDocument();
+    expect(mockCreate).toHaveBeenCalledTimes(3);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+});

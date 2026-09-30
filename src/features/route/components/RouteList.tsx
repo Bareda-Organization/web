@@ -94,6 +94,11 @@ export const RouteList = () => {
             setCreating(false);
             router.push(`/route/${id}`);
           }}
+          // 요일을 여러 개 골라 만들었으면 상세로 이어 갈 한 건이 없다 — 목록을 다시 읽는다.
+          onBatchDone={() => {
+            setCreating(false);
+            load(page);
+          }}
         />
       ) : null}
     </StyledRouteLayout>

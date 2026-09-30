@@ -6,6 +6,7 @@ import { AlertBanner, Badge, Button, Card, PageHeader, Pagination, RosterTable }
 import type { RosterColumn } from "@/shared/types";
 import { getSchedules } from "../api";
 import type { ScheduleDirection, ScheduleItemResponseTypes, ScheduleWeekday } from "../types";
+import { ScheduleCopyDialog } from "./ScheduleCopyDialog";
 import { ScheduleDeleteDialog } from "./ScheduleDeleteDialog";
 import { ScheduleForm } from "./ScheduleForm";
 import { StyledScheduleSection } from "./ScheduleList.styled";
@@ -31,6 +32,7 @@ export const ScheduleList = () => {
   const [editing, setEditing] = useState<ScheduleItemResponseTypes | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copying, setCopying] = useState<ScheduleItemResponseTypes | undefined>(undefined);
 
   const load = useCallback(async (nextPage: number) => {
     setLoading(true);
@@ -57,6 +59,7 @@ export const ScheduleList = () => {
   const handleDone = () => {
     setEditing(undefined);
     setCreating(false);
+    setCopying(undefined);
     load(page);
   };
 
@@ -85,16 +88,28 @@ export const ScheduleList = () => {
       label: "",
       align: "right",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(event) => {
-            event.stopPropagation();
-            setDeletingId(row.id);
-          }}
-        >
-          삭제
-        </Button>
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              setCopying(row);
+            }}
+          >
+            복사
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDeletingId(row.id);
+            }}
+          >
+            삭제
+          </Button>
+        </>
       ),
     },
   ];
@@ -121,6 +136,7 @@ export const ScheduleList = () => {
 
       {editing ? <ScheduleForm schedule={editing} onClose={() => setEditing(undefined)} onDone={handleDone} /> : null}
       {creating ? <ScheduleForm onClose={() => setCreating(false)} onDone={handleDone} /> : null}
+      {copying ? <ScheduleCopyDialog schedule={copying} onClose={() => setCopying(undefined)} onDone={handleDone} /> : null}
       {deletingId !== null ? (
         <ScheduleDeleteDialog
           scheduleId={deletingId}
