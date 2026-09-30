@@ -33,6 +33,25 @@ const ITEM = {
   ackedBy: null,
 };
 
+// Z-04(Ruling 379 ①) — §5.16 은 최근 200건까지만 준다.
+describe("EmergencyList — 200건 상한 안내", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("200건이 오면 최근 200건까지만 표시한다고 알리고, 그보다 적으면 알리지 않는다", async () => {
+    mockGet.mockResolvedValue({ items: Array.from({ length: 200 }, (_, i) => ({ ...ITEM, emergencyId: String(i) })), unackedCount: 200 });
+    const { unmount } = render(<EmergencyList />);
+    expect(await screen.findByText(/최근 200건까지만 표시합니다/)).toBeInTheDocument();
+    unmount();
+
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    render(<EmergencyList />);
+    await screen.findByRole("button", { name: "확인" });
+    expect(screen.queryByText(/최근 200건까지만/)).not.toBeInTheDocument();
+  });
+});
+
 describe("EmergencyList — 확인(ack) 실패 갈래", () => {
   afterEach(() => {
     vi.clearAllMocks();

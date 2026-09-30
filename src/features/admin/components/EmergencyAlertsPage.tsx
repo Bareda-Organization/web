@@ -11,6 +11,7 @@ import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyAlertsLayout, StyledEmergencyHeaderRow } from "./EmergencyAlertsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { formatRole } from "@/shared/lib/format/roleLabel";
+import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
 // §5.16 이 정의한 실제 쿼리값(open·acked·canceled, 기본 open) — 대문자 enum 이 아니다.
 const STATUS_FILTER_OPTIONS = [
@@ -72,6 +73,9 @@ export const EmergencyAlertsPage = () => {
       </StyledEmergencyHeaderRow>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {emergencies.length >= RECENT_LIST_CAP ? (
+        <AlertBanner tone="info" title={`최근 ${RECENT_LIST_CAP}건까지만 표시합니다 — 그 이전 이력은 이 화면에서 볼 수 없습니다`} />
+      ) : null}
 
       <SegmentedControl options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} />
 

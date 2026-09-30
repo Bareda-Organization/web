@@ -9,6 +9,7 @@ import { getReports } from "../api";
 import type { ReportItemResponseTypes, ReportType } from "../types";
 import { StyledReportFilters, StyledReportLayout } from "./ReportList.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
 const TYPE_LABEL: Record<ReportType, string> = {
   guardian_absent: "보호자 부재",
@@ -106,6 +107,9 @@ export const ReportList = () => {
       </StyledReportFilters>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {items.length >= RECENT_LIST_CAP ? (
+        <AlertBanner tone="info" title={`최근 ${RECENT_LIST_CAP}건까지만 표시합니다 — 이전 기록은 날짜로 좁혀 확인하세요`} />
+      ) : null}
 
       <Card padding={0} aria-busy={loading}>
         <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />

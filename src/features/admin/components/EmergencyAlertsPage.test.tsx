@@ -26,3 +26,42 @@ describe("EmergencyAlertsPage — 목록 조회 실패", () => {
     await waitFor(() => expect(screen.getByText("서버 처리 중 오류가 발생했습니다")).toBeInTheDocument());
   });
 });
+
+// Z-04(Ruling 379 ①) — §6.11 은 최근 200건까지만 주고 날짜로 좁히는 수단도 없다.
+describe("EmergencyAlertsPage — 200건 상한 안내", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const item = (id: string) => ({
+    emergencyId: id,
+    academy: { id: "1", name: "바래다학원", contact: "02-000-0000" },
+    type: "accident" as const,
+    memo: null,
+    raisedBy: { name: "이기사", role: "driver" as const, phone: "010-1111-2222" },
+    runId: "1",
+    busNo: "1호차",
+    direction: "to_academy" as const,
+    position: { lat: 37.5, lng: 127.0, recordedAt: null },
+    riderCount: 1,
+    contacts: [],
+    raisedAt: "2026-09-30T08:00:00",
+    staffAcked: false,
+    ackedAt: null,
+    canceledAt: null,
+    ackedBy: null,
+    elapsedSinceRaised: 10,
+  });
+
+  it("200건이 오면 최근 200건까지만 표시한다고 알리고, 그보다 적으면 알리지 않는다", async () => {
+    mockGetEmergencies.mockResolvedValue({ items: Array.from({ length: 200 }, (_, i) => item(String(i))), unackedCount: 200 });
+    const { unmount } = render(<EmergencyAlertsPage />);
+    expect(await screen.findByText(/최근 200건까지만 표시합니다/)).toBeInTheDocument();
+    unmount();
+
+    mockGetEmergencies.mockResolvedValue({ items: [item("1")], unackedCount: 1 });
+    render(<EmergencyAlertsPage />);
+    await screen.findByText("바래다학원");
+    expect(screen.queryByText(/최근 200건까지만/)).not.toBeInTheDocument();
+  });
+});
