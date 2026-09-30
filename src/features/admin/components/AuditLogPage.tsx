@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Badge, Button, Card, EmptyState, Input, PageHeader, Pagination, RosterTable, SegmentedControl } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, EmptyState, Input, PageHeader, Pagination, RosterTable, SearchField, SegmentedControl, Select } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { getAuditLogs, getLoginHistory } from "../api";
+import { getAllAcademies, getAuditActors, getAuditLogs, getLoginHistory } from "../api";
 import type {
+  AcademySummaryResponseTypes,
+  AuditAction,
+  AuditActorResponseTypes,
   AuditLogItemResponseTypes,
   AuditLogsResponseTypes,
   LoginHistoryItemResponseTypes,
@@ -27,6 +30,14 @@ const ACTION_LABEL: Record<AuditLogItemResponseTypes["action"], string> = {
   delete: "삭제",
 };
 
+// 동작 필터의 선택지 — 빈 값은 "거르지 않음"(서버도 action 을 안 받으면 셋 다 돌려준다).
+const ACTION_FILTER_OPTIONS = [
+  { value: "", label: "전체 동작" },
+  { value: "read", label: ACTION_LABEL.read },
+  { value: "update", label: ACTION_LABEL.update },
+  { value: "delete", label: ACTION_LABEL.delete },
+];
+
 const BLOCK_ACTION_LABEL = { block: "차단", unblock: "해제" } as const;
 
 // §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
@@ -38,22 +49,62 @@ export const AuditLogPage = () => {
   const [tab, setTab] = useState<"audit" | "login">("audit");
   const [academyId, setAcademyId] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [action, setAction] = useState("");
+  const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
+  const [actorQuery, setActorQuery] = useState("");
+  const [actors, setActors] = useState<AuditActorResponseTypes[]>([]);
+  const [actorSearched, setActorSearched] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
   const [from, setFrom] = useState(todayInSeoul());
   const [to, setTo] = useState("");
 
   // 조회 조건은 [조회] 를 눌러야 적용된다 — 입력 중인 값과 서버에 보내는 값(applied)을 나눈다.
-  const [applied, setApplied] = useState({ academyId: "", accountId: "", from: todayInSeoul(), to: "" });
+  const [applied, setApplied] = useState({ academyId: "", accountId: "", action: "", from: todayInSeoul(), to: "" });
   const query = {
     academyId: applied.academyId || undefined,
     accountId: applied.accountId || undefined,
     from: applied.from || undefined,
     to: applied.to || undefined,
   };
+  // 동작은 감사 로그 탭만 고른다 — 접속 이력에는 조회·수정·삭제가 없다(Ruling 446).
+  const auditQuery = { ...query, action: (applied.action || undefined) as AuditAction | undefined };
   const paging = usePagedList<AuditLogsResponseTypes | LoginHistoryResponseTypes>(
-    (page) => (tab === "audit" ? getAuditLogs({ ...query, page, size: PAGE_SIZE }) : getLoginHistory({ ...query, page, size: PAGE_SIZE })),
+    (page) => (tab === "audit" ? getAuditLogs({ ...auditQuery, page, size: PAGE_SIZE }) : getLoginHistory({ ...query, page, size: PAGE_SIZE })),
     { resetKey: `${tab}|${JSON.stringify(applied)}`, errorMessage: "이력을 불러오지 못했습니다" },
   );
   const { loading, error } = paging;
+
+  // 학원 선택 목록은 첫 쪽(20건)이 아니라 전부 — 21번째 이후 학원의 이력도 걸러 볼 수 있어야 한다.
+  useEffect(() => {
+    let cancelled = false;
+    getAllAcademies()
+      .then((items) => {
+        if (!cancelled) setAcademies(items);
+      })
+      .catch(() => {
+        if (!cancelled) setFilterError("학원 목록을 불러오지 못했습니다");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const searchActors = async (keyword: string) => {
+    const q = keyword.trim();
+    setAccountId("");
+    setFilterError(null);
+    if (!q) {
+      setActors([]);
+      setActorSearched(false);
+      return;
+    }
+    try {
+      setActors(await getAuditActors(q));
+      setActorSearched(true);
+    } catch {
+      setFilterError("행위자를 찾지 못했습니다");
+    }
+  };
   const auditItems = tab === "audit" ? (paging.items as AuditLogItemResponseTypes[]) : [];
   const loginItems = tab === "login" ? (paging.items as LoginHistoryItemResponseTypes[]) : [];
 
@@ -89,16 +140,39 @@ export const AuditLogPage = () => {
       <PageHeader title="감사 · 접속 이력" description="시스템 조작·로그인 이력을 조회합니다" />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {filterError ? <AlertBanner tone="missed" title={filterError} /> : null}
 
       <SegmentedControl options={TAB_OPTIONS} value={tab} onChange={(value) => setTab(value as "audit" | "login")} />
 
       <StyledFilterRow>
         <StyledFilterField>
-          <Input label="학원 ID" placeholder="선택" value={academyId} onChange={(event) => setAcademyId(event.target.value)} />
+          <Select
+            label="학원"
+            value={academyId}
+            onChange={(event) => setAcademyId(event.target.value)}
+            options={[{ value: "", label: "전체 학원" }, ...academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))]}
+          />
         </StyledFilterField>
         <StyledFilterField>
-          <Input label="계정 ID" placeholder="선택" value={accountId} onChange={(event) => setAccountId(event.target.value)} />
+          <SearchField value={actorQuery} onChange={(event) => setActorQuery(event.target.value)} onSubmit={searchActors} placeholder="이름 또는 아이디로 행위자 찾기" />
         </StyledFilterField>
+        <StyledFilterField>
+          <Select
+            label="행위자"
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
+            hint={actorSearched && actors.length === 0 ? "찾은 계정이 없습니다" : undefined}
+            options={[
+              { value: "", label: "전체 행위자" },
+              ...actors.map((actor) => ({ value: actor.accountId, label: `${actor.name} (${actor.loginId})${actor.academyName ? ` · ${actor.academyName}` : ""}` })),
+            ]}
+          />
+        </StyledFilterField>
+        {tab === "audit" ? (
+          <StyledFilterField>
+            <Select label="동작" value={action} onChange={(event) => setAction(event.target.value)} options={ACTION_FILTER_OPTIONS} />
+          </StyledFilterField>
+        ) : null}
         <StyledFilterField>
           <Input label="시작일" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
         </StyledFilterField>
@@ -108,7 +182,7 @@ export const AuditLogPage = () => {
         <Button variant="secondary" onClick={() => setFrom("")}>
           전체 기간 보기
         </Button>
-        <Button variant="primary" onClick={() => setApplied({ academyId, accountId, from, to })}>
+        <Button variant="primary" onClick={() => setApplied({ academyId, accountId, action, from, to })}>
           조회
         </Button>
       </StyledFilterRow>

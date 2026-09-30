@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAuditLogs, getLoginHistory } from "./auditLog";
+import { getAuditActors, getAuditLogs, getLoginHistory } from "./auditLog";
 
 // R37-IT — API_SPEC 전역 규약(§1, "ISO-8601 + 오프셋")상 from·to 는 시각이다. 화면의 날짜 칸이 주는
 // `YYYY-MM-DD` 를 그대로 보내면 서버가 422 로 거절한다(실서버로 확인: 접속 이력 화면이 열자마자 오류).
@@ -37,5 +37,40 @@ describe("auditLog api — 날짜 조건을 ISO-8601 오프셋 시각으로 보�
     const params = requestedUrl(fetchMock).searchParams;
     expect(params.has("from")).toBe(false);
     expect(params.has("to")).toBe(false);
+  });
+});
+
+// R46 감사 화면(Ruling 446·447)
+describe("auditLog api — 동작 필터와 행위자 찾기", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("getAuditLogs: action 을 쿼리로 보낸다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getAuditLogs({ action: "update" });
+
+    expect(requestedUrl(fetchMock).searchParams.get("action")).toBe("update");
+  });
+
+  it("getAuditActors: q 를 보내고 응답을 화면 모양으로 바꾼다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { items: [{ account_id: "55", name: "김관계", login_id: "kim_staff", role: "staff", academy_name: "바래다학원" }] },
+      }),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const actors = await getAuditActors("김관");
+
+    const url = requestedUrl(fetchMock);
+    expect(url.pathname).toMatch(/\/admin\/audit-actors$/);
+    expect(url.searchParams.get("q")).toBe("김관");
+    expect(actors).toEqual([{ accountId: "55", name: "김관계", loginId: "kim_staff", role: "staff", academyName: "바래다학원" }]);
   });
 });

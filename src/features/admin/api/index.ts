@@ -5,5 +5,5 @@ export { getAcademyRunsLive } from "./runsLive";
 export { getRunRoster } from "./roster";
 export { getBlockedAccounts, unblockAccount } from "./blockedAccounts";
 export { getEmergencies } from "./emergencies";
-export { getAuditLogs, getLoginHistory } from "./auditLog";
+export { getAuditActors, getAuditLogs, getLoginHistory } from "./auditLog";
 export { forceConfirmRun } from "./forceConfirm";

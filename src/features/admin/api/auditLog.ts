@@ -2,6 +2,7 @@ import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type {
   AuditAction,
+  AuditActorResponseTypes,
   AuditLogItemResponseTypes,
   AuditLogsResponseTypes,
   AuditQueryTypes,
@@ -47,6 +48,7 @@ const toQuery = (query: AuditQueryTypes) => ({
   account_id: query.accountId,
   from: toSeoulStart(query.from),
   to: toSeoulEnd(query.to),
+  action: query.action,
   page: query.page,
   size: query.size,
 });
@@ -101,4 +103,24 @@ export const getLoginHistory = async (query: AuditQueryTypes = {}): Promise<Logi
     totalCount: raw.total_count,
     hasNext: raw.has_next,
   };
+};
+
+type RawAuditActor = {
+  account_id: string | number;
+  name: string;
+  login_id: string;
+  role: string;
+  academy_name: string | null;
+};
+
+// GET /admin/audit-actors (§6.13, Ruling 447) — 서버가 20건에서 자르므로 페이징이 없다.
+export const getAuditActors = async (q: string): Promise<AuditActorResponseTypes[]> => {
+  const raw = await apiFetch<{ items: RawAuditActor[] }>("/admin/audit-actors", { method: "GET", query: { q } });
+  return raw.items.map((item) => ({
+    accountId: asIdString(item.account_id),
+    name: item.name,
+    loginId: item.login_id,
+    role: item.role,
+    academyName: item.academy_name,
+  }));
 };

@@ -21,6 +21,8 @@ import {
 // F03-06 — 폴링·재조회 한 번의 실패가 이미 보이던 목록을 지우고 "없습니다" 를 그리면 안 된다.
 vi.mock("../api", () => ({
   getAcademies: vi.fn(),
+  getAllAcademies: vi.fn().mockResolvedValue([]),
+  getAuditActors: vi.fn().mockResolvedValue([]),
   getAuditLogs: vi.fn(),
   getBlockedAccounts: vi.fn(),
   getEmergencies: vi.fn(),
@@ -132,9 +134,9 @@ describe("감사·접속 이력 — 다음 쪽과 실패 시 목록 유지", () 
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })), { timeout: 3000 });
 
-    fireEvent.change(screen.getByLabelText("계정 ID"), { target: { value: "5" } });
+    fireEvent.change(screen.getByLabelText("동작"), { target: { value: "update" } });
     fireEvent.click(screen.getByRole("button", { name: "조회" }));
-    await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 0, accountId: "5" })), {
+    await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 0, action: "update" })), {
       timeout: 3000,
     });
   });

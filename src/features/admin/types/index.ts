@@ -352,6 +352,17 @@ export type AuditQueryTypes = PagingRequest & {
   accountId?: string;
   from?: string;
   to?: string;
+  /** 감사 로그 탭만 쓴다 — 접속 이력은 동작을 고르지 않는다(Ruling 446). */
+  action?: AuditAction;
+};
+
+// GET /admin/audit-actors (§6.13, Ruling 447) — 계정 ID 를 손으로 치지 않고 이름·아이디 일부로 고르는 목록.
+export type AuditActorResponseTypes = {
+  accountId: string;
+  name: string;
+  loginId: string;
+  role: string;
+  academyName: string | null;
 };
 
 // ── §6.14 회차 강제 확정 (O-06) — 되돌릴 수 없다 ──────────────────────────

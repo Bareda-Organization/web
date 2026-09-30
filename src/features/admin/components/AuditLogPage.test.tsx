@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuditLogPage } from "./AuditLogPage";
-import { getAuditLogs, getLoginHistory } from "../api";
+import { getAllAcademies, getAuditActors, getAuditLogs, getLoginHistory } from "../api";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 
 // §6.13, BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다". 판단 근거(코드 주석)는
@@ -10,10 +10,19 @@ import { todayInSeoul } from "@/shared/lib/format/dateTime";
 vi.mock("../api", () => ({
   getAuditLogs: vi.fn(),
   getLoginHistory: vi.fn(),
+  getAllAcademies: vi.fn(),
+  getAuditActors: vi.fn(),
 }));
 
 const mockGetAuditLogs = vi.mocked(getAuditLogs);
 const mockGetLoginHistory = vi.mocked(getLoginHistory);
+const mockGetAllAcademies = vi.mocked(getAllAcademies);
+const mockGetAuditActors = vi.mocked(getAuditActors);
+
+beforeEach(() => {
+  mockGetAllAcademies.mockResolvedValue([]);
+  mockGetAuditActors.mockResolvedValue([]);
+});
 
 const emptyResponse = { items: [], page: 1, size: 20, totalCount: 0, hasNext: false };
 
@@ -112,5 +121,63 @@ describe("AuditLogPage — 차단/해제 구분(Ruling 394)", () => {
     expect(await screen.findByText("차단")).toBeInTheDocument();
     expect(screen.getByText("해제")).toBeInTheDocument();
     expect(screen.queryByText("차단·해제")).not.toBeInTheDocument();
+  });
+});
+
+// R46 감사 화면(Ruling 446·447) — 숫자 ID 입력을 학원 선택 · 이름으로 행위자 찾기 · 동작 필터로 바꿨다.
+describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R46)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const academy = { id: "7", code: "A7", name: "바래다학원", region: "서울", staffCount: 1, userCount: 3, status: "active" } as never;
+
+  it("학원을 목록에서 고르고 조회하면 academyId 가 요청에 실린다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetAllAcademies.mockResolvedValue([academy]);
+    render(<AuditLogPage />);
+    await screen.findByRole("option", { name: /바래다학원/ });
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "7" } });
+    fireEvent.click(screen.getByRole("button", { name: "조회" }));
+
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ academyId: "7" })));
+  });
+
+  it("이름으로 행위자를 찾아 고르고 조회하면 accountId 가 요청에 실린다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetAuditActors.mockResolvedValue([
+      { accountId: "55", name: "김관계", loginId: "kim_staff", role: "staff", academyName: "바래다학원" },
+    ]);
+    render(<AuditLogPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("이름 또는 아이디로 행위자 찾기"), { target: { value: "김관" } });
+    fireEvent.click(screen.getByRole("button", { name: "검색" }));
+    await screen.findByRole("option", { name: /김관계/ });
+    expect(mockGetAuditActors).toHaveBeenCalledWith("김관");
+
+    fireEvent.change(screen.getByLabelText("행위자"), { target: { value: "55" } });
+    fireEvent.click(screen.getByRole("button", { name: "조회" }));
+
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ accountId: "55" })));
+  });
+
+  it("동작(수정)을 고르고 조회하면 action 이 요청에 실린다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+
+    fireEvent.change(screen.getByLabelText("동작"), { target: { value: "update" } });
+    fireEvent.click(screen.getByRole("button", { name: "조회" }));
+
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ action: "update" })));
+  });
+
+  it("접속 이력 탭에는 동작 필터가 없다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetLoginHistory.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
+
+    await waitFor(() => expect(mockGetLoginHistory).toHaveBeenCalled());
+    expect(screen.queryByLabelText("동작")).not.toBeInTheDocument();
   });
 });
