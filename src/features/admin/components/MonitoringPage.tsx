@@ -499,7 +499,7 @@ export const MonitoringPage = () => {
               없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {routeNoPlannedRoute ? (
-            <StyledFallbackNotice>등록된 고정 노선이 없어 예정 경로도 없습니다</StyledFallbackNotice>
+            <StyledFallbackNotice>이 회차의 고정 노선이 없습니다 — 고정 노선 편성에서 등록하세요</StyledFallbackNotice>
           ) : null}
         </StyledMapPane>
 

@@ -486,14 +486,14 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
   // Ruling 321 — idle 회차인데 백엔드가 confirmed:false·좌표 0개(고정 노선 자체가
   // 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
-  it("고정 노선이 없는 idle 회차를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
+  it("고정 노선이 없는 idle 회차를 고르면 이 회차의 고정 노선이 없습니다 안내를 보여준다", async () => {
     mockGetRunsLive.mockResolvedValue({ runs: [{ ...baseLiveRun, runStatus: "idle" }] });
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<MonitoringPage />);
 
     fireEvent.click(await screen.findByText("1호차 · 등원"));
 
-    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText("이 회차의 고정 노선이 없습니다 — 고정 노선 편성에서 등록하세요")).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
   });
 

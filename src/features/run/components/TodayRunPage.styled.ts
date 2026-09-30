@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT } from "@/features/map/mapSurfaceSize";
+import { MAP_SURFACE_HEIGHT } from "@/features/map";
 
 export const StyledTodayRunLayout = styled.div`
   display: flex;
