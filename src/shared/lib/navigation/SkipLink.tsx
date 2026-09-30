@@ -6,7 +6,7 @@ export const MAIN_CONTENT_ID = "main-content";
 const StyledSkipLink = styled.a`
   position: absolute;
   left: 8px;
-  top: -48px;
+  top: -100px;
   z-index: 100;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
