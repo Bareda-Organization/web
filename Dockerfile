@@ -10,13 +10,13 @@
 #     docker build -f apps/academy-web/Dockerfile -t academy-web .
 
 # ---- deps: 의존성만 먼저 설치해 레이어 캐시를 살린다 ----
-FROM node:22-alpine AS deps
+FROM node:22.23.3-alpine AS deps
 WORKDIR /repo/apps/academy-web
 COPY apps/academy-web/package.json apps/academy-web/package-lock.json ./
 RUN npm ci
 
 # ---- builder: design-system 토큰 원본과 함께 빌드 ----
-FROM node:22-alpine AS builder
+FROM node:22.23.3-alpine AS builder
 WORKDIR /repo
 COPY --from=deps /repo/apps/academy-web/node_modules ./apps/academy-web/node_modules
 COPY apps/academy-web ./apps/academy-web
@@ -36,7 +36,7 @@ ENV NEXT_PUBLIC_TEST_DATA_RESET=${NEXT_PUBLIC_TEST_DATA_RESET}
 RUN npm run build
 
 # ---- runner: standalone 산출물만 담은 최소 실행 이미지 ----
-FROM node:22-alpine AS runner
+FROM node:22.23.3-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
