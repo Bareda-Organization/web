@@ -466,9 +466,9 @@ export const MonitoringPage = () => {
       </StyledFilterRow>
 
       {/* R15-T2 §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
-          이 화면의 목록은 §6.8 정의상 moving 회차만 대상이다(Ruling 313 — O-05 는
-          "운행 중 전 차량" 관제이고, idle·finished 는 stops[].eta 등 필수 필드 자체가
-          없어 넓힐 수 없다). 아래 상세 표(EmptyState/RosterTable)는 그대로 둔다. */}
+          이 화면의 목록은 §6.8 정의상 그 학원의 오늘 회차 전부(idle·confirmed·moving·finished 4종)다
+          (Ruling 315 — 2026-09-19 개정. 임시 취소된 회차는 뺀다, Ruling 375). 처음 정한 "moving 만"(Ruling 313)은
+          이 개정으로 대체됐다. 아래 상세 표(EmptyState/RosterTable)는 그대로 둔다. */}
       <StyledMapTopRow>
         <StyledMapPane>
           <StyledMapSurface>
