@@ -38,11 +38,19 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
   const [status, setStatus] = useState<"idle" | "loading" | "empty" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
+  // 후보를 고르며 입력칸을 고른 이름으로 채우는 변경은 검색어가 아니다 — 그 변경으로 검색이 또 나가지 않게 한다.
+  const skipNextSearch = useRef(false);
 
   useEffect(() => {
+    if (skipNextSearch.current) {
+      skipNextSearch.current = false;
+      ++requestSeq.current;
+      return;
+    }
     const trimmed = query.trim();
-    if (trimmed.length < SUGGEST_MIN_LENGTH) return;
+    // 최소 길이 미만으로 줄여도 번호를 올려, 이미 나간 요청의 늦은 응답이 결과를 채우지 못하게 한다.
     const seq = ++requestSeq.current;
+    if (trimmed.length < SUGGEST_MIN_LENGTH) return;
     const timer = setTimeout(async () => {
       setStatus("loading");
       try {
@@ -63,7 +71,10 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
 
   const pick = (suggestion: StopSuggestionTypes) => {
     setOpen(false);
-    setQuery(suggestion.placeName ?? suggestion.displayName);
+    const nextQuery = suggestion.placeName ?? suggestion.displayName;
+    // 값이 그대로면 effect 가 안 돌아 표시가 남으므로, 실제로 바뀔 때만 건너뛴다.
+    if (nextQuery !== query) skipNextSearch.current = true;
+    setQuery(nextQuery);
     onPick(suggestion);
   };
 
