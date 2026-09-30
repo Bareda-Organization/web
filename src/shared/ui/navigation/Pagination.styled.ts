@@ -5,7 +5,7 @@ export const StyledPagination = styled.nav`
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px var(--gutter-desktop, 20px);
+  padding: 14px 0;
 `;
 
 export const StyledPaginationSummary = styled.span`

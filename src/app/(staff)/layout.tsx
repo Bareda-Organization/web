@@ -7,8 +7,13 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
-import { EmergencyAlertProvider, useEmergencyUnackedCount } from "@/features/emergency";
+import { ApprovalPendingProvider, useApprovalPending } from "@/features/approval";
+import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
+import { useAttentionSignals } from "@/shared/hooks";
+import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
+import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
 import {
@@ -41,9 +46,6 @@ const resolveActiveValue = (pathname: string): string => {
   return found?.value ?? "dashboard";
 };
 
-const formatToday = (): string =>
-  new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-
 // SideNav 원본(kit.jsx)은 로컬 state 로 화면을 전환하는 SPA 스위치 방식이지만, 이 앱은
 // Next.js 라우팅을 쓴다 — value 를 현재 경로에서 계산하고 onChange 는 router.push 로
 // 바꾼다(판단 근거, 보고서 §1).
@@ -53,23 +55,35 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuthSession();
   const { canGoBack, goBack } = useBackNavigation();
   const emergencyUnackedCount = useEmergencyUnackedCount();
+  const { signupCount, changeCount, isReady } = useApprovalPending();
+  // 탭 제목·알림음 — 다른 탭에 있어도 비상·승인 요청을 알아채게 한다(알림음은 사용자가 켠 경우에만).
+  useAttentionSignals(emergencyUnackedCount, signupCount + changeCount, isReady);
+
+  // 사이드바 배지 — 비상은 미확인 수, 승인 두 종은 처리 대기 수. 0 이면 배지를 달지 않는다.
+  const badgeCounts: Record<string, number> = {
+    emergency: emergencyUnackedCount,
+    "signup-approval": signupCount,
+    "change-approval": changeCount,
+  };
 
   return (
     <StyledStaffShell>
+      <SkipLink />
       <SideNav
         items={NAV_ITEMS.map((item) => ({
           value: item.value,
           label: item.label,
           icon: item.icon,
-          badge: item.value === "emergency" && emergencyUnackedCount > 0 ? emergencyUnackedCount : undefined,
+          badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
         }))}
         value={resolveActiveValue(pathname)}
+        getHref={(value) => `/${value}`}
         onChange={(value) => {
           if (confirmLeave()) router.push(`/${value}`);
         }}
         academy={session?.academy?.name}
       />
-      <StyledStaffMain>
+      <StyledStaffMain id={MAIN_CONTENT_ID} tabIndex={-1}>
         <StyledStaffHeader>
           <StyledStaffHeaderSide>
             {canGoBack ? (
@@ -77,26 +91,38 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
                 뒤로
               </Button>
             ) : null}
-            <StyledStaffHeaderDate>{formatToday()}</StyledStaffHeaderDate>
+            <StyledStaffHeaderDate>{formatHeaderDate()}</StyledStaffHeaderDate>
           </StyledStaffHeaderSide>
           <StyledStaffHeaderSide>
             <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
+            <AttentionAlertToggle />
             <TestDataResetButton />
             <LogoutButton />
           </StyledStaffHeaderSide>
         </StyledStaffHeader>
+        <EmergencyAlertStrip />
         {children}
       </StyledStaffMain>
     </StyledStaffShell>
   );
 };
 
+// 세션(학원 id)이 있어야 승인 대기 통지 채널을 구독할 수 있어 가드 안쪽에서 한 겹 더 감싼다.
+const StaffProviders = ({ children }: { children: React.ReactNode }) => {
+  const { session } = useAuthSession();
+  return (
+    <EmergencyAlertProvider>
+      <ApprovalPendingProvider academyId={session?.academy?.id ?? ""}>
+        <StaffShell>{children}</StaffShell>
+      </ApprovalPendingProvider>
+    </EmergencyAlertProvider>
+  );
+};
+
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGateGuard requiredRole="staff">
-      <EmergencyAlertProvider>
-        <StaffShell>{children}</StaffShell>
-      </EmergencyAlertProvider>
+      <StaffProviders>{children}</StaffProviders>
     </AuthGateGuard>
   );
 }

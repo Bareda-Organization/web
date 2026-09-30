@@ -45,6 +45,7 @@ export const StyledSideNavButton = styled.button<{ $active: boolean }>`
   color: ${(props) => (props.$active ? "var(--nav-active-text)" : "var(--nav-text)")};
   font: ${(props) => (props.$active ? "var(--fw-medium)" : "var(--fw-regular)")} var(--fs-body-sm) / 1 var(--font-sans);
   text-align: left;
+  text-decoration: none;
   transition: var(--transition-control);
 `;
 

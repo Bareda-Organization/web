@@ -9,6 +9,7 @@ import { getChangeApprovals } from "../api";
 import type { ChangeApprovalSummaryResponseTypes } from "../types";
 import { StyledChangeApprovalLayout } from "./ChangeApprovalList.styled";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { formatRemaining, useNowEverySecond } from "../lib/remainingTime";
 
 const DIRECTION_LABEL: Record<ChangeApprovalSummaryResponseTypes["direction"], string> = {
   to_academy: "등원",
@@ -80,11 +81,13 @@ export const ChangeApprovalList = () => {
     setPage(0);
   };
 
+  const now = useNowEverySecond();
+
   const columns: RosterColumn<ChangeApprovalSummaryResponseTypes>[] = [
     { key: "studentName", label: "학생" },
     { key: "source", label: "출처", render: (row) => SOURCE_LABEL[row.source] },
     { key: "busNo", label: "버스" },
-    { key: "direction", label: "구간", render: (row) => DIRECTION_LABEL[row.direction] },
+    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     { key: "stopName", label: "승하차지" },
     {
       key: "willRemoveStop",
@@ -94,6 +97,16 @@ export const ChangeApprovalList = () => {
     { key: "remainingRiders", label: "잔여 인원" },
     // 상세 화면과 같은 형식 함수를 쓴다 — 목록만 풀 ISO 로 남아 있었다(2026-09-19 실측).
     { key: "deadlineAt", label: "처리 기한", render: (row) => formatClockTime(row.deadlineAt) },
+    // 기한을 넘기면 자동 거절되어 학부모에게 실패 통지가 나간다 — 처리 대기 목록에서는 남은 시간을 함께 보여 준다(B1 #5).
+    ...(status === "pending"
+      ? [
+          {
+            key: "autoRejectIn",
+            label: "자동 거절까지",
+            render: (row: ChangeApprovalSummaryResponseTypes) => formatRemaining(Date.parse(row.deadlineAt), now) ?? "기한 지남",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -105,7 +118,7 @@ export const ChangeApprovalList = () => {
       <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={handleStatusChange} />
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={items}
@@ -114,7 +127,7 @@ export const ChangeApprovalList = () => {
         />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
     </StyledChangeApprovalLayout>
   );
 };

@@ -8,7 +8,15 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
+import { AdminPendingProvider, getAdminEmergencies, useAdminPending } from "@/features/admin";
+import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
+import type { EmergencyAlertSource } from "@/features/emergency";
+import { useAttentionSignals } from "@/shared/hooks";
+import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
+import { formatHeaderDate } from "@/shared/lib/format/dateTime";
+import { adminLiveDestination } from "@/shared/lib/ws";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
+import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
 import {
@@ -38,12 +46,19 @@ const resolveActiveValue = (pathname: string): string => {
   return found?.value ?? "academies";
 };
 
-const formatToday = (): string =>
-  new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-
 // 메인 관리자는 학원 경계를 넘는 유일한 역할이라 session.academy 가 null 이다 — SideNav 의
 // academy prop 에 학원 이름 대신 "전체 학원" 을 고정으로 넣는다(BRIEF-a1.md §2.2).
 const AdminShell = ({ children }: { children: React.ReactNode }) => {
+  const emergencyUnackedCount = useEmergencyUnackedCount();
+  const { signupCount, blockedCount, isReady } = useAdminPending();
+  // 탭 제목·알림음 — 다른 탭에 있어도 비상·승인 대기를 알아채게 한다(알림음은 사용자가 켠 경우에만).
+  useAttentionSignals(emergencyUnackedCount, signupCount + blockedCount, isReady);
+  const badgeCounts: Record<string, number> = {
+    "member-approvals": signupCount,
+    "blocked-accounts": blockedCount,
+    "emergency-alerts": emergencyUnackedCount,
+  };
+
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
@@ -51,15 +66,22 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <StyledAdminShell>
+      <SkipLink />
       <SideNav
-        items={NAV_ITEMS.map((item) => ({ value: item.value, label: item.label, icon: item.icon }))}
+        items={NAV_ITEMS.map((item) => ({
+          value: item.value,
+          label: item.label,
+          icon: item.icon,
+          badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
+        }))}
         value={resolveActiveValue(pathname)}
+        getHref={(value) => `/${value}`}
         onChange={(value) => {
           if (confirmLeave()) router.push(`/${value}`);
         }}
         academy="전체 학원"
       />
-      <StyledAdminMain>
+      <StyledAdminMain id={MAIN_CONTENT_ID} tabIndex={-1}>
         <StyledAdminHeader>
           <StyledAdminHeaderSide>
             {canGoBack ? (
@@ -67,24 +89,43 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
                 뒤로
               </Button>
             ) : null}
-            <StyledAdminHeaderDate>{formatToday()}</StyledAdminHeaderDate>
+            <StyledAdminHeaderDate>{formatHeaderDate()}</StyledAdminHeaderDate>
           </StyledAdminHeaderSide>
           <StyledAdminHeaderSide>
             <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
+            <AttentionAlertToggle />
             <TestDataResetButton />
             <LogoutButton />
           </StyledAdminHeaderSide>
         </StyledAdminHeader>
+        <EmergencyAlertStrip />
         {children}
       </StyledAdminMain>
     </StyledAdminShell>
   );
 };
 
+// 메인 관리자의 비상 알림 출처 — 관계자가 아직 확인하지 않은 전 학원의 신고. 확인(ack)은 관계자 몫이라 버튼이 없다.
+const ADMIN_EMERGENCY_SOURCE: EmergencyAlertSource = {
+  destination: adminLiveDestination(),
+  fetchUnacked: async () =>
+    (await getAdminEmergencies("open")).items.map((item) => ({
+      emergencyId: item.emergencyId,
+      busNo: item.busNo,
+      type: item.type,
+      raisedByName: item.raisedBy.name,
+    })),
+  listPath: "/emergency-alerts",
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGateGuard requiredRole="system_admin">
-      <AdminShell>{children}</AdminShell>
+      <EmergencyAlertProvider source={ADMIN_EMERGENCY_SOURCE}>
+        <AdminPendingProvider>
+          <AdminShell>{children}</AdminShell>
+        </AdminPendingProvider>
+      </EmergencyAlertProvider>
     </AuthGateGuard>
   );
 }

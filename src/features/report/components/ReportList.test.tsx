@@ -94,14 +94,14 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     ({ reportId, type: "etc", busNo: "1호차", studentName: null, reportedBy: "김기사", reportedAt: "2026-09-12T08:00:00Z", memo, handled: false }) as never;
 
   beforeEach(() => {
-    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [{ runId: "7", busNo: "2호차", direction: "to_academy" }] } as never);
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [{ runId: "7", busNo: "2호차", direction: "to_academy", departTime: "08:10" }] } as never);
   });
   afterEach(() => vi.clearAllMocks());
 
   it("회차를 고르면 그 run_id 로 조회한다", async () => {
     mockGet.mockResolvedValue({ items: [] });
     render(<ReportList />);
-    await screen.findByRole("option", { name: "2호차 · 등원" });
+    await screen.findByRole("option", { name: "08:10 2호차 · 등원" });
 
     fireEvent.change(screen.getByLabelText("회차"), { target: { value: "7" } });
 

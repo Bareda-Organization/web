@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, PageHeader, Pagination, RosterTable, SearchField } from "@/shared/ui";
+import { useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { getStudents } from "../api";
 import type { StudentListItemResponseTypes } from "../types";
@@ -23,6 +24,7 @@ export const StudentList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { notice, showNotice } = useSavedNotice();
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [withdrawing, setWithdrawing] = useState<StudentListItemResponseTypes | undefined>(undefined);
@@ -67,6 +69,7 @@ export const StudentList = () => {
   };
 
   const handleDone = () => {
+    showNotice("변경 사항을 반영했습니다");
     setEditingId(undefined);
     setCreating(false);
     setWithdrawing(undefined);
@@ -105,7 +108,7 @@ export const StudentList = () => {
     <StyledStudentLayout>
       <PageHeader
         title="학생 관리"
-        description={`총 ${totalCount}명`}
+        description={q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
             학생 등록
@@ -118,9 +121,10 @@ export const StudentList = () => {
       </StyledStudentToolbar>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}
           columns={columns}
           loading={loading}
           rows={items}
@@ -129,7 +133,7 @@ export const StudentList = () => {
         />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {editingId ? (
         <StudentForm studentId={editingId} onClose={() => setEditingId(undefined)} onDone={handleDone} />

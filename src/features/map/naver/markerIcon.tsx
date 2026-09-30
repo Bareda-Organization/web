@@ -43,17 +43,26 @@ export const MARKER_SIZE_PX: Record<MapMarkerKind, number> = {
 // 지시 — 그냥 파란 원이라 지도의 다른 POI 아이콘과 섞였다). `naver.maps.Marker` 의
 // icon.content 는 HTML 문자열만 받으므로, `react-dom/server` 의 renderToStaticMarkup
 // 으로 lucide-react 아이콘을 문자열로 굳혀 둔다 — 마커마다 다시 렌더링할 필요가
-// 없어 모듈 로드 시 한 번만 계산한다.
+// 없어 처음 쓸 때 한 번만 계산해 둔다.
 //
 // R21-A 목표 3 — 등원·하원은 색을 못 쓰므로(C-09 4색 고정) 아이콘 모양을 바꾼다.
 // `Bus`(옆모습, 등원)와 `BusFront`(앞모습, 하원) 두 벌을 미리 굳혀 둔다.
-const BUS_ICON_HTML: Record<MapMarkerDirection, string> = {
-  to_academy: renderToStaticMarkup(
-    <Bus color="#fff" size={Math.round(MARKER_SIZE_PX.bus * 0.6)} strokeWidth={2.5} />,
-  ),
-  from_academy: renderToStaticMarkup(
-    <BusFront color="#fff" size={Math.round(MARKER_SIZE_PX.bus * 0.6)} strokeWidth={2.5} />,
-  ),
+const BUS_ICON_SIZE_PX = Math.round(MARKER_SIZE_PX.bus * 0.6);
+const busIconCache: Partial<Record<MapMarkerDirection, string>> = {};
+
+// ⚠ 모듈 로드 때가 아니라 처음 쓸 때 굳힌다(R46-WEB). 모듈 최상위에서 `renderToStaticMarkup` 을 부르면, 서버 렌더링 도중에
+// 이 모듈이 처음 불러질 때 "렌더 안의 렌더" 가 되어 `Invalid hook call` 로 모든 관계자·관리자 화면이 500 을 냈다
+// (브라우저는 클라이언트 렌더로 복구돼 눈에 안 띄고, 서버 로그와 개발 오버레이 "1 Issue" 로만 드러난다).
+const busIconHtml = (direction: MapMarkerDirection): string => {
+  const cached = busIconCache[direction];
+  if (cached !== undefined) return cached;
+  const icon =
+    direction === "to_academy" ? (
+      <Bus color="#fff" size={BUS_ICON_SIZE_PX} strokeWidth={2.5} />
+    ) : (
+      <BusFront color="#fff" size={BUS_ICON_SIZE_PX} strokeWidth={2.5} />
+    );
+  return (busIconCache[direction] = renderToStaticMarkup(icon));
 };
 
 // R21-A 목표 1 — 고른 마커를 흰 띠로 두른다(사용자 예시 그대로). 좌표 앵커가
@@ -154,7 +163,7 @@ const busChipHtml = (
       ? `box-shadow:0 0 0 4px ${EMERGENCY_GLOW};`
       : "";
   const border = emergency ? `3px solid ${EMERGENCY_COLOR}` : "2px solid #fff";
-  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:${border};${ring}white-space:nowrap;">${BUS_ICON_HTML[direction]}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${escapeHtml(busNo)}</span></span>`;
+  return `<span${markerIdAttr(markerId)} style="display:inline-flex;align-items:center;gap:3px;height:${MARKER_SIZE_PX.bus}px;padding:0 8px 0 6px;border-radius:999px;background:${color};border:${border};${ring}white-space:nowrap;">${busIconHtml(direction)}<span style="color:#fff;font-size:11px;font-weight:700;line-height:1;">${escapeHtml(busNo)}</span></span>`;
 };
 
 // 물방울 핀 윤곽 — 머리는 (12,12) 중심 반지름 12 의 원, 끝점은 (12,32). viewBox 를 흰 테두리
@@ -243,7 +252,7 @@ export const buildMarkerIconHtml = (kind: MapMarkerKind, options: MarkerIconOpti
     );
   }
   const size = MARKER_SIZE_PX[kind];
-  const icon = kind === "bus" ? BUS_ICON_HTML[options.direction ?? "to_academy"] : "";
+  const icon = kind === "bus" ? busIconHtml(options.direction ?? "to_academy") : "";
   const ring = options.selected ? selectedRingOf(kind) : "";
   return centeredOnPoint(
     `<span${markerIdAttr(options.markerId)} style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${MARKER_COLOR[kind]};border:2px solid #fff;${ring}">${icon}</span>`,

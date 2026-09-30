@@ -55,7 +55,8 @@ const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelop
   capturedOnEnvelope = onEnvelope;
   return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
-vi.mock("@/shared/hooks", () => ({
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
     mockUseRealtimeChannel(destination, onEnvelope),
 }));

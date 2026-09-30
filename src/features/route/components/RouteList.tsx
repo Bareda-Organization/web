@@ -75,7 +75,7 @@ export const RouteList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={items}
@@ -84,14 +84,15 @@ export const RouteList = () => {
         />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {creating ? (
         <RouteForm
           onClose={() => setCreating(false)}
-          onDone={() => {
+          // 저장하면 만든 편성의 상세로 이어 간다 — 정차지를 넣는 것이 다음 일이다(B1 #10).
+          onDone={({ id }) => {
             setCreating(false);
-            load(page);
+            router.push(`/route/${id}`);
           }}
         />
       ) : null}

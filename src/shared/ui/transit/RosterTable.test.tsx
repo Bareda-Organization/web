@@ -63,3 +63,20 @@ describe("RosterTable — 빈 목록과 키보드", () => {
     expect(screen.getByText("김철수").closest("tr")).not.toHaveAttribute("tabindex");
   });
 });
+
+// B1 #11 — 조회에 실패했는데 "표시할 내용이 없습니다" 가 같이 떠서 실제로 없는 것으로 읽혔다.
+describe("RosterTable — 조회 실패", () => {
+  it("행이 없고 조회가 실패했으면 빈 목록 문구 대신 불러오지 못했다고 보여 준다", () => {
+    render(<RosterTable<Row> columns={columns} rows={[]} hasError />);
+
+    expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();
+    expect(screen.getByText("목록을 불러오지 못했습니다")).toBeInTheDocument();
+  });
+
+  it("이미 받은 행이 있으면 갱신 실패에도 그 행을 지우지 않는다", () => {
+    render(<RosterTable<Row> columns={columns} rows={[{ id: "1", name: "김철수" }]} hasError />);
+
+    expect(screen.getByText("김철수")).toBeInTheDocument();
+    expect(screen.queryByText("목록을 불러오지 못했습니다")).not.toBeInTheDocument();
+  });
+});

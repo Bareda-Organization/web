@@ -9,3 +9,5 @@ export { BlockedAccountsPage } from "./components/BlockedAccountsPage";
 export { EmergencyAlertsPage } from "./components/EmergencyAlertsPage";
 export { ForceConfirmPage } from "./components/ForceConfirmPage";
 export { AuditLogPage } from "./components/AuditLogPage";
+export { AdminPendingProvider, useAdminPending } from "./components/AdminPendingProvider";
+export { getEmergencies as getAdminEmergencies } from "./api";

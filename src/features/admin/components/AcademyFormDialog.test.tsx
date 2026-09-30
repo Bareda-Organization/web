@@ -106,3 +106,18 @@ describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
     expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
   });
 });
+
+// A#10(R46-WEB) — 주소는 선택 입력(§6.2)이지만 비우면 그 학원의 회차 확정이 전부 ACADEMY_COORDINATES_MISSING 으로 막힌다.
+// 막히는 원인이 화면에서 보이도록 주소를 비워 둔 동안 경고를 보여 준다.
+describe("AcademyFormDialog — 주소 비움 경고", () => {
+  it("주소가 비어 있으면 회차 확정이 시작되지 않는다는 경고를 보이고, 주소를 넣으면 사라진다", () => {
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
+    const warning = "주소를 비워 두면 이 학원의 회차 확정이 시작되지 않습니다. 등록 뒤에라도 주소를 넣어 주세요";
+
+    expect(screen.getByText(warning)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: "서울 강동구 천호대로 1" } });
+
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+  });
+});

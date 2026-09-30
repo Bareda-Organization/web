@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MARKER_SIZE_PX, buildMarkerIconHtml, busColorOf } from "./markerIcon";
 
 // R18-B 목표 1 — 버스 아이콘이 한눈에 보여야 하고, 정차지·학생 마커와 크기로
@@ -266,5 +266,24 @@ describe("markerIcon — 경유 지점 · 미경유 표기(R39 Ruling 400)", () 
     expect(skipped).toContain("line-through");
     expect(normal).not.toContain("line-through");
     expect(normal).not.toContain("opacity");
+  });
+});
+
+// R46-WEB — 모듈 최상위에서 renderToStaticMarkup 을 부르면 서버 렌더링 도중 이 모듈이 처음 불릴 때 "렌더 안의 렌더" 가 되어
+// 관계자·관리자 모든 화면이 Invalid hook call(500) 을 냈다. 불러오는 것만으로는 렌더하지 않고, 처음 쓸 때 한 번만 굳힌다.
+describe("markerIcon — 모듈 로드 시점", () => {
+  it("모듈을 불러올 때는 정적 마크업을 만들지 않고, 같은 방향의 버스 아이콘은 한 번만 만든다", async () => {
+    vi.resetModules();
+    const renderToStaticMarkup = vi.fn(() => "<svg/>");
+    vi.doMock("react-dom/server", () => ({ renderToStaticMarkup }));
+
+    const fresh = await import("./markerIcon");
+    expect(renderToStaticMarkup).not.toHaveBeenCalled();
+
+    fresh.buildMarkerIconHtml("bus", { busNo: "1호차", direction: "to_academy" });
+    fresh.buildMarkerIconHtml("bus", { busNo: "2호차", direction: "to_academy" });
+    expect(renderToStaticMarkup).toHaveBeenCalledTimes(1);
+
+    vi.doUnmock("react-dom/server");
   });
 });

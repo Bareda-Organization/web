@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
-import { useRealtimeChannel } from "@/shared/hooks";
+import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import {
   academyLiveDestination,
   parseWsEmergencyCanceledPayload,
@@ -17,22 +17,57 @@ import { toEmergencyTypeLabel } from "../lib/emergencyLabels";
 import { StyledEmergencyPopupStack } from "./EmergencyAlertProvider.styled";
 
 // 팝업 한 건에 필요한 것만 — REST 목록과 WebSocket 통지 양쪽에서 같은 모양으로 만든다.
-type EmergencyAlert = { emergencyId: string; busNo: string; type: string; raisedByName: string | null };
+export type EmergencyAlert = { emergencyId: string; busNo: string; type: string; raisedByName: string | null };
+
+// 비상 알림을 어디서 받아 오는가 — 관계자는 기본값을 쓰고, 메인 관리자 레이아웃은 관리자 쪽 조회·채널을 넘긴다(A#6).
+// `ack` 가 없으면 이 화면의 사용자는 확인 주체가 아니라(메인 관리자) 확인 버튼 없이 목록으로만 안내한다.
+export type EmergencyAlertSource = {
+  destination: string;
+  fetchUnacked: () => Promise<EmergencyAlert[]>;
+  ack?: (emergencyId: string) => Promise<void>;
+  listPath: string;
+};
+
+type EmergencyAlertState = {
+  alerts: EmergencyAlert[];
+  ackingId: string | null;
+  ackFailedId: string | null;
+  isAckable: boolean;
+  listPath: string;
+  onAck: (emergencyId: string) => void;
+};
 
 // 비상 알림은 지연 인지 자체가 위험이라 WebSocket 이 끊겨도 놓치지 않게 짧게 다시 확인한다(EmergencyAlertsPage 와 같은 5초).
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
 
-const EmergencyAlertContext = createContext<number>(0);
+const EMPTY_STATE: EmergencyAlertState = { alerts: [], ackingId: null, ackFailedId: null, isAckable: true, listPath: "/emergency", onAck: () => {} };
+
+const EmergencyAlertContext = createContext<EmergencyAlertState>(EMPTY_STATE);
 
 // 사이드바 '비상 알림' 건수 — 확인하지 않은 비상 알림 수.
-export const useEmergencyUnackedCount = (): number => useContext(EmergencyAlertContext);
+export const useEmergencyUnackedCount = (): number => useContext(EmergencyAlertContext).alerts.length;
 
-// 관계자 전 화면(`(staff)` 레이아웃)에서 비상 알림을 받아 확인 전까지 팝업으로 유지한다.
+// 관계자 전 화면(`(staff)` 레이아웃)에서 비상 알림을 받아 확인 전까지 띠로 유지한다 — 띠를 그리는 것은 `EmergencyAlertStrip`.
 // 구독을 화면이 아니라 레이아웃 한 곳에 둔다 — 대시보드에서만 받으면 다른 화면에서는 신고를 놓친다.
 // WebSocket 연결은 `useRealtimeChannel` 이 하나를 공유하므로 대시보드의 구독과 연결이 겹쳐 열리지 않는다.
-export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode }) => {
+export const EmergencyAlertProvider = ({ children, source }: { children: React.ReactNode; source?: EmergencyAlertSource }) => {
   const { session } = useAuthSession();
-  const router = useRouter();
+  const defaultSource = useMemo<EmergencyAlertSource>(
+    () => ({
+      destination: academyLiveDestination(session?.academy?.id ?? ""),
+      fetchUnacked: async () =>
+        (await getEmergencies({ status: "open" })).items.map((item) => ({
+          emergencyId: item.emergencyId,
+          busNo: item.busNo,
+          type: item.type,
+          raisedByName: item.raisedBy.name,
+        })),
+      ack: async (emergencyId) => void (await ackEmergency(emergencyId)),
+      listPath: "/emergency",
+    }),
+    [session?.academy?.id],
+  );
+  const { destination, fetchUnacked, ack, listPath } = source ?? defaultSource;
   const [alerts, setAlerts] = useState<EmergencyAlert[]>([]);
   const [ackingId, setAckingId] = useState<string | null>(null);
   // 실패 문구는 실패한 알림 id 에 묶는다 — 그 알림이 사라지면 문구도 함께 사라져 새 비상 건 옆에 남지 않는다(F01-12).
@@ -41,31 +76,28 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
   const requestSeq = useRef(0);
 
   // 서버의 미확인(open) 목록이 기준이다 — 통지를 놓쳤거나 새로고침한 뒤에도 미확인 신고가 다시 뜬다.
-  const load = useCallback(async () => {
+  // 돌려주는 값은 폴링용 성공 여부다(`usePolling` 이 실패하면 간격을 늘린다).
+  const load = useCallback(async (): Promise<boolean> => {
     const mine = ++requestSeq.current;
     try {
-      const data = await getEmergencies({ status: "open" });
-      if (mine !== requestSeq.current) return;
-      setAlerts(
-        data.items.map((item) => ({
-          emergencyId: item.emergencyId,
-          busNo: item.busNo,
-          type: item.type,
-          raisedByName: item.raisedBy.name,
-        })),
-      );
+      const items = await fetchUnacked();
+      if (mine !== requestSeq.current) return true;
+      setAlerts(items);
+      return true;
     } catch {
       // 다음 주기에 다시 시도한다 — 실패했다고 이미 뜬 팝업을 지우지 않는다.
+      return false;
     }
-  }, []);
+  }, [fetchUnacked]);
 
   useEffect(() => {
     (async () => {
       await load();
     })();
-    const timer = setInterval(load, EMERGENCY_POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
   }, [load]);
+
+  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  usePolling(load, EMERGENCY_POLL_INTERVAL_MS);
 
   const handleEnvelope = useCallback(
     (envelope: WebSocketEnvelope) => {
@@ -89,60 +121,77 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
     },
     [load],
   );
-  useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+  useRealtimeChannel(destination, handleEnvelope);
 
-  const handleAck = async (emergencyId: string) => {
-    setAckingId(emergencyId);
-    setAckFailedId(null);
-    try {
-      await ackEmergency(emergencyId);
-      closeAcked(emergencyId);
-    } catch (cause) {
-      // 다른 관계자가 먼저 확인한 건(409)은 이미 처리된 것이라 실패로 안내하지 않는다 — 다시 눌러도 같은 결과다.
-      if (cause instanceof ApiError && cause.code === "ALREADY_ACKED") closeAcked(emergencyId);
-      else setAckFailedId(emergencyId);
-    } finally {
-      setAckingId(null);
-    }
-  };
+  const closeAcked = useCallback(
+    (emergencyId: string) => {
+      setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== emergencyId));
+      // load() 가 요청 번호를 올려, ack 전에 나간 폴링의 옛 응답은 이 시점부터 버려진다.
+      void load();
+    },
+    [load],
+  );
 
-  const closeAcked = (emergencyId: string) => {
-    setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== emergencyId));
-    // load() 가 요청 번호를 올려, ack 전에 나간 폴링의 옛 응답은 이 시점부터 버려진다.
-    void load();
-  };
+  const handleAck = useCallback(
+    async (emergencyId: string) => {
+      if (!ack) return;
+      setAckingId(emergencyId);
+      setAckFailedId(null);
+      try {
+        await ack(emergencyId);
+        closeAcked(emergencyId);
+      } catch (cause) {
+        // 다른 관계자가 먼저 확인한 건(409)은 이미 처리된 것이라 실패로 안내하지 않는다 — 다시 눌러도 같은 결과다.
+        if (cause instanceof ApiError && cause.code === "ALREADY_ACKED") closeAcked(emergencyId);
+        else setAckFailedId(emergencyId);
+      } finally {
+        setAckingId(null);
+      }
+    },
+    [ack, closeAcked],
+  );
 
-  const count = useMemo(() => alerts.length, [alerts]);
+  const state = useMemo<EmergencyAlertState>(
+    () => ({ alerts, ackingId, ackFailedId, isAckable: ack !== undefined, listPath, onAck: (id) => void handleAck(id) }),
+    [alerts, ackingId, ackFailedId, ack, listPath, handleAck],
+  );
+
+  return <EmergencyAlertContext.Provider value={state}>{children}</EmergencyAlertContext.Provider>;
+};
+
+// 미확인 비상 알림 띠 — 레이아웃의 머리줄 바로 아래에 둔다. 화면 위에 띄우지 않고 흐름에 넣어, 등록·배치 변경 같은 버튼을 가리지 않는다.
+export const EmergencyAlertStrip = () => {
+  const router = useRouter();
+  const { alerts, ackingId, ackFailedId, isAckable, listPath, onAck } = useContext(EmergencyAlertContext);
+  if (alerts.length === 0) return null;
 
   return (
-    <EmergencyAlertContext.Provider value={count}>
-      {children}
-      {alerts.length > 0 ? (
-        <StyledEmergencyPopupStack role="alert">
-          {alerts.map((alert) => (
-            <AlertBanner
-              key={alert.emergencyId}
-              tone="missed"
-              title={`비상 상황 — ${alert.busNo} · ${toEmergencyTypeLabel(alert.type)}`}
-              action={
-                <>
-                  <Button size="sm" variant="danger" disabled={ackingId === alert.emergencyId} onClick={() => handleAck(alert.emergencyId)}>
-                    확인
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => router.push("/emergency")}>
-                    비상 알림 목록
-                  </Button>
-                </>
-              }
-            >
-              {alert.raisedByName ? `${alert.raisedByName} 님이 신고했습니다. ` : ""}확인하기 전까지 이 알림은 계속 표시됩니다.
-            </AlertBanner>
-          ))}
-          {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
-            <AlertBanner tone="missed" title="확인 처리에 실패했습니다. 다시 눌러 주세요." />
-          ) : null}
-        </StyledEmergencyPopupStack>
+    <StyledEmergencyPopupStack role="alert">
+      {alerts.map((alert) => (
+        <AlertBanner
+          key={alert.emergencyId}
+          tone="missed"
+          title={`비상 상황 — ${alert.busNo} · ${toEmergencyTypeLabel(alert.type)}`}
+          action={
+            <>
+              {isAckable ? (
+                <Button size="sm" variant="danger" disabled={ackingId === alert.emergencyId} onClick={() => onAck(alert.emergencyId)}>
+                  확인
+                </Button>
+              ) : null}
+              <Button size="sm" variant="secondary" onClick={() => router.push(listPath)}>
+                비상 알림 목록
+              </Button>
+            </>
+          }
+        >
+          {alert.raisedByName ? `${alert.raisedByName} 님이 신고했습니다. ` : ""}
+          {isAckable ? "확인하기 전까지 이 알림은 계속 표시됩니다." : "관계자가 확인하면 사라집니다."}
+        </AlertBanner>
+      ))}
+      {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
+        <AlertBanner tone="missed" title="확인 처리에 실패했습니다. 다시 눌러 주세요." />
       ) : null}
-    </EmergencyAlertContext.Provider>
+    </StyledEmergencyPopupStack>
   );
 };

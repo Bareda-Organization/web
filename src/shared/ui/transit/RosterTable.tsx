@@ -22,6 +22,8 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
   emptyMessage?: string;
   /** 목록을 불러오는 중 — 참이면 행이 0건이어도 빈 목록 문구 대신 불러오는 중 문구를 보인다 */
   loading?: boolean;
+  /** 조회가 실패했다 — 행이 없을 때 "표시할 내용이 없습니다" 대신 불러오지 못했다고 보인다(없는 것이 아니라 못 읽은 것) */
+  hasError?: boolean;
   /**
    * 행 고유 키 추출자. 원본은 `key={r.id || i}` 로 id 가 없으면 인덱스를 썼는데,
    * rows 가 제네릭이라 컴포넌트 스스로 내용 기반 키를 보장할 수 없다 — 호출자가
@@ -52,6 +54,7 @@ export const RosterTable = <T,>({
   onRowClick,
   emptyMessage = "표시할 내용이 없습니다",
   loading = false,
+  hasError = false,
   getRowKey = defaultRowKey,
   groupBy,
   ...rest
@@ -136,7 +139,7 @@ export const RosterTable = <T,>({
           {rows.length === 0 ? (
             <StyledRosterTableRow $clickable={false}>
               <StyledRosterTableCell $align="center" colSpan={columns.length || 1}>
-                {loading ? "불러오는 중입니다" : emptyMessage}
+                {loading ? "불러오는 중입니다" : hasError ? "목록을 불러오지 못했습니다" : emptyMessage}
               </StyledRosterTableCell>
             </StyledRosterTableRow>
           ) : null}

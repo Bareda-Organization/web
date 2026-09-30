@@ -19,9 +19,14 @@ export const StyledStatGrid = styled.div`
 // 3fr:1fr 로 나눠 지도가 대부분을 차지하면서도 목록이 항상 옆에 보이게 한다.
 export const StyledMapTopRow = styled.div`
   display: grid;
-  grid-template-columns: 3fr 1fr;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+
+  /* 1100px 이하에서는 오른쪽 목록이 좁아 회차 이름·상태 칩이 글자 단위로 꺾인다(B1 #13) — 지도 아래로 내려 쌓는다. */
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 export const StyledMapPane = styled.div`
@@ -98,7 +103,9 @@ export const StyledBusListItemHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   font-weight: var(--fw-bold);
+  white-space: nowrap;
 `;
 
 export const StyledBusListItemMeta = styled.span`

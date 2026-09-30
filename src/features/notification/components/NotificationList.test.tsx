@@ -28,7 +28,7 @@ describe("NotificationList — 조회 갈래", () => {
     // aria-busy)를 먼저 기다린다.
     await waitFor(() => expect(container.querySelector('[aria-busy="false"]')).toBeTruthy());
 
-    expect(screen.getByText("총 0건 · 미확인 0건")).toBeInTheDocument();
+    expect(screen.getByText("총 0건 · 수신자 미확인 0건")).toBeInTheDocument();
     // 데이터 행은 없고, 머리글 아래에 빈 목록 문구(R32-W10)가 한 줄 있다.
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
     await screen.findByText("내용2");
     mockGet.mockClear();
 
-    fireEvent.change(screen.getByLabelText("확인 여부"), { target: { value: "false" } });
+    fireEvent.change(screen.getByLabelText("수신자 확인 여부"), { target: { value: "false" } });
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
     expect(mockGet).toHaveBeenCalledWith(0, 20, expect.objectContaining({ acked: false }));

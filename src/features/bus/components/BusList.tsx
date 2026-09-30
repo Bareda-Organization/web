@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, Pagination, RosterTable } from "@/shared/ui";
+import { useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { getBuses } from "../api";
 import type { BusItemResponseTypes } from "../types";
@@ -20,6 +21,7 @@ export const BusList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { notice, showNotice } = useSavedNotice();
   const [editing, setEditing] = useState<BusItemResponseTypes | undefined>(undefined);
   const [creating, setCreating] = useState(false);
 
@@ -46,6 +48,7 @@ export const BusList = () => {
   }, [page, load]);
 
   const handleDone = () => {
+    showNotice("변경 사항을 반영했습니다");
     setEditing(undefined);
     setCreating(false);
     load(page);
@@ -76,12 +79,13 @@ export const BusList = () => {
       />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
-      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
 
       {editing ? <BusForm bus={editing} onClose={() => setEditing(undefined)} onDone={handleDone} /> : null}
       {creating ? <BusForm onClose={() => setCreating(false)} onDone={handleDone} /> : null}

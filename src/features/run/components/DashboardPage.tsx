@@ -11,7 +11,7 @@ import {
   parseWsPositionPayload,
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
-import { useRealtimeChannel } from "@/shared/hooks";
+import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -80,7 +80,8 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 // §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-04) — 관계자 웹
 // 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
 // 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
-export const DashboardPage = () => {
+// `pendingSlot` — 처리 대기·기한 임박 카드 자리. `run` 이 `approval` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
+export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }) => {
   const router = useRouter();
   const { session } = useAuthSession();
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getDashboard>>["metrics"] | null>(null);
@@ -159,28 +160,34 @@ export const DashboardPage = () => {
   const routeSeq = useRef(0);
 
   // silent — 주기·이벤트 갱신. 실패해도 이미 보이던 지표·표를 오류로 덮지 않는다(다음 주기에 회복).
-  const loadDashboard = useCallback(async (silent = false) => {
+  // 돌려주는 값은 폴링용 성공 여부다 — 실패하면 `usePolling` 이 간격을 늘린다.
+  const loadDashboard = useCallback(async (silent = false): Promise<boolean> => {
     const mine = ++dashboardSeq.current;
     try {
       const data = await getDashboard();
-      if (mine !== dashboardSeq.current) return;
+      if (mine !== dashboardSeq.current) return true;
       setMetrics(data.metrics);
       setRuns(data.runs);
       setError(null);
+      return true;
     } catch (cause) {
-      if (silent || mine !== dashboardSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "대시보드를 불러오지 못했습니다");
+      if (!silent && mine === dashboardSeq.current) {
+        setError(cause instanceof ApiError ? cause.message : "대시보드를 불러오지 못했습니다");
+      }
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const loadLive = useCallback(async () => {
+  const loadLive = useCallback(async (): Promise<boolean> => {
     try {
       const data = await getRunsLive();
       setLiveRuns(data.runs);
+      return true;
     } catch {
       // 실시간 카드는 보조 정보라 실패해도 본문 오류로 승격하지 않는다 — 다음 폴링에서 회복.
+      return false;
     }
   }, []);
 
@@ -318,24 +325,23 @@ export const DashboardPage = () => {
         await loadLive();
       }
     })();
-    const timer = setInterval(() => {
-      if (!cancelled) {
-        loadLive();
-        // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다.
-        loadDashboard(true);
-      }
-    }, LIVE_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
   }, [loadDashboard, loadLive]);
+
+  // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다. 응답을 받은 뒤 다음 요청을 예약하고,
+  // 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  usePolling(async () => {
+    const results = await Promise.all([loadLive(), loadDashboard(true)]);
+    return results.every(Boolean);
+  }, LIVE_POLL_INTERVAL_MS);
 
   const noShowRuns = runs.filter((run) => run.noShowCases.length > 0);
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
     { key: "busNo", label: "버스" },
-    { key: "direction", label: "구간", render: (row) => DIRECTION_LABEL[row.direction] },
+    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     {
       key: "runStatus",
       label: "상태",
@@ -395,6 +401,8 @@ export const DashboardPage = () => {
     <StyledDashboardLayout>
       <PageHeader title="운행 관리" description="오늘 회차의 운행 현황을 한눈에 확인합니다" />
 
+      {pendingSlot}
+
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       {approvalRequests.length > 0 ? (
@@ -435,7 +443,7 @@ export const DashboardPage = () => {
         <StatCard label="탑승 완료" value={metrics?.boarded ?? "-"} unit="명" icon="check" tone="boarded" />
         <StatCard label="미탑승" value={metrics?.noShow ?? "-"} unit="명" icon="alert-triangle" tone="missed" />
         <StatCard label="결석" value={metrics?.absent ?? "-"} unit="명" icon="user-x" />
-        <StatCard label="매니저 미배치" value={metrics?.unassignedManagers ?? "-"} unit="건" icon="user-round-x" />
+        <StatCard label="오늘 배치 없는 매니저" value={metrics?.unassignedManagers ?? "-"} unit="명" icon="user-round-x" />
       </StyledStatGrid>
 
       <StyledMapTopRow>
@@ -531,7 +539,7 @@ export const DashboardPage = () => {
       </StyledMapTopRow>
 
       <Card padding={0}>
-        <RosterTable
+        <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
           rows={runs}

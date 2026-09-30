@@ -11,7 +11,8 @@ type RouteFormProps = {
   /** 있으면 수정, 없으면 신규 편성. stop_ids 는 이 폼에서 다루지 않는다(RouteStopsPanel 몫). */
   route?: RouteListItemResponseTypes;
   onClose: () => void;
-  onDone: () => void;
+  // 등록이면 만든 편성의 id 를 넘긴다(목록이 상세로 이어 주는 데 쓴다). 수정이면 그 편성의 id.
+  onDone: (saved: { id: string }) => void;
 };
 
 const WEEKDAY_OPTIONS: { value: Weekday; label: string }[] = [
@@ -53,12 +54,8 @@ export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
     try {
       // PATCH 는 키가 없으면 그대로 둔다 — 지운 이름은 빈 문자열로 보내야 서버 값이 지워진다(원래 이름이 있던 수정에서만).
       const request = { busId, weekday, direction, name: name.trim() || (route?.name ? "" : undefined), active };
-      if (route) {
-        await updateRoute(route.id, request);
-      } else {
-        await createRoute(request);
-      }
-      onDone();
+      const saved = route ? await updateRoute(route.id, request) : await createRoute(request);
+      onDone({ id: saved.id });
     } catch (cause) {
       if (cause instanceof ApiError && cause.code === "DUPLICATE_ROUTE") {
         setError("같은 차량·요일·방향의 편성이 이미 있습니다.");

@@ -16,6 +16,7 @@ export const StyledStatusPill = styled.span<StyledStatusPillProps>`
   background: ${({ $status }) => `var(--status-${$status}-soft)`};
   color: ${({ $status }) => `var(--status-${$status})`};
   font: var(--fw-medium) var(--fs-label-sm) / 1.2 var(--font-sans);
+  white-space: nowrap;
 `;
 
 export const StyledDot = styled.span<StyledStatusPillProps>`

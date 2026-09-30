@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
+import { usePolling } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -16,7 +17,7 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
+import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
 import type {
   DashboardRunResponseTypes,
@@ -233,15 +234,19 @@ export const TodayRunPage = () => {
   );
 
   // silent — 주기 갱신. 실패해도 이미 뜬 화면을 오류로 덮지 않는다.
-  const loadRuns = useCallback(async (silent = false) => {
+  // 돌려주는 값은 폴링용 성공 여부다(`usePolling` 이 실패하면 간격을 늘린다).
+  const loadRuns = useCallback(async (silent = false): Promise<boolean> => {
     try {
       const data = await getDashboard();
       setRuns(data.runs);
       setRunsLoaded(true);
+      return true;
     } catch (cause) {
-      if (silent) return;
-      setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
-      setLoading(false);
+      if (!silent) {
+        setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
+        setLoading(false);
+      }
+      return false;
     }
   }, []);
 
@@ -250,19 +255,21 @@ export const TodayRunPage = () => {
   const liveSeq = useRef(0);
   const routeSeq = useRef(0);
 
-  const loadRoster = useCallback(async (runId: string, silent = false) => {
+  const loadRoster = useCallback(async (runId: string, silent = false): Promise<boolean> => {
     const mine = ++rosterSeq.current;
     if (!silent) setLoading(true);
     try {
       const items = await getRunRoster(runId);
-      if (mine !== rosterSeq.current) return;
+      if (mine !== rosterSeq.current) return true;
       setRoster(items);
       setError(null);
+      return true;
     } catch (cause) {
-      if (mine !== rosterSeq.current) return;
+      if (mine !== rosterSeq.current) return false;
       setError(cause instanceof ApiError ? cause.message : "명단을 불러오지 못했습니다");
       // 주기 갱신이 한 번 실패했다고 보이던 명단을 지우지 않는다.
       if (!silent) setRoster([]);
+      return false;
     } finally {
       if (mine === rosterSeq.current) setLoading(false);
     }
@@ -271,14 +278,16 @@ export const TodayRunPage = () => {
   // §5.18 은 `status='moving'` 인 회차만 돌려준다 — 선택된 회차가 없으면(대기·종료)
   // `liveRun` 은 null 로 남고 지도는 기본 좌표를 보여준다. 위치 카드는 보조 정보라
   // 실패해도 본문 오류로 승격하지 않는다(DashboardPage.tsx 의 loadLive 와 같은 판단).
-  const loadLiveRun = useCallback(async (runId: string, silent = false) => {
+  const loadLiveRun = useCallback(async (runId: string, silent = false): Promise<boolean> => {
     const mine = ++liveSeq.current;
     try {
       const data = await getRunsLive();
-      if (mine !== liveSeq.current) return;
+      if (mine !== liveSeq.current) return true;
       setLiveRun(data.runs.find((run) => run.runId === runId) ?? null);
+      return true;
     } catch {
       if (mine === liveSeq.current && !silent) setLiveRun(null);
+      return false;
     }
   }, []);
 
@@ -352,15 +361,17 @@ export const TodayRunPage = () => {
 
   // F01-03 — 종료되지 않은 회차는 화면을 열어 둔 동안 회차 상태·명단·위치를 다시 불러온다. 표를 '불러오는 중' 으로
   // 뒤집지 않도록 전부 silent 다.
-  useEffect(() => {
-    if (selectedRunId == null || selectedRunStatus == null || selectedRunStatus === "finished") return;
-    const timer = setInterval(() => {
-      void loadRuns(true);
-      void loadRoster(selectedRunId, true);
-      void loadLiveRun(selectedRunId, true);
-    }, LIVE_POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [selectedRunId, selectedRunStatus, loadRuns, loadRoster, loadLiveRun]);
+  // 응답을 받은 뒤 다음 요청을 예약한다 — 명단 조회는 서버가 호출마다 감사 기록을 남기므로 요청이 겹치면 기록도 겹친다.
+  // 숨은 탭에서는 멈추고 실패하면 간격을 늘린다. 간격(7초) 자체는 그대로다(R46-WEB C).
+  usePolling(
+    async () => {
+      if (selectedRunId == null) return true;
+      const results = await Promise.all([loadRuns(true), loadRoster(selectedRunId, true), loadLiveRun(selectedRunId, true)]);
+      return results.every(Boolean);
+    },
+    LIVE_POLL_INTERVAL_MS,
+    selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
+  );
 
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },
@@ -464,6 +475,8 @@ export const TodayRunPage = () => {
               >
                 강제 승하차지 추가
               </Button>
+              {/* 비활성 버튼의 사유가 title 툴팁뿐이면 키보드·터치로는 읽을 수 없다(B1 #25) — 글자로도 보인다. */}
+              {canTransfer ? null : <StyledCrewLabel>확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)</StyledCrewLabel>}
             </>
           ) : null
         }
@@ -519,7 +532,7 @@ export const TodayRunPage = () => {
             >
               <StyledBusListItemHeader>
                 <span>
-                  {run.busNo} · {DIRECTION_LABEL[run.direction]}
+                  {formatClockTime(run.departTime)} {run.busNo} · {DIRECTION_LABEL[run.direction]}
                 </span>
                 <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
               </StyledBusListItemHeader>
@@ -532,18 +545,6 @@ export const TodayRunPage = () => {
         {/* 사용자 지시(2026-09-22) — 승하차지별로 묶어 접고 펼 수 있게, 길면 스크롤로.
             한 회차에 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지
             눈으로 좇기 어렵다. 스크롤 상자는 표 머리줄을 고정한다(styled 의 sticky). */}
-        <Card padding={0} aria-busy={isLoading}>
-          <StyledRosterScroll>
-            <RosterTable
-              columns={columns}
-              loading={isLoading}
-              rows={roster}
-              getRowKey={(row) => row.studentId}
-              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
-            />
-          </StyledRosterScroll>
-        </Card>
-
         <StyledSidePanel>
           <Card>
             <p>현재 위치</p>
@@ -608,6 +609,18 @@ export const TodayRunPage = () => {
             </Card>
           ) : null}
         </StyledSidePanel>
+
+        <Card padding={0} aria-busy={isLoading}>
+          <StyledRosterScroll>
+            <RosterTable
+              columns={columns}
+              loading={isLoading}
+              rows={roster}
+              getRowKey={(row) => row.studentId}
+              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
+            />
+          </StyledRosterScroll>
+        </Card>
       </StyledContentGrid>
 
       {selectedRunId != null ? (

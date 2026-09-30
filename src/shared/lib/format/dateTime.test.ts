@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDateTime, todayInSeoul } from "./dateTime";
+import { formatDateTime, formatHeaderDate, todayInSeoul } from "./dateTime";
 
 // R32-W9 — 목록 11곳 이상이 서버가 준 ISO 원문(`2026-09-12T08:00:00Z`)을 그대로 보여 줬다.
 describe("formatDateTime", () => {
@@ -44,5 +44,13 @@ describe("todayInSeoul", () => {
     expect(todayInSeoul()).toBe("2026-10-01");
     vi.setSystemTime(new Date("2026-09-30T14:59:00Z")); // 서울 2026-09-30 23:59
     expect(todayInSeoul()).toBe("2026-09-30");
+  });
+});
+
+// B1 #23 — 머리줄 날짜를 브라우저 시계(toLocaleDateString)로 만들면 서울이 아닌 PC 에서 하루 어긋난다.
+describe("formatHeaderDate", () => {
+  it("UTC 로는 전날인 한국 시간 새벽에도 서울 날짜·요일을 낸다", () => {
+    expect(formatHeaderDate(new Date("2026-09-30T16:00:00Z"))).toBe("10월 1일 (목)"); // 서울 2026-10-01 목요일 01:00
+    expect(formatHeaderDate(new Date("2026-09-30T14:59:00Z"))).toBe("9월 30일 (수)"); // 서울 2026-09-30 수요일 23:59
   });
 });
