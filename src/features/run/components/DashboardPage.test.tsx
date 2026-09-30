@@ -49,9 +49,10 @@ vi.mock("@/features/auth", () => ({
 // 이미 따로 검증하므로 여기서 다시 열지 않는다.
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
+const mockReconnect = vi.fn();
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
   capturedOnEnvelope = onEnvelope;
-  return { connectionState: mockConnectionState };
+  return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
 vi.mock("@/shared/hooks", () => ({
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
@@ -385,6 +386,19 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
   // R15-T2 — 우측 버스 목록은 이제 getRunsLive(moving 전용)가 아니라 getDashboard(4종
   // 상태 전부)로 채운다(§8.23 목표 3). "빈 목록" 의 기준도 그에 맞춰 runs 로 옮겨서,
   // runs 가 빈 배열일 때만 빈 목록 문구가 뜬다는 것을 확인한다.
+  it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다", async () => {
+    mockUseAuthSession.mockReturnValue({
+      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
+    });
+    mockConnectionState = "gaveUp";
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 연결" }));
+    expect(mockReconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("연결이 끊기면(gaveUp) 연결 끊김 배너를 띄우고, runs 가 비어 있으면 빈 목록 문구도 함께 유지한다", async () => {
     mockUseAuthSession.mockReturnValue({
       session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },

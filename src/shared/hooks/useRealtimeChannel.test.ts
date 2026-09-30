@@ -150,4 +150,33 @@ describe("useRealtimeChannel", () => {
       { destination: "/topic/academy/2/live" },
     ]);
   });
+
+  it("F04-07: gaveUp 으로 굳은 연결은 reconnect() 로 다시 열 수 있다", () => {
+    const { result } = renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+    act(() => {
+      instances[0].emitState("gaveUp");
+    });
+    expect(instances[0].connectCalls).toBe(1);
+
+    act(() => {
+      result.current.reconnect();
+    });
+    expect(instances[0].connectCalls).toBe(2);
+  });
+
+  it("F04-07: 브라우저가 다시 온라인이 되면 gaveUp 연결을 저절로 다시 연다(연결 중이던 상태는 건드리지 않는다)", () => {
+    renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(instances[0].connectCalls).toBe(1);
+
+    act(() => {
+      instances[0].emitState("gaveUp");
+    });
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(instances[0].connectCalls).toBe(2);
+  });
 });

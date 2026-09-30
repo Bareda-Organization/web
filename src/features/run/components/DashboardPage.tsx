@@ -301,7 +301,7 @@ export const DashboardPage = () => {
     },
     [loadLive, loadDashboard],
   );
-  const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+  const { connectionState, reconnect } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `liveRuns` 는
   // REST 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록을
   // 대체하지 않고 그 위에 별도로 얹는다 — WS 가 끊겨도 REST 로 받은 "지금
@@ -481,6 +481,13 @@ export const DashboardPage = () => {
             <AlertBanner
               tone="missed"
               title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
+              action={
+                connectionState === "gaveUp" ? (
+                  <Button variant="secondary" size="sm" onClick={reconnect}>
+                    다시 연결
+                  </Button>
+                ) : undefined
+              }
             >
               {connectionState === "forbidden"
                 ? "이 학원의 실시간 갱신을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."

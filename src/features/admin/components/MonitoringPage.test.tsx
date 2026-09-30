@@ -50,9 +50,10 @@ const mockGetRunRoute = vi.mocked(getRunRoute);
 // 훅 내부는 `useRealtimeChannel.test.ts` 가 따로 검증한다).
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
+const mockReconnect = vi.fn();
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
   capturedOnEnvelope = onEnvelope;
-  return { connectionState: mockConnectionState };
+  return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
 vi.mock("@/shared/hooks", () => ({
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
@@ -255,6 +256,14 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
 
     expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(await screen.findByText("지금 운행 중인 회차가 없습니다")).toBeInTheDocument();
+  });
+
+  it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다 — 권한 거부(forbidden)에는 버튼이 없다", async () => {
+    mockConnectionState = "gaveUp";
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "다시 연결" }));
+    expect(mockReconnect).toHaveBeenCalledTimes(1);
   });
 
   it("forbidden 이면 '실시간 조회 권한 없음' 배너가 뜬다", async () => {

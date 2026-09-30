@@ -297,7 +297,7 @@ export const MonitoringPage = () => {
     },
     [academyId, loadRuns],
   );
-  const { connectionState } = useRealtimeChannel(adminLiveDestination(), handleEnvelope);
+  const { connectionState, reconnect } = useRealtimeChannel(adminLiveDestination(), handleEnvelope);
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `runs` 는 REST
   // 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록·EmptyState 를
   // 대체하지 않고 그 위에 별도로 얹는다(DashboardPage.tsx 와 동일 판단).
@@ -367,6 +367,13 @@ export const MonitoringPage = () => {
         <AlertBanner
           tone="missed"
           title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
+          action={
+            connectionState === "gaveUp" ? (
+              <Button variant="secondary" size="sm" onClick={reconnect}>
+                다시 연결
+              </Button>
+            ) : undefined
+          }
         >
           {connectionState === "forbidden"
             ? "전체 관제 채널을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
