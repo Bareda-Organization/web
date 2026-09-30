@@ -5,7 +5,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select } from "@/shared/ui";
 import { createManager, updateManager } from "../api";
 import type { ManagerItemResponseTypes, ManagerRole, WorkHours } from "../types";
-import { WorkHoursEditor } from "./WorkHoursEditor";
+import { hasInvalidWorkHours, WorkHoursEditor } from "./WorkHoursEditor";
 
 type ManagerFormProps = {
   /** 있으면 수정, 없으면 등록. §5.13 에는 상세 GET 이 없어 목록 행 데이터를 그대로 받는다. */
@@ -29,7 +29,7 @@ export const ManagerForm = ({ manager, onClose, onDone }: ManagerFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = name.trim().length > 0 && phone.trim().length > 0;
+  const canSubmit = name.trim().length > 0 && phone.trim().length > 0 && !hasInvalidWorkHours(workHours);
 
   const handleSubmit = async () => {
     setSubmitting(true);

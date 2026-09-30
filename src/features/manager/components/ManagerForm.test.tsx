@@ -65,3 +65,44 @@ describe("ManagerForm — 등록 실패 갈래", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 });
+
+// F02-12 — 하루 두 구간을 가진 매니저를 수정할 때 첫 구간만 남기고 나머지를 지우면 배치 충돌 경고의 근거가 조용히 줄어든다.
+describe("ManagerForm — F02-12 근무 시간 편집", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const twoRanges: ManagerItemResponseTypes = {
+    ...existingManager,
+    workHours: {
+      mon: [
+        { start: "06:00", end: "09:00" },
+        { start: "14:00", end: "18:00" },
+      ],
+    },
+  };
+
+  it("첫 구간의 시간을 고쳐도 같은 요일의 둘째 구간은 그대로 저장된다", async () => {
+    mockUpdate.mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<ManagerForm manager={twoRanges} onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(screen.getByDisplayValue("06:00"), { target: { value: "07:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1].workHours?.mon).toEqual([
+      { start: "07:00", end: "09:00" },
+      { start: "14:00", end: "18:00" },
+    ]);
+  });
+
+  it("시작이 끝보다 늦으면 이유를 보이고 저장을 막는다", () => {
+    render(<ManagerForm manager={twoRanges} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByDisplayValue("06:00"), { target: { value: "10:00" } });
+
+    expect(screen.getByText("근무 시작이 끝보다 빨라야 합니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+  });
+});

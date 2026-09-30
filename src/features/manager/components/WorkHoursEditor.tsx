@@ -1,6 +1,6 @@
 "use client";
 
-import { Checkbox, Input } from "@/shared/ui";
+import { AlertBanner, Checkbox, Input } from "@/shared/ui";
 import type { WorkHours } from "../types";
 import { StyledWorkHoursRow, StyledWorkHoursWrap } from "./WorkHoursEditor.styled";
 
@@ -19,14 +19,19 @@ type WorkHoursEditorProps = {
   onChange: (next: WorkHours) => void;
 };
 
+// 시작이 끝보다 늦거나 같은 구간이 하나라도 있는지 — "HH:mm" 문자열이라 사전순 비교가 시각 순서와 같다.
+export const hasInvalidWorkHours = (value: WorkHours): boolean =>
+  Object.values(value).some((ranges) => ranges?.some((range) => range.start >= range.end));
+
 // §5.13 work_hours — 요일별 근무 시간대(§5.14 MGR-06 충돌 경고의 근거). 요일당 구간
 // 하나만 다룬다 — 사양이 배열을 허용하지만 관계자 등록 화면에서 요일당 여러 구간을
 // 나눠 넣는 실제 흐름이 없어(하루 두 근무는 드묾) 첫 구간만 편집하고 나머지는 보존한다.
+// 요일을 끄면 그 요일의 구간이 전부 지워진다.
 export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
   const setDay = (day: keyof WorkHours, enabled: boolean, start = "09:00", end = "18:00") => {
     const next = { ...value };
     if (enabled) {
-      next[day] = [{ start, end }];
+      next[day] = [{ start, end }, ...(value[day]?.slice(1) ?? [])];
     } else {
       delete next[day];
     }
@@ -35,6 +40,7 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
 
   return (
     <StyledWorkHoursWrap>
+      {hasInvalidWorkHours(value) ? <AlertBanner tone="missed" title="근무 시작이 끝보다 빨라야 합니다" /> : null}
       {DAYS.map(({ key, label }) => {
         const range = value[key]?.[0];
         const enabled = !!range;
