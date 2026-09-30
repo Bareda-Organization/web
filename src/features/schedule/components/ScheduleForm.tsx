@@ -97,6 +97,9 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
     } catch (cause) {
       if (cause instanceof ApiError && cause.code === "DUPLICATE_SCHEDULE") {
         setError("같은 차량·요일·방향·출발 시각의 스케줄이 이미 있습니다.");
+      } else if (cause instanceof ApiError && cause.code === "DUPLICATE_RUN") {
+        // Ruling 367 — 옮길 자리를 다른 회차가 잡고 있으면 스케줄 변경 전체가 되돌려진다.
+        setError("다른 회차(임시 회차 등)가 이미 그 자리를 차지해 스케줄 변경 전체가 반영되지 않았습니다.");
       } else {
         setError(cause instanceof ApiError ? cause.message : "스케줄 저장에 실패했습니다");
       }
@@ -161,6 +164,12 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
         onChange={(event) => setEstDurationMin(event.target.value)}
       />
       <Switch label="활성" checked={active} onChange={(event) => setActive(event.target.checked)} />
+      {schedule ? (
+        <p>
+          비활성으로 바꾸거나 요일·방향을 바꾸면 내일 이후 시작 전 회차는 취소 표시됩니다(오늘 회차는 그대로). 출발 시각·차량·출발지·도착지·소요
+          시간 수정은 그 회차에 옮겨집니다.
+        </p>
+      ) : null}
       {error ? <AlertBanner tone="missed" title={error} /> : null}
     </Dialog>
   );

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScheduleForm } from "./ScheduleForm";
-import { createSchedule } from "../api";
+import { createSchedule, updateSchedule } from "../api";
 import { getBuses } from "@/features/bus";
 import { ApiError } from "@/shared/lib/http";
 
@@ -18,6 +18,7 @@ vi.mock("@/features/bus", () => ({
 }));
 
 const mockCreate = vi.mocked(createSchedule);
+const mockUpdate = vi.mocked(updateSchedule);
 const mockGetBuses = vi.mocked(getBuses);
 
 describe("ScheduleForm — 등록 실패 갈래", () => {
@@ -57,5 +58,57 @@ describe("ScheduleForm — 등록 실패 갈래", () => {
       expect(screen.getByText("같은 차량·요일·방향·출발 시각의 스케줄이 이미 있습니다.")).toBeInTheDocument(),
     );
     expect(onDone).not.toHaveBeenCalled();
+  });
+});
+
+describe("ScheduleForm — F02-08 수정 반영 안내", () => {
+  const busPage = {
+    items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+    page: 0,
+    size: 100,
+    totalCount: 1,
+    hasNext: false,
+  };
+  const schedule = {
+    id: "9",
+    busId: "1",
+    busNo: "1호차",
+    weekday: "mon" as const,
+    direction: "to_academy" as const,
+    departTime: "08:00",
+    originName: "정문",
+    destinationName: "학원",
+    estDurationMin: 20,
+    active: true,
+  };
+
+  afterEach(() => vi.clearAllMocks());
+
+  it("수정 폼은 비활성·요일·방향 변경이 내일 이후 시작 전 회차를 취소 표시한다고 미리 알린다", async () => {
+    mockGetBuses.mockResolvedValue(busPage);
+    render(<ScheduleForm schedule={schedule} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText(/내일 이후 시작 전 회차는 취소 표시됩니다/)).toBeInTheDocument();
+  });
+
+  it("등록 폼에는 반영 안내가 없다", async () => {
+    mockGetBuses.mockResolvedValue(busPage);
+    render(<ScheduleForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    await waitFor(() => expect(mockGetBuses).toHaveBeenCalled());
+    expect(screen.queryByText(/내일 이후 시작 전 회차는 취소 표시됩니다/)).not.toBeInTheDocument();
+  });
+
+  it("409 DUPLICATE_RUN 이면 스케줄 변경이 전부 취소됐다는 전용 문구를 보여 준다", async () => {
+    mockGetBuses.mockResolvedValue(busPage);
+    mockUpdate.mockRejectedValue(new ApiError(409, "DUPLICATE_RUN", "이미 있는 회차입니다"));
+    render(<ScheduleForm schedule={schedule} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(
+      await screen.findByText(/다른 회차\(임시 회차 등\)가 이미 그 자리를 차지해 스케줄 변경 전체가 반영되지 않았습니다/),
+    ).toBeInTheDocument();
   });
 });
