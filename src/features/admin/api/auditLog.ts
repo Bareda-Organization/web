@@ -5,6 +5,7 @@ import type {
   AuditLogItemResponseTypes,
   AuditLogsResponseTypes,
   AuditQueryTypes,
+  LoginHistoryBlockAction,
   LoginHistoryItemResponseTypes,
   LoginHistoryResponseTypes,
   LoginHistoryResult,
@@ -60,10 +61,11 @@ export const getAuditLogs = async (query: AuditQueryTypes = {}): Promise<AuditLo
 type RawLoginHistoryItem = {
   account_id: string | number;
   login_id: string;
-  result: LoginHistoryResult;
+  result: LoginHistoryResult | null;
   ip: string;
   occurred_at: string;
   block_event: boolean;
+  block_action: LoginHistoryBlockAction | null;
 };
 
 type RawLoginHistoryResponse = {
@@ -81,6 +83,7 @@ const toLoginHistoryItem = (raw: RawLoginHistoryItem): LoginHistoryItemResponseT
   ip: raw.ip,
   occurredAt: raw.occurred_at,
   blockEvent: raw.block_event,
+  blockAction: raw.block_action ?? null,
 });
 
 // GET /admin/login-history (§6.13, SYS-02, O-04).

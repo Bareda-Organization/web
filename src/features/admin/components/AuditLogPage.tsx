@@ -27,6 +27,8 @@ const ACTION_LABEL: Record<AuditLogItemResponseTypes["action"], string> = {
   delete: "삭제",
 };
 
+const BLOCK_ACTION_LABEL = { block: "차단", unblock: "해제" } as const;
+
 // §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
 // 이 화면은 §1.12 가 마스킹하는 필드(보호자 연락처 등)를 응답에 아예 담지 않지만, 대신
 // 계정별 로그인 IP·시각 전체를 무제한으로 펼쳐 보이는 것 자체가 노출 범위 문제라
@@ -70,14 +72,15 @@ export const AuditLogPage = () => {
     {
       key: "result",
       label: "결과",
-      render: (row) => <Badge tone={row.result === "success" ? "added" : "red"}>{row.result === "success" ? "성공" : "실패"}</Badge>,
+      render: (row) =>
+        row.result === null ? "-" : <Badge tone={row.result === "success" ? "added" : "red"}>{row.result === "success" ? "성공" : "실패"}</Badge>,
     },
     { key: "ip", label: "IP" },
     {
       key: "blockEvent",
-      // block_event 는 차단 행과 해제 행 양쪽에 붙는다(§6.13, BR-219) — 어느 쪽인지 응답이 구분하지 않으므로 중립 문구로 쓴다.
+      // block_event 는 차단 행과 해제 행 양쪽에 붙는다(§6.13, BR-219) — block_action 이 둘을 가른다(Ruling 394).
       label: "차단·해제 이벤트",
-      render: (row) => (row.blockEvent ? <Badge tone="amber">차단·해제</Badge> : "-"),
+      render: (row) => (row.blockAction ? <Badge tone={row.blockAction === "block" ? "red" : "added"}>{BLOCK_ACTION_LABEL[row.blockAction]}</Badge> : "-"),
     },
   ];
 

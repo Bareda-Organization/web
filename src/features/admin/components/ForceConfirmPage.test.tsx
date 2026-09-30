@@ -23,6 +23,7 @@ const baseRun: RunLiveItemResponseTypes = {
   position: null,
   lastSeenAt: null,
   departTime: "08:00",
+  confirmAt: "07:30",
   estDepartTime: "08:00",
   stops: [],
   destinationEta: null,
@@ -67,17 +68,28 @@ describe("ForceConfirmPage — 학원 선택 목록은 전체 학원", () => {
   });
 });
 
-// F03-11 — "확정 예정" 열이 실제로는 출발 예정 시각(est_depart_time)이었다. 확정 시각(출발−30분)과 30분 이상 다르다.
+// F03-11 — "확정 예정" 열은 출발 예정 시각(est_depart_time)도 출발 시각도 아니라 확정 판정 시각(confirm_at =
+// 출발−30분)이어야 한다(Ruling 393). 세 시각이 서로 다른 값이어야 어느 필드를 읽는지 갈린다.
 describe("ForceConfirmPage — 열 이름", () => {
-  it("시각 열은 출발 시각·출발 예정(추정)으로 적고 '확정 예정' 이라 하지 않는다", async () => {
+  it("'확정 예정' 열이 confirm_at 값을 보여 주고 출발 시각·출발 예정(추정)과 따로 있다", async () => {
     mockGetAcademies.mockResolvedValue([{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const }]);
-    mockGetRunsLive.mockResolvedValue({ runs: [baseRun] });
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{
+        ...baseRun,
+        departTime: "2026-09-30T08:00:00+09:00",
+        confirmAt: "2026-09-30T07:30:00+09:00",
+        estDepartTime: "2026-09-30T08:05:00+09:00",
+      }],
+    });
 
     render(<ForceConfirmPage />);
 
     expect(await screen.findByText("출발 시각")).toBeInTheDocument();
     expect(screen.getByText("출발 예정(추정)")).toBeInTheDocument();
-    expect(screen.queryByText("확정 예정")).not.toBeInTheDocument();
+    expect(screen.getByText("확정 예정")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30 07:30")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30 08:00")).toBeInTheDocument();
+    expect(screen.getByText("2026-09-30 08:05")).toBeInTheDocument();
   });
 });
 
