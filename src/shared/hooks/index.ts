@@ -4,3 +4,4 @@ export type { UseRealtimeChannelResult } from "./useRealtimeChannel";
 export { useProtectedImageUrl } from "./useProtectedImageUrl";
 export { usePagedList } from "./usePagedList";
 export type { PagedPage } from "./usePagedList";
+export { usePolling, nextPollDelay } from "./usePolling";
