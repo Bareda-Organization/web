@@ -59,8 +59,8 @@ export const ReportList = () => {
   // 종류·날짜·회차 어느 것이 바뀌어도 조회는 이 한 곳에서 한 번 나간다.
   useEffect(() => {
     const mine = ++requestSeq.current;
-    setLoading(true);
     (async () => {
+      setLoading(true);
       try {
         const result = await getReports({
           type: type === "" ? undefined : (type as ReportType),

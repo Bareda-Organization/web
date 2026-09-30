@@ -132,8 +132,8 @@ describe("EmergencyList — 주기 갱신의 실패·경합(F01-08·F01-05)", ()
 
   it("필터를 바꾸기 전에 보낸 요청의 늦은 응답은 새 필터의 목록을 덮지 않는다", async () => {
     let resolveOpen: (value: { items: (typeof ITEM)[]; unackedCount: number }) => void = () => {};
-    mockGet.mockImplementation(({ status }) =>
-      status === "open"
+    mockGet.mockImplementation((query) =>
+      query?.status === "open"
         ? new Promise((resolve) => {
             resolveOpen = resolve;
           })
