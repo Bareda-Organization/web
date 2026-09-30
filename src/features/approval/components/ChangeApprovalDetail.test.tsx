@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { MapSurfaceProps } from "@/features/map";
@@ -67,6 +67,10 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   previewToken: "token-abc",
   previewStale: false,
 };
+
+// shouldAdvanceTime 을 쓰면 실제 시간이 흐르는 만큼 가짜 시계도 흘러, 기계가 바쁠 때 렌더가 1초 늦으면
+// "12분 30초" 가 이미 "12분 29초" 로 바뀐다. 초 단위·기한 경계를 검사하는 시험은 시계를 멈춰 두고 손으로만 움직인다.
+const flushPendingWork = () => act(() => vi.advanceTimersByTimeAsync(0));
 
 describe("ChangeApprovalDetail — 승인/거절", () => {
   // baseDetail 의 기한(2026-09-13T00:00Z)이 실제 시계로는 이미 지났다 — 기한 지난 건은 버튼이 꺼지므로(FE2)
@@ -334,15 +338,16 @@ describe("ChangeApprovalDetail — 처리 기한 남은 시간(R32-W7)", () => {
   });
 
   it("처리 기한 옆에 남은 분·초를 보여주고 1초마다 줄어든다", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-12T23:47:30Z"));
     mockGetDetail.mockResolvedValue(baseDetail); // 기한 2026-09-13T00:00:00Z
 
     render(<ChangeApprovalDetail approvalId="5" />);
+    await flushPendingWork();
 
-    expect(await screen.findByText(/남은 시간 12분 30초/)).toBeInTheDocument();
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(await screen.findByText(/남은 시간 12분 29초/)).toBeInTheDocument();
+    expect(screen.getByText(/남은 시간 12분 30초/)).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    expect(screen.getByText(/남은 시간 12분 29초/)).toBeInTheDocument();
   });
 
   it("기한이 지났으면 지났다고 알린다", async () => {
@@ -389,14 +394,17 @@ describe("ChangeApprovalDetail — 기한이 지난 대기 건(R36-FE FE2)", () 
   });
 
   it("화면을 열어 둔 채 시계가 기한을 넘으면 꺼진다", async () => {
-    openAt("2026-09-12T23:59:58Z");
+    // 기한 2초 전 — 실제 시간이 함께 흐르면 부하로 느려진 사이 이미 지나 "켜져 있다" 검사가 어긋난다. 시계를 멈춰 둔다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-12T23:59:58Z"));
     mockGetDetail.mockResolvedValue(baseDetail);
     render(<ChangeApprovalDetail approvalId="5" />);
+    await flushPendingWork();
 
-    expect(await screen.findByRole("button", { name: "승인" })).toBeEnabled();
-    await vi.advanceTimersByTimeAsync(3000);
+    expect(screen.getByRole("button", { name: "승인" })).toBeEnabled();
+    await act(() => vi.advanceTimersByTimeAsync(3000));
 
-    expect(await screen.findByText("처리 기한이 지나 자동 거절됩니다")).toBeInTheDocument();
+    expect(screen.getByText("처리 기한이 지나 자동 거절됩니다")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
   });
 
