@@ -337,7 +337,10 @@ export type LoginHistoryResponseTypes = {
 };
 
 // 감사·접속 이력 목록 조회 시 공통으로 쓰는 필터 (§6.13 쿼리 파라미터).
-export type AuditQueryTypes = {
+// §1.8 페이징 요청 — page 는 0 기점, size 는 기본 20·최대 100.
+export type PagingRequest = { page?: number; size?: number };
+
+export type AuditQueryTypes = PagingRequest & {
   academyId?: string;
   accountId?: string;
   from?: string;

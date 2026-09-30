@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
-import { getAcademies, getAcademyRunsLive } from "../api";
+import { getAcademyRunsLive, getAllAcademies } from "../api";
 import { getRunRoute } from "@/features/route";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
@@ -32,7 +32,7 @@ vi.mock("@/features/map", async (importOriginal) => {
 // 가드, 두 갈래 모두). 아래 두 검사가 그 가드를 고정한다 — 가드를 지우면 이 검사들만
 // 실패해야 한다.
 vi.mock("../api", () => ({
-  getAcademies: vi.fn(),
+  getAllAcademies: vi.fn(),
   getAcademyRunsLive: vi.fn(),
 }));
 
@@ -41,7 +41,7 @@ vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
 }));
 
-const mockGetAcademies = vi.mocked(getAcademies);
+const mockGetAcademies = vi.mocked(getAllAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
 
@@ -124,13 +124,7 @@ describe("MonitoringPage — 실시간 회차 조회 실패", () => {
   });
 
   it("회차 조회가 실패하면 EmptyState 는 뜨지 않는다 — '정말 0건' 과 '조회 실패' 를 구별한다", async () => {
-    mockGetAcademies.mockResolvedValue({
-      items: [{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }],
-      page: 1,
-      size: 20,
-      totalCount: 1,
-      hasNext: false,
-    });
+    mockGetAcademies.mockResolvedValue([{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" }]);
     mockGetRunsLive.mockRejectedValue(new ApiError(500, "UNKNOWN", "실시간 회차 조회 중 오류가 발생했습니다"));
     render(<MonitoringPage />);
 
@@ -146,7 +140,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
   beforeEach(() => {
     mockConnectionState = "connected";
     capturedOnEnvelope = undefined;
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
   });
 
@@ -242,7 +236,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
 describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [] });
   });
 
@@ -296,7 +290,7 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   // 두 조건이 서로 무관함을 고정한다.
   it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, EmptyState 는 뜨지 않는다", async () => {
     mockConnectionState = "gaveUp";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<MonitoringPage />);
 
@@ -316,7 +310,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
@@ -534,7 +528,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
@@ -589,7 +583,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
-    mockGetAcademies.mockResolvedValue(baseAcademies);
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 

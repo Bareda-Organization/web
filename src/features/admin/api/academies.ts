@@ -1,5 +1,6 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { PagingRequest } from "../types";
 import type {
   AcademiesResponseTypes,
   AcademyDetailResponseTypes,
@@ -39,11 +40,15 @@ const toSummary = (raw: RawAcademySummary): AcademySummaryResponseTypes => ({
   status: raw.status,
 });
 
-// GET /admin/academies (§6.1, ACAD-01, O-01).
-export const getAcademies = async (q?: string, status?: AcademyStatus): Promise<AcademiesResponseTypes> => {
+// GET /admin/academies (§6.1, ACAD-01, O-01). §1.8 페이징 — 안 넘기면 서버는 첫 20건만 준다.
+export const getAcademies = async (
+  q?: string,
+  status?: AcademyStatus,
+  paging: PagingRequest = {},
+): Promise<AcademiesResponseTypes> => {
   const raw = await apiFetch<RawAcademiesResponse>("/admin/academies", {
     method: "GET",
-    query: { q: q || undefined, status },
+    query: { q: q || undefined, status, page: paging.page, size: paging.size },
   });
   return {
     items: raw.items.map(toSummary),
@@ -52,6 +57,21 @@ export const getAcademies = async (q?: string, status?: AcademyStatus): Promise<
     totalCount: raw.total_count,
     hasNext: raw.has_next,
   };
+};
+
+const ALL_ACADEMIES_PAGE_SIZE = 100;
+// 학원이 이만큼 늘어도 무한 루프가 되지 않게 거는 안전 상한(100건 × 50쪽 = 5,000곳).
+const ALL_ACADEMIES_MAX_PAGES = 50;
+
+// 학원 선택 목록(전체 관제 · 강제 확정)용 — 첫 쪽만 받으면 21번째 이후 학원의 회차는 관제도 강제 확정도 못 한다.
+export const getAllAcademies = async (): Promise<AcademySummaryResponseTypes[]> => {
+  const all: AcademySummaryResponseTypes[] = [];
+  for (let page = 0; page < ALL_ACADEMIES_MAX_PAGES; page += 1) {
+    const data = await getAcademies(undefined, undefined, { page, size: ALL_ACADEMIES_PAGE_SIZE });
+    all.push(...data.items);
+    if (!data.hasNext) break;
+  }
+  return all;
 };
 
 type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string };

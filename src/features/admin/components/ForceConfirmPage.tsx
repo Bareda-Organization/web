@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable, Select } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { getAcademies, getAcademyRunsLive } from "../api";
+import { getAcademyRunsLive, getAllAcademies } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes } from "../types";
 import { ForceConfirmDialog } from "./ForceConfirmDialog";
 import { StyledFilterRow, StyledForceConfirmLayout } from "./ForceConfirmPage.styled";
@@ -27,11 +27,12 @@ export const ForceConfirmPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getAcademies();
+        // 학원 선택 목록은 첫 쪽(20건)이 아니라 전부 — 21번째 이후 학원의 회차도 관제·강제 확정을 할 수 있어야 한다.
+        const items = await getAllAcademies();
         if (!cancelled) {
-          setAcademies(data.items);
-          if (data.items.length > 0) {
-            setAcademyId(data.items[0].id);
+          setAcademies(items);
+          if (items.length > 0) {
+            setAcademyId(items[0].id);
           }
         }
       } catch (cause) {

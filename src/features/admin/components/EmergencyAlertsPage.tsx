@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useState } from "react";
+import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getEmergencies } from "../api";
@@ -9,6 +9,7 @@ import type { EmergencyItemResponseTypes, EmergencyType } from "../types";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyAlertsLayout, StyledEmergencyHeaderRow } from "./EmergencyAlertsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatRole } from "@/shared/lib/format/roleLabel";
 
 // §5.16 이 정의한 실제 쿼리값(open·acked·canceled, 기본 open) — 대문자 enum 이 아니다.
 const STATUS_FILTER_OPTIONS = [
@@ -26,6 +27,9 @@ const TYPE_LABEL: Record<string, string> = {
   etc: "기타",
 };
 
+// 발신 후 경과 초 → "N분" (1분 미만은 그대로 알린다).
+const formatElapsed = (seconds: number): string => (seconds < 60 ? "1분 미만" : `${Math.floor(seconds / 60)}분`);
+
 const toTypeLabel = (type: EmergencyType) => TYPE_LABEL[type] ?? type;
 
 // 비상 알림은 지연 인지 자체가 위험이라(§6.11) 다른 화면보다 짧은 5초로 폴링한다.
@@ -35,48 +39,24 @@ const EMERGENCY_POLL_INTERVAL_MS = 5000;
 // 학원명 열을 둔다(BRIEF-a1.md §2).
 export const EmergencyAlertsPage = () => {
   const [status, setStatus] = useState("open");
-  const [emergencies, setEmergencies] = useState<EmergencyItemResponseTypes[]>([]);
-  const [unackedCount, setUnackedCount] = useState(0);
   const [detailTarget, setDetailTarget] = useState<EmergencyItemResponseTypes | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async (currentStatus: string) => {
-    try {
-      const data = await getEmergencies(currentStatus);
-      setEmergencies(data.items);
-      setUnackedCount(data.unackedCount);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "비상 알림 이력을 불러오지 못했습니다");
-      setEmergencies([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      await load(status);
-    })();
-    const timer = setInterval(() => {
-      if (!cancelled) {
-        load(status);
-      }
-    }, EMERGENCY_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [status, load]);
+  // 갱신이 한 번 실패해도 이미 보이던 미확인 목록은 지우지 않는다(usePagedList) — 오류 배너만 더한다.
+  const { items: emergencies, data, loading, error } = usePagedList(
+    async () => {
+      const response = await getEmergencies(status);
+      return { ...response, totalCount: response.items.length, hasNext: false };
+    },
+    { resetKey: status, pollMs: EMERGENCY_POLL_INTERVAL_MS, errorMessage: "비상 알림 이력을 불러오지 못했습니다" },
+  );
+  const unackedCount = data?.unackedCount ?? 0;
 
   const columns: RosterColumn<EmergencyItemResponseTypes>[] = [
     { key: "academy", label: "학원", render: (row) => row.academy.name },
     { key: "type", label: "유형", render: (row) => toTypeLabel(row.type) },
     { key: "busNo", label: "버스" },
-    { key: "raisedBy", label: "발신자", render: (row) => `${row.raisedBy.name ?? "미상"} (${row.raisedBy.role})` },
+    { key: "raisedBy", label: "발신자", render: (row) => `${row.raisedBy.name ?? "미상"} (${formatRole(row.raisedBy.role)})` },
+    // §6.11 elapsed_since_raised — 관계자가 몇 분째 응답하지 않았는지가 이 화면의 핵심 정보다(미응답 지연 인지).
+    { key: "elapsed", label: "경과", render: (row) => formatElapsed(row.elapsedSinceRaised) },
     { key: "raisedAt", label: "발신 시각", render: (row) => formatDateTime(row.raisedAt) },
     {
       key: "staffAcked",
@@ -106,7 +86,7 @@ export const EmergencyAlertsPage = () => {
       <SegmentedControl options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} />
 
       <Card padding={0} aria-busy={loading}>
-        {!loading && emergencies.length === 0 ? (
+        {!loading && !error && emergencies.length === 0 ? (
           <EmptyState icon="siren" title="해당 상태의 비상 알림이 없습니다" />
         ) : (
           <RosterTable columns={columns} loading={loading} rows={emergencies} getRowKey={(row) => row.emergencyId} />

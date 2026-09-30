@@ -1,6 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type {
+  PagingRequest,
   StaffSignupAcademyRefResponseTypes,
   StaffSignupDecideRequestTypes,
   StaffSignupDecideResponseTypes,
@@ -44,8 +45,11 @@ const toSignupRequestItem = (raw: RawSignupRequestItem): StaffSignupRequestItemR
 });
 
 // GET /admin/staff-signup-requests (§6.4, O-02).
-export const getStaffSignupRequests = async (): Promise<StaffSignupRequestsResponseTypes> => {
-  const raw = await apiFetch<RawSignupRequestsResponse>("/admin/staff-signup-requests", { method: "GET" });
+export const getStaffSignupRequests = async (paging: PagingRequest = {}): Promise<StaffSignupRequestsResponseTypes> => {
+  const raw = await apiFetch<RawSignupRequestsResponse>("/admin/staff-signup-requests", {
+    method: "GET",
+    query: { page: paging.page, size: paging.size },
+  });
   return {
     items: raw.items.map(toSignupRequestItem),
     page: raw.page,

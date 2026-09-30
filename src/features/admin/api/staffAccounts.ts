@@ -1,6 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type {
+  PagingRequest,
   StaffAccountItemResponseTypes,
   StaffAccountStatus,
   StaffAccountsResponseTypes,
@@ -37,8 +38,11 @@ const toStaffAccountItem = (raw: RawStaffAccountItem): StaffAccountItemResponseT
 });
 
 // GET /admin/staff-accounts (§6.6, O-02).
-export const getStaffAccounts = async (): Promise<StaffAccountsResponseTypes> => {
-  const raw = await apiFetch<RawStaffAccountsResponse>("/admin/staff-accounts", { method: "GET" });
+export const getStaffAccounts = async (paging: PagingRequest = {}): Promise<StaffAccountsResponseTypes> => {
+  const raw = await apiFetch<RawStaffAccountsResponse>("/admin/staff-accounts", {
+    method: "GET",
+    query: { page: paging.page, size: paging.size },
+  });
   return {
     items: raw.items.map(toStaffAccountItem),
     page: raw.page,

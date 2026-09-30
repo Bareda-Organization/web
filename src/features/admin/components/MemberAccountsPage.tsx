@@ -1,42 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable } from "@/shared/ui";
+import { usePagedList } from "@/shared/hooks";
+import { AlertBanner, Badge, Button, Card, PageHeader, Pagination, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getStaffAccounts } from "../api";
 import type { StaffAccountItemResponseTypes } from "../types";
 import { MemberAccountFormDialog } from "./MemberAccountFormDialog";
 import { StyledMemberAccountsLayout } from "./MemberAccountsPage.styled";
 
+const PAGE_SIZE = 20;
+
 // §6.6~§6.7 관계자 계정 관리(O-02). 목록에 academyName 열을 둔다 — 메인 관리자만
 // 여러 학원의 계정을 한 화면에서 다루므로 이 열이 없으면 어느 학원 소속인지 알 수 없다.
 export const MemberAccountsPage = () => {
-  const [accounts, setAccounts] = useState<StaffAccountItemResponseTypes[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<StaffAccountItemResponseTypes | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getStaffAccounts();
-      setAccounts(data.items);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "관계자 계정 목록을 불러오지 못했습니다");
-      setAccounts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await load();
-    })();
-  }, [load]);
+  const {
+    items: accounts,
+    totalCount,
+    hasNext,
+    page,
+    setPage,
+    loading,
+    error,
+    reload,
+  } = usePagedList((targetPage) => getStaffAccounts({ page: targetPage, size: PAGE_SIZE }), {
+    errorMessage: "관계자 계정 목록을 불러오지 못했습니다",
+  });
 
   const columns: RosterColumn<StaffAccountItemResponseTypes>[] = [
     { key: "name", label: "이름" },
@@ -66,7 +57,7 @@ export const MemberAccountsPage = () => {
 
   return (
     <StyledMemberAccountsLayout>
-      <PageHeader title="관계자 계정 관리" description={`전체 ${accounts.length}개 계정`} />
+      <PageHeader title="관계자 계정 관리" description={`전체 ${totalCount}개 계정`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
@@ -74,13 +65,15 @@ export const MemberAccountsPage = () => {
         <RosterTable columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
       </Card>
 
+      <Pagination page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+
       {target ? (
         <MemberAccountFormDialog
           account={target}
           onClose={() => setTarget(null)}
           onDone={() => {
             setTarget(null);
-            load();
+            reload();
           }}
         />
       ) : null}

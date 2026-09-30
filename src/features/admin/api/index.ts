@@ -1,4 +1,4 @@
-export { getAcademies, getAcademy, createAcademy, updateAcademy } from "./academies";
+export { getAcademies, getAllAcademies, getAcademy, createAcademy, updateAcademy } from "./academies";
 export { getStaffSignupRequests, decideStaffSignupRequest } from "./signupRequests";
 export { getStaffAccounts, updateStaffAccount } from "./staffAccounts";
 export { getAcademyRunsLive } from "./runsLive";
