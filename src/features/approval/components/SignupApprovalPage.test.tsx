@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/shared/lib/http";
 import { SignupApprovalPage } from "./SignupApprovalPage";
 import { getSignupRequests, decideSignupRequest, searchStudentCandidates, searchManagerCandidates } from "../api";
 import type { SignupRequestsResponseTypes } from "../types";
@@ -149,5 +150,60 @@ describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
 
     expect(await screen.findByText("2026-09-10 09:00")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-10T/)).not.toBeInTheDocument();
+  });
+});
+
+// FE7(R36-FE) — 이미 다른 계정과 연결된 학생·매니저를 골라 승인하면 서버가 409 ALREADY_LINKED 로 거절한다.
+// 서버 원문 대신 역할에 맞는 쉬운 문구를 보이고, 대화상자는 열린 채 선택을 고칠 수 있어야 한다.
+describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("학생 승인이 ALREADY_LINKED 로 거절되면 다른 학생을 고르라는 문구를 보이고 선택을 고칠 수 있다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "5", name: "박학생", role: "student" }],
+    });
+    mockSearchStudents.mockResolvedValue([{ id: "77", name: "김철수" }]);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByLabelText(/김철수/));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 다른 계정과 연결된 학생입니다 — 다른 학생을 고르세요")).toBeInTheDocument();
+    expect(screen.queryByText("server raw message")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/김철수/)).toBeEnabled();
+    expect(screen.getByRole("button", { name: "승인 확정" })).toBeEnabled();
+  });
+
+  it("기사 승인이 ALREADY_LINKED 로 거절되면 다른 매니저를 고르라는 문구를 보인다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "6", name: "최기사", role: "driver" }],
+    });
+    mockSearchManagers.mockResolvedValue([{ id: "31", name: "최기사(등록)" }]);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByLabelText(/최기사\(등록\)/));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 다른 계정과 연결된 매니저입니다 — 다른 매니저를 고르세요")).toBeInTheDocument();
+  });
+
+  it("학부모 승인이 ALREADY_LINKED 로 거절되면 이미 연결된 자녀가 있다는 문구를 보인다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 연결된 자녀가 있습니다")).toBeInTheDocument();
   });
 });
