@@ -39,6 +39,8 @@ const transferErrorMessage = (cause: unknown): string => {
       return "이 학생이 출발 버스 명단에 없습니다";
     case "TRANSFER_ALREADY_STAGED":
       return "이 학생은 이미 옮기기로 저장된 건이 있습니다";
+    case "STUDENT_ALREADY_IN_RUN":
+      return "이 학생은 이미 도착 회차 명단에 있어 옮길 수 없습니다";
     default:
       return cause.message;
   }
