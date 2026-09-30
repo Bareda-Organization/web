@@ -67,6 +67,15 @@ export const StudentForm = ({
     {},
   );
   const [note, setNote] = useState("");
+  // 수정 폼이 처음 받은 값 — 지운 항목을 가려내는 기준이다(아래 handleSubmit).
+  const [original, setOriginal] = useState({
+    studentPhone: "",
+    gender: "",
+    birthDate: "",
+    grade: "",
+    className: "",
+    note: "",
+  });
   const [canGoAlone, setCanGoAlone] = useState(false);
   const [photo, setPhoto] = useState<File | null | undefined>(undefined);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | undefined>(
@@ -98,6 +107,14 @@ export const StudentForm = ({
           ),
         );
         setNote(detail.note ?? "");
+        setOriginal({
+          studentPhone: detail.studentPhone ?? "",
+          gender: detail.gender ?? "",
+          birthDate: detail.birthDate ?? "",
+          grade: detail.grade ?? "",
+          className: detail.className ?? "",
+          note: detail.note ?? "",
+        });
         setCanGoAlone(detail.canGoAlone);
         setExistingPhotoUrl(detail.photoUrl ?? undefined);
         setError(null);
@@ -136,7 +153,23 @@ export const StudentForm = ({
     if (!dirty || confirmLeave()) onClose();
   };
 
+  // PATCH(§5.11)는 키가 없으면 "그대로 둔다"(`Student.update`). 그래서 수정에서 지운 값을 키째 빼면 저장은
+  // 성공하는데 옛 값이 남는다. 학년·반·메모는 서버가 빈 문자열을 그대로 저장하므로 지운 경우에 `""` 를 보낸다.
+  // 학생 연락처·성별·생년월일은 서버에 지우는 길이 없다(`""` 를 비운 값으로 받지 않거나 무시) —
+  // 저장이 성공한 것처럼 끝나지 않도록 보내기 전에 알린다.
+  const clearable = (current: string, before: string): string | undefined =>
+    current.trim() || (studentId !== undefined && before !== "" ? "" : undefined);
+  const erasesUnclearable =
+    studentId !== undefined &&
+    ((original.studentPhone !== "" && studentPhone.trim() === "") ||
+      (original.gender !== "" && gender === "") ||
+      (original.birthDate !== "" && birthDate === ""));
+
   const handleSubmit = async () => {
+    if (erasesUnclearable) {
+      setError("학생 연락처·성별·생년월일은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -145,8 +178,8 @@ export const StudentForm = ({
         studentPhone: studentPhone.trim() || undefined,
         gender: gender || undefined,
         birthDate: birthDate || undefined,
-        grade: grade.trim() || undefined,
-        className: className.trim() || undefined,
+        grade: clearable(grade, original.grade),
+        className: clearable(className, original.className),
         guardians: studentId
           ? guardians
               .filter(
@@ -158,7 +191,7 @@ export const StudentForm = ({
                 phone: guardian.phone.trim(),
               }))
           : undefined,
-        note: note.trim() || undefined,
+        note: clearable(note, original.note),
         canGoAlone,
         photo,
       };

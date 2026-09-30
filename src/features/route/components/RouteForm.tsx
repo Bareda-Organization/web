@@ -51,7 +51,8 @@ export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
     setSubmitting(true);
     setError(null);
     try {
-      const request = { busId, weekday, direction, name: name.trim() || undefined, active };
+      // PATCH 는 키가 없으면 그대로 둔다 — 지운 이름은 빈 문자열로 보내야 서버 값이 지워진다(원래 이름이 있던 수정에서만).
+      const request = { busId, weekday, direction, name: name.trim() || (route?.name ? "" : undefined), active };
       if (route) {
         await updateRoute(route.id, request);
       } else {

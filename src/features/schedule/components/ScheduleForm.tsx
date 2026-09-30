@@ -58,8 +58,16 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
     destinationName.trim().length > 0 &&
     !submitting;
 
+  // 서버(`@Positive Integer`, null = 유지)에 소요시간을 지우는 길이 없다 — 비운 채 보내면 저장이 성공한 것처럼
+  // 끝나고 옛 값이 남으므로 보내기 전에 알린다.
+  const erasesDuration = schedule?.estDurationMin != null && estDurationMin === "";
+
   const handleSubmit = async () => {
     if (busId === undefined) return;
+    if (erasesDuration) {
+      setError("예상 소요시간은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

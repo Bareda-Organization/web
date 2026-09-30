@@ -154,3 +154,72 @@ describe("StudentForm — 이탈 경고(R32-W13)", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+// F02-01 — PATCH 는 키가 없으면 "그대로 둔다"(Student.update). 지운 값을 키째 빼면 저장은 성공하는데 값이 남는다.
+describe("StudentForm — F02-01 수정에서 값 지우기", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const filled = {
+    studentId: "1",
+    name: "김바래",
+    studentPhone: "010-1111-2222",
+    photoUrl: null,
+    gender: "male" as const,
+    birthDate: "2015-03-02",
+    grade: "3학년",
+    className: "2반",
+    note: "알레르기",
+    canGoAlone: false,
+    guardians: [],
+    accountId: null,
+  };
+
+  it("메모·학년·반을 지우고 저장하면 빈 문자열을 보내 서버 값을 지운다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue(filled);
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(await screen.findByDisplayValue("알레르기"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("3학년"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("2반"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.note).toBe("");
+    expect(request.grade).toBe("");
+    expect(request.className).toBe("");
+  });
+
+  it("원래 비어 있던 항목은 요청에 싣지 않는다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue({ ...filled, note: null, grade: null, className: null });
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    await screen.findByDisplayValue("김바래");
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.note).toBeUndefined();
+    expect(request.grade).toBeUndefined();
+    expect(request.className).toBeUndefined();
+  });
+
+  it("서버가 지우지 못하는 학생 연락처·생년월일을 지우고 저장하면 요청 없이 그 사실을 알린다", async () => {
+    vi.mocked(getStudentDetail).mockResolvedValue(filled);
+    const onDone = vi.fn();
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(await screen.findByDisplayValue("010-1111-2222"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText("학생 연락처·성별·생년월일은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다")).toBeInTheDocument();
+    expect(updateStudent).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+});
