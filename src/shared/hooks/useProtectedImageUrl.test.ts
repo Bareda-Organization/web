@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../lib/http";
+import { API_BASE_URL } from "../lib/http/config";
 import { useProtectedImageUrl } from "./useProtectedImageUrl";
 
 // Ruling 377 — 학생 사진은 로그인 토큰이 있어야 받는다. `<img src>` 는 Authorization 을
@@ -33,7 +34,7 @@ describe("useProtectedImageUrl", () => {
 
     await waitFor(() => expect(result.current).toBe("blob:photo-1"));
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/v1/files/photos/a.jpg");
+    expect(url).toBe(`${API_BASE_URL}/files/photos/a.jpg`);
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-1");
   });
 
