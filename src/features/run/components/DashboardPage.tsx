@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
@@ -87,7 +88,8 @@ export const DashboardPage = () => {
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [liveAlert, setLiveAlert] = useState<string | null>(null);
+  // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
+  const [approvalRequests, setApprovalRequests] = useState<{ approvalId: string; label: string }[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선. 목록 자체는 `runs`(getDashboard,
   // 4종 상태 전부)를 쓰고, 위치만 `liveRuns`(getRunsLive, moving 전용)에서 run_id 로
@@ -152,13 +154,21 @@ export const DashboardPage = () => {
     return { lat: sum.lat / mapMarkers.length, lng: sum.lng / mapMarkers.length, zoom: DEFAULT_CAMERA.zoom };
   }, [selectedBusMarker, mapMarkers]);
 
-  const loadDashboard = useCallback(async () => {
+  // 요청 번호 — 겹친 요청에서는 최신 요청의 응답만 반영한다(F01-01·F01-05).
+  const dashboardSeq = useRef(0);
+  const routeSeq = useRef(0);
+
+  // silent — 주기·이벤트 갱신. 실패해도 이미 보이던 지표·표를 오류로 덮지 않는다(다음 주기에 회복).
+  const loadDashboard = useCallback(async (silent = false) => {
+    const mine = ++dashboardSeq.current;
     try {
       const data = await getDashboard();
+      if (mine !== dashboardSeq.current) return;
       setMetrics(data.metrics);
       setRuns(data.runs);
       setError(null);
     } catch (cause) {
+      if (silent || mine !== dashboardSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "대시보드를 불러오지 못했습니다");
     } finally {
       setLoading(false);
@@ -178,6 +188,7 @@ export const DashboardPage = () => {
   // 선택을 해제한다(토글) — 목표 4 "선택 해제도 검사"가 요구하는 짝.
   const handleSelectBus = useCallback(
     async (runId: string) => {
+      const mine = ++routeSeq.current;
       if (selectedRunId === runId) {
         setSelectedRunId(null);
         setRoutePolylines([]);
@@ -196,6 +207,8 @@ export const DashboardPage = () => {
       const runStatus = runs.find((run) => run.runId === runId)?.runStatus ?? "idle";
       try {
         const route = await getRunRoute(runId);
+        // F01-05 — 그 사이 다른 버스를 골랐거나 선택을 해제했으면 이 응답은 버린다.
+        if (mine !== routeSeq.current) return;
         // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
         // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
         const display = buildRouteDisplayState(runId, runStatus, route);
@@ -206,13 +219,17 @@ export const DashboardPage = () => {
         setRoutePlanned(display.planned);
         setRouteStopMarkers(display.stopMarkers);
       } catch (cause) {
+        if (mine !== routeSeq.current) return;
+        // C00-03 — 고정 노선이 없는 확정 전 회차는 409 RUN_NOT_CONFIRMED. 원문("확정되지 않은 회차입니다")은
+        // "확정을 기다리면 된다" 로 읽히므로 고정 노선 부재 안내로 바꾼다.
+        const noFixedRoute = cause instanceof ApiError && cause.code === "RUN_NOT_CONFIRMED";
         setRoutePolylines([]);
         setRouteFallback(false);
         setRouteMissing(false);
-        setRouteNoPlannedRoute(false);
+        setRouteNoPlannedRoute(noFixedRoute);
         setRoutePlanned(false);
         setRouteStopMarkers([]);
-        setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+        if (!noFixedRoute) setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
     [selectedRunId, runs],
@@ -257,16 +274,24 @@ export const DashboardPage = () => {
           return;
         }
         case "stop_arrived":
+          loadLive();
+          return;
+        // 탑승 수·회차 상태는 위치 응답이 아니라 대시보드 응답에 있어 함께 다시 불러온다(F01-01).
         case "rider_changed":
         case "run_started":
         case "run_ended":
           loadLive();
+          loadDashboard(true);
           return;
         // 비상 알림(`emergency_raised`·`emergency_canceled`)은 `(staff)` 레이아웃의
         // EmergencyAlertProvider 가 전 화면에서 받는다(R32-W5) — 여기서 또 처리하면 이중 표시다.
         case "approval_requested": {
           const payload = parseWsApprovalRequestedPayload(envelope.payload);
-          setLiveAlert(`탑승 승인 요청 — ${payload.studentName} (${payload.stopName})`);
+          setApprovalRequests((prev) =>
+            prev.some((request) => request.approvalId === payload.approvalId)
+              ? prev
+              : [...prev, { approvalId: payload.approvalId, label: `${payload.studentName} (${payload.stopName})` }],
+          );
           return;
         }
         default:
@@ -274,7 +299,7 @@ export const DashboardPage = () => {
           return;
       }
     },
-    [loadLive],
+    [loadLive, loadDashboard],
   );
   const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `liveRuns` 는
@@ -296,6 +321,8 @@ export const DashboardPage = () => {
     const timer = setInterval(() => {
       if (!cancelled) {
         loadLive();
+        // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다.
+        loadDashboard(true);
       }
     }, LIVE_POLL_INTERVAL_MS);
     return () => {
@@ -370,7 +397,26 @@ export const DashboardPage = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      {liveAlert ? <AlertBanner tone="missed" title={liveAlert} /> : null}
+      {approvalRequests.length > 0 ? (
+        <AlertBanner
+          tone="missed"
+          title={
+            approvalRequests.length === 1
+              ? `탑승 승인 요청 — ${approvalRequests[0].label}`
+              : `탑승 승인 요청 ${approvalRequests.length}건 — ${approvalRequests[approvalRequests.length - 1].label} 외`
+          }
+          action={
+            <>
+              <Button size="sm" variant="secondary" onClick={() => router.push("/change-approval")}>
+                승인 화면으로
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setApprovalRequests([])}>
+                닫기
+              </Button>
+            </>
+          }
+        />
+      ) : null}
 
       {noShowRuns.length > 0 ? (
         <AlertBanner
@@ -423,7 +469,9 @@ export const DashboardPage = () => {
               없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {routeNoPlannedRoute ? (
-            <StyledFallbackNotice>등록된 고정 노선이 없어 예정 경로도 없습니다</StyledFallbackNotice>
+            <StyledFallbackNotice>
+              이 회차의 고정 노선이 없습니다 — <Link href="/route">고정 노선 편성에서 등록하세요</Link>
+            </StyledFallbackNotice>
           ) : null}
         </StyledMapPane>
 
