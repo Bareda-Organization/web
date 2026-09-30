@@ -148,15 +148,16 @@ describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
   });
 });
 
-// F02-17 — 서버(`@Positive Integer`, null = 유지)에 소요시간을 지우는 길이 없다. 비운 채 저장하면 성공처럼 끝나고 값이 남는다.
+// F02-17 · Z-01(Ruling 390) — 선택 항목에 `null` 을 명시하면 서버가 지운다. 비운 소요시간은 키를 빼지 않고 null 로 보낸다.
 describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("소요시간을 비우고 저장하면 요청 없이 지울 수 없다고 알린다", async () => {
+  it("소요시간을 비우고 저장하면 estDurationMin 을 null 로 보내 서버 값을 지운다", async () => {
     mockGetBuses.mockResolvedValue({
       items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
       page: 0, size: 100, totalCount: 1, hasNext: false,
     });
+    mockUpdate.mockResolvedValue({} as never);
     const onDone = vi.fn();
     render(
       <ScheduleForm
@@ -172,8 +173,7 @@ describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
     fireEvent.change(screen.getByDisplayValue("20"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-    expect(await screen.findByText("예상 소요시간은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다")).toBeInTheDocument();
-    expect(mockUpdate).not.toHaveBeenCalled();
-    expect(onDone).not.toHaveBeenCalled();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1].estDurationMin).toBeNull();
   });
 });

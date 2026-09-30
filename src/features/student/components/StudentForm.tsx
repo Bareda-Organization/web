@@ -156,31 +156,20 @@ export const StudentForm = ({
     if (!dirty || confirmLeave()) onClose();
   };
 
-  // PATCH(§5.11)는 키가 없으면 "그대로 둔다"(`Student.update`). 그래서 수정에서 지운 값을 키째 빼면 저장은
-  // 성공하는데 옛 값이 남는다. 학년·반·메모는 서버가 빈 문자열을 그대로 저장하므로 지운 경우에 `""` 를 보낸다.
-  // 학생 연락처·성별·생년월일은 서버에 지우는 길이 없다(`""` 를 비운 값으로 받지 않거나 무시) —
-  // 저장이 성공한 것처럼 끝나지 않도록 보내기 전에 알린다.
-  const clearable = (current: string, before: string): string | undefined =>
-    current.trim() || (studentId !== undefined && before !== "" ? "" : undefined);
-  const erasesUnclearable =
-    studentId !== undefined &&
-    ((original.studentPhone !== "" && studentPhone.trim() === "") ||
-      (original.gender !== "" && gender === "") ||
-      (original.birthDate !== "" && birthDate === ""));
+  // PATCH(§5.11 · Ruling 390)는 키가 없으면 "그대로 둔다"이고 선택 항목의 `null` 이 "지운다"이다. 그래서
+  // 수정에서 지운 항목만 `null` 로 보내고, 원래 비어 있던 항목은 키를 뺀다(그사이 다른 관계자가 넣은 값을 덮지 않는다).
+  const clearable = (current: string, before: string): string | null | undefined =>
+    current.trim() || (studentId !== undefined && before !== "" ? null : undefined);
 
   const handleSubmit = async () => {
-    if (erasesUnclearable) {
-      setError("학생 연락처·성별·생년월일은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다");
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {
       const request: StudentUpsertRequestTypes = {
         name: name.trim(),
-        studentPhone: studentPhone.trim() || undefined,
-        gender: gender || undefined,
-        birthDate: birthDate || undefined,
+        studentPhone: clearable(studentPhone, original.studentPhone),
+        gender: clearable(gender, original.gender) as StudentGender | null | undefined,
+        birthDate: clearable(birthDate, original.birthDate),
         grade: clearable(grade, original.grade),
         className: clearable(className, original.className),
         guardians: studentId

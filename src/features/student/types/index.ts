@@ -50,13 +50,14 @@ export type StudentGuardianTypes = { guardianId: string; name: string; phone: st
 // 이 엔드포인트만 예외). photo 는 새로 고를 때만 채워지고, 없으면 기존 사진을 유지한다.
 export type StudentUpsertRequestTypes = {
   name: string;
-  studentPhone?: string;
+  // 선택 항목: 키 없음(undefined) = 유지, `null` = 지움(수정 전용, Ruling 390).
+  studentPhone?: string | null;
   photo?: File | null;
-  gender?: StudentGender;
-  birthDate?: string;
-  grade?: string;
-  className?: string;
-  note?: string;
+  gender?: StudentGender | null;
+  birthDate?: string | null;
+  grade?: string | null;
+  className?: string | null;
+  note?: string | null;
   canGoAlone: boolean;
   // 고친 보호자 연락처만 싣는다(수정 전용). 연결되지 않은 보호자는 서버가 422 로 막는다.
   guardians?: { guardianId: string; phone: string }[];

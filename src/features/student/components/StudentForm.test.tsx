@@ -176,7 +176,7 @@ describe("StudentForm — F02-01 수정에서 값 지우기", () => {
     accountId: null,
   };
 
-  it("메모·학년·반을 지우고 저장하면 빈 문자열을 보내 서버 값을 지운다", async () => {
+  it("메모·학년·반을 지우고 저장하면 null 을 보내 서버 값을 지운다", async () => {
     vi.mocked(getStudentDetail).mockResolvedValue(filled);
     vi.mocked(updateStudent).mockResolvedValue({} as never);
     const onDone = vi.fn();
@@ -189,9 +189,9 @@ describe("StudentForm — F02-01 수정에서 값 지우기", () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     const request = vi.mocked(updateStudent).mock.calls[0][1];
-    expect(request.note).toBe("");
-    expect(request.grade).toBe("");
-    expect(request.className).toBe("");
+    expect(request.note).toBeNull();
+    expect(request.grade).toBeNull();
+    expect(request.className).toBeNull();
   });
 
   it("원래 비어 있던 항목은 요청에 싣지 않는다", async () => {
@@ -210,17 +210,21 @@ describe("StudentForm — F02-01 수정에서 값 지우기", () => {
     expect(request.className).toBeUndefined();
   });
 
-  it("서버가 지우지 못하는 학생 연락처·생년월일을 지우고 저장하면 요청 없이 그 사실을 알린다", async () => {
+  it("학생 연락처·성별·생년월일을 지우고 저장하면 null 을 보내 서버 값을 지운다(Ruling 390)", async () => {
     vi.mocked(getStudentDetail).mockResolvedValue(filled);
+    vi.mocked(updateStudent).mockResolvedValue({} as never);
     const onDone = vi.fn();
     render(<StudentForm studentId="1" onClose={vi.fn()} onDone={onDone} />);
 
     fireEvent.change(await screen.findByDisplayValue("010-1111-2222"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("2015-03-02"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-    expect(await screen.findByText("학생 연락처·성별·생년월일은 지울 수 없습니다 — 다른 값으로만 바꿀 수 있습니다")).toBeInTheDocument();
-    expect(updateStudent).not.toHaveBeenCalled();
-    expect(onDone).not.toHaveBeenCalled();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const request = vi.mocked(updateStudent).mock.calls[0][1];
+    expect(request.studentPhone).toBeNull();
+    expect(request.birthDate).toBeNull();
+    expect(request.gender).toBe("male");
   });
 });
 
