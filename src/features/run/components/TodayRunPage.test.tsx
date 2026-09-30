@@ -12,9 +12,12 @@ import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseT
 // 핵심 동작이다. absent 는 매니저 앱과 반대로 계속 결측(missed) 로 보여야 한다는
 // 화면 전용 규칙(TodayRunPage.tsx 주석)도 함께 검증한다.
 const mockReplace = vi.fn();
+// 실제 useRouter 는 렌더가 바뀌어도 같은 객체를 돌려준다. 렌더마다 새 객체를 주면 `router` 를 의존성에 둔 effect 가
+// 렌더 때마다 다시 예약돼, 주소를 바꾸는 시험이 "아직 실행되지 않은 옛 effect" 와 경합한다(간헐 실패의 원인).
+const mockRouter = { replace: mockReplace, push: vi.fn() };
 let mockRunIdParam: string | null = null;
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: mockReplace, push: vi.fn() }),
+  useRouter: () => mockRouter,
   useSearchParams: () => ({ get: () => mockRunIdParam }),
 }));
 
