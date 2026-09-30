@@ -589,7 +589,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
 
   // Ruling 321 — runId 7(2호차, idle)인데 백엔드가 confirmed:false·좌표 0개(고정
   // 노선 자체가 없음)를 돌려주면 "확정됐지만 없음"과 다른 문구를 보여준다.
-  it("고정 노선이 없는 idle 회차(runId 7)를 고르면 등록된 고정 노선이 없어 예정 경로도 없습니다 를 보여준다", async () => {
+  it("고정 노선이 없는 idle 회차(runId 7)를 고르면 고정 노선이 없다는 안내(편성 화면 링크 포함)를 보여준다", async () => {
     mockRunIdParam = "7";
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
@@ -597,7 +597,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<TodayRunPage />);
 
-    expect(await screen.findByText("등록된 고정 노선이 없어 예정 경로도 없습니다")).toBeInTheDocument();
+    expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
   });
 
@@ -754,5 +754,138 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(
       expect(markers.find((marker) => marker.id === "stop-22")?.selected).toBe(true);
       expect(markers.find((marker) => marker.id === "stop-11")?.selected).toBeUndefined();
     });
+  });
+});
+
+// C00-01·F01-03·F01-04·F01-05·C00-03·F01-14 — 선택 회차 유지 · 자동 갱신 · 요청 경합 · 노선 없음 안내.
+describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", () => {
+  const runOf = (runId: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
+    ...baseDashboard.runs[0],
+    runId,
+    busNo: `${runId}호차`,
+    runStatus,
+  });
+  const dashboardOf = (...runs: ReturnType<typeof runOf>[]): DashboardResponseTypes => ({ ...baseDashboard, runs });
+
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // C00-01 — 사이드바로 들어오면 첫 렌더의 runIdParam 이 null 이라 loadRuns 가 옛 null 을 붙들고 있었다.
+  it("주소에 회차가 정해진 뒤 명단을 다시 불러와도 첫 회차로 주소를 되돌리지 않는다", async () => {
+    const staged: RosterItemResponseTypes = { ...baseRoster[0], name: "이대기", change: "added", transferId: "31" };
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle"), runOf("8", "idle")));
+    mockGetRunRoster.mockResolvedValue([staged]);
+    mockDeleteTransfer.mockResolvedValue(undefined);
+    const { rerender } = render(<TodayRunPage />);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/today-run?runId=7"));
+
+    mockRunIdParam = "8"; // 관계자가 8호차를 골라 주소가 바뀐 상태
+    mockReplace.mockClear();
+    rerender(<TodayRunPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+    const dashboardCallsBefore = mockGetDashboard.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
+
+    await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBeGreaterThan(dashboardCallsBefore));
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  // F01-04 — 직접 진입하면 회차 목록이 오기 전에 상태 없이 노선을 그리는 호출이 먼저 나가고, 목록이 오면 다시 나갔다.
+  it("회차 목록이 오기 전에는 명단·노선을 부르지 않고, 목록이 오면 각 한 번씩만 부른다", async () => {
+    mockRunIdParam = "7";
+    let resolveDashboard: (value: DashboardResponseTypes) => void = () => {};
+    mockGetDashboard.mockReturnValue(new Promise((resolve) => (resolveDashboard = resolve)));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+    await waitFor(() => expect(mockGetRunRoster).toHaveBeenCalledTimes(1));
+    expect(mockGetRunRoute).not.toHaveBeenCalled();
+
+    resolveDashboard(dashboardOf(runOf("7", "moving")));
+
+    await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledTimes(1));
+    expect(mockGetRunRoster).toHaveBeenCalledTimes(1);
+  });
+
+  // F01-03 — 명단·현재 위치·버스 마커는 진입 시점 값에서 갱신이 없었다.
+  it("진행 중인 회차는 7초마다 명단·위치·회차 상태를 다시 불러와 탑승 현황이 바뀐다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "moving")));
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    mockGetRunRoster.mockResolvedValueOnce([{ ...baseRoster[0], status: "waiting" }]);
+    render(<TodayRunPage />);
+    expect(await screen.findByText("대기")).toBeInTheDocument();
+
+    mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], status: "boarded" }]);
+    await vi.advanceTimersByTimeAsync(7000);
+
+    expect(await screen.findByText("탑승 완료")).toBeInTheDocument();
+    expect(mockGetRunsLive.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(mockGetDashboard.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("종료된 회차는 다시 불러오지 않는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "finished")));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+    await screen.findByText("김학생");
+
+    await vi.advanceTimersByTimeAsync(15000);
+
+    expect(mockGetRunRoster).toHaveBeenCalledTimes(1);
+  });
+
+  // F01-05 — 회차를 연달아 바꾸면 이전 회차의 명단이 늦게 와서 새 회차 제목 아래에 남았다.
+  it("회차를 바꾸기 전에 보낸 명단 요청의 늦은 응답이 새 회차의 명단을 덮지 않는다", async () => {
+    mockRunIdParam = "7";
+    let resolveOld: (value: RosterItemResponseTypes[]) => void = () => {};
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle"), runOf("8", "idle")));
+    mockGetRunRoster.mockImplementation((runId) =>
+      runId === "7"
+        ? new Promise((resolve) => (resolveOld = resolve))
+        : Promise.resolve([{ ...baseRoster[0], studentId: "2", name: "8호차학생" }]),
+    );
+    const { rerender } = render(<TodayRunPage />);
+    await waitFor(() => expect(mockGetRunRoster).toHaveBeenCalledWith("7"));
+
+    mockRunIdParam = "8";
+    rerender(<TodayRunPage />);
+    await screen.findByText("8호차학생");
+    resolveOld([{ ...baseRoster[0], name: "7호차학생" }]);
+
+    await waitFor(() => expect(screen.queryByText("7호차학생")).not.toBeInTheDocument());
+    expect(screen.getByText("8호차학생")).toBeInTheDocument();
+  });
+
+  // C00-03 — 고정 노선이 없는 확정 전 회차는 §5.19 가 409 RUN_NOT_CONFIRMED 를 준다. 그 원문("확정되지 않은
+  // 회차입니다")을 오류 띠로 내면 "확정을 기다리면 된다" 로 읽힌다 — 실제 원인은 고정 노선 부재다.
+  it("고정 노선이 없어 노선 조회가 RUN_NOT_CONFIRMED 면 오류 띠 대신 고정 노선 편성 안내를 보여준다", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle")));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockGetRunRoute.mockRejectedValue(new ApiError(409, "RUN_NOT_CONFIRMED", "확정되지 않은 회차입니다"));
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "고정 노선 편성에서 등록하세요" })).toHaveAttribute("href", "/route");
+    expect(screen.queryByText("확정되지 않은 회차입니다")).not.toBeInTheDocument();
+  });
+
+  // F01-14 — 보호자 미연결 학생은 연락처가 null(§5.4)이다. 다른 null 열(반)처럼 "-" 로 보여 실패로 읽히지 않게 한다.
+  it("보호자 연락처가 없는 학생은 빈 칸이 아니라 - 로 보인다", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle")));
+    mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], guardianPhone: null }]);
+    render(<TodayRunPage />);
+
+    const row = (await screen.findByText("김학생")).closest("tr")!;
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
+    const phoneCell = within(row).getAllByRole("cell")[headers.indexOf("보호자 연락처")];
+    expect(phoneCell).toHaveTextContent("-");
   });
 });

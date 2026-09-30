@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
@@ -58,6 +59,9 @@ import { formatDateTime } from "@/shared/lib/format/dateTime";
 // 미수신 상태(`position=null`)에서는 지도가 이 기본 좌표를 그대로 보여준다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
+// DashboardPage.tsx 와 같은 7초 — 종료되지 않은 회차는 화면을 열어 둔 동안 이 주기로 다시 불러온다(F01-03).
+const LIVE_POLL_INTERVAL_MS = 7000;
+
 // §5.4 응답의 `absent` 는 매니저 앱과 반대로 계속 빨간색(missed)으로 유지해야 한다
 // (API_SPEC §5.4) — 공용 StudentRow 의 RIDE_META 는 absent 를 idle 로 다뤄서 여기선
 // 안 쓰고 화면 전용 매핑을 둔다(판단 근거, 보고서 §1).
@@ -114,6 +118,7 @@ export const TodayRunPage = () => {
   const runIdParam = searchParams.get("runId");
 
   const [runs, setRuns] = useState<DashboardRunResponseTypes[]>([]);
+  const [runsLoaded, setRunsLoaded] = useState(false);
   const [roster, setRoster] = useState<RosterItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +152,12 @@ export const TodayRunPage = () => {
 
   const selectedRunId = runIdParam ?? (runs[0]?.runId ?? null);
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
+  // 명단·위치·노선 조회의 의존성은 회차 객체가 아니라 이 원시값이다 — 회차 목록을 다시 받을 때마다 배열이 새로
+  // 만들어져도 값이 같으면 다시 부르지 않는다(F01-04).
+  const selectedRunStatus = selectedRun?.runStatus ?? null;
+  // 오늘 회차가 하나도 없으면 명단을 부를 일이 없어 불러오는 중 표시를 끈다.
+  const isLoading = loading && !(runsLoaded && selectedRunId == null);
+  const firstRunId = runs[0]?.runId ?? null;
   // A-07(UF-M-04) — 확정 전(①구간, idle) 회차에서만 학생을 다른 버스로 옮길 수 있고, 도착 회차는
   // 같은 날짜(이 화면은 오늘)·같은 방향의 확정 전 다른 버스다. 확정된 회차는 추가에 해당해 막힌다.
   const canTransfer = selectedRun?.runStatus === "idle";
@@ -221,46 +232,53 @@ export const TodayRunPage = () => {
     [mapMarkers, routeStopMarkers],
   );
 
-  const loadRuns = useCallback(async () => {
+  // silent — 주기 갱신. 실패해도 이미 뜬 화면을 오류로 덮지 않는다.
+  const loadRuns = useCallback(async (silent = false) => {
     try {
       const data = await getDashboard();
       setRuns(data.runs);
-      if (!runIdParam && data.runs[0]) {
-        router.replace(`/today-run?runId=${data.runs[0].runId}`);
-      } else if (!runIdParam) {
-        // 오늘 회차가 없으면 명단을 부를 일이 없어 불러오는 중 표시를 여기서 끈다.
-        setLoading(false);
-      }
+      setRunsLoaded(true);
     } catch (cause) {
+      if (silent) return;
       setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadRoster = useCallback(async (runId: string) => {
-    setLoading(true);
+  // 요청 번호 — 회차를 바꾸기 전에 나간 요청의 늦은 응답이 새 회차의 값을 덮지 않게 최신 요청만 반영한다(F01-05).
+  const rosterSeq = useRef(0);
+  const liveSeq = useRef(0);
+  const routeSeq = useRef(0);
+
+  const loadRoster = useCallback(async (runId: string, silent = false) => {
+    const mine = ++rosterSeq.current;
+    if (!silent) setLoading(true);
     try {
       const items = await getRunRoster(runId);
+      if (mine !== rosterSeq.current) return;
       setRoster(items);
       setError(null);
     } catch (cause) {
+      if (mine !== rosterSeq.current) return;
       setError(cause instanceof ApiError ? cause.message : "명단을 불러오지 못했습니다");
-      setRoster([]);
+      // 주기 갱신이 한 번 실패했다고 보이던 명단을 지우지 않는다.
+      if (!silent) setRoster([]);
     } finally {
-      setLoading(false);
+      if (mine === rosterSeq.current) setLoading(false);
     }
   }, []);
 
   // §5.18 은 `status='moving'` 인 회차만 돌려준다 — 선택된 회차가 없으면(대기·종료)
   // `liveRun` 은 null 로 남고 지도는 기본 좌표를 보여준다. 위치 카드는 보조 정보라
   // 실패해도 본문 오류로 승격하지 않는다(DashboardPage.tsx 의 loadLive 와 같은 판단).
-  const loadLiveRun = useCallback(async (runId: string) => {
+  const loadLiveRun = useCallback(async (runId: string, silent = false) => {
+    const mine = ++liveSeq.current;
     try {
       const data = await getRunsLive();
+      if (mine !== liveSeq.current) return;
       setLiveRun(data.runs.find((run) => run.runId === runId) ?? null);
     } catch {
-      setLiveRun(null);
+      if (mine === liveSeq.current && !silent) setLiveRun(null);
     }
   }, []);
 
@@ -270,9 +288,11 @@ export const TodayRunPage = () => {
   // R20-C 목표 4 — "아직 확정 전"과 "확정됐는데 경로가 없음"을 가르려면 회차
   // 상태가 필요하다(호출부가 `selectedRun.runStatus` 를 넘긴다).
   const loadRoute = useCallback(async (runId: string, runStatus: RunStatus) => {
+    const mine = ++routeSeq.current;
     setRouteError(null);
     try {
       const route = await getRunRoute(runId);
+      if (mine !== routeSeq.current) return;
       // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
       // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
       const display = buildRouteDisplayState(runId, runStatus, route);
@@ -285,15 +305,20 @@ export const TodayRunPage = () => {
       setRouteStops(route.stops.map((stop) => ({ stopId: stop.stopId, name: stop.name })));
       setSelectedStopId(null);
     } catch (cause) {
+      if (mine !== routeSeq.current) return;
       setRoutePolylines([]);
       setRouteFallback(false);
       setRouteMissing(false);
-      setRouteNoPlannedRoute(false);
+      // C00-03 — 고정 노선이 없는 확정 전 회차는 §5.19 가 409 RUN_NOT_CONFIRMED 를 준다. 원문을 띠로 내면
+      // "확정을 기다리면 된다" 로 읽히므로 고정 노선 부재 안내로 바꾼다.
+      setRouteNoPlannedRoute(cause instanceof ApiError && cause.code === "RUN_NOT_CONFIRMED");
       setRoutePlanned(false);
       setRouteStopMarkers([]);
       setRouteStops([]);
       setSelectedStopId(null);
-      setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+      if (!(cause instanceof ApiError && cause.code === "RUN_NOT_CONFIRMED")) {
+        setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
+      }
     }
   }, []);
 
@@ -303,20 +328,45 @@ export const TodayRunPage = () => {
     })();
   }, [loadRuns]);
 
+  // 사이드바로 들어와 회차 번호가 주소에 없으면 첫 회차를 기본으로 고른다. 주소의 최신 값을 보고 판단해야
+  // 하므로 loadRuns 안이 아니라 렌더 값에 의존하는 이 effect 에 둔다(C00-01 — 옛 null 을 붙든 채
+  // 조작 뒤 재조회가 선택을 첫 회차로 되돌렸다).
+  useEffect(() => {
+    if (!runIdParam && firstRunId) router.replace(`/today-run?runId=${firstRunId}`);
+  }, [runIdParam, firstRunId, router]);
+
   useEffect(() => {
     if (selectedRunId == null) return;
     (async () => {
-      await loadRoster(selectedRunId);
-      await loadLiveRun(selectedRunId);
-      await loadRoute(selectedRunId, selectedRun?.runStatus ?? "idle");
+      await Promise.all([loadRoster(selectedRunId), loadLiveRun(selectedRunId)]);
     })();
-  }, [selectedRunId, selectedRun, loadRoster, loadLiveRun, loadRoute]);
+  }, [selectedRunId, loadRoster, loadLiveRun]);
+
+  // 회차 목록이 온 뒤(상태를 안 뒤)에만 노선을 그린다 — 상태 없이 그리면 확정 노선이 색을 못 받아 선이 사라진다(F01-04).
+  useEffect(() => {
+    if (selectedRunId == null || selectedRunStatus == null) return;
+    (async () => {
+      await loadRoute(selectedRunId, selectedRunStatus);
+    })();
+  }, [selectedRunId, selectedRunStatus, loadRoute]);
+
+  // F01-03 — 종료되지 않은 회차는 화면을 열어 둔 동안 회차 상태·명단·위치를 다시 불러온다. 표를 '불러오는 중' 으로
+  // 뒤집지 않도록 전부 silent 다.
+  useEffect(() => {
+    if (selectedRunId == null || selectedRunStatus == null || selectedRunStatus === "finished") return;
+    const timer = setInterval(() => {
+      void loadRuns(true);
+      void loadRoster(selectedRunId, true);
+      void loadLiveRun(selectedRunId, true);
+    }, LIVE_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [selectedRunId, selectedRunStatus, loadRuns, loadRoster, loadLiveRun]);
 
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },
     { key: "className", label: "반", render: (row) => row.className ?? "-" },
     { key: "stopName", label: "승하차지", render: (row) => row.stopName ?? UNASSIGNED_STOP },
-    { key: "guardianPhone", label: "보호자 연락처" },
+    { key: "guardianPhone", label: "보호자 연락처", render: (row) => row.guardianPhone ?? "-" },
     {
       // R21-B 목표 2·3·4 — DashboardPage.tsx 와 같은 표기(예정/실제 구분, 시:분:초).
       // 이 표는 학생 단위 행이지만 회차 단위 값이라 모든 행에 같은 값이 반복된다 —
@@ -452,7 +502,9 @@ export const TodayRunPage = () => {
               없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {routeNoPlannedRoute ? (
-            <StyledFallbackNotice>등록된 고정 노선이 없어 예정 경로도 없습니다</StyledFallbackNotice>
+            <StyledFallbackNotice>
+              이 회차의 고정 노선이 없습니다 — <Link href="/route">고정 노선 편성에서 등록하세요</Link>
+            </StyledFallbackNotice>
           ) : null}
         </StyledMapPane>
 
@@ -480,11 +532,11 @@ export const TodayRunPage = () => {
         {/* 사용자 지시(2026-09-22) — 승하차지별로 묶어 접고 펼 수 있게, 길면 스크롤로.
             한 회차에 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지
             눈으로 좇기 어렵다. 스크롤 상자는 표 머리줄을 고정한다(styled 의 sticky). */}
-        <Card padding={0} aria-busy={loading}>
+        <Card padding={0} aria-busy={isLoading}>
           <StyledRosterScroll>
             <RosterTable
               columns={columns}
-              loading={loading}
+              loading={isLoading}
               rows={roster}
               getRowKey={(row) => row.studentId}
               groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
