@@ -252,3 +252,39 @@ describe("SignupApprovalPage — F02-03 페이징", () => {
     await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("rejected", 0, 20));
   });
 });
+
+// F02-06 — 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 예전 목록에 그 요청이 남지 않게 닫으면서 목록을 새로 받는다.
+describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("409 APPROVAL_ALREADY_DECIDED 면 한국어 안내를 보이고, [닫기] 가 목록을 다시 불러온다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "APPROVAL_ALREADY_DECIDED", "Already decided"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승인 확정" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("김보호 가입 요청 처리")).not.toBeInTheDocument();
+  });
+
+  it("409 SIGNUP_TARGET_BLOCKED 면 차단된 계정이라 승인할 수 없다고 알린다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "SIGNUP_TARGET_BLOCKED", "blocked"));
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    expect(await screen.findByText("승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다")).toBeInTheDocument();
+  });
+});
