@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/shared/lib/http";
 import { EmergencyList } from "./EmergencyList";
 import { ackEmergency, getEmergencies } from "../api";
 
@@ -105,5 +106,46 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
     await vi.advanceTimersByTimeAsync(5000);
 
     expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// F01-08·F01-05 — 무음 주기 갱신의 실패·늦은 응답이 화면의 목록을 바꾸면 안 된다.
+describe("EmergencyList — 주기 갱신의 실패·경합(F01-08·F01-05)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("주기 갱신이 실패해도 이미 보이던 미확인 목록을 비우지 않고 오류만 띄운다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGet.mockResolvedValueOnce({ items: [ITEM], unackedCount: 1 });
+    render(<EmergencyList />);
+    await screen.findByText("1호차 · 등원");
+
+    mockGet.mockRejectedValue(new ApiError(500, "INTERNAL", "서버 오류"));
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(await screen.findByText("서버 오류")).toBeInTheDocument();
+    expect(screen.getByText("1호차 · 등원")).toBeInTheDocument();
+    expect(screen.queryByText("해당 상태의 비상 알림이 없습니다")).not.toBeInTheDocument();
+  });
+
+  it("필터를 바꾸기 전에 보낸 요청의 늦은 응답은 새 필터의 목록을 덮지 않는다", async () => {
+    let resolveOpen: (value: { items: (typeof ITEM)[]; unackedCount: number }) => void = () => {};
+    mockGet.mockImplementation(({ status }) =>
+      status === "open"
+        ? new Promise((resolve) => {
+            resolveOpen = resolve;
+          })
+        : Promise.resolve({ items: [], unackedCount: 0 }),
+    );
+    render(<EmergencyList />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "확인됨" }));
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith(expect.objectContaining({ status: "acked" })));
+    resolveOpen({ items: [ITEM], unackedCount: 1 });
+
+    expect(await screen.findByText("해당 상태의 비상 알림이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText("1호차 · 등원")).not.toBeInTheDocument();
   });
 });
