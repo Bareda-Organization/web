@@ -71,7 +71,8 @@ describe("admin api — 실서버 계약", () => {
     const created = await createAcademy({
       name: `F5W2계약시험학원${suffix}`,
       region: "서울",
-      address: "서울시 어딘가",
+      // Ruling 374 — 주소를 좌표로 옮기지 못하면 422 ADDRESS_VERIFICATION_FAILED 로 저장이 보류된다. 실재하는 주소여야 한다.
+      address: "서울특별시 중구 세종대로 110",
       contact: "02-0000-0000",
     });
     expect(created.academyId).toBeTruthy();

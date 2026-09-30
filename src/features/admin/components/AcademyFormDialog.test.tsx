@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AcademyFormDialog } from "./AcademyFormDialog";
-import { getAcademy, updateAcademy } from "../api";
+import { ApiError } from "@/shared/lib/http";
+import { createAcademy, getAcademy, updateAcademy } from "../api";
 
 vi.mock("../api", () => ({ getAcademy: vi.fn(), updateAcademy: vi.fn(), createAcademy: vi.fn() }));
 
 const mockGet = vi.mocked(getAcademy);
 const mockUpdate = vi.mocked(updateAcademy);
+const mockCreate = vi.mocked(createAcademy);
 
 const DETAIL = {
   id: "3",
@@ -75,5 +77,32 @@ describe("AcademyFormDialog — 비활성 저장 전 확인(R32-W12)", () => {
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+  });
+});
+
+// N-04·N-06 — §6.2·§6.3 주소 검증 실패(422)는 저장이 보류된다. 서버 원문 대신 고칠 자리를 알린다. 메모는 200자까지.
+describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it.each([
+    [422, "ADDRESS_VERIFICATION_FAILED", "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요"],
+    [503, "ADDRESS_VERIFICATION_UNAVAILABLE", "주소 확인 서비스에 연결하지 못했습니다. 잠시 뒤 다시 저장해 주세요"],
+  ])("%s %s 는 서버 원문이 아니라 쉬운 한국어 문구로 알리고 닫지 않는다", async (status, code, message) => {
+    mockCreate.mockRejectedValue(new ApiError(status, code, "서버 원문"));
+    const onDone = vi.fn();
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={onDone} />);
+    fireEvent.change(screen.getByLabelText(/학원명/), { target: { value: "새 학원" } });
+    fireEvent.change(screen.getByLabelText(/지역/), { target: { value: "서울" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("메모 입력칸은 200자까지만 받는다", () => {
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
   });
 });

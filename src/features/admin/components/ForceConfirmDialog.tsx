@@ -39,6 +39,8 @@ export const ForceConfirmDialog = ({ run, onClose, onDone }: ForceConfirmDialogP
         setError("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.");
       } else if (cause instanceof ApiError && cause.code === "RUN_NOT_DUE") {
         setError("아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.");
+      } else if (cause instanceof ApiError && cause.code === "RUN_CANCELED") {
+        setError("임시 취소된 회차라 강제 확정할 수 없습니다.");
       } else {
         setError(cause instanceof ApiError ? cause.message : "강제 확정에 실패했습니다");
       }

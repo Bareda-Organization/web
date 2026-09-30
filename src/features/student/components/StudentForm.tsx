@@ -33,6 +33,9 @@ type StudentFormProps = {
   onDone: () => void;
 };
 
+// §5.11 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
+const NOTE_MAX_LENGTH = 200;
+
 const GENDER_OPTIONS = [
   { value: "", label: "선택 안 함" },
   { value: "male", label: "남" },
@@ -334,6 +337,7 @@ export const StudentForm = ({
               label="메모"
               value={note}
               onChange={(event) => setNote(event.target.value)}
+              maxLength={NOTE_MAX_LENGTH}
             />
             <Checkbox
               checked={canGoAlone}

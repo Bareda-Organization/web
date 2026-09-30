@@ -97,4 +97,16 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
       screen.queryByText("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요."),
     ).not.toBeInTheDocument();
   });
+
+  // N-01 — §6.14 임시 취소된 회차는 409 RUN_CANCELED(Ruling 375).
+  it("RUN_CANCELED 오류는 취소된 회차라는 문구로 보여준다", async () => {
+    mockForceConfirmRun.mockRejectedValue(new ApiError(409, "RUN_CANCELED", "서버 원문"));
+    render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+
+    await waitFor(() => expect(screen.getByText("임시 취소된 회차라 강제 확정할 수 없습니다.")).toBeInTheDocument());
+    expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
+  });
 });

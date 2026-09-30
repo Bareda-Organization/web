@@ -106,3 +106,24 @@ describe("ManagerForm — F02-12 근무 시간 편집", () => {
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });
 });
+
+// N-07 — 수정 폼에서 이름·전화번호를 지운 채 저장하면 서버가 422 로 거부한다. 요청이 나가기 전에 저장 버튼이 막혀야 한다.
+describe("ManagerForm — 수정 폼의 빈 값", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("이름이나 전화번호를 공백으로 지우면 저장 버튼이 잠기고 요청이 나가지 않는다", () => {
+    render(<ManagerForm manager={existingManager} onClose={vi.fn()} onDone={vi.fn()} />);
+    const [nameInput, phoneInput] = screen.getAllByRole("textbox");
+    const save = screen.getByRole("button", { name: "저장" });
+    expect(save).toBeEnabled();
+
+    fireEvent.change(nameInput, { target: { value: "   " } });
+    expect(save).toBeDisabled();
+    fireEvent.change(nameInput, { target: { value: "김기사" } });
+    fireEvent.change(phoneInput, { target: { value: "" } });
+    expect(save).toBeDisabled();
+
+    fireEvent.click(save);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
