@@ -194,7 +194,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
       );
     });
 
-    expect(await screen.findByText("비상 상황 발생 — 2호차 (accident)")).toBeInTheDocument();
+    expect(await screen.findByText("비상 상황 발생 — 2호차 (사고)")).toBeInTheDocument();
   });
 
   it("W3: emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
@@ -214,7 +214,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
         }),
       );
     });
-    await screen.findByText("비상 상황 발생 — 2호차 (accident)");
+    await screen.findByText("비상 상황 발생 — 2호차 (사고)");
 
     act(() => {
       capturedOnEnvelope?.(
@@ -227,7 +227,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     });
 
     expect(await screen.findByText("비상 알림 취소 — 2호차")).toBeInTheDocument();
-    expect(screen.queryByText("비상 상황 발생 — 2호차 (accident)")).not.toBeInTheDocument();
+    expect(screen.queryByText("비상 상황 발생 — 2호차 (사고)")).not.toBeInTheDocument();
   });
 });
 
@@ -621,5 +621,150 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     const item = await screen.findByRole("button", { name: /9호차/ });
     expect(item).toHaveTextContent("종료");
     expect(screen.queryByText("표시할 버스가 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+const raised = (id: number, busNo: string, type = "accident") =>
+  envelope("emergency_raised", {
+    emergency_id: id, type, bus_no: busNo,
+    raised_by: { name: "김기사", role: "driver", phone: "010" },
+    position: { lat: 37.5, lng: 127.0 }, rider_count: 3, raised_at: "2026-09-13T00:00:00Z",
+  });
+const canceled = (id: number, busNo: string) =>
+  envelope("emergency_canceled", { emergency_id: id, bus_no: busNo, canceled_at: "2026-09-13T00:01:00Z" });
+
+// F03-05 — 비상 배너가 한 줄짜리 상태라 나중 이벤트가 앞 이벤트를 덮었다.
+describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("두 버스의 비상이 함께 보이고, 다른 버스의 취소가 진행 중인 비상을 가리지 않는다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    act(() => {
+      capturedOnEnvelope?.(raised(1, "3호차"));
+      capturedOnEnvelope?.(raised(2, "5호차", "vehicle_fault"));
+    });
+    expect(await screen.findByText("비상 상황 발생 — 3호차 (사고)")).toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (차량 고장)")).toBeInTheDocument();
+
+    act(() => {
+      capturedOnEnvelope?.(canceled(1, "3호차"));
+    });
+
+    expect(screen.getByText("비상 알림 취소 — 3호차")).toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (차량 고장)")).toBeInTheDocument();
+  });
+
+  it("[닫기] 로 그 알림만 지운다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    act(() => {
+      capturedOnEnvelope?.(raised(1, "3호차"));
+      capturedOnEnvelope?.(raised(2, "5호차"));
+    });
+    const banner = (await screen.findByText("비상 상황 발생 — 3호차 (사고)")).closest('[role="alert"], [role="status"]') as HTMLElement;
+
+    fireEvent.click(within(banner).getByRole("button", { name: "닫기" }));
+
+    expect(screen.queryByText("비상 상황 발생 — 3호차 (사고)")).not.toBeInTheDocument();
+    expect(screen.getByText("비상 상황 발생 — 5호차 (사고)")).toBeInTheDocument();
+  });
+});
+
+// F03-10 — 전 학원 방송의 이벤트마다 선택 학원 회차를 재조회했다.
+describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("지금 보는 학원 목록에 없는 회차의 이벤트는 재조회하지 않고, 있는 회차의 잇단 이벤트는 한 번만 재조회한다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    const before = mockGetRunsLive.mock.calls.length;
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "999"));
+      capturedOnEnvelope?.(envelope("stop_arrived", {}, "999"));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(mockGetRunsLive.mock.calls.length).toBe(before);
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "1"));
+      capturedOnEnvelope?.(envelope("stop_arrived", {}, "1"));
+      capturedOnEnvelope?.(envelope("rider_changed", {}, "1"));
+    });
+    await waitFor(() => expect(mockGetRunsLive.mock.calls.length).toBe(before + 1));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
+  });
+});
+
+// F03-09 — 겹친 요청에서 늦은 응답이 새 선택을 덮었다.
+describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09)", () => {
+  const academyB = { id: "2", code: "B002", name: "둘째 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("학원을 A→B 로 바꾼 뒤에 A 의 회차 응답이 늦게 와도 B 의 회차를 유지한다", async () => {
+    mockGetAcademies.mockResolvedValue([...baseAcademies.items, academyB]);
+    let resolveA: (value: { runs: RunLiveItemResponseTypes[] }) => void = () => {};
+    mockGetRunsLive.mockImplementation((academyId: string) =>
+      academyId === "1"
+        ? new Promise((resolve) => (resolveA = resolve))
+        : Promise.resolve({ runs: [{ ...baseLiveRun, runId: "20", busNo: "B학원 버스" }] }),
+    );
+    render(<MonitoringPage />);
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("1"));
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    expect(await screen.findByText("B학원 버스")).toBeInTheDocument();
+    await act(async () => {
+      resolveA({ runs: [{ ...baseLiveRun, runId: "10", busNo: "A학원 버스" }] });
+    });
+
+    expect(screen.getByText("B학원 버스")).toBeInTheDocument();
+    expect(screen.queryByText("A학원 버스")).not.toBeInTheDocument();
+  });
+
+  it("버스 1 의 노선 응답이 버스 2 뒤에 도착해도 지도에는 버스 2 의 경로를 그린다", async () => {
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseLiveRun, runId: "1", busNo: "1호차" },
+        { ...baseLiveRun, runId: "2", busNo: "2호차" },
+      ],
+    });
+    let resolveFirst: (value: never) => void = () => {};
+    mockGetRunRoute.mockImplementation((runId: string) =>
+      runId === "1"
+        ? new Promise((resolve) => (resolveFirst = resolve as never))
+        : Promise.resolve({ roadPath: [{ lat: 2, lng: 2 }, { lat: 2.1, lng: 2.1 }], fallbackUsed: false, stops: [], confirmed: true }),
+    );
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByText("2호차 · 등원"));
+    await waitFor(() => expect(mockMapSurface.mock.calls.at(-1)?.[0].polylines?.length).toBeGreaterThan(0));
+
+    await act(async () => {
+      resolveFirst({ roadPath: [{ lat: 1, lng: 1 }, { lat: 1.1, lng: 1.1 }], fallbackUsed: false, stops: [], confirmed: true } as never);
+    });
+
+    const polylines = mockMapSurface.mock.calls.at(-1)?.[0].polylines ?? [];
+    expect(polylines.every((line) => line.points[0].lat === 2)).toBe(true);
   });
 });

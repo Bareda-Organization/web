@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import {
@@ -26,6 +26,7 @@ import {
 import { getRunRoute } from "@/features/route";
 import { getAcademyRunsLive, getAllAcademies } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { emergencyTypeLabel } from "../lib/emergencyType";
 import { RunRosterDialog } from "./RunRosterDialog";
 import {
   StyledFilterRow,
@@ -74,6 +75,12 @@ const DIRECTION_LABEL: Record<RunLiveItemResponseTypes["direction"], string> = {
 // §6.8~§6.9 전체 관제 — 학원별 실시간 회차(O-05·O-06). 메인 관리자는 학원 경계를 넘는
 // 유일한 역할이라(BRIEF-a1.md §2) 학원 선택 드롭다운이 이 화면의 진입점이다 — 관계자
 // 대시보드처럼 학원 하나로 고정된 화면이 아니다.
+// 실시간 비상 알림 한 건 — 발생(raised)과 취소(canceled) 모두 그 신고(emergencyId) 자리에 남는다.
+type LiveEmergencyAlert = { emergencyId: string; state: "raised" | "canceled"; busNo: string; type?: string };
+
+// 방송 이벤트로 회차 목록을 다시 읽을 때 겹친 이벤트를 한 번으로 묶는 대기 시간.
+const RUNS_REFRESH_DEBOUNCE_MS = 300;
+
 export const MonitoringPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
   const [academyId, setAcademyId] = useState<string | null>(null);
@@ -82,7 +89,8 @@ export const MonitoringPage = () => {
   const [loadingAcademies, setLoadingAcademies] = useState(true);
   const [loadingRuns, setLoadingRuns] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [liveAlert, setLiveAlert] = useState<string | null>(null);
+  // F03-05 — 비상 알림은 한 줄이 아니라 목록이다. 건마다 emergencyId 로 구분해 나중 이벤트가 앞 이벤트를 덮지 않는다.
+  const [liveAlerts, setLiveAlerts] = useState<LiveEmergencyAlert[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -178,24 +186,32 @@ export const MonitoringPage = () => {
     };
   }, []);
 
+  // F03-09 — 요청이 겹치면 마지막에 보낸 요청의 응답만 반영한다(학원을 바꾼 뒤 옛 학원의 늦은 응답이 목록을 덮지 않게).
+  const runsRequestRef = useRef(0);
   const loadRuns = useCallback(async (id: string) => {
+    const requestId = ++runsRequestRef.current;
     setLoadingRuns(true);
     try {
       const data = await getAcademyRunsLive(id);
+      if (requestId !== runsRequestRef.current) return;
       setRuns(data.runs);
       setError(null);
     } catch (cause) {
+      if (requestId !== runsRequestRef.current) return;
+      // 7초 갱신 한 번의 실패가 지도의 버스를 지우지 않게 이미 받은 목록은 둔다.
       setError(cause instanceof ApiError ? cause.message : "실시간 회차를 불러오지 못했습니다");
-      setRuns([]);
     } finally {
-      setLoadingRuns(false);
+      if (requestId === runsRequestRef.current) setLoadingRuns(false);
     }
   }, []);
 
   // R15-T2 목표 4 — 버스를 고르면 그 노선을 지도에 그린다. 같은 버스를 다시 고르면
   // 선택을 해제한다(DashboardPage.tsx 와 같은 토글).
+  // F03-09 — 버스를 연달아 고르면 마지막에 고른 버스의 노선만 지도에 그린다.
+  const routeRequestRef = useRef(0);
   const handleSelectBus = useCallback(
     async (runId: string) => {
+      const routeRequestId = ++routeRequestRef.current;
       if (selectedRunId === runId) {
         setSelectedRunId(null);
         setRoutePolylines([]);
@@ -214,6 +230,7 @@ export const MonitoringPage = () => {
       const runStatus = runs.find((run) => run.runId === runId)?.runStatus ?? "idle";
       try {
         const route = await getRunRoute(runId);
+        if (routeRequestId !== routeRequestRef.current) return;
         // R18-B2 — 좌표 0개=데이터 부재, 근사 경로 안내는 실제로 그려졌을 때만 켜는
         // 판단을 `features/map`(`buildRouteDisplayState`)이 세 화면 몫을 한 곳에서 한다.
         const display = buildRouteDisplayState(runId, runStatus, route);
@@ -224,6 +241,7 @@ export const MonitoringPage = () => {
         setRoutePlanned(display.planned);
         setRouteStopMarkers(display.stopMarkers);
       } catch (cause) {
+        if (routeRequestId !== routeRequestRef.current) return;
         setRoutePolylines([]);
         setRouteFallback(false);
         setRouteMissing(false);
@@ -257,6 +275,23 @@ export const MonitoringPage = () => {
   // 판단(payload 조각으로 목록 구조를 재구성하지 않는다, 보고서 §1).
   // `emergency_raised` 는 학원 필터와 무관하게 항상 띄운다 — Goal 8 이 요구하는
   // "모든 학원의 실시간 갱신"의 일부다.
+  // F03-10 — 이 채널은 전 학원을 방송한다. 지금 보는 학원 목록에 있는 회차의 이벤트만 재조회하고,
+  // 잇단 이벤트는 짧게 묶어 한 번만 읽는다.
+  const runsRef = useRef(runs);
+  useEffect(() => {
+    runsRef.current = runs;
+  });
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleRunsRefresh = useCallback(
+    (id: string) => {
+      if (refreshTimerRef.current !== null) return;
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null;
+        void loadRuns(id);
+      }, RUNS_REFRESH_DEBOUNCE_MS);
+    },
+    [loadRuns],
+  );
   const handleEnvelope = useCallback(
     (envelope: WebSocketEnvelope) => {
       switch (envelope.event) {
@@ -275,20 +310,27 @@ export const MonitoringPage = () => {
         case "rider_changed":
         case "run_started":
         case "run_ended":
-          if (academyId != null) {
-            loadRuns(academyId);
+          if (academyId != null && runsRef.current.some((run) => String(run.runId) === envelope.runId)) {
+            scheduleRunsRefresh(academyId);
           }
           return;
         case "emergency_raised": {
           const payload = parseWsEmergencyRaisedPayload(envelope.payload);
-          setLiveAlert(`비상 상황 발생 — ${payload.busNo} (${payload.type})`);
+          setLiveAlerts((prev) => [
+            ...prev.filter((alert) => alert.emergencyId !== payload.emergencyId),
+            { emergencyId: payload.emergencyId, state: "raised", busNo: payload.busNo, type: payload.type },
+          ]);
           return;
         }
-        // W3 — 발신 후 1분 안 취소(§4.14). 같은 신고를 닫는 통지라 기존 알림을
-        // 취소 문구로 덮어쓴다.
+        // W3 — 발신 후 1분 안 취소(§4.14). 같은 신고(emergencyId)의 알림만 취소 문구로 바꾼다 —
+        // 다른 버스의 진행 중인 비상은 그대로 둔다.
         case "emergency_canceled": {
           const payload = parseWsEmergencyCanceledPayload(envelope.payload);
-          setLiveAlert(`비상 알림 취소 — ${payload.busNo}`);
+          setLiveAlerts((prev) =>
+            prev.some((alert) => alert.emergencyId === payload.emergencyId)
+              ? prev.map((alert) => (alert.emergencyId === payload.emergencyId ? { ...alert, state: "canceled" as const } : alert))
+              : [...prev, { emergencyId: payload.emergencyId, state: "canceled", busNo: payload.busNo }],
+          );
           return;
         }
         default:
@@ -297,7 +339,7 @@ export const MonitoringPage = () => {
           return;
       }
     },
-    [academyId, loadRuns],
+    [academyId, scheduleRunsRefresh],
   );
   const { connectionState, reconnect } = useRealtimeChannel(adminLiveDestination(), handleEnvelope);
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `runs` 는 REST
@@ -322,6 +364,11 @@ export const MonitoringPage = () => {
     return () => {
       cancelled = true;
       clearInterval(timer);
+      // 학원을 바꾸거나 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
+      if (refreshTimerRef.current !== null) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     };
   }, [academyId, loadRuns]);
 
@@ -362,7 +409,26 @@ export const MonitoringPage = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      {liveAlert ? <AlertBanner tone="missed" title={liveAlert} /> : null}
+      {liveAlerts.map((alert) => (
+        <AlertBanner
+          key={alert.emergencyId}
+          tone={alert.state === "raised" ? "missed" : "info"}
+          title={
+            alert.state === "raised"
+              ? `비상 상황 발생 — ${alert.busNo} (${emergencyTypeLabel(alert.type ?? "")})`
+              : `비상 알림 취소 — ${alert.busNo}`
+          }
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLiveAlerts((prev) => prev.filter((item) => item.emergencyId !== alert.emergencyId))}
+            >
+              닫기
+            </Button>
+          }
+        />
+      ))}
 
       {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
 
@@ -389,7 +455,11 @@ export const MonitoringPage = () => {
         <Select
           label="학원"
           value={academyId ?? ""}
-          onChange={(event) => setAcademyId(event.target.value)}
+          onChange={(event) => {
+            // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
+            setRuns([]);
+            setAcademyId(event.target.value);
+          }}
           options={academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))}
           disabled={loadingAcademies || academies.length === 0}
         />

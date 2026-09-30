@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ForceConfirmPage } from "./ForceConfirmPage";
 import { getAcademyRunsLive, getAllAcademies } from "../api";
@@ -64,5 +64,44 @@ describe("ForceConfirmPage — 학원 선택 목록은 전체 학원", () => {
     render(<ForceConfirmPage />);
 
     expect(await screen.findByRole("option", { name: "학원25 (서울)" })).toBeInTheDocument();
+  });
+});
+
+// F03-11 — "확정 예정" 열이 실제로는 출발 예정 시각(est_depart_time)이었다. 확정 시각(출발−30분)과 30분 이상 다르다.
+describe("ForceConfirmPage — 열 이름", () => {
+  it("시각 열은 출발 시각·출발 예정(추정)으로 적고 '확정 예정' 이라 하지 않는다", async () => {
+    mockGetAcademies.mockResolvedValue([{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const }]);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseRun] });
+
+    render(<ForceConfirmPage />);
+
+    expect(await screen.findByText("출발 시각")).toBeInTheDocument();
+    expect(screen.getByText("출발 예정(추정)")).toBeInTheDocument();
+    expect(screen.queryByText("확정 예정")).not.toBeInTheDocument();
+  });
+});
+
+// F03-09(c) — 학원을 바꿨는데 옛 학원의 대기 회차 응답이 늦게 오면 다른 학원 회차에 "강제 확정" 을 누를 수 있다.
+describe("ForceConfirmPage — 늦은 응답이 새 학원 선택을 덮지 않음", () => {
+  it("학원을 A→B 로 바꾼 뒤 A 의 응답이 늦게 와도 B 의 회차만 보인다", async () => {
+    const base = { code: "C", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
+    mockGetAcademies.mockResolvedValue([{ id: "1", name: "가 학원", ...base }, { id: "2", name: "나 학원", ...base }]);
+    let resolveA: (value: { runs: (typeof baseRun)[] }) => void = () => {};
+    mockGetRunsLive.mockImplementation((academyId: string) =>
+      academyId === "1"
+        ? new Promise((resolve) => (resolveA = resolve))
+        : Promise.resolve({ runs: [{ ...baseRun, runId: "20", busNo: "B학원 버스" }] }),
+    );
+    render(<ForceConfirmPage />);
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("1"));
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    expect(await screen.findByText("B학원 버스")).toBeInTheDocument();
+    await act(async () => {
+      resolveA({ runs: [{ ...baseRun, runId: "10", busNo: "A학원 버스" }] });
+    });
+
+    expect(screen.queryByText("A학원 버스")).not.toBeInTheDocument();
+    expect(screen.getByText("B학원 버스")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable, Select } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -50,17 +50,24 @@ export const ForceConfirmPage = () => {
     };
   }, []);
 
+  // F03-09 — 학원을 바꾼 뒤 옛 학원의 늦은 응답이 목록을 덮으면 다른 학원 회차에 "강제 확정" 을 누를 수 있다.
+  // 요청이 겹치면 마지막에 보낸 요청의 응답만 반영한다.
+  const runsRequestRef = useRef(0);
   const loadRuns = useCallback(async (id: string) => {
+    const requestId = ++runsRequestRef.current;
     setLoadingRuns(true);
+    // 학원이 바뀐 직후 옛 학원의 대기 회차가 남아 있지 않게 먼저 비운다.
+    setRuns([]);
     try {
       const data = await getAcademyRunsLive(id);
+      if (requestId !== runsRequestRef.current) return;
       setRuns(data.runs.filter((run) => run.runStatus === "idle"));
       setError(null);
     } catch (cause) {
+      if (requestId !== runsRequestRef.current) return;
       setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
-      setRuns([]);
     } finally {
-      setLoadingRuns(false);
+      if (requestId === runsRequestRef.current) setLoadingRuns(false);
     }
   }, []);
 
@@ -76,8 +83,9 @@ export const ForceConfirmPage = () => {
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },
     { key: "direction", label: "구간", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
-    { key: "departTime", label: "예정 출발", render: (row) => formatDateTime(row.departTime) },
-    { key: "estDepartTime", label: "확정 예정", render: (row) => formatDateTime(row.estDepartTime) },
+    { key: "departTime", label: "출발 시각", render: (row) => formatDateTime(row.departTime) },
+    // §6.8 est_depart_time 은 출발 예정(추정) 시각이다 — 확정 시각(출발 30분 전)이 아니다.
+    { key: "estDepartTime", label: "출발 예정(추정)", render: (row) => formatDateTime(row.estDepartTime) },
     {
       // W4 — 확정이 계속 실패하는 회차를 이 목록에서 바로 알아본다(`API_SPEC §6.8`
       // `consecutive_failures`, BR-047 · `UF-O-07`). 0(성공)이면 표시하지 않는다.

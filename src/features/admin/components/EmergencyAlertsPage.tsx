@@ -5,7 +5,8 @@ import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getEmergencies } from "../api";
-import type { EmergencyItemResponseTypes, EmergencyType } from "../types";
+import type { EmergencyItemResponseTypes } from "../types";
+import { emergencyTypeLabel } from "../lib/emergencyType";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
 import { StyledEmergencyAlertsLayout, StyledEmergencyHeaderRow } from "./EmergencyAlertsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -18,19 +19,8 @@ const STATUS_FILTER_OPTIONS = [
   { value: "canceled", label: "취소됨" },
 ];
 
-// §5.16 이 정의한 실제 type 값(소문자 스네이크케이스). 서버 직렬화 정정(BE-R1 목표 3)
-// 이후로는 항상 이 형태로 내려오므로 소문자 정규화 없이 그대로 조회한다.
-const TYPE_LABEL: Record<string, string> = {
-  accident: "사고",
-  vehicle_fault: "차량 고장",
-  student_emergency: "학생 응급",
-  etc: "기타",
-};
-
 // 발신 후 경과 초 → "N분" (1분 미만은 그대로 알린다).
 const formatElapsed = (seconds: number): string => (seconds < 60 ? "1분 미만" : `${Math.floor(seconds / 60)}분`);
-
-const toTypeLabel = (type: EmergencyType) => TYPE_LABEL[type] ?? type;
 
 // 비상 알림은 지연 인지 자체가 위험이라(§6.11) 다른 화면보다 짧은 5초로 폴링한다.
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
@@ -52,7 +42,7 @@ export const EmergencyAlertsPage = () => {
 
   const columns: RosterColumn<EmergencyItemResponseTypes>[] = [
     { key: "academy", label: "학원", render: (row) => row.academy.name },
-    { key: "type", label: "유형", render: (row) => toTypeLabel(row.type) },
+    { key: "type", label: "유형", render: (row) => emergencyTypeLabel(row.type) },
     { key: "busNo", label: "버스" },
     { key: "raisedBy", label: "발신자", render: (row) => `${row.raisedBy.name ?? "미상"} (${formatRole(row.raisedBy.role)})` },
     // §6.11 elapsed_since_raised — 관계자가 몇 분째 응답하지 않았는지가 이 화면의 핵심 정보다(미응답 지연 인지).
