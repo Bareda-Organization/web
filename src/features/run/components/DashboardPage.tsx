@@ -11,7 +11,7 @@ import {
   parseWsPositionPayload,
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
-import { useRealtimeChannel } from "@/shared/hooks";
+import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -159,28 +159,34 @@ export const DashboardPage = () => {
   const routeSeq = useRef(0);
 
   // silent — 주기·이벤트 갱신. 실패해도 이미 보이던 지표·표를 오류로 덮지 않는다(다음 주기에 회복).
-  const loadDashboard = useCallback(async (silent = false) => {
+  // 돌려주는 값은 폴링용 성공 여부다 — 실패하면 `usePolling` 이 간격을 늘린다.
+  const loadDashboard = useCallback(async (silent = false): Promise<boolean> => {
     const mine = ++dashboardSeq.current;
     try {
       const data = await getDashboard();
-      if (mine !== dashboardSeq.current) return;
+      if (mine !== dashboardSeq.current) return true;
       setMetrics(data.metrics);
       setRuns(data.runs);
       setError(null);
+      return true;
     } catch (cause) {
-      if (silent || mine !== dashboardSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "대시보드를 불러오지 못했습니다");
+      if (!silent && mine === dashboardSeq.current) {
+        setError(cause instanceof ApiError ? cause.message : "대시보드를 불러오지 못했습니다");
+      }
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const loadLive = useCallback(async () => {
+  const loadLive = useCallback(async (): Promise<boolean> => {
     try {
       const data = await getRunsLive();
       setLiveRuns(data.runs);
+      return true;
     } catch {
       // 실시간 카드는 보조 정보라 실패해도 본문 오류로 승격하지 않는다 — 다음 폴링에서 회복.
+      return false;
     }
   }, []);
 
@@ -318,18 +324,17 @@ export const DashboardPage = () => {
         await loadLive();
       }
     })();
-    const timer = setInterval(() => {
-      if (!cancelled) {
-        loadLive();
-        // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다.
-        loadDashboard(true);
-      }
-    }, LIVE_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
   }, [loadDashboard, loadLive]);
+
+  // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다. 응답을 받은 뒤 다음 요청을 예약하고,
+  // 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  usePolling(async () => {
+    const results = await Promise.all([loadLive(), loadDashboard(true)]);
+    return results.every(Boolean);
+  }, LIVE_POLL_INTERVAL_MS);
 
   const noShowRuns = runs.filter((run) => run.noShowCases.length > 0);
 

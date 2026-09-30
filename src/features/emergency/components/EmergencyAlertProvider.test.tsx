@@ -12,7 +12,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 const mockPush = vi.fn();
 
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
-vi.mock("@/shared/hooks", () => ({
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
     capturedOnEnvelope = onEnvelope;
     return { connectionState: "connected" };

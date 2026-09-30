@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
-import { useRealtimeChannel } from "@/shared/hooks";
+import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import {
   academyLiveDestination,
   parseWsEmergencyCanceledPayload,
@@ -41,11 +41,12 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
   const requestSeq = useRef(0);
 
   // 서버의 미확인(open) 목록이 기준이다 — 통지를 놓쳤거나 새로고침한 뒤에도 미확인 신고가 다시 뜬다.
-  const load = useCallback(async () => {
+  // 돌려주는 값은 폴링용 성공 여부다(`usePolling` 이 실패하면 간격을 늘린다).
+  const load = useCallback(async (): Promise<boolean> => {
     const mine = ++requestSeq.current;
     try {
       const data = await getEmergencies({ status: "open" });
-      if (mine !== requestSeq.current) return;
+      if (mine !== requestSeq.current) return true;
       setAlerts(
         data.items.map((item) => ({
           emergencyId: item.emergencyId,
@@ -54,8 +55,10 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
           raisedByName: item.raisedBy.name,
         })),
       );
+      return true;
     } catch {
       // 다음 주기에 다시 시도한다 — 실패했다고 이미 뜬 팝업을 지우지 않는다.
+      return false;
     }
   }, []);
 
@@ -63,9 +66,10 @@ export const EmergencyAlertProvider = ({ children }: { children: React.ReactNode
     (async () => {
       await load();
     })();
-    const timer = setInterval(load, EMERGENCY_POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
   }, [load]);
+
+  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  usePolling(load, EMERGENCY_POLL_INTERVAL_MS);
 
   const handleEnvelope = useCallback(
     (envelope: WebSocketEnvelope) => {

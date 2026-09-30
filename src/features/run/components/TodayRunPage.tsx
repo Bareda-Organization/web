@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
+import { usePolling } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -233,15 +234,19 @@ export const TodayRunPage = () => {
   );
 
   // silent — 주기 갱신. 실패해도 이미 뜬 화면을 오류로 덮지 않는다.
-  const loadRuns = useCallback(async (silent = false) => {
+  // 돌려주는 값은 폴링용 성공 여부다(`usePolling` 이 실패하면 간격을 늘린다).
+  const loadRuns = useCallback(async (silent = false): Promise<boolean> => {
     try {
       const data = await getDashboard();
       setRuns(data.runs);
       setRunsLoaded(true);
+      return true;
     } catch (cause) {
-      if (silent) return;
-      setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
-      setLoading(false);
+      if (!silent) {
+        setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
+        setLoading(false);
+      }
+      return false;
     }
   }, []);
 
@@ -250,19 +255,21 @@ export const TodayRunPage = () => {
   const liveSeq = useRef(0);
   const routeSeq = useRef(0);
 
-  const loadRoster = useCallback(async (runId: string, silent = false) => {
+  const loadRoster = useCallback(async (runId: string, silent = false): Promise<boolean> => {
     const mine = ++rosterSeq.current;
     if (!silent) setLoading(true);
     try {
       const items = await getRunRoster(runId);
-      if (mine !== rosterSeq.current) return;
+      if (mine !== rosterSeq.current) return true;
       setRoster(items);
       setError(null);
+      return true;
     } catch (cause) {
-      if (mine !== rosterSeq.current) return;
+      if (mine !== rosterSeq.current) return false;
       setError(cause instanceof ApiError ? cause.message : "명단을 불러오지 못했습니다");
       // 주기 갱신이 한 번 실패했다고 보이던 명단을 지우지 않는다.
       if (!silent) setRoster([]);
+      return false;
     } finally {
       if (mine === rosterSeq.current) setLoading(false);
     }
@@ -271,14 +278,16 @@ export const TodayRunPage = () => {
   // §5.18 은 `status='moving'` 인 회차만 돌려준다 — 선택된 회차가 없으면(대기·종료)
   // `liveRun` 은 null 로 남고 지도는 기본 좌표를 보여준다. 위치 카드는 보조 정보라
   // 실패해도 본문 오류로 승격하지 않는다(DashboardPage.tsx 의 loadLive 와 같은 판단).
-  const loadLiveRun = useCallback(async (runId: string, silent = false) => {
+  const loadLiveRun = useCallback(async (runId: string, silent = false): Promise<boolean> => {
     const mine = ++liveSeq.current;
     try {
       const data = await getRunsLive();
-      if (mine !== liveSeq.current) return;
+      if (mine !== liveSeq.current) return true;
       setLiveRun(data.runs.find((run) => run.runId === runId) ?? null);
+      return true;
     } catch {
       if (mine === liveSeq.current && !silent) setLiveRun(null);
+      return false;
     }
   }, []);
 
@@ -352,15 +361,17 @@ export const TodayRunPage = () => {
 
   // F01-03 — 종료되지 않은 회차는 화면을 열어 둔 동안 회차 상태·명단·위치를 다시 불러온다. 표를 '불러오는 중' 으로
   // 뒤집지 않도록 전부 silent 다.
-  useEffect(() => {
-    if (selectedRunId == null || selectedRunStatus == null || selectedRunStatus === "finished") return;
-    const timer = setInterval(() => {
-      void loadRuns(true);
-      void loadRoster(selectedRunId, true);
-      void loadLiveRun(selectedRunId, true);
-    }, LIVE_POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [selectedRunId, selectedRunStatus, loadRuns, loadRoster, loadLiveRun]);
+  // 응답을 받은 뒤 다음 요청을 예약한다 — 명단 조회는 서버가 호출마다 감사 기록을 남기므로 요청이 겹치면 기록도 겹친다.
+  // 숨은 탭에서는 멈추고 실패하면 간격을 늘린다. 간격(7초) 자체는 그대로다(R46-WEB C).
+  usePolling(
+    async () => {
+      if (selectedRunId == null) return true;
+      const results = await Promise.all([loadRuns(true), loadRoster(selectedRunId, true), loadLiveRun(selectedRunId, true)]);
+      return results.every(Boolean);
+    },
+    LIVE_POLL_INTERVAL_MS,
+    selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
+  );
 
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },

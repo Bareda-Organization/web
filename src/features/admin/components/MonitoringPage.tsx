@@ -10,7 +10,7 @@ import {
   parseWsPositionPayload,
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
-import { useRealtimeChannel } from "@/shared/hooks";
+import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -202,18 +202,21 @@ export const MonitoringPage = () => {
 
   // F03-09 — 요청이 겹치면 마지막에 보낸 요청의 응답만 반영한다(학원을 바꾼 뒤 옛 학원의 늦은 응답이 목록을 덮지 않게).
   const runsRequestRef = useRef(0);
-  const loadRuns = useCallback(async (id: string) => {
+  // 돌려주는 값은 폴링용 성공 여부다(`usePolling` 이 실패하면 간격을 늘린다).
+  const loadRuns = useCallback(async (id: string): Promise<boolean> => {
     const requestId = ++runsRequestRef.current;
     setLoadingRuns(true);
     try {
       const data = await getAcademyRunsLive(id);
-      if (requestId !== runsRequestRef.current) return;
+      if (requestId !== runsRequestRef.current) return true;
       setRuns(data.runs);
       setError(null);
+      return true;
     } catch (cause) {
-      if (requestId !== runsRequestRef.current) return;
+      if (requestId !== runsRequestRef.current) return false;
       // 7초 갱신 한 번의 실패가 지도의 버스를 지우지 않게 이미 받은 목록은 둔다.
       setError(cause instanceof ApiError ? cause.message : "실시간 회차를 불러오지 못했습니다");
+      return false;
     } finally {
       if (requestId === runsRequestRef.current) setLoadingRuns(false);
     }
@@ -373,18 +376,10 @@ export const MonitoringPage = () => {
     if (academyId == null) {
       return;
     }
-    let cancelled = false;
     (async () => {
       await loadRuns(academyId);
     })();
-    const timer = setInterval(() => {
-      if (!cancelled) {
-        loadRuns(academyId);
-      }
-    }, LIVE_POLL_INTERVAL_MS);
     return () => {
-      cancelled = true;
-      clearInterval(timer);
       // 학원을 바꾸거나 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
       if (refreshTimerRef.current !== null) {
         clearTimeout(refreshTimerRef.current);
@@ -392,6 +387,9 @@ export const MonitoringPage = () => {
       }
     };
   }, [academyId, loadRuns]);
+
+  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  usePolling(() => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)), LIVE_POLL_INTERVAL_MS, academyId != null);
 
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },

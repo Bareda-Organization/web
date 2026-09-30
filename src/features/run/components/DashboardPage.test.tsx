@@ -54,7 +54,8 @@ const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelop
   capturedOnEnvelope = onEnvelope;
   return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
-vi.mock("@/shared/hooks", () => ({
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
     mockUseRealtimeChannel(destination, onEnvelope),
 }));
@@ -237,29 +238,26 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   });
 
   // §5.18 폴링(getRunsLive, 7초 간격)은 화면을 떠난 뒤에도 계속 돌면 요청이 쌓이고
-  // 여러 화면을 오갈수록 겹친다 — 언마운트 시 setInterval 로 만든 타이머를 실제로
-  // clearInterval 하는지를 이 검사 하나가 무는 유일한 대상이다. 콜백 안의 cancelled
-  // 플래그만으로는 이 결함을 못 잡는다(호출은 막아도 타이머 자체는 계속 살아있다) —
-  // 그래서 호출 횟수가 아니라 clearInterval 이 그 타이머 id 로 불렸는지를 직접 본다.
-  it("언마운트하면 폴링에 쓰던 setInterval 타이머를 clearInterval 로 정리한다", () => {
-    const setIntervalSpy = vi.spyOn(global, "setInterval");
-    const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+  // 여러 화면을 오갈수록 겹친다 — 언마운트 시 예약해 둔 다음 요청 타이머(setTimeout)를 실제로
+  // clearTimeout 하는지를 이 검사 하나가 무는 유일한 대상이다. 호출 횟수가 아니라 clearTimeout 이
+  // 그 타이머 id 로 불렸는지를 직접 본다. 타이머는 응답을 받은 뒤에 예약되므로(usePolling) 폴링 간격(7000ms)짜리를 찾는다.
+  it("언마운트하면 폴링에 예약해 둔 다음 요청 타이머를 clearTimeout 으로 정리한다", () => {
+    const setTimeoutSpy = vi.spyOn(global, "setTimeout");
+    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
 
-    // render() 는 act() 로 감싸여 있어 초기 렌더의 useEffect(그 안의 setInterval 호출 포함)가
-    // 이 시점에 이미 동기적으로 반영돼 있다 — waitFor 는 필요 없다(오히려 waitFor 자신도
-    // 내부적으로 setInterval 로 폴링해 이 스파이에 잡히므로 호출 수를 오염시킨다).
     const { unmount } = render(<DashboardPage />);
-    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
-    const timerId = setIntervalSpy.mock.results[0]!.value;
+    const pollCallIndex = setTimeoutSpy.mock.calls.findIndex(([, delay]) => delay === 7000);
+    expect(pollCallIndex).toBeGreaterThanOrEqual(0);
+    const timerId = setTimeoutSpy.mock.results[pollCallIndex]!.value;
 
     unmount();
 
-    expect(clearIntervalSpy).toHaveBeenCalledWith(timerId);
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(timerId);
 
-    setIntervalSpy.mockRestore();
-    clearIntervalSpy.mockRestore();
+    setTimeoutSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
   });
 });
 
