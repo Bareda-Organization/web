@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getBuses } from "@/features/bus";
-import type { BusItemResponseTypes } from "@/features/bus";
+import { useState } from "react";
+import { BusOptionsNotice, useBusOptions } from "@/features/bus";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select, Switch } from "@/shared/ui";
 import { createRoute, updateRoute } from "../api";
@@ -33,8 +32,7 @@ const DIRECTION_OPTIONS: { value: RunDirection; label: string }[] = [
 // §5.9 POST·PATCH /staff/routes(RTE-01) — 편성 등록·수정. bus_id·weekday·direction
 // 조합이 UNIQUE 라(uk_route_bus_weekday_direction), 하나만 바꿔도 409 DUPLICATE_ROUTE 가 날 수 있다.
 export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
-  const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<string | undefined>(route?.busId);
+  const [selectedBusId, setBusId] = useState<string | undefined>(route?.busId);
   const [weekday, setWeekday] = useState<Weekday>(route?.weekday ?? "mon");
   const [direction, setDirection] = useState<RunDirection>(route?.direction ?? "to_academy");
   const [name, setName] = useState(route?.name ?? "");
@@ -42,22 +40,9 @@ export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // 편성이 늘어날수록 100건을 넘길 수 있으나, 선택지 목록이라 1페이지로 충분한
-        // 규모를 가정한다 — 넘는 학원이 나오면 검색형 Select 로 바꿔야 한다(확신 없는 지점).
-        const data = await getBuses(0, 100);
-        setBuses(data.items);
-        if (busId === undefined && data.items.length > 0) {
-          setBusId(data.items[0].id);
-        }
-      } catch {
-        // 차량 목록 실패는 이 폼의 본체가 아니다 — 조용히 빈 목록으로 둔다.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const busOptions = useBusOptions(route ? { id: route.busId, busNo: route.busNo } : undefined);
+  // 등록 폼은 목록의 첫 차량이 기본 선택이다.
+  const busId = selectedBusId ?? busOptions.buses[0]?.id;
 
   const canSubmit = busId !== undefined && !submitting;
 
@@ -102,10 +87,11 @@ export const RouteForm = ({ route, onClose, onDone }: RouteFormProps) => {
     >
       <Select
         label="차량"
-        options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
+        options={busOptions.options}
         value={busId ?? ""}
         onChange={(event) => setBusId(event.target.value)}
       />
+      <BusOptionsNotice error={busOptions.error} hasMore={busOptions.hasMore} onRetry={busOptions.reload} />
       <Select
         label="요일"
         options={WEEKDAY_OPTIONS}

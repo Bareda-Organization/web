@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getBuses } from "@/features/bus";
-import type { BusItemResponseTypes } from "@/features/bus";
+import { useState } from "react";
+import { BusOptionsNotice, useBusOptions } from "@/features/bus";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select, Switch } from "@/shared/ui";
 import { createSchedule, updateSchedule } from "../api";
@@ -35,8 +34,7 @@ const DIRECTION_OPTIONS: { value: ScheduleDirection; label: string }[] = [
 // 409 DUPLICATE_SCHEDULE 이 날 수 있다(route 편성의 uk_route_bus_weekday_direction 과
 // 같은 형태이나 이쪽은 depart_time 까지 넷을 묶는다는 점이 다르다).
 export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) => {
-  const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<string | undefined>(schedule?.busId);
+  const [selectedBusId, setBusId] = useState<string | undefined>(schedule?.busId);
   const [weekday, setWeekday] = useState<ScheduleWeekday>(schedule?.weekday ?? "mon");
   const [direction, setDirection] = useState<ScheduleDirection>(schedule?.direction ?? "to_academy");
   const [departTime, setDepartTime] = useState(schedule?.departTime ?? "");
@@ -49,22 +47,9 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // route 편성 폼과 같은 가정(§2 확신 없는 지점 인계) — 학원당 차량이 100대를
-        // 넘으면 검색형 Select 로 바꿔야 한다.
-        const data = await getBuses(0, 100);
-        setBuses(data.items);
-        if (busId === undefined && data.items.length > 0) {
-          setBusId(data.items[0].id);
-        }
-      } catch {
-        // 차량 목록 실패는 이 폼의 본체가 아니다 — 조용히 빈 목록으로 둔다.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const busOptions = useBusOptions(schedule ? { id: schedule.busId, busNo: schedule.busNo } : undefined);
+  // 등록 폼은 목록의 첫 차량이 기본 선택이다.
+  const busId = selectedBusId ?? busOptions.buses[0]?.id;
 
   const canSubmit =
     busId !== undefined &&
@@ -125,10 +110,11 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
     >
       <Select
         label="차량"
-        options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
+        options={busOptions.options}
         value={busId ?? ""}
         onChange={(event) => setBusId(event.target.value)}
       />
+      <BusOptionsNotice error={busOptions.error} hasMore={busOptions.hasMore} onRetry={busOptions.reload} />
       <Select
         label="요일"
         options={WEEKDAY_OPTIONS}

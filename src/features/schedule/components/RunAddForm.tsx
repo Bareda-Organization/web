@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getBuses } from "@/features/bus";
-import type { BusItemResponseTypes } from "@/features/bus";
+import { useState } from "react";
+import { BusOptionsNotice, useBusOptions } from "@/features/bus";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select } from "@/shared/ui";
 import { createRun } from "../api";
@@ -22,8 +21,7 @@ const DIRECTION_OPTIONS: { value: ScheduleDirection; label: string }[] = [
 // §5.10 POST /staff/runs(SCH-03) — 특정일 회차 임시 추가. 정규 스케줄과 무관한
 // 1회성 운행이라 만들어진 회차는 schedule_id 가 비어 있다(실측 확인, api/index.ts 주석).
 export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) => {
-  const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
-  const [busId, setBusId] = useState<string | undefined>(undefined);
+  const [selectedBusId, setBusId] = useState<string | undefined>(undefined);
   const [direction, setDirection] = useState<ScheduleDirection>("to_academy");
   const [departTime, setDepartTime] = useState("");
   const [originName, setOriginName] = useState("");
@@ -32,17 +30,9 @@ export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) =>
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getBuses(0, 100);
-        setBuses(data.items);
-        if (data.items.length > 0) setBusId(data.items[0].id);
-      } catch {
-        // 차량 목록 실패는 이 폼의 본체가 아니다 — 조용히 빈 목록으로 둔다.
-      }
-    })();
-  }, []);
+  const busOptions = useBusOptions();
+  // 목록의 첫 차량이 기본 선택이다.
+  const busId = selectedBusId ?? busOptions.buses[0]?.id;
 
   const canSubmit =
     busId !== undefined &&
@@ -94,10 +84,11 @@ export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) =>
     >
       <Select
         label="차량"
-        options={buses.map((bus) => ({ value: String(bus.id), label: `${bus.busNo} (${bus.plateNo})` }))}
+        options={busOptions.options}
         value={busId ?? ""}
         onChange={(event) => setBusId(event.target.value)}
       />
+      <BusOptionsNotice error={busOptions.error} hasMore={busOptions.hasMore} onRetry={busOptions.reload} />
       <Select
         label="방향"
         options={DIRECTION_OPTIONS}

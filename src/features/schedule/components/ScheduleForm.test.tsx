@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScheduleForm } from "./ScheduleForm";
 import { createSchedule, updateSchedule } from "../api";
-import { getBuses } from "@/features/bus";
+import { getBuses } from "@/features/bus/api";
 import { ApiError } from "@/shared/lib/http";
 
 // §5.10 SCH-01 · API_SPEC §1.9 — 등록이 409 DUPLICATE_SCHEDULE 로 거부되면
@@ -13,7 +13,7 @@ vi.mock("../api", () => ({
   updateSchedule: vi.fn(),
 }));
 
-vi.mock("@/features/bus", () => ({
+vi.mock("@/features/bus/api", () => ({
   getBuses: vi.fn(),
 }));
 
@@ -110,5 +110,40 @@ describe("ScheduleForm — F02-08 수정 반영 안내", () => {
     expect(
       await screen.findByText(/다른 회차\(임시 회차 등\)가 이미 그 자리를 차지해 스케줄 변경 전체가 반영되지 않았습니다/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {
+    mockGetBuses.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
+    mockGetBuses.mockResolvedValueOnce({
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      page: 0,
+      size: 100,
+      totalCount: 1,
+      hasNext: false,
+    });
+    render(<ScheduleForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText("차량 목록을 불러오지 못했습니다 — 서버 오류")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByRole("option", { name: "1호차 (12가3456)" })).toBeInTheDocument();
+    expect(screen.queryByText(/차량 목록을 불러오지 못했습니다/)).not.toBeInTheDocument();
+  });
+
+  it("차량이 100대를 넘으면 일부만 보인다고 알린다", async () => {
+    mockGetBuses.mockResolvedValue({
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      page: 0,
+      size: 100,
+      totalCount: 130,
+      hasNext: true,
+    });
+    render(<ScheduleForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText("차량이 100대를 넘어 앞의 100대만 보입니다")).toBeInTheDocument();
   });
 });
