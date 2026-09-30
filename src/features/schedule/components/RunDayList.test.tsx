@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunDayList } from "./RunDayList";
 import { getRuns } from "../api";
 import type { RunItemResponseTypes } from "../types";
@@ -45,5 +45,44 @@ describe("RunDayList — W4 연속 실패 표시", () => {
 
     await screen.findByText("정문 → 학원");
     expect(screen.queryByText(/연속 실패/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RunDayList — F02-07 기본 날짜는 한국 날짜", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("한국 시간 오전 8시(UTC 는 전날 23시)에 열면 날짜 칸이 한국의 오늘이고 그 날짜로 회차를 조회한다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-15T23:00:00Z"));
+    mockGetRuns.mockResolvedValue({ items: [] });
+    render(<RunDayList />);
+
+    expect(screen.getByLabelText("날짜")).toHaveValue("2026-09-16");
+    expect(mockGetRuns).toHaveBeenCalledWith("2026-09-16");
+  });
+});
+
+describe("RunDayList — F02-09 취소 버튼과 시각 표기", () => {
+  it("운행 전·확정 회차에만 취소 버튼이 있고 이동 중·종료 회차에는 없다", async () => {
+    mockGetRuns.mockResolvedValue({
+      items: [
+        { ...baseRun, id: "1", status: "idle", originName: "A" },
+        { ...baseRun, id: "2", status: "confirmed", originName: "B" },
+        { ...baseRun, id: "3", status: "moving", originName: "C" },
+        { ...baseRun, id: "4", status: "finished", originName: "D" },
+      ],
+    });
+    render(<RunDayList />);
+
+    await screen.findByText("A → 학원");
+    expect(screen.getAllByRole("button", { name: "취소" })).toHaveLength(2);
+  });
+
+  it("출발·확정 시각을 공용 형식(시:분)으로 보여 준다", async () => {
+    mockGetRuns.mockResolvedValue({ items: [baseRun] });
+    render(<RunDayList />);
+
+    expect(await screen.findByText("08:00")).toBeInTheDocument();
+    expect(screen.getByText("07:30")).toBeInTheDocument();
   });
 });
