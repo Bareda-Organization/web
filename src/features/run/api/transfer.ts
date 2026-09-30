@@ -50,3 +50,8 @@ export const postTransfer = async (
     },
   };
 };
+
+// DELETE /staff/transfers/{transferId} (§5.8.1, Ruling 369) — 반영 전(staged) 이동 대기를 지운다. 204 본문 부재.
+export const deleteTransfer = async (transferId: string): Promise<void> => {
+  await apiFetch(`/staff/transfers/${transferId}`, { method: "DELETE" });
+};

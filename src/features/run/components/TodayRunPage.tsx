@@ -27,6 +27,7 @@ import type {
 import { ForcedAddDialog } from "./ForcedAddDialog";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
 import { StudentTransferDialog } from "./StudentTransferDialog";
+import { TransferCancelDialog } from "./TransferCancelDialog";
 import {
   StyledTodayRunLayout,
   StyledMapTopRow,
@@ -76,6 +77,9 @@ const STATUS_PILL: Record<RosterStatus, "boarded" | "moving" | "missed" | "idle"
   no_show: "missed",
 };
 
+// 예정 명단에서 승하차지가 아직 정해지지 않은 학생(`stopName` null, §5.4)의 표기 — 표 칸과 묶음 머리줄이 같다.
+const UNASSIGNED_STOP = "승하차지 미지정";
+
 const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = {
   to_academy: "등원",
   from_academy: "하원",
@@ -117,6 +121,8 @@ export const TodayRunPage = () => {
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   // A-07 — [다른 버스로]를 누른 학생. null 이면 대화상자가 닫혀 있다.
   const [transferTarget, setTransferTarget] = useState<RosterItemResponseTypes | null>(null);
+  // A-07 — [이동 취소]를 누른 이동 대기 학생(§5.8.1). null 이면 확인 대화상자가 닫혀 있다.
+  const [cancelTarget, setCancelTarget] = useState<(RosterItemResponseTypes & { transferId: string }) | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [liveRun, setLiveRun] = useState<RunLiveItemResponseTypes | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른(=지금 화면에 뜬) 회차의 노선.
@@ -309,7 +315,7 @@ export const TodayRunPage = () => {
   const columns: RosterColumn<RosterItemResponseTypes>[] = [
     { key: "name", label: "이름" },
     { key: "className", label: "반", render: (row) => row.className ?? "-" },
-    { key: "stopName", label: "승하차지" },
+    { key: "stopName", label: "승하차지", render: (row) => row.stopName ?? UNASSIGNED_STOP },
     { key: "guardianPhone", label: "보호자 연락처" },
     {
       // R21-B 목표 2·3·4 — DashboardPage.tsx 와 같은 표기(예정/실제 구분, 시:분:초).
@@ -368,12 +374,23 @@ export const TodayRunPage = () => {
     {
       key: "transfer",
       label: "조정",
-      render: (row) =>
-        canTransfer && row.change !== "removed" ? (
+      // 이동 대기 행(transferId)은 다시 옮기면 서버가 TRANSFER_ALREADY_STAGED 로 거절한다(§5.8) —
+      // [다른 버스로] 대신 [이동 취소] 만 둔다. 취소한 뒤 다시 옮길 수 있다.
+      render: (row) => {
+        const { transferId } = row;
+        if (transferId != null) {
+          return (
+            <Button variant="ghost" size="sm" onClick={() => setCancelTarget({ ...row, transferId })}>
+              이동 취소
+            </Button>
+          );
+        }
+        return canTransfer && row.change !== "removed" ? (
           <Button variant="ghost" size="sm" onClick={() => setTransferTarget(row)}>
             다른 버스로
           </Button>
-        ) : null,
+        ) : null;
+      },
     },
   ];
 
@@ -464,7 +481,7 @@ export const TodayRunPage = () => {
               loading={loading}
               rows={roster}
               getRowKey={(row) => row.studentId}
-              groupBy={(row) => row.stopName ?? "승하차지 미지정"}
+              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
             />
           </StyledRosterScroll>
         </Card>
@@ -555,6 +572,18 @@ export const TodayRunPage = () => {
           onClose={() => setTransferTarget(null)}
           onDone={() => {
             setTransferTarget(null);
+            loadRoster(selectedRun.runId);
+            loadRuns();
+          }}
+        />
+      ) : null}
+
+      {cancelTarget && selectedRun ? (
+        <TransferCancelDialog
+          student={cancelTarget}
+          onClose={() => setCancelTarget(null)}
+          onDone={() => {
+            setCancelTarget(null);
             loadRoster(selectedRun.runId);
             loadRuns();
           }}

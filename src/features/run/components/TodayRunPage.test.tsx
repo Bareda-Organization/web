@@ -4,7 +4,7 @@ import { ApiError } from "@/shared/lib/http";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
 import { TodayRunPage } from "./TodayRunPage";
-import { getDashboard, getRunRoster, getRunsLive } from "../api";
+import { deleteTransfer, getDashboard, getRunRoster, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
@@ -24,6 +24,7 @@ vi.mock("../api", () => ({
   getRunsLive: vi.fn(),
   postForcedAdd: vi.fn(),
   postTransfer: vi.fn(),
+  deleteTransfer: vi.fn(),
   getManagers: vi.fn(),
   patchRunAssignment: vi.fn(),
 }));
@@ -53,6 +54,7 @@ const mockGetDashboard = vi.mocked(getDashboard);
 const mockGetRunRoster = vi.mocked(getRunRoster);
 const mockGetRunsLive = vi.mocked(getRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
+const mockDeleteTransfer = vi.mocked(deleteTransfer);
 
 // R15-T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
 // "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
@@ -91,6 +93,7 @@ const baseRoster: RosterItemResponseTypes[] = [
     name: "김학생",
     className: "1반",
     stopName: "정문",
+    transferId: null,
     guardianPhone: "010-1234-5678",
     change: null,
     status: "absent",
@@ -187,6 +190,88 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       await screen.findByText("김학생");
       expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
     });
+
+    // R36-FE FE1 — 이동 대기(§5.8 staged)로 들어온 행에만 [이동 취소](§5.8.1, Ruling 369).
+    describe("이동 취소(§5.8.1)", () => {
+      const idleDashboard = () => dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]);
+      const stagedRow: RosterItemResponseTypes = {
+        ...baseRoster[0],
+        studentId: "2",
+        name: "이대기",
+        change: "added",
+        transferId: "31",
+      };
+
+      it("transferId 가 있는 행에만 [이동 취소] 가 있고, 그 행에는 [다른 버스로] 를 두지 않는다", async () => {
+        mockRunIdParam = "7";
+        mockGetDashboard.mockResolvedValue(idleDashboard());
+        mockGetRunRoster.mockResolvedValue([baseRoster[0], stagedRow]);
+        render(<TodayRunPage />);
+
+        await screen.findByText("이대기");
+        expect(screen.getAllByRole("button", { name: "이동 취소" })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: "다른 버스로" })).toHaveLength(1);
+      });
+
+      it("확인 단계에서 돌아가면 요청을 보내지 않는다", async () => {
+        mockRunIdParam = "7";
+        mockGetDashboard.mockResolvedValue(idleDashboard());
+        mockGetRunRoster.mockResolvedValue([stagedRow]);
+        render(<TodayRunPage />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        expect(screen.getByText(/이대기 학생/, { selector: "p" })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
+
+        expect(mockDeleteTransfer).not.toHaveBeenCalled();
+        expect(screen.queryByRole("button", { name: "이동 취소하기" })).not.toBeInTheDocument();
+      });
+
+      it("확인하면 DELETE 를 정확히 1회 보내고 성공하면 명단을 다시 불러온다", async () => {
+        mockRunIdParam = "7";
+        mockGetDashboard.mockResolvedValue(idleDashboard());
+        mockGetRunRoster.mockResolvedValue([stagedRow]);
+        mockDeleteTransfer.mockResolvedValue(undefined);
+        render(<TodayRunPage />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        const rosterCallsBefore = mockGetRunRoster.mock.calls.length;
+        fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
+
+        await waitFor(() => expect(mockGetRunRoster.mock.calls.length).toBeGreaterThan(rosterCallsBefore));
+        expect(mockDeleteTransfer).toHaveBeenCalledTimes(1);
+        expect(mockDeleteTransfer).toHaveBeenCalledWith("31");
+        await waitFor(() => expect(screen.queryByRole("button", { name: "이동 취소하기" })).not.toBeInTheDocument());
+      });
+
+      it.each([
+        ["CHANGE_WINDOW_CLOSED", 403, "이미 확정된 회차가 있어 이동을 취소할 수 없습니다"],
+        ["TRANSFER_NOT_FOUND", 404, "이미 취소되었거나 찾을 수 없는 이동 기록입니다"],
+      ])("%s 는 쉬운 한국어 문구를 보여주고 대화상자를 유지한다", async (code, status, message) => {
+        mockRunIdParam = "7";
+        mockGetDashboard.mockResolvedValue(idleDashboard());
+        mockGetRunRoster.mockResolvedValue([stagedRow]);
+        mockDeleteTransfer.mockRejectedValue(new ApiError(status, code as never, "서버 원문"));
+        render(<TodayRunPage />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
+
+        expect(await screen.findByText(message)).toBeInTheDocument();
+        expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  // R36-FE FE5 — 예정 명단에서 승하차지가 정해지지 않은 학생은 `stop_name` 이 null 로 온다.
+  it("stopName 이 null 인 행은 승하차지 미지정으로 보이고 화면이 죽지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], stopName: null }]);
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("김학생")).toBeInTheDocument();
+    // 묶음 머리줄 1곳 + 행 칸 1곳.
+    expect(screen.getAllByText("승하차지 미지정")).toHaveLength(2);
   });
 
   it("명단 조회에 실패하면 오류 배너를 보여준다", async () => {
@@ -249,9 +334,9 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 // 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지 눈으로 좇기 어렵다.
 describe("TodayRunPage — 명단을 승하차지별로 묶는다", () => {
   const twoStopRoster: RosterItemResponseTypes[] = [
-    { studentId: "1", name: "김학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
-    { studentId: "2", name: "이학생", className: "1반", stopName: "정문", guardianPhone: "", change: null, status: "waiting", note: null },
-    { studentId: "3", name: "박학생", className: "2반", stopName: "후문", guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "1", name: "김학생", className: "1반", stopName: "정문", transferId: null, guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "2", name: "이학생", className: "1반", stopName: "정문", transferId: null, guardianPhone: "", change: null, status: "waiting", note: null },
+    { studentId: "3", name: "박학생", className: "2반", stopName: "후문", transferId: null, guardianPhone: "", change: null, status: "waiting", note: null },
   ];
 
   afterEach(() => {
@@ -552,11 +637,11 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(
     confirmed: true,
   };
   const 두정차지_명단: RosterItemResponseTypes[] = [
-    { studentId: "1", name: "한빛학생", className: "1반", stopName: "한빛아파트 정문",
+    { studentId: "1", name: "한빛학생", className: "1반", stopName: "한빛아파트 정문", transferId: null,
       guardianPhone: "010-1111-1111", change: null, status: "waiting", note: null },
-    { studentId: "2", name: "그린학생", className: "2반", stopName: "그린빌라 입구",
+    { studentId: "2", name: "그린학생", className: "2반", stopName: "그린빌라 입구", transferId: null,
       guardianPhone: "010-2222-2222", change: null, status: "waiting", note: null },
-    { studentId: "3", name: "한빛둘째", className: "3반", stopName: "한빛아파트 정문",
+    { studentId: "3", name: "한빛둘째", className: "3반", stopName: "한빛아파트 정문", transferId: null,
       guardianPhone: "010-3333-3333", change: null, status: "boarded", note: null },
   ];
 
