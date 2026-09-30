@@ -18,7 +18,7 @@ export const formatClockTime = (raw: string): string => {
 
 // R21-B — `formatClockTime` 과 이 함수는 용도가 다르다. `formatClockTime` 은 위 자바독이
 // 못박은 "화면 전체 시간 표기" 기본값(시:분)이고, 이 함수는 **운행 출발·도착 시각만**
-// 초 단위까지 보여 달라는 별도 사용자 지시(§8.34 목표 B3, "몇시, 몇분, 초")를 따른다 —
+// 초 단위까지 보여 달라는 별도 사용자 지시(docs/archive/rounds/be-rounds-r15-r21.md §8.34 목표 B3, "몇시, 몇분, 초")를 따른다 —
 // 기존 시:분 표기(승인 화면 등)를 이걸로 바꾸지 않는다.
 export const formatClockTimeWithSeconds = (raw: string): string => {
   const parsed = new Date(raw);

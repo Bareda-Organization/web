@@ -382,7 +382,7 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
   });
 
   // R15-T2 — 우측 버스 목록은 이제 getRunsLive(moving 전용)가 아니라 getDashboard(4종
-  // 상태 전부)로 채운다(§8.23 목표 3). "빈 목록" 의 기준도 그에 맞춰 runs 로 옮겨서,
+  // 상태 전부)로 채운다(docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3). "빈 목록" 의 기준도 그에 맞춰 runs 로 옮겨서,
   // runs 가 빈 배열일 때만 빈 목록 문구가 뜬다는 것을 확인한다.
   it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다", async () => {
     mockUseAuthSession.mockReturnValue({
@@ -469,7 +469,7 @@ describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
   });
 });
 
-// R15-T2 §8.23 목표 3·4·5 — 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3·4·5 — 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
 // 버스를 고르면 §5.19 노선을 지도에 그린다(선택 해제·근사 경로 표시 포함).
 describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", () => {
   const fourStatusDashboard: DashboardResponseTypes = {

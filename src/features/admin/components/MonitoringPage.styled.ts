@@ -16,7 +16,7 @@ export const StyledFilterRow = styled.div`
   max-width: 320px;
 `;
 
-// R15-T2 §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다
 // (run/components/DashboardPage.styled.ts 와 같은 비율 — 지도 3 : 목록 1).
 export const StyledMapTopRow = styled.div`
   display: grid;

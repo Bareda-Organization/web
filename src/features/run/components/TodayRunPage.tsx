@@ -90,7 +90,7 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
   from_academy: "하원",
 };
 
-// R15-T2 §8.23 목표 3 — DashboardPage.tsx 와 같은 표기(대기·확정·운행 중·운행 종료).
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3 — DashboardPage.tsx 와 같은 표기(대기·확정·운행 중·운행 종료).
 // finished 도 이 화면의 우측 버스 목록에서 걸러내지 않는다.
 const RUN_STATUS_LABEL: Record<RunStatus, string> = {
   idle: "대기",
