@@ -22,6 +22,16 @@ type SignupDecideDialogProps = {
 const needsStudentLink = (role: SignupRequestItemResponseTypes["role"]) => role === "student";
 const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role === "driver" || role === "escort";
 
+// §5.2 409 ALREADY_LINKED — 고른 학생·매니저가 이미 다른 계정과 연결됐거나(학부모는 이미 연결된 자녀) 해서 거절된 경우.
+// 영문 코드·서버 원문은 화면에 내지 않고, 역할에 맞게 다시 고를 방향을 알려 준다. 계정은 pending 그대로다.
+const acceptErrorMessage = (cause: unknown, role: SignupRequestItemResponseTypes["role"]): string => {
+  if (!(cause instanceof ApiError)) return "승인 처리에 실패했습니다";
+  if (cause.code !== "ALREADY_LINKED") return cause.message;
+  if (needsStudentLink(role)) return "이미 다른 계정과 연결된 학생입니다 — 다른 학생을 고르세요";
+  if (needsManagerLink(role)) return "이미 다른 계정과 연결된 매니저입니다 — 다른 매니저를 고르세요";
+  return "이미 연결된 자녀가 있습니다";
+};
+
 // §5.2 POST /staff/signup-requests/{id}/decide(A-02). 수락 시 계정↔레코드 연결이
 // 필수라(§5.2, 누락하면 422 LINK_REQUIRED) role 에 따라 studentIds 또는 managerId 를
 // 받는다. 학생·매니저는 ID 를 직접 입력받지 않고 이름 검색 목록에서 고른다(R32-W3) —
@@ -56,7 +66,7 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
       });
       onDone();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "승인 처리에 실패했습니다");
+      setError(acceptErrorMessage(cause, request.role));
     } finally {
       setSubmitting(false);
     }
