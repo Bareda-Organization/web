@@ -198,3 +198,19 @@ describe("정차지 핀 — 끝이 좌표를 가리킨다", () => {
     expect(buildMarkerIconHtml("stop", { seq: 15 })).toContain(">15<");
   });
 });
+
+// F01-02 — 호차명(`bus_no`)은 관계자가 입력하는 문자열이고 SDK 는 이 HTML 을 그대로 DOM 에 넣는다.
+// 태그·속성 문자가 그대로 실리면 같은 학원 관계자 브라우저에서 임의 스크립트가 실행된다.
+describe("markerIcon — 사용자 입력 이스케이프(F01-02)", () => {
+  it("호차명의 태그·따옴표는 텍스트로만 들어가고 태그로 살아나지 않는다", () => {
+    const html = buildMarkerIconHtml("bus", { busNo: '<img src=x onerror="alert(1)">', direction: "to_academy" });
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+  });
+
+  it("마커 id 의 따옴표가 data-marker-id 속성을 깨고 나오지 못한다", () => {
+    const html = buildMarkerIconHtml("bus", { busNo: "1호차", direction: "to_academy", markerId: '7" onmouseover="x' });
+    expect(html).not.toContain('onmouseover="x');
+    expect(html).toContain('data-marker-id="7&quot; onmouseover=&quot;x"');
+  });
+});
