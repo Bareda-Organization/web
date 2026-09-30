@@ -19,9 +19,6 @@ export type { SegmentedControlProps } from "./SegmentedControl";
 export { SearchField } from "./SearchField";
 export type { SearchFieldProps } from "./SearchField";
 
-export { CodeInput } from "./CodeInput";
-export type { CodeInputProps } from "./CodeInput";
-
 export { PhotoUploadField } from "./PhotoUploadField";
 export type { PhotoUploadFieldProps } from "./PhotoUploadField";
 

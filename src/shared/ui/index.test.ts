@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import * as UI from "./index";
 
-// FE-R2 W 목표 3 — 배럴 파일 상단 주석의 컴포넌트 개수("29개")가 실제 export 수(31개)와
+// FE-R2 W 목표 3 — 배럴 파일 상단 주석의 컴포넌트 개수("29개")가 실제 export 수(23개)와
 // 어긋나 있었다. 숫자만 고쳐 적으면 다음에 또 낡으므로, 주석의 숫자를 실제 export 수와
 // 대조하는 검사로 고정한다 — 컴포넌트를 추가·삭제하고 주석을 안 고치면 이 검사가 실패한다.
 describe("shared/ui 배럴 — 주석의 컴포넌트 개수", () => {
