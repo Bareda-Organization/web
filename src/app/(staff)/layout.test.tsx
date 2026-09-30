@@ -19,7 +19,12 @@ vi.mock("@/features/auth", () => ({
 vi.mock("@/shared/lib/navigation/useBackNavigation", () => ({ useBackNavigation: () => ({ canGoBack: false, goBack: vi.fn() }) }));
 vi.mock("@/features/emergency", () => ({
   EmergencyAlertProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EmergencyAlertStrip: () => <p>비상 띠</p>,
   useEmergencyUnackedCount: () => 3,
+}));
+vi.mock("@/features/approval", () => ({
+  ApprovalPendingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useApprovalPending: () => ({ signupCount: 2, changeCount: 1, nextDeadlineAt: null, isReady: true, refresh: async () => true }),
 }));
 
 // R32-W5 — 사이드바 '비상 알림' 옆에 확인하지 않은 건수가 보여야 한다.
@@ -33,6 +38,33 @@ describe("(staff) 레이아웃 — 비상 알림 건수", () => {
 
     expect(screen.getByRole("button", { name: /비상 알림/ })).toHaveTextContent("3");
     expect(screen.getByRole("button", { name: /운행 관리/ })).not.toHaveTextContent("3");
+  });
+});
+
+// R46-WEB B — 승인 대기를 놓치면 구간 변경이 자동 거절되어 학부모에게 실패 통지가 나간다. 어느 화면에서든 건수가 보여야 한다.
+describe("(staff) 레이아웃 — 승인 대기 건수", () => {
+  it("사이드바 '가입 승인'·'구간 변경 승인' 에 대기 건수를 붙이고 탭 제목에도 합계를 반영한다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    expect(screen.getByRole("button", { name: /가입 승인/ })).toHaveTextContent("2");
+    expect(screen.getByRole("button", { name: /구간 변경 승인/ })).toHaveTextContent("1");
+    expect(document.title).toBe("(6) 비상 발생 · 바래다 관계자 웹"); // 비상 3 + 승인 3
+  });
+
+  it("비상 알림 띠를 머리줄 아래 본문 앞에 그린다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    const strip = screen.getByText("비상 띠");
+    const body = screen.getByText("본문");
+    expect(strip.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

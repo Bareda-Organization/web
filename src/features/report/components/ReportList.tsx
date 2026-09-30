@@ -8,6 +8,7 @@ import { getDashboard } from "@/features/run";
 import { getReports } from "../api";
 import type { ReportItemResponseTypes, ReportType } from "../types";
 import { StyledReportFilters, StyledReportLayout } from "./ReportList.styled";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
@@ -48,7 +49,7 @@ export const ReportList = () => {
           { value: "", label: "전체" },
           ...data.runs.map((run) => ({
             value: run.runId,
-            label: `${run.busNo} · ${run.direction === "to_academy" ? "등원" : "하원"}`,
+            label: `${formatClockTime(run.departTime)} ${run.busNo} · ${run.direction === "to_academy" ? "등원" : "하원"}`,
           })),
         ]);
       } catch {

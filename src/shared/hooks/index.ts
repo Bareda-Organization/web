@@ -5,3 +5,4 @@ export { useProtectedImageUrl } from "./useProtectedImageUrl";
 export { usePagedList } from "./usePagedList";
 export type { PagedPage } from "./usePagedList";
 export { usePolling, nextPollDelay } from "./usePolling";
+export { useAttentionSignals, buildAttentionTitle } from "./useAttentionSignals";

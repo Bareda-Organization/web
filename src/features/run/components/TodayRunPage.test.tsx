@@ -509,16 +509,17 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
+  // B1 #3 — 같은 이름 회차를 구분하도록 버스 목록 항목 앞에 출발 시각을 붙인다.
   it("idle·confirmed·moving·finished 4종 상태가 전부 목록에 남는다 — finished 도 걸러내지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
     mockGetRunsLive.mockResolvedValue({ runs: [] });
     render(<TodayRunPage />);
 
-    expect(await screen.findByText("2호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("3호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("4호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("5호차 · 등원")).toBeInTheDocument();
+    expect(await screen.findByText("08:10 2호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("08:10 3호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("08:10 4호차 · 등원")).toBeInTheDocument();
+    expect(screen.getByText("08:10 5호차 · 등원")).toBeInTheDocument();
     expect(screen.getAllByText("대기").length).toBeGreaterThan(0);
     expect(screen.getAllByText("확정").length).toBeGreaterThan(0);
     expect(screen.getAllByText("운행 중").length).toBeGreaterThan(0);
@@ -531,7 +532,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetRunsLive.mockResolvedValue({ runs: [] });
     render(<TodayRunPage />);
 
-    fireEvent.click(await screen.findByText("5호차 · 등원"));
+    fireEvent.click(await screen.findByText("08:10 5호차 · 등원"));
 
     expect(mockReplace).toHaveBeenCalledWith("/today-run?runId=10");
   });

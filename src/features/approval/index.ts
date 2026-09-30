@@ -3,3 +3,5 @@ export { SignupApprovalPage } from "./components/SignupApprovalPage";
 export { ChangeApprovalList } from "./components/ChangeApprovalList";
 export { ChangeApprovalDetail } from "./components/ChangeApprovalDetail";
 export * from "./types";
+export { ApprovalPendingProvider, useApprovalPending } from "./components/ApprovalPendingProvider";
+export { ApprovalPendingCard } from "./components/ApprovalPendingCard";

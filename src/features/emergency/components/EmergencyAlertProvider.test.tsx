@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope } from "@/shared/lib/ws";
 import { ackEmergency, getEmergencies } from "../api";
-import { EmergencyAlertProvider, useEmergencyUnackedCount } from "./EmergencyAlertProvider";
+import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "./EmergencyAlertProvider";
 
 vi.mock("@/features/auth", () => ({
   useAuthSession: () => ({ session: { academy: { id: "7", name: "바래다" } } }),
@@ -61,6 +61,7 @@ const renderProvider = () =>
   render(
     <EmergencyAlertProvider>
       <CountProbe />
+      <EmergencyAlertStrip />
       <p>현재 화면</p>
     </EmergencyAlertProvider>,
   );
@@ -185,5 +186,43 @@ describe("EmergencyAlertProvider — 확인(ack) 경합·실패 문구(F01-12)",
 
     expect(await screen.findByText(/3호차/)).toBeInTheDocument();
     expect(screen.queryByText(/확인 처리에 실패했습니다/)).not.toBeInTheDocument();
+  });
+});
+
+// R46-WEB B1 #1 — 띠가 화면 위에 떠(fixed) 등록·배치 변경 버튼을 가렸다. 흐름 속에 놓여야 아래 내용을 밀어 낸다.
+describe("EmergencyAlertStrip — 버튼을 가리지 않는 위치", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("화면 위에 띄우지 않고(fixed 아님) 흐름 속에 놓는다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    renderProvider();
+
+    await screen.findByText(/2호차/);
+    const strip = screen.getAllByRole("alert")[0]!; // 바깥 띠(안쪽 배너도 alert 역할이라 첫 번째가 띠)
+
+    expect(getComputedStyle(strip).position).not.toBe("fixed");
+  });
+});
+
+// R46-WEB A#6 — 메인 관리자 레이아웃도 같은 띠를 쓰되, 확인 주체는 관계자라 확인 버튼이 없다.
+describe("EmergencyAlertProvider — 메인 관리자 출처", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("넘겨 받은 조회·채널을 쓰고 확인 버튼 없이 목록 링크만 보여 준다", async () => {
+    const fetchUnacked = vi.fn(async () => [{ emergencyId: "4", busNo: "3호차", type: "accident", raisedByName: null }]);
+    render(
+      <EmergencyAlertProvider source={{ destination: "/topic/admin/live", fetchUnacked, listPath: "/emergency-alerts" }}>
+        <CountProbe />
+        <EmergencyAlertStrip />
+      </EmergencyAlertProvider>,
+    );
+
+    expect(await screen.findByText(/3호차/)).toBeInTheDocument();
+    expect(screen.getByText("미확인 1건")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "확인" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "비상 알림 목록" }));
+    expect(mockPush).toHaveBeenCalledWith("/emergency-alerts");
+    expect(mockGet).not.toHaveBeenCalled();
   });
 });

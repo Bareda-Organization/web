@@ -36,3 +36,8 @@ const SEOUL_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", ye
 // 서비스 기준 날짜(ERD §2)로 본 오늘 — `YYYY-MM-DD`. `new Date().toISOString().slice(0, 10)` 은 UTC 날짜라
 // 한국 시간 00:00~09:00 에 어제를 낸다(등원 회차가 몰린 시간대). 날짜 입력칸의 기본값은 전부 이 함수를 거친다.
 export const todayInSeoul = (): string => SEOUL_DATE.format(new Date());
+
+const SEOUL_HEADER_DATE = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" });
+
+// 관계자·메인 관리자 머리줄의 날짜 — `10월 1일 (목)`. 브라우저(PC) 시계·시간대와 무관하게 서울 기준이다.
+export const formatHeaderDate = (now: Date = new Date()): string => SEOUL_HEADER_DATE.format(now);

@@ -393,7 +393,7 @@ export const MonitoringPage = () => {
 
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },
-    { key: "direction", label: "구간", render: (row) => DIRECTION_LABEL[row.direction] },
+    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     {
       key: "runStatus",
       label: "상태",

@@ -80,7 +80,8 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 // §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-04) — 관계자 웹
 // 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
 // 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
-export const DashboardPage = () => {
+// `pendingSlot` — 처리 대기·기한 임박 카드 자리. `run` 이 `approval` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
+export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }) => {
   const router = useRouter();
   const { session } = useAuthSession();
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getDashboard>>["metrics"] | null>(null);
@@ -340,7 +341,7 @@ export const DashboardPage = () => {
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
     { key: "busNo", label: "버스" },
-    { key: "direction", label: "구간", render: (row) => DIRECTION_LABEL[row.direction] },
+    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     {
       key: "runStatus",
       label: "상태",
@@ -400,6 +401,8 @@ export const DashboardPage = () => {
     <StyledDashboardLayout>
       <PageHeader title="운행 관리" description="오늘 회차의 운행 현황을 한눈에 확인합니다" />
 
+      {pendingSlot}
+
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       {approvalRequests.length > 0 ? (
@@ -440,7 +443,7 @@ export const DashboardPage = () => {
         <StatCard label="탑승 완료" value={metrics?.boarded ?? "-"} unit="명" icon="check" tone="boarded" />
         <StatCard label="미탑승" value={metrics?.noShow ?? "-"} unit="명" icon="alert-triangle" tone="missed" />
         <StatCard label="결석" value={metrics?.absent ?? "-"} unit="명" icon="user-x" />
-        <StatCard label="매니저 미배치" value={metrics?.unassignedManagers ?? "-"} unit="건" icon="user-round-x" />
+        <StatCard label="오늘 배치 없는 매니저" value={metrics?.unassignedManagers ?? "-"} unit="명" icon="user-round-x" />
       </StyledStatGrid>
 
       <StyledMapTopRow>

@@ -16,7 +16,44 @@ vi.mock("@/features/auth", () => ({
   TestDataResetButton: () => null,
   useAuthSession: () => ({ session: { academy: null } }),
 }));
+vi.mock("@/features/emergency", () => ({
+  EmergencyAlertProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EmergencyAlertStrip: () => <p>비상 띠</p>,
+  useEmergencyUnackedCount: () => 1,
+}));
+vi.mock("@/features/admin", () => ({
+  AdminPendingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAdminPending: () => ({ signupCount: 11, blockedCount: 1, isReady: true }),
+  getAdminEmergencies: vi.fn(),
+}));
 vi.mock("@/shared/lib/navigation/useBackNavigation", () => ({ useBackNavigation: () => ({ canGoBack: false, goBack: vi.fn() }) }));
+
+// R46-WEB A#6 · B1 #15 — 메인 관리자는 비상·가입 승인·차단이 모두 무표시였다.
+describe("(admin) 레이아웃 — 알림 인지", () => {
+  it("사이드바 '가입 승인'·'차단 해제'·'비상 알림' 에 건수를 붙이고 탭 제목에 합계를 반영한다", () => {
+    render(
+      <AdminLayout>
+        <p>본문</p>
+      </AdminLayout>,
+    );
+
+    expect(screen.getByRole("button", { name: /가입 승인/ })).toHaveTextContent("11");
+    expect(screen.getByRole("button", { name: /차단 해제/ })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /비상 알림/ })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /학원 관리/ })).not.toHaveTextContent("1");
+    expect(document.title).toBe("(13) 비상 발생 · 바래다 관계자 웹"); // 비상 1 + 가입 11 + 차단 1
+  });
+
+  it("비상 알림 띠를 본문 앞에 그린다", () => {
+    render(
+      <AdminLayout>
+        <p>본문</p>
+      </AdminLayout>,
+    );
+
+    expect(screen.getByText("비상 띠").compareDocumentPosition(screen.getByText("본문")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
 
 // F03-12 — 접근 판정은 경로 목록이 아니라 라우트 그룹이 맡는다. (admin) 그룹은 system_admin 역할을 요구한다.
 describe("(admin) 레이아웃 — 그룹 역할", () => {

@@ -197,7 +197,12 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
               <Input label="학원명" required value={name} onChange={(event) => setName(event.target.value)} />
               <Input label="지역" required value={region} onChange={(event) => setRegion(event.target.value)} />
             </StyledDialogFormRow>
-            <Input label="주소" value={address} onChange={(event) => setAddress(event.target.value)} />
+            <Input
+              label="주소"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              hint={address.trim() ? undefined : "주소를 비워 두면 이 학원의 회차 확정이 시작되지 않습니다. 등록 뒤에라도 주소를 넣어 주세요"}
+            />
             <Input label="연락처" value={contact} onChange={(event) => setContact(event.target.value)} />
             <Textarea label="메모" value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} maxLength={MEMO_MAX_LENGTH} />
             {isEditMode ? (

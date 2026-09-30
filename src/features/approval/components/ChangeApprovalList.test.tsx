@@ -112,3 +112,36 @@ describe("ChangeApprovalList — F02-04 늦게 온 옛 응답", () => {
     expect(screen.queryByText("이학생")).not.toBeInTheDocument();
   });
 });
+
+// B1 #5 — 처리 기한을 시각으로만 보여 주면 남은 시간을 알 수 없다. 대기 건은 자동 거절까지 남은 시간을 함께 보여 준다.
+describe("ChangeApprovalList — 자동 거절까지 남은 시간", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("처리 대기 목록에는 '자동 거절까지' 열로 남은 시간을, 기한이 지난 건은 '기한 지남' 을 보여 준다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-12T23:45:00Z"));
+    mockGetChangeApprovals.mockResolvedValue({
+      ...baseList,
+      items: [baseList.items[0]!, { ...baseList.items[0]!, approvalId: "6", studentName: "박학생", deadlineAt: "2026-09-12T23:00:00Z" }],
+    });
+    render(<ChangeApprovalList />);
+
+    expect(await screen.findByRole("columnheader", { name: "자동 거절까지" })).toBeInTheDocument();
+    expect(screen.getByText("15분 0초")).toBeInTheDocument();
+    expect(screen.getByText("기한 지남")).toBeInTheDocument();
+  });
+
+  it("처리가 끝난 목록(거절·승인)에는 남은 시간 열이 없다", async () => {
+    mockGetChangeApprovals.mockResolvedValue(baseList);
+    render(<ChangeApprovalList />);
+    await screen.findByText("이학생");
+
+    fireEvent.click(screen.getByRole("tab", { name: "승인 완료" }));
+
+    await screen.findByText("이학생");
+    expect(screen.queryByRole("columnheader", { name: "자동 거절까지" })).not.toBeInTheDocument();
+  });
+});

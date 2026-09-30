@@ -17,7 +17,7 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
+import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
 import type {
   DashboardRunResponseTypes,
@@ -530,7 +530,7 @@ export const TodayRunPage = () => {
             >
               <StyledBusListItemHeader>
                 <span>
-                  {run.busNo} · {DIRECTION_LABEL[run.direction]}
+                  {formatClockTime(run.departTime)} {run.busNo} · {DIRECTION_LABEL[run.direction]}
                 </span>
                 <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
               </StyledBusListItemHeader>

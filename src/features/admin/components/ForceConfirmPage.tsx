@@ -82,7 +82,7 @@ export const ForceConfirmPage = () => {
 
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },
-    { key: "direction", label: "구간", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
+    { key: "direction", label: "방향", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
     { key: "departTime", label: "출발 시각", render: (row) => formatDateTime(row.departTime) },
     // 확정 예정은 §6.8 confirm_at(출발 30분 전) — est_depart_time 은 출발 예정(추정) 시각이라 별도 열이다(Ruling 393).
     { key: "confirmAt", label: "확정 예정", render: (row) => formatDateTime(row.confirmAt) },
