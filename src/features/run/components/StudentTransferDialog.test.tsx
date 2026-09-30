@@ -47,6 +47,7 @@ const student: RosterItemResponseTypes = {
   name: "김학생",
   className: "1반",
   stopName: "정문",
+  transferId: null,
   guardianPhone: null,
   change: null,
   status: "waiting",

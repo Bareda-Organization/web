@@ -82,7 +82,10 @@ export type RosterItemResponseTypes = {
   studentId: string;
   name: string;
   className: string | null;
-  stopName: string;
+  // 예정 명단에서 승하차지가 아직 정해지지 않은 학생은 null(§5.4).
+  stopName: string | null;
+  // 이동 대기(§5.8 staged)로 이 회차에 들어온 행에만 — 이 값으로 §5.8.1 취소(Ruling 369).
+  transferId: string | null;
   guardianPhone: string | null;
   change: RosterChange;
   status: RosterStatus;

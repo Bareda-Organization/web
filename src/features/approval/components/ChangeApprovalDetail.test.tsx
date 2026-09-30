@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { MapSurfaceProps } from "@/features/map";
 import { ChangeApprovalDetail } from "./ChangeApprovalDetail";
@@ -69,7 +69,14 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
 };
 
 describe("ChangeApprovalDetail — 승인/거절", () => {
+  // baseDetail 의 기한(2026-09-13T00:00Z)이 실제 시계로는 이미 지났다 — 기한 지난 건은 버튼이 꺼지므로(FE2)
+  // 기한 전 시각으로 시계를 고정한다.
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
+  });
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -346,6 +353,61 @@ describe("ChangeApprovalDetail — 처리 기한 남은 시간(R32-W7)", () => {
     render(<ChangeApprovalDetail approvalId="5" />);
 
     expect(await screen.findByText(/처리 기한이 지났습니다/)).toBeInTheDocument();
+  });
+});
+
+// R36-FE FE2 — 서버는 처리 기한에 자동 거절한다(Ruling 306). 기한이 지난 대기 건은 [승인]·[거절] 을 끈다.
+describe("ChangeApprovalDetail — 기한이 지난 대기 건(R36-FE FE2)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const openAt = (iso: string) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(iso));
+  };
+
+  it("기한 전에는 [승인]·[거절] 이 켜져 있다", async () => {
+    openAt("2026-09-12T23:47:30Z");
+    mockGetDetail.mockResolvedValue(baseDetail);
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByRole("button", { name: "승인" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "거절" })).toBeEnabled();
+    expect(screen.queryByText("처리 기한이 지나 자동 거절됩니다")).not.toBeInTheDocument();
+  });
+
+  it("기한이 지났으면 두 버튼이 꺼지고 자동 거절 안내가 뜬다", async () => {
+    openAt("2026-09-13T00:00:05Z");
+    mockGetDetail.mockResolvedValue(baseDetail);
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByText("처리 기한이 지나 자동 거절됩니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "거절" })).toBeDisabled();
+  });
+
+  it("화면을 열어 둔 채 시계가 기한을 넘으면 꺼진다", async () => {
+    openAt("2026-09-12T23:59:58Z");
+    mockGetDetail.mockResolvedValue(baseDetail);
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByRole("button", { name: "승인" })).toBeEnabled();
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(await screen.findByText("처리 기한이 지나 자동 거절됩니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
+  });
+
+  it("이미 결정된 건은 기한이 지났어도 지금처럼 버튼과 안내가 없다", async () => {
+    openAt("2026-09-13T00:00:05Z");
+    mockGetDetail.mockResolvedValue({ ...baseDetail, routePreview: null, previewToken: null });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    await screen.findByText(/처리 기한이 지났습니다/);
+    expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
+    expect(screen.queryByText("처리 기한이 지나 자동 거절됩니다")).not.toBeInTheDocument();
   });
 });
 

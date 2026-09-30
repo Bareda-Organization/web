@@ -244,6 +244,9 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   // "이미 결정됐는가"를 판정해 노선 비교·승인/거절 조작을 감춘다.
   const isAlreadyDecided = detail.routePreview === null;
   const remaining = formatRemaining(new Date(detail.deadlineAt).getTime(), now);
+  // 서버는 처리 기한에 대기 건을 자동 거절한다(Ruling 306, API_SPEC §9.6) — 기한이 지난 대기 건은
+  // 눌러도 소용이 없어 조작을 끈다. `now` 가 1초마다 갱신돼 화면을 열어 둔 채 넘겨도 바뀐다.
+  const isExpired = !isAlreadyDecided && remaining === null;
 
   return (
     <StyledDetailLayout>
@@ -390,6 +393,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
 
       {isAlreadyDecided ? null : (
         <Card>
+          {isExpired ? <AlertBanner tone="missed" title="처리 기한이 지나 자동 거절됩니다" /> : null}
           {mode === "reject" ? (
             <>
               <Textarea
@@ -402,17 +406,17 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
                 <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
                   뒤로
                 </Button>
-                <Button variant="danger" onClick={handleReject} disabled={submitting || !rejectReason.trim()}>
+                <Button variant="danger" onClick={handleReject} disabled={submitting || isExpired || !rejectReason.trim()}>
                   {submitting ? "처리 중..." : "거절 확정"}
                 </Button>
               </StyledActionRow>
             </>
           ) : (
             <StyledActionRow>
-              <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting}>
+              <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting || isExpired}>
                 거절
               </Button>
-              <Button variant="primary" onClick={handleApprove} disabled={submitting}>
+              <Button variant="primary" onClick={handleApprove} disabled={submitting || isExpired}>
                 {submitting ? "처리 중..." : "승인"}
               </Button>
             </StyledActionRow>
