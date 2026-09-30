@@ -13,6 +13,7 @@ import {
   RosterTable,
   SearchField,
 } from "@/shared/ui";
+import { useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { getManagers } from "../api";
 import type { ManagerItemResponseTypes } from "../types";
@@ -39,6 +40,7 @@ export const ManagerList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { notice, showNotice } = useSavedNotice();
   const [editing, setEditing] = useState<ManagerItemResponseTypes | undefined>(
     undefined,
   );
@@ -84,6 +86,7 @@ export const ManagerList = () => {
   };
 
   const handleDone = () => {
+    showNotice("변경 사항을 반영했습니다");
     setEditing(undefined);
     setCreating(false);
     setDeleting(undefined);
@@ -153,6 +156,7 @@ export const ManagerList = () => {
       </StyledManagerToolbar>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
         <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}

@@ -49,6 +49,29 @@ describe("RouteForm — 등록 실패 갈래", () => {
   });
 });
 
+// B1 #10 — 등록을 저장하면 목록으로 돌아가 정차지를 넣으러 다시 찾아 들어가야 했다. 만든 편성의 id 를 넘겨 상세로 이어 준다.
+describe("RouteForm — 등록 뒤 이어가기", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("등록에 성공하면 만든 편성의 id 를 onDone 에 넘긴다", async () => {
+    mockGetBuses.mockResolvedValue({
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      page: 0,
+      size: 100,
+      totalCount: 1,
+      hasNext: false,
+    });
+    mockCreate.mockResolvedValue({ id: "42" } as Awaited<ReturnType<typeof createRoute>>);
+    const onDone = vi.fn();
+    render(<RouteForm onClose={vi.fn()} onDone={onDone} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
+
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith({ id: "42" }));
+  });
+});
+
 describe("RouteForm — F02-13 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 

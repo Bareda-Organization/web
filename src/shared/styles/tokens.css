@@ -3,3 +3,12 @@
    원본 자체가 fonts → colors → semantic → typography → space → shape → motion → base
    순으로 @import 를 연쇄하므로 여기서는 진입점 하나만 가리키면 된다. */
 @import "../../../../../design-system/styles.css";
+
+/* 상태 칩 글자색 대비 보정(R46-WEB B1 #21) — 원본 토큰의 칩 글자가 배경 대비 2.9~4.05:1 이라 WCAG AA(4.5:1)에 못 미친다.
+   디자인 시스템 사본(frontend/design-system)은 읽기 전용이라 원본을 고치지 않고 이 앱에서만 같은 색상 계열의 진한 톤으로 덮는다.
+   앰버 #C77E12→#8A5A0A(5.25:1) · 빨강 #C93F2C→#B5361F(4.88:1) · 회색 #6B7672→#5E6A66(4.83:1). 어두운 테마는 건드리지 않는다. */
+:root:not([data-theme="dark"]) {
+  --status-moving: #8a5a0a;
+  --status-missed: #b5361f;
+  --status-idle: #5e6a66;
+}

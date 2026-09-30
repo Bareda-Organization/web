@@ -45,12 +45,3 @@ export const getReports = async (filters: ReportListQueryTypes = {}): Promise<Re
   });
   return { items: raw.items.map(toItem) };
 };
-
-// GET /staff/reports/{id} — 목록 항목과 동일한 필드 구성이라(실측 확인) 이 화면은
-// 별도 상세 페이지를 두지 않는다(판단 근거, 보고서 §1). 404 REPORT_NOT_FOUND 는
-// 존재 비노출(Ruling 163) — 호출부가 없어 이 함수만 barrel 없이 남겨 두되, 필요
-// 시 재사용할 수 있도록 구현은 해 둔다.
-export const getReportDetail = async (reportId: string): Promise<ReportItemResponseTypes> => {
-  const raw = await apiFetch<RawReportItem>(`/staff/reports/${reportId}`, { method: "GET" });
-  return toItem(raw);
-};

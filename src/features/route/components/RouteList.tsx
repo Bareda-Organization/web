@@ -89,9 +89,10 @@ export const RouteList = () => {
       {creating ? (
         <RouteForm
           onClose={() => setCreating(false)}
-          onDone={() => {
+          // 저장하면 만든 편성의 상세로 이어 간다 — 정차지를 넣는 것이 다음 일이다(B1 #10).
+          onDone={({ id }) => {
             setCreating(false);
-            load(page);
+            router.push(`/route/${id}`);
           }}
         />
       ) : null}
