@@ -149,16 +149,24 @@ describe("AcademyRealtimeClient — 만료 전 무중단 갱신", () => {
     handles[1].emit(DESTINATION, envelope(1));
     handles[1].emit(DESTINATION, envelope(2));
     expect(received).toHaveBeenCalledTimes(2);
+    // 3번 방송은 옛 연결로만 먼저 왔다 — 쌍둥이는 옛 연결을 닫은 뒤에 새 연결로 늦게 온다.
+    handles[0].emit(DESTINATION, envelope(3));
+    expect(received).toHaveBeenCalledTimes(3);
 
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
-    handles[0].emit(DESTINATION, envelope(3));
+    expect(handles[0].deactivateCalls).toBe(1);
+    // 닫힌 옛 연결이 늦게 내보낸 프레임은 버린다.
+    handles[0].emit(DESTINATION, envelope(9));
+    expect(received).toHaveBeenCalledTimes(3);
     handles[1].emit(DESTINATION, envelope(3));
     expect(received).toHaveBeenCalledTimes(3);
+    handles[1].emit(DESTINATION, envelope(4));
+    expect(received).toHaveBeenCalledTimes(4);
 
     // 거르는 창은 짧다 — 한참 뒤의 같은 본문은 새 방송으로 전달한다.
     await vi.advanceTimersByTimeAsync(10_000);
     handles[1].emit(DESTINATION, envelope(3));
-    expect(received).toHaveBeenCalledTimes(4);
+    expect(received).toHaveBeenCalledTimes(5);
   });
 
   it("재발급이 실패하면 연결을 그대로 두고, 만료 뒤에는 기존 흐름(TOKEN_EXPIRED → 재발급 → 재연결)으로 넘어간다", async () => {
