@@ -102,6 +102,12 @@ export const ManagerList = () => {
       render: (row) => <Badge tone="brand">{ROLE_LABEL[row.role]}</Badge>,
     },
     {
+      // B1 #8 — 앱에서 가입 신청해 승인을 받으면 이 기록에 계정이 연결된다. 그 전에는 앱에 들어올 수 없다.
+      key: "accountId",
+      label: "앱 계정",
+      render: (row) => <Badge tone={row.accountId ? "added" : "neutral"}>{row.accountId ? "연결됨" : "앱 가입 전"}</Badge>,
+    },
+    {
       key: "actions",
       label: "",
       align: "right",
