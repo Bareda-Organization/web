@@ -99,6 +99,13 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     vi.clearAllMocks();
   });
 
+  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  it("비고 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
+    renderDialog();
+
+    expect(screen.getByText(/학생 이름·연락처는 적지 마세요/)).toBeInTheDocument();
+  });
+
   it("도착 회차를 고르면 그 회차 노선의 승하차지를 고를 수 있고 학원(도착지)은 빠진다", async () => {
     mockGetRunRoute.mockResolvedValue(routeWithStops);
     renderDialog();
@@ -152,7 +159,7 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     await pickDestination();
     fireEvent.click(screen.getByRole("tab", { name: "주소 입력" }));
     fireEvent.change(screen.getByLabelText("승하차 주소"), { target: { value: "서울시 후문로 2" } });
-    fireEvent.change(screen.getByLabelText("비고"), { target: { value: "오늘만" } });
+    fireEvent.change(screen.getByLabelText(/^비고/), { target: { value: "오늘만" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() =>

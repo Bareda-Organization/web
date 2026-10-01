@@ -5,6 +5,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl, Select } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { getRunRoute } from "@/features/route";
+import { FREE_TEXT_PRIVACY_NOTICE } from "@/shared/lib/freeTextNotice";
 import { postTransfer } from "../api";
 import type { DashboardRunResponseTypes, RosterItemResponseTypes, TransferResponseTypes } from "../types";
 import { StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
@@ -185,7 +186,7 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
         ) : (
           <Input label="승하차 주소" value={address} onChange={(event) => setAddress(event.target.value)} />
         )}
-        <Input label="비고" value={note} onChange={(event) => setNote(event.target.value)} />
+        <Input label="비고" hint={FREE_TEXT_PRIVACY_NOTICE} value={note} onChange={(event) => setNote(event.target.value)} />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledDialogForm>
     </Dialog>

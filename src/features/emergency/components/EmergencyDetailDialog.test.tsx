@@ -25,6 +25,13 @@ const EMERGENCY = {
 
 // Ruling 541 — 확인할 때 조치 메모를 남기고(선택), 확인된 건은 확인자와 메모를 보여 준다.
 describe("EmergencyDetailDialog — 조치 메모", () => {
+  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  it("조치 메모 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
+    render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={vi.fn()} />);
+
+    expect(screen.getByText(/학생 이름·연락처는 적지 마세요/)).toBeInTheDocument();
+  });
+
   it("미확인 건은 메모 입력칸과 [확인] 버튼이 있고, 입력한 메모로 확인을 요청한다", () => {
     const onAck = vi.fn();
     render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={onAck} />);
