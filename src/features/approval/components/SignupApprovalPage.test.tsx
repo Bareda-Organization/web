@@ -102,6 +102,23 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     );
   });
 
+  // B1 #14 — 신청자는 자기 이름으로 가입했으니 관계자가 같은 이름을 다시 치지 않게 후보 검색을 그 이름으로 시작한다.
+  it("학생·기사 승인은 신청자 이름으로 먼저 후보를 검색한다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0], requestId: "5", name: "박학생", role: "student" }],
+    });
+    mockSearchStudents.mockResolvedValue([{ id: "77", name: "박학생" }]);
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+
+    await screen.findByLabelText(/박학생/);
+    expect(mockSearchStudents).toHaveBeenCalledWith("박학생");
+    expect(screen.getByPlaceholderText("학생 이름으로 검색")).toHaveValue("박학생");
+  });
+
   it("학생을 하나도 고르지 않으면 승인 확정이 비활성이다", async () => {
     mockGetSignupRequests.mockResolvedValue({
       ...baseList,
