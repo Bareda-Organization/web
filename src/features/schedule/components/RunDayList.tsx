@@ -144,7 +144,7 @@ export const RunDayList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(serviceDate)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} />
       </Card>
 
       {adding ? <RunAddForm serviceDate={serviceDate} onClose={() => setAdding(false)} onDone={handleAdded} /> : null}

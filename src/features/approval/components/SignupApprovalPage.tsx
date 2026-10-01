@@ -96,7 +96,7 @@ export const SignupApprovalPage = () => {
       <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={handleStatusChange} />
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={requests} getRowKey={(row) => row.requestId} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => loadRequests(status, page)} columns={columns} loading={loading} rows={requests} getRowKey={(row) => row.requestId} />
       </Card>
 
       <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

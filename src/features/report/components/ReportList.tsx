@@ -38,6 +38,8 @@ export const ReportList = () => {
   const [items, setItems] = useState<ReportItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // [다시 시도] — 조회 조건은 그대로 두고 같은 조회를 한 번 더 낸다.
+  const [retryCount, setRetryCount] = useState(0);
   // 요청 번호 — 조건을 바꾸기 전에 나간 요청의 늦은 응답이 새 조건의 목록을 덮지 않게 한다(F01-05).
   const requestSeq = useRef(0);
 
@@ -80,7 +82,7 @@ export const ReportList = () => {
         if (mine === requestSeq.current) setLoading(false);
       }
     })();
-  }, [type, date, runId]);
+  }, [type, date, runId, retryCount]);
 
   const columns: RosterColumn<ReportItemResponseTypes>[] = [
     { key: "reportedAt", label: "신고 시각", render: (row) => formatDateTime(row.reportedAt) },
@@ -113,7 +115,7 @@ export const ReportList = () => {
       ) : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => setRetryCount((count) => count + 1)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.reportId} />
       </Card>
     </StyledReportLayout>
   );

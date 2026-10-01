@@ -129,7 +129,7 @@ export const ScheduleList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page)} emptyMessage="등록된 스케줄이 없습니다" emptyAction={{ label: "스케줄 등록", onClick: () => setCreating(true) }} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
       <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

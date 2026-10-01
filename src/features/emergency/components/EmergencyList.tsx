@@ -158,7 +158,7 @@ export const EmergencyList = () => {
       ) : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)}
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(status, date)}
           columns={columns}
           loading={loading}
           rows={items}

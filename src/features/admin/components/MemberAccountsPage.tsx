@@ -62,7 +62,7 @@ export const MemberAccountsPage = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
+        <RosterTable hasError={Boolean(error)} onRetry={reload} columns={columns} loading={loading} rows={accounts} getRowKey={(row) => row.accountId} />
       </Card>
 
       <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

@@ -56,7 +56,7 @@ export const MemberApprovalsPage = () => {
         {!loading && !error && requests.length === 0 ? (
           <EmptyState icon="user-check" title="처리할 가입 요청이 없습니다" />
         ) : (
-          <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={requests} getRowKey={(row) => row.requestId} />
+          <RosterTable hasError={Boolean(error)} onRetry={reload} columns={columns} loading={loading} rows={requests} getRowKey={(row) => row.requestId} />
         )}
       </Card>
 

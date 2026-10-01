@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StudentList } from "./StudentList";
 import { getStudents } from "../api";
 import { ApiError } from "@/shared/lib/http";
@@ -9,6 +9,16 @@ import { ApiError } from "@/shared/lib/http";
 // (미연결 행은 guardianPhone 도 null 이지만, 검사 대상은 guardianCount 문구다).
 vi.mock("../api", () => ({
   getStudents: vi.fn(),
+}));
+// 등록 창은 저장 완료만 흉내 낸다 — 저장한 학생의 id 를 목록에 넘기는 흐름만 본다.
+vi.mock("./StudentForm", () => ({
+  StudentForm: ({ onDone }: { onDone: (savedStudentId?: string) => void }) => (
+    <div role="dialog" aria-label="학생 등록 창">
+      <button type="button" onClick={() => onDone("9")}>
+        저장 완료
+      </button>
+    </div>
+  ),
 }));
 
 const mockGetStudents = vi.mocked(getStudents);
@@ -123,5 +133,64 @@ describe("StudentList — 검색 결과 없음", () => {
 
     expect(await screen.findByText("'없는이름' 검색 결과가 없습니다")).toBeInTheDocument();
     expect(screen.getByText("'없는이름' 검색 결과 0명")).toBeInTheDocument();
+  });
+});
+
+// R46-FUWEB B1 #11 — 목록을 못 읽으면 새로고침 말고는 되돌릴 길이 없었다.
+describe("StudentList — 다시 시도", () => {
+  beforeEach(() => mockGetStudents.mockReset());
+
+  it("조회에 실패하면 다시 시도 버튼이 있고, 누르면 다시 조회해 목록이 나온다", async () => {
+    mockGetStudents.mockRejectedValueOnce(new ApiError(503, "UNAVAILABLE", "서버 오류"));
+    render(<StudentList />);
+    await screen.findByText("서버 오류");
+
+    mockGetStudents.mockResolvedValue({
+      ...emptyPage,
+      items: [{ studentId: "1", name: "복구학생", className: null, guardianPhone: null, guardianCount: 0 }],
+      totalCount: 1,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("복구학생")).toBeInTheDocument();
+    expect(mockGetStudents).toHaveBeenCalledTimes(2);
+  });
+});
+
+// R46-FUWEB B1 #12·#19 — 학생이 없을 때 다음 행동을 알려 주고, 저장한 학생의 행을 잠깐 강조한다.
+describe("StudentList — 빈 상태 행동과 저장 행 강조", () => {
+  it("학생이 한 명도 없으면 학생 등록 버튼이 보이고, 저장하면 새로 생긴 그 행이 강조된다", async () => {
+    mockGetStudents.mockResolvedValue(emptyPage);
+    render(<StudentList />);
+    expect(await screen.findByText("등록된 학생이 없습니다")).toBeInTheDocument();
+
+    mockGetStudents.mockResolvedValue({
+      ...emptyPage,
+      items: [
+        { studentId: "8", name: "기존학생", className: null, guardianPhone: null, guardianCount: 0 },
+        { studentId: "9", name: "새학생", className: null, guardianPhone: null, guardianCount: 0 },
+      ],
+      totalCount: 2,
+    });
+    const emptyRow = screen.getByText("등록된 학생이 없습니다").closest("tr")!;
+    fireEvent.click(within(emptyRow).getByRole("button", { name: "학생 등록" }));
+    fireEvent.click(await screen.findByRole("button", { name: "저장 완료" }));
+
+    const newRow = (await screen.findByText("새학생")).closest("tr")!;
+    expect(newRow).toHaveAttribute("data-highlighted", "true");
+    expect(screen.getByText("기존학생").closest("tr")).not.toHaveAttribute("data-highlighted");
+  });
+
+  it("검색 결과가 없을 때는 학생 등록 버튼을 내지 않는다", async () => {
+    mockGetStudents.mockResolvedValue({ ...emptyPage, totalCount: 35 });
+    render(<StudentList />);
+    await screen.findByText("총 35명");
+    mockGetStudents.mockResolvedValue(emptyPage);
+
+    fireEvent.change(screen.getByPlaceholderText("이름으로 검색"), { target: { value: "없는이름" } });
+    fireEvent.click(screen.getByRole("button", { name: /검색/ }));
+    const emptyRow = (await screen.findByText("'없는이름' 검색 결과가 없습니다")).closest("tr")!;
+
+    expect(within(emptyRow).queryByRole("button", { name: "학생 등록" })).not.toBeInTheDocument();
   });
 });

@@ -24,7 +24,7 @@ export const StudentList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { notice, showNotice } = useSavedNotice();
+  const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [withdrawing, setWithdrawing] = useState<StudentListItemResponseTypes | undefined>(undefined);
@@ -68,8 +68,9 @@ export const StudentList = () => {
     load(0, value);
   };
 
-  const handleDone = () => {
-    showNotice("변경 사항을 반영했습니다");
+  // savedStudentId — 등록·수정한 학생의 id(퇴원은 없다). 그 행을 잠깐 강조한다.
+  const handleDone = (savedStudentId?: string) => {
+    showNotice("변경 사항을 반영했습니다", savedStudentId);
     setEditingId(undefined);
     setCreating(false);
     setWithdrawing(undefined);
@@ -124,7 +125,10 @@ export const StudentList = () => {
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q)}
+          emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : "등록된 학생이 없습니다"}
+          emptyAction={q ? undefined : { label: "학생 등록", onClick: () => setCreating(true) }}
+          highlightedKey={highlightedKey}
           columns={columns}
           loading={loading}
           rows={items}

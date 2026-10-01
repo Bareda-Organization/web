@@ -40,7 +40,7 @@ export const ManagerList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { notice, showNotice } = useSavedNotice();
+  const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editing, setEditing] = useState<ManagerItemResponseTypes | undefined>(
     undefined,
   );
@@ -85,8 +85,9 @@ export const ManagerList = () => {
     load(0, value);
   };
 
-  const handleDone = () => {
-    showNotice("변경 사항을 반영했습니다");
+  // savedManagerId — 등록·수정한 매니저의 id(삭제는 없다). 그 행을 잠깐 강조한다.
+  const handleDone = (savedManagerId?: string) => {
+    showNotice("변경 사항을 반영했습니다", savedManagerId);
     setEditing(undefined);
     setCreating(false);
     setDeleting(undefined);
@@ -165,7 +166,10 @@ export const ManagerList = () => {
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : undefined}
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q)}
+          emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : "등록된 매니저가 없습니다"}
+          emptyAction={q ? undefined : { label: "매니저 등록", onClick: () => setCreating(true) }}
+          highlightedKey={highlightedKey}
           columns={columns}
           loading={loading}
           rows={items}

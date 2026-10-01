@@ -193,12 +193,12 @@ export const AuditLogPage = () => {
           auditItems.length === 0 && !loading && !error ? (
             <EmptyState icon="file-search" title="조건에 맞는 감사 로그가 없습니다" />
           ) : (
-            <RosterTable hasError={Boolean(error)} columns={auditColumns} loading={loading} rows={auditItems} getRowKey={(row, index) => `${row.targetType}-${row.targetId}-${index}`} />
+            <RosterTable hasError={Boolean(error)} onRetry={paging.reload} columns={auditColumns} loading={loading} rows={auditItems} getRowKey={(row, index) => `${row.targetType}-${row.targetId}-${index}`} />
           )
         ) : loginItems.length === 0 && !loading && !error ? (
           <EmptyState icon="file-search" title="조건에 맞는 접속 이력이 없습니다" />
         ) : (
-          <RosterTable hasError={Boolean(error)} columns={loginColumns} loading={loading} rows={loginItems} getRowKey={(row, index) => `${row.accountId}-${index}`} />
+          <RosterTable hasError={Boolean(error)} onRetry={paging.reload} columns={loginColumns} loading={loading} rows={loginItems} getRowKey={(row, index) => `${row.accountId}-${index}`} />
         )}
       </Card>
 

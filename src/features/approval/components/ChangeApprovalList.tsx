@@ -118,7 +118,7 @@ export const ChangeApprovalList = () => {
       <SegmentedControl options={STATUS_OPTIONS} value={status} onChange={handleStatusChange} />
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)}
+        <RosterTable hasError={Boolean(error)} onRetry={() => loadApprovals(status, page)}
           columns={columns}
           loading={loading}
           rows={items}

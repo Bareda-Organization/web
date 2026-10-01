@@ -31,7 +31,8 @@ type StudentFormProps = {
   /** 있으면 수정 대상 student_id, 없으면 신규 등록. */
   studentId?: string;
   onClose: () => void;
-  onDone: () => void;
+  /** 저장한 학생의 id — 목록이 그 행을 잠깐 강조한다 */
+  onDone: (savedStudentId?: string) => void;
 };
 
 // §5.11 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
@@ -190,10 +191,11 @@ export const StudentForm = ({
       };
       if (studentId) {
         await updateStudent(studentId, request);
+        onDone(studentId);
       } else {
-        await createStudent(request);
+        const created = await createStudent(request);
+        onDone(created.studentId);
       }
-      onDone();
     } catch (cause) {
       setError(
         cause instanceof ApiError

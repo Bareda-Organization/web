@@ -51,7 +51,7 @@ export const NotificationList = () => {
   const [acked, setAcked] = useState("");
   // 필터가 바뀌면 0쪽부터 다시 읽는다 — 쪽 번호와 필터를 한 곳(usePagedList)에서 다뤄 요청이 한 번만 나가고,
   // 늦게 온 옛 응답은 무시하며, 조회가 실패해도 보이던 목록은 그대로 둔다.
-  const { items, data, totalCount, hasNext, page, setPage, loading, error } = usePagedList(
+  const { items, data, totalCount, hasNext, page, setPage, loading, error, reload } = usePagedList(
     (targetPage) =>
       getNotifications(targetPage, PAGE_SIZE, {
         type: type ? (type as NotificationType) : undefined,
@@ -107,7 +107,7 @@ export const NotificationList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
+        <RosterTable hasError={Boolean(error)} onRetry={reload} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
       </Card>
 
       <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

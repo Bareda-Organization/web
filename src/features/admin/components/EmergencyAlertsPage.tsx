@@ -32,7 +32,7 @@ export const EmergencyAlertsPage = () => {
   const [status, setStatus] = useState("open");
   const [detailTarget, setDetailTarget] = useState<EmergencyItemResponseTypes | null>(null);
   // 갱신이 한 번 실패해도 이미 보이던 미확인 목록은 지우지 않는다(usePagedList) — 오류 배너만 더한다.
-  const { items: emergencies, data, loading, error } = usePagedList(
+  const { items: emergencies, data, loading, error, reload } = usePagedList(
     async () => {
       const response = await getEmergencies(status);
       return { ...response, totalCount: response.items.length, hasNext: false };
@@ -83,7 +83,7 @@ export const EmergencyAlertsPage = () => {
         {!loading && !error && emergencies.length === 0 ? (
           <EmptyState icon="siren" title="해당 상태의 비상 알림이 없습니다" />
         ) : (
-          <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={emergencies} getRowKey={(row) => row.emergencyId} />
+          <RosterTable hasError={Boolean(error)} onRetry={reload} columns={columns} loading={loading} rows={emergencies} getRowKey={(row) => row.emergencyId} />
         )}
       </Card>
 

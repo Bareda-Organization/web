@@ -13,7 +13,8 @@ type BusFormProps = {
   /** 있으면 수정, 없으면 등록. §5.12 에는 상세 GET 이 없어 목록 행 데이터를 그대로 받는다. */
   bus?: BusItemResponseTypes;
   onClose: () => void;
-  onDone: () => void;
+  /** 저장한 차량의 id — 목록이 그 행을 잠깐 강조한다 */
+  onDone: (savedBusId?: string) => void;
 };
 
 // §5.12 POST·PATCH /staff/buses(BUS-02·03) — 차량 등록·수정 폼.
@@ -48,10 +49,11 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
           );
           return;
         }
+        onDone(bus.id);
       } else {
-        await createBus(request);
+        const created = await createBus(request);
+        onDone(created.id);
       }
-      onDone();
     } catch (cause) {
       // 409 DUPLICATE_BUS_NO · 409 CAPACITY_EXCEEDED 는 화면이 그 경계를 그대로 말한다 —
       // "정원 초과" 를 "등록 실패" 로 뭉뚱그리면 다음 행동(정원을 늘릴지 배정을 줄일지)을 알 수 없다.
@@ -65,10 +67,10 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
     <Dialog
       title={bus ? "차량 정보 수정" : "차량 등록"}
       // 경고가 떠 있다는 것은 수정이 이미 저장됐다는 뜻이다 — 어떻게 닫아도 목록이 새 값을 다시 받아야 한다.
-      onClose={warnings.length > 0 ? onDone : onClose}
+      onClose={warnings.length > 0 ? () => onDone(bus?.id) : onClose}
       footer={
         warnings.length > 0 ? (
-          <Button variant="primary" onClick={onDone}>
+          <Button variant="primary" onClick={() => onDone(bus?.id)}>
             확인
           </Button>
         ) : (

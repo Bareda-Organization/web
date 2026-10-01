@@ -75,7 +75,7 @@ export const RouteList = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)}
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page)} emptyMessage="등록된 편성이 없습니다" emptyAction={{ label: "편성 등록", onClick: () => setCreating(true) }}
           columns={columns}
           loading={loading}
           rows={items}

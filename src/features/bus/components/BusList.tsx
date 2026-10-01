@@ -21,7 +21,7 @@ export const BusList = () => {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { notice, showNotice } = useSavedNotice();
+  const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editing, setEditing] = useState<BusItemResponseTypes | undefined>(undefined);
   const [creating, setCreating] = useState(false);
 
@@ -47,8 +47,9 @@ export const BusList = () => {
     })();
   }, [page, load]);
 
-  const handleDone = () => {
-    showNotice("변경 사항을 반영했습니다");
+  // savedBusId — 등록·수정한 차량의 id. 그 행을 잠깐 강조한다.
+  const handleDone = (savedBusId?: string) => {
+    showNotice("변경 사항을 반영했습니다", savedBusId);
     setEditing(undefined);
     setCreating(false);
     load(page);
@@ -82,7 +83,8 @@ export const BusList = () => {
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page)} emptyMessage="등록된 차량이 없습니다" emptyAction={{ label: "차량 등록", onClick: () => setCreating(true) }}
+          highlightedKey={highlightedKey} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} onRowClick={setEditing} />
       </Card>
 
       <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />

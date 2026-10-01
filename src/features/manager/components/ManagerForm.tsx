@@ -11,7 +11,8 @@ type ManagerFormProps = {
   /** 있으면 수정, 없으면 등록. §5.13 에는 상세 GET 이 없어 목록 행 데이터를 그대로 받는다. */
   manager?: ManagerItemResponseTypes;
   onClose: () => void;
-  onDone: () => void;
+  /** 저장한 매니저의 id — 목록이 그 행을 잠깐 강조한다 */
+  onDone: (savedManagerId?: string) => void;
 };
 
 const ROLE_OPTIONS = [
@@ -38,10 +39,11 @@ export const ManagerForm = ({ manager, onClose, onDone }: ManagerFormProps) => {
       const request = { name: name.trim(), phone: phone.trim(), role, workHours };
       if (manager) {
         await updateManager(manager.id, request);
+        onDone(manager.id);
       } else {
-        await createManager(request);
+        const created = await createManager(request);
+        onDone(created.id);
       }
-      onDone();
     } catch (cause) {
       // W8 — §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling 339`).
       // 서버 문구가 삭제 전용이라(`ErrorCode.java`) 수정 맥락에 맞게 바꿔 보여준다
