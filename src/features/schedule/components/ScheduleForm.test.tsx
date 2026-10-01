@@ -113,6 +113,19 @@ describe("ScheduleForm — F02-08 수정 반영 안내", () => {
   });
 });
 
+describe("ScheduleForm — R46-SCREEN 창 폭", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  // 420px 기본 폭에서는 요일 7칸 중 '일'이 둘째 줄에 혼자 내려갔다(화면 확인 1440) — 노선 편성 등록 창(480px)과 같은 폭이면 한 줄에 들어간다.
+  it("등록 창은 요일 7칸이 한 줄에 들어가도록 480px 폭이다", async () => {
+    mockGetBuses.mockResolvedValue({ items: [], page: 0, size: 100, totalCount: 0, hasNext: false });
+    render(<ScheduleForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    await waitFor(() => expect(mockGetBuses).toHaveBeenCalled());
+    expect(getComputedStyle(screen.getByRole("dialog")).maxWidth).toBe("480px");
+  });
+});
+
 describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 
