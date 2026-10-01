@@ -8,10 +8,12 @@ import { ApprovalPendingProvider, useApprovalPending } from "./ApprovalPendingPr
 vi.mock("../api", () => ({ getSignupRequests: vi.fn(), getChangeApprovals: vi.fn() }));
 
 let emitEnvelope: (envelope: WebSocketEnvelope) => void = () => {};
+let emitReconnected: () => void = () => {};
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
+  useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     emitEnvelope = onEnvelope;
+    emitReconnected = onReconnected ?? (() => {});
     return { connectionState: "connected", reconnect: vi.fn() };
   },
 }));
@@ -89,5 +91,18 @@ describe("ApprovalPendingProvider", () => {
     await act(async () => emitEnvelope({ event: "approval_requested" } as WebSocketEnvelope));
 
     expect(screen.getByText(/가입 2 · 구간 1/)).toBeInTheDocument();
+  });
+
+  // R46-FIXCONN C-6 — 연결이 끊긴 사이 놓친 승인 요청 통지는 30초 폴링을 기다리지 않고 재연결 직후 한 번 메운다.
+  it("연결이 끊겼다 돌아오면 폴링 주기를 기다리지 않고 바로 다시 센다", async () => {
+    mockSignups.mockResolvedValue(signupPage(0));
+    mockChanges.mockResolvedValue(changePage(0, []));
+    renderProvider();
+    await waitFor(() => expect(screen.getByText(/준비 가입 0 · 구간 0/)).toBeInTheDocument());
+
+    mockChanges.mockResolvedValue(changePage(2, [change("n", "2026-10-01T10:00:00+09:00")]));
+    await act(async () => emitReconnected());
+
+    await waitFor(() => expect(screen.getByText(/구간 2/)).toBeInTheDocument());
   });
 });

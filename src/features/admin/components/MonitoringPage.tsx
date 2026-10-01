@@ -48,7 +48,7 @@ import {
 const LIVE_POLL_INTERVAL_MS = 7000;
 // 실시간 연결이 살아 있으면 방송(`stop_arrived`·`rider_changed`·`run_started`·`run_ended`)이 갱신을 가져온다 — 이 조회는 오늘
 // 취소 아닌 회차 전부를 정차 목록과 함께 돌려주는 가장 무거운 GET 이라(R46-LOAD L3) 안전망으로만 느리게 돈다.
-// 연결이 끊기면 하트비트(10초)가 감지해 7초로 돌아간다.
+// 연결이 끊기면 서버 무송신 20초 초과를 10초 주기로 점검해 20~30초 안에 감지하고 7초로 돌아간다(`API_SPEC §7`).
 const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
@@ -386,7 +386,11 @@ export const MonitoringPage = () => {
     },
     [academyId, scheduleRunsRefresh],
   );
-  const { connectionState, reconnect } = useRealtimeChannel(adminLiveDestination(), handleEnvelope);
+  // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다(R46-FIXCONN: 판정을
+  // 훅이 맡는다 — 재연결 대기 뒤 `connecting` 을 거치므로 직전 렌더 상태 비교로는 못 잡았다).
+  const { connectionState, reconnect } = useRealtimeChannel(adminLiveDestination(), handleEnvelope, () => {
+    if (academyId != null) void loadRuns(academyId);
+  });
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `runs` 는 REST
   // 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록·EmptyState 를
   // 대체하지 않고 그 위에 별도로 얹는다(DashboardPage.tsx 와 동일 판단).
@@ -416,16 +420,6 @@ export const MonitoringPage = () => {
     connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS,
     academyId != null,
   );
-
-  // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다.
-  const previousConnectionRef = useRef(connectionState);
-  useEffect(() => {
-    const previous = previousConnectionRef.current;
-    previousConnectionRef.current = connectionState;
-    if (connectionState === "connected" && (previous === "reconnecting" || previous === "gaveUp") && academyId != null) {
-      void loadRuns(academyId);
-    }
-  }, [connectionState, academyId, loadRuns]);
 
   // 한 번의 `GET /admin/emergencies?status=open` 으로 전 학원의 미확인 비상을 받아 학원별로 센다(Ruling 497 — 학원마다
   // §6.8 을 부르면 학원 수에 비례해 요청이 늘어난다). 실패해도 관제 화면을 막지 않는다 — 요약이 비어 보일 뿐이다.

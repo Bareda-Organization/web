@@ -73,7 +73,8 @@ export const ApprovalPendingProvider = ({ academyId, children }: { academyId: st
     },
     [refresh],
   );
-  useRealtimeChannel(academyLiveDestination(academyId), handleEnvelope);
+  // 연결이 끊겼다 돌아오면 끊긴 사이의 통지를 30초 폴링을 기다리지 않고 한 번 메운다(`API_SPEC §7` 재연결 동기화).
+  useRealtimeChannel(academyLiveDestination(academyId), handleEnvelope, () => void refresh());
 
   const value = useMemo(() => ({ ...counts, refresh }), [counts, refresh]);
   return <ApprovalPendingContext.Provider value={value}>{children}</ApprovalPendingContext.Provider>;

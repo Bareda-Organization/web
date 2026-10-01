@@ -55,14 +55,16 @@ const mockGetRunAttention = vi.mocked(getRunAttention);
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
 const mockReconnect = vi.fn();
-const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
+let capturedOnReconnected: (() => void) | undefined;
+const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
   capturedOnEnvelope = onEnvelope;
+  capturedOnReconnected = onReconnected;
   return { connectionState: mockConnectionState, reconnect: mockReconnect };
 });
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
-    mockUseRealtimeChannel(destination, onEnvelope),
+  useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) =>
+    mockUseRealtimeChannel(destination, onEnvelope, onReconnected),
 }));
 
 const baseAcademies = {
@@ -838,9 +840,10 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
     await advance(7_500);
     expect(mockGetRunsLive.mock.calls.length).toBe(afterDrop + 1);
 
-    // 다시 붙었다 — 끊긴 사이 놓친 방송은 되찾을 길이 없으므로 30초를 기다리지 않고 한 번 받는다.
+    // 다시 붙었다 — 끊긴 사이 놓친 방송은 되찾을 길이 없으므로 30초를 기다리지 않고 한 번 받는다(판정은 훅이 하고 콜백으로 알린다).
     mockConnectionState = "connected";
     view.rerender(<MonitoringPage />);
+    await act(async () => capturedOnReconnected?.());
     await advance(100);
     const afterBackfill = mockGetRunsLive.mock.calls.length;
     expect(afterBackfill).toBe(afterDrop + 2);

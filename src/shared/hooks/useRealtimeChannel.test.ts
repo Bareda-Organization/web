@@ -75,6 +75,7 @@ vi.mock("../lib/ws", () => {
 let useRealtimeChannel: (
   destination: string,
   onEnvelope: (envelope: WebSocketEnvelope) => void,
+  onReconnected?: () => void,
 ) => UseRealtimeChannelResult;
 
 beforeEach(async () => {
@@ -210,5 +211,61 @@ describe("useRealtimeChannel", () => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
     expect(instances[0].connectCalls).toBe(2);
+  });
+  // R46-FIXCONN C-1 ③·C-6 — 끊겼다 다시 붙으면 끊긴 사이 놓친 방송을 REST 로 한 번 메운다(API_SPEC §7 재연결 동기화).
+  // 실제 클라이언트는 재연결 대기가 끝나면 `connecting` 을 거쳐 `connected` 가 되므로 그 순서로 시험한다.
+  describe("재연결 직후 콜백(onReconnected)", () => {
+    it("끊김(reconnecting) 뒤 connecting 을 거쳐 connected 가 되면 한 번만 부른다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).not.toHaveBeenCalled();
+
+      act(() => instances[0].emitState("reconnecting"));
+      act(() => instances[0].emitState("connecting"));
+      expect(onReconnected).not.toHaveBeenCalled();
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+
+    it("최초 연결(connecting → connected)에는 부르지 않는다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("connecting"));
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).not.toHaveBeenCalled();
+    });
+
+    it("재연결 포기(gaveUp) 뒤 다시 붙어도 부르고, 한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("gaveUp"));
+      act(() => instances[0].emitState("connecting"));
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+
+    it("화면이 직접 끊은(disconnected) 뒤의 연결은 재연결로 치지 않는다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("reconnecting"));
+      act(() => instances[0].emitState("disconnected"));
+      act(() => instances[0].emitState("connecting"));
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).not.toHaveBeenCalled();
+    });
+
+    it("이미 끊긴 채 공유 연결에 뒤늦게 붙은 화면도 다시 붙는 순간 한 번 받는다", () => {
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+      act(() => instances[0].emitState("reconnecting"));
+
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("connecting"));
+      act(() => instances[0].emitState("connected"));
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
   });
 });

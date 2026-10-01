@@ -60,24 +60,43 @@ const buildHeaders = (hasBody: boolean): HeadersInit => {
   return headers;
 };
 
+// 조회(GET)가 응답 헤더를 기다리는 한도 — 서버가 연결은 받고 응답을 안 주는 상태(DB 풀 고갈 뒤 대기 · 반쯤 죽은 TCP)에서 브라우저가
+// 포기할 때까지(수 분) 폴링이 매달려 그 화면 갱신이 멈추는 것을 막는다. 넘으면 `NetworkError` 로 끊어 폴링의 실패 백오프가 이어받는다
+// (R46-FIXCONN C-8). 쓰기(POST·PATCH·PUT·DELETE)는 서버가 이미 처리를 시작했을 수 있어 끊지 않는다.
+// ponytail: 본문을 다 읽기까지의 한도는 아님(헤더 도착까지) — 본문이 멈추는 경우가 실측되면 읽기 단계에도 같은 타이머를 건다.
+const GET_TIMEOUT_MS = 15000;
+
 const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Response> => {
   const body =
     options.idempotencyKey !== undefined
       ? { ...(options.body ?? {}), client_key: options.idempotencyKey }
       : options.body;
+  const method = options.method ?? "GET";
+
+  // 호출부의 중단 신호와 시간 제한을 하나로 묶는다 — 둘 중 어느 쪽이든 먼저 오면 요청을 끊는다.
+  const timeoutController = method === "GET" ? new AbortController() : undefined;
+  const timer = timeoutController ? setTimeout(() => timeoutController.abort(), GET_TIMEOUT_MS) : undefined;
+  const forwardAbort = () => timeoutController?.abort();
+  if (timeoutController) {
+    if (options.signal?.aborted) timeoutController.abort();
+    options.signal?.addEventListener("abort", forwardAbort, { once: true });
+  }
 
   try {
     return await fetch(buildUrl(path, options.query), {
-      method: options.method ?? "GET",
+      method,
       headers: buildHeaders(body !== undefined),
       // §1.2.1 — refresh 쿠키가 응답에 오고 다음 요청에 자동 동봉되려면 항상 필요하다.
       credentials: "include",
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: options.signal,
+      signal: timeoutController?.signal ?? options.signal,
     });
   } catch (cause) {
-    // fetch 가 reject 하는 것은 응답을 아예 못 받은 경우(오프라인·DNS·CORS 차단 등)뿐이다.
+    // fetch 가 reject 하는 것은 응답을 아예 못 받은 경우(오프라인·DNS·CORS 차단·시간 제한 등)뿐이다.
     throw new NetworkError(cause);
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", forwardAbort);
   }
 };
 

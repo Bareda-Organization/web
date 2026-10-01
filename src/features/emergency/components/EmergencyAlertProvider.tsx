@@ -39,6 +39,10 @@ type EmergencyAlertState = {
 
 // 비상 알림은 지연 인지 자체가 위험이라 WebSocket 이 끊겨도 놓치지 않게 짧게 다시 확인한다(EmergencyAlertsPage 와 같은 5초).
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
+// 탭이 숨어 있어도 폴링을 멈추지 않는다 — 근무 중 관계자가 다른 창을 보는 것이 평상 사용이고, 이 알림의 소리·브라우저 알림은 바로 그때
+// 알아채게 하려는 기능이다. 숨은 탭의 WebSocket 이 끊긴 사이에는 이 폴링이 유일한 경로라 느린 간격으로라도 돈다(R46-FIXCONN C-1 ②).
+// 관계자 25명 기준 초당 1건 미만.
+const EMERGENCY_HIDDEN_POLL_INTERVAL_MS = 30000;
 
 const EMPTY_STATE: EmergencyAlertState = { alerts: [], ackingId: null, ackFailedId: null, isAckable: true, listPath: "/emergency", onAck: () => {} };
 
@@ -96,8 +100,8 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
     })();
   }, [load]);
 
-  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
-  usePolling(load, EMERGENCY_POLL_INTERVAL_MS);
+  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 느린 간격으로 이어가며, 실패하면 간격을 늘린다(R46-WEB C · R46-FIXCONN C-1).
+  usePolling(load, EMERGENCY_POLL_INTERVAL_MS, true, EMERGENCY_HIDDEN_POLL_INTERVAL_MS);
 
   const handleEnvelope = useCallback(
     (envelope: WebSocketEnvelope) => {
@@ -121,7 +125,8 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
     },
     [load],
   );
-  useRealtimeChannel(destination, handleEnvelope);
+  // 연결이 끊겼다 돌아오면 끊긴 사이의 신고를 서버 목록으로 한 번 메운다(`API_SPEC §7` 재연결 동기화).
+  useRealtimeChannel(destination, handleEnvelope, () => void load());
 
   const closeAcked = useCallback(
     (emergencyId: string) => {

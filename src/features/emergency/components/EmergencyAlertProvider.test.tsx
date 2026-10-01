@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope } from "@/shared/lib/ws";
 import { createStableRouter } from "@/shared/testing/stableRouter";
@@ -14,10 +14,12 @@ const mockRouter = createStableRouter({ push: mockPush });
 vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
+let capturedOnReconnected: (() => void) | undefined;
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
+  useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     capturedOnEnvelope = onEnvelope;
+    capturedOnReconnected = onReconnected;
     return { connectionState: "connected" };
   },
 }));
@@ -261,5 +263,54 @@ describe("EmergencyAlertStrip — 접기", () => {
     act(() => capturedOnEnvelope?.(envelope("emergency_raised", { ...RAISED, emergency_id: 10, bus_no: "3호차" })));
 
     expect(await screen.findByText(/3호차/)).toBeInTheDocument();
+  });
+});
+
+// R46-FIXCONN C-1 ②·C-6 — 근무 중 관계자는 다른 창을 보는 것이 평상 사용이다. 숨은 탭에서도 비상 폴링이 멈추면 안 되고,
+// 연결이 끊겼다 돌아온 직후에는 끊긴 사이의 신고를 REST 로 한 번 받아 온다.
+describe("EmergencyAlertProvider — 숨은 탭·재연결 보충(R46-FIXCONN)", () => {
+  const setHidden = (hidden: boolean) => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setHidden(false);
+    mockGet.mockResolvedValue({ items: [], unackedCount: 0 });
+  });
+  afterEach(() => {
+    setHidden(false);
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it("탭이 숨어도 비상 폴링이 멈추지 않는다 — 30초 간격으로 계속 받고, 다시 보이면 바로 받는다", async () => {
+    renderProvider();
+    await advance(0);
+    const afterMount = mockGet.mock.calls.length;
+
+    act(() => setHidden(true));
+    await advance(29_999);
+    expect(mockGet.mock.calls.length).toBe(afterMount);
+    await advance(1);
+    expect(mockGet.mock.calls.length).toBe(afterMount + 1);
+
+    act(() => setHidden(false));
+    await advance(0);
+    expect(mockGet.mock.calls.length).toBe(afterMount + 2);
+  });
+
+  it("연결이 끊겼다 돌아오면 폴링 주기를 기다리지 않고 미확인 비상 목록을 다시 받는다", async () => {
+    renderProvider();
+    await advance(0);
+    const before = mockGet.mock.calls.length;
+
+    await act(async () => capturedOnReconnected?.());
+
+    expect(mockGet.mock.calls.length).toBe(before + 1);
   });
 });

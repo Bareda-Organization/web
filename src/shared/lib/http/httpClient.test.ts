@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, apiFetchBlob } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
-import { ApiError } from "./apiError";
+import { ApiError, NetworkError } from "./apiError";
 
 // 보고서 4항이 지목한 두 번째 공백 — httpClient → authGate 이벤트 전달.
 // 403 AUTH_PENDING·AUTH_REJECTED 는 대기 화면 재판정을 깨워야 하고, 같은 403 이라도
@@ -82,5 +82,77 @@ describe("apiFetchBlob", () => {
     );
 
     await expect(apiFetchBlob("/files/photos/a.jpg")).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+// R46-FIXCONN C-8 — 서버가 연결은 받고 응답을 안 주면 브라우저가 포기할 때까지(수 분) 그 조회가 매달려 폴링이 멈춘다.
+// GET 은 응답 헤더를 15초 안에 못 받으면 끊어 실패로 알린다(폴링의 실패 백오프가 이어받는다). 쓰기(POST·PATCH)는 서버가 이미 처리를
+// 시작했을 수 있어 끊지 않는다.
+describe("apiFetch — 응답 시간 제한", () => {
+  // 신호가 중단되면 거절하는 가짜 fetch — 응답을 끝내 안 주는 서버를 흉내 낸다.
+  const hangingFetch = () =>
+    vi.fn((_url: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+    });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("GET 은 15초 안에 응답이 없으면 NetworkError 로 끊긴다", async () => {
+    vi.stubGlobal("fetch", hangingFetch());
+    const result = apiFetch("/staff/dashboard").then(
+      () => "응답",
+      (cause: unknown) => cause,
+    );
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    let settled = false;
+    void result.then(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await result).toBeInstanceOf(NetworkError);
+  });
+
+  it("쓰기(POST)는 시간 제한으로 끊지 않는다 — 서버가 이미 처리를 시작했을 수 있다", async () => {
+    vi.stubGlobal("fetch", hangingFetch());
+    let settled = false;
+    void apiFetch("/staff/emergencies", { method: "POST", body: {} }).then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(settled).toBe(false);
+  });
+
+  it("호출부가 준 신호로 중단해도 여전히 중단된다", async () => {
+    vi.stubGlobal("fetch", hangingFetch());
+    const controller = new AbortController();
+    const result = apiFetch("/staff/dashboard", { signal: controller.signal }).then(
+      () => "응답",
+      (cause: unknown) => cause,
+    );
+
+    controller.abort();
+
+    expect(await result).toBeInstanceOf(NetworkError);
+  });
+
+  it("응답이 제때 오면 타이머를 남기지 않는다", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockJsonResponse(200, { data: { ok: true } })));
+
+    await expect(apiFetch("/staff/dashboard")).resolves.toEqual({ ok: true });
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -1,3 +1,4 @@
+import { TickerStrategy } from "@stomp/stompjs";
 import { describe, expect, it } from "vitest";
 import { createStompClient } from "./stompClient";
 
@@ -44,5 +45,31 @@ describe("createStompClient", () => {
     const raw = client as unknown as { brokerURL: string; connectHeaders: Record<string, string> };
     expect(raw.brokerURL).toBe("ws://localhost/ws/location");
     expect(raw.connectHeaders).toEqual({ Authorization: "Bearer t" });
+  });
+  // R46-FIXCONN C-1 ③·C-3·C-4 — 숨은 탭에서도 하트비트가 제때 나가고, 반쯤 죽은 연결·응답 없는 연결 시도가 바로 정리된다.
+  it("하트비트는 Worker 로 보낸다 — 숨은 탭의 setInterval 스로틀로 서버가 세션을 닫지 않게", () => {
+    const client = createStompClient({
+      brokerURL: "ws://localhost/ws/location",
+      connectHeaders: {},
+      onConnect: () => {},
+      onStompError: () => {},
+      onWebSocketClose: () => {},
+      onWebSocketError: () => {},
+    });
+    expect((client as unknown as { heartbeatStrategy: TickerStrategy }).heartbeatStrategy).toBe(TickerStrategy.Worker);
+  });
+
+  it("하트비트가 끊기면 소켓을 닫기를 기다리지 않고 버리고, CONNECTED 가 10초 안에 안 오면 시도를 끊는다", () => {
+    const client = createStompClient({
+      brokerURL: "ws://localhost/ws/location",
+      connectHeaders: {},
+      onConnect: () => {},
+      onStompError: () => {},
+      onWebSocketClose: () => {},
+      onWebSocketError: () => {},
+    });
+    const raw = client as unknown as { discardWebsocketOnCommFailure: boolean; connectionTimeout: number };
+    expect(raw.discardWebsocketOnCommFailure).toBe(true);
+    expect(raw.connectionTimeout).toBe(10000);
   });
 });
