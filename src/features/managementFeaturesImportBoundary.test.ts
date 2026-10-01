@@ -13,6 +13,7 @@ const ALLOWED: Record<string, string[]> = {
   emergency: ["auth"],
   map: [],
   notification: [],
+  onboarding: [],
   report: ["run"],
   approval: ["map"],
   student: ["auth"],
