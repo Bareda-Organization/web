@@ -38,6 +38,13 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     vi.clearAllMocks();
   });
 
+  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  it("메모 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByText(/학생 이름·연락처는 적지 마세요/)).toBeInTheDocument();
+  });
+
   it("기존 학생 모드에서 이름으로 찾아 고르고 확정하면 studentId 만 싣고 newStudentName 은 undefined 다", async () => {
     mockPostForcedAdd.mockResolvedValue({
       forcedAdditionId: "1",
@@ -99,7 +106,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
   it("메모 입력칸은 200자까지만 받는다", async () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
-    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
+    expect(screen.getByLabelText(/^메모/)).toHaveAttribute("maxlength", "200");
   });
 
   it("신규 학생 모드로 전환하면 newStudentName 을 싣고 studentId 는 undefined 다", async () => {
@@ -113,7 +120,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "신규 학생" }));
-    fireEvent.change(screen.getByLabelText(/학생 이름/), { target: { value: "새학생" } });
+    fireEvent.change(screen.getByLabelText(/^학생 이름/), { target: { value: "새학생" } });
     fireEvent.click(screen.getByRole("button", { name: "주소 후보 고르기" }));
 
     fireEvent.click(screen.getByRole("button", { name: "다음" }));

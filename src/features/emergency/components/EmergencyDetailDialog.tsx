@@ -5,6 +5,7 @@ import { Badge, Button, Dialog, Textarea } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
 import { emergencyMapUrl } from "../lib/mapLink";
+import { FREE_TEXT_PRIVACY_NOTICE } from "@/shared/lib/freeTextNotice";
 import type { EmergencyItemResponseTypes } from "../types";
 import { PhoneContact } from "./PhoneContact";
 import { StyledEmergencyDetailBody, StyledEmergencyDetailRow } from "./EmergencyDetailDialog.styled";
@@ -93,7 +94,7 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
         {canAck ? (
           <Textarea
             label="조치 메모 (선택)"
-            hint={`확인할 때 남깁니다 · 최대 ${ACK_MEMO_MAX_LENGTH}자 (${ackMemo.length}/${ACK_MEMO_MAX_LENGTH})`}
+            hint={`확인할 때 남깁니다 · 최대 ${ACK_MEMO_MAX_LENGTH}자 (${ackMemo.length}/${ACK_MEMO_MAX_LENGTH}) · ${FREE_TEXT_PRIVACY_NOTICE}`}
             maxLength={ACK_MEMO_MAX_LENGTH}
             rows={3}
             value={ackMemo}

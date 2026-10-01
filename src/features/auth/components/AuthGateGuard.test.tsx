@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { changePassword } from "../api";
 import { AuthGateGuard } from "./AuthGateGuard";
 
 const mockLogout = vi.fn().mockResolvedValue(undefined);
 let mockSession: Record<string, unknown> | null = null;
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useRouter: () => ({ replace: vi.fn() }) }));
+const mockRouter = createStableRouter();
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useRouter: () => mockRouter }));
 vi.mock("../api", () => ({ changePassword: vi.fn() }));
 vi.mock("../hooks/useAuthSession", () => ({
   useAuthSession: () => ({ bootstrapStatus: "ready", session: mockSession, logout: mockLogout }),

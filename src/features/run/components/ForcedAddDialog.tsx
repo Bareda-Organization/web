@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl } from "@/shared/ui";
 import { StopAddressSearch } from "@/features/route";
+import { FREE_TEXT_PRIVACY_NOTICE } from "@/shared/lib/freeTextNotice";
 import { postForcedAdd, searchStudents } from "../api";
 import type { StudentSearchItemTypes } from "../types";
 import { StyledAddressHint, StyledAddressPicker, StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
@@ -209,7 +210,13 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
             {address ? `선택한 주소: ${address}` : "검색한 뒤 후보에서 주소를 골라 주세요"}
           </StyledAddressHint>
         </StyledAddressPicker>
-        <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} maxLength={NOTE_MAX_LENGTH} />
+        <Input
+          label="메모"
+          hint={FREE_TEXT_PRIVACY_NOTICE}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={NOTE_MAX_LENGTH}
+        />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledDialogForm>
     </Dialog>
