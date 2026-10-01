@@ -6,7 +6,7 @@ import { AlertBanner, Badge, Card, Input, PageHeader, Pagination, RosterTable, S
 import type { RosterColumn } from "@/shared/types";
 import { getNotifications } from "../api";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
-import { StyledNotificationFilters, StyledNotificationLayout } from "./NotificationList.styled";
+import { StyledNotificationFilters, StyledNotificationLayout, StyledStaffRecipientMark } from "./NotificationList.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { formatRole } from "@/shared/lib/format/roleLabel";
 
@@ -35,6 +35,9 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   emergency: "비상 알림",
   emergency_canceled: "비상 알림 해제",
 };
+
+// 수신자가 학원 관계자·메인 관리자인 역할(§2.2) — 이 알림의 "수신자 확인" 이 관계자 본인의 확인이다.
+const STAFF_ROLES = new Set(["staff", "system_admin"]);
 
 const TYPE_OPTIONS = [{ value: "", label: "전체 종류" }, ...Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))];
 const ACKED_OPTIONS = [
@@ -68,7 +71,17 @@ export const NotificationList = () => {
     {
       key: "recipient",
       label: "수신자",
-      render: (row) => `${row.recipientName} (${formatRole(row.recipientRole)})`,
+      render: (row) => (
+        <>
+          {`${row.recipientName} (${formatRole(row.recipientRole)})`}
+          {/* 학부모·동승자에게 간 알림의 "수신자 확인" 은 그 수신자의 일이고, 관계자에게 간 알림만 학원이 직접 확인한다. */}
+          {STAFF_ROLES.has(row.recipientRole) ? (
+            <StyledStaffRecipientMark>
+              <Badge tone="brand">관계자 알림</Badge>
+            </StyledStaffRecipientMark>
+          ) : null}
+        </>
+      ),
     },
     { key: "type", label: "종류", render: (row) => TYPE_LABEL[row.type] },
     { key: "body", label: "내용" },

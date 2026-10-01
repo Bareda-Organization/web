@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotificationList } from "./NotificationList";
 import { getNotifications } from "../api";
@@ -60,7 +60,7 @@ describe("NotificationList — 시각 표기(R32-W9)", () => {
 });
 
 const row = (id: number) => ({
-  notificationId: String(id), sentAt: "2026-09-30T05:00:00Z", busNo: "1호차", recipientName: `수신${id}`, recipientRole: "parent" as const,
+  notificationId: String(id), sentAt: "2026-09-30T05:00:00Z", busNo: "1호차", recipientName: `수신${id}`, recipientRole: "parent" as string,
   type: "no_show_escalated" as const, body: `내용${id}`, acked: false,
 });
 const pageOf = (items: ReturnType<typeof row>[], page: number, hasNext: boolean) => ({ items, page, size: 20, totalCount: 45, hasNext, unackedCount: 3 });
@@ -101,5 +101,33 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
     expect(screen.getAllByText(/미승차 무응답/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/escalation/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(parent\)/)).not.toBeInTheDocument();
+  });
+});
+
+// R46-FUWEB B1 #20 — "수신자 확인" 의 수신자가 학부모·동승자면 학원이 볼 일이 아니다. 관계자 본인에게 간 알림만
+// 학원 관계자가 직접 확인해야 하므로 수신자가 관계자인 행에는 "관계자 알림" 표시를 달아 구분한다.
+describe("NotificationList — 관계자 알림 구분", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("수신자가 학원 관계자·메인 관리자인 행에만 관계자 알림 표시가 붙는다", async () => {
+    mockGet.mockResolvedValue(
+      pageOf(
+        [
+          { ...row(1), recipientName: "김학부모", recipientRole: "parent" },
+          { ...row(2), recipientName: "이관계자", recipientRole: "staff" },
+          { ...row(3), recipientName: "박관리자", recipientRole: "system_admin" },
+        ],
+        0,
+        false,
+      ),
+    );
+    render(<NotificationList />);
+
+    const parentRow = (await screen.findByText("김학부모 (학부모)")).closest("tr")!;
+    const staffRow = screen.getByText("이관계자 (학원 관계자)").closest("tr")!;
+    const adminRow = screen.getByText("박관리자 (메인 관리자)").closest("tr")!;
+    expect(within(parentRow).queryByText("관계자 알림")).not.toBeInTheDocument();
+    expect(within(staffRow).getByText("관계자 알림")).toBeInTheDocument();
+    expect(within(adminRow).getByText("관계자 알림")).toBeInTheDocument();
   });
 });
