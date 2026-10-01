@@ -75,7 +75,7 @@ describe("StudentForm — 보호자 연락처 수정", () => {
     fireEvent.change(최부모, { target: { value: "010-5555-0101" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
 
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith("1"));
     expect(vi.mocked(updateStudent).mock.calls[0][1].guardians).toEqual([
       { guardianId: "7", phone: "010-5555-0101" },
     ]);
@@ -237,3 +237,22 @@ describe("StudentForm — 메모 길이", () => {
     expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
   });
 });
+
+// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 등록을 마치면 서버가 만든 학생 id 를 onDone 에 실어 보낸다.
+describe("StudentForm — 저장한 학생 id 전달", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("등록하면 서버가 만든 학생 id 를 onDone 에 넘긴다", async () => {
+    mockCreate.mockResolvedValue({ studentId: "77" } as never);
+    const onDone = vi.fn();
+    render(<StudentForm onClose={vi.fn()} onDone={onDone} />);
+
+    fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "김바래" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith("77"));
+  });
+});
+

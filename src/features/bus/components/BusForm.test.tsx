@@ -107,3 +107,41 @@ describe("BusForm — 등록 실패 갈래", () => {
     expect(await screen.findByText("정원 8명을 넘는 회차가 있습니다 — 배정 인원 12명 (2026-09-30 08:00 등원 회차, 회차 번호 3)")).toBeInTheDocument();
   });
 });
+
+// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 차량의 id 를 onDone 에 실어 보낸다.
+describe("BusForm — 저장한 차량 id 전달", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("등록하면 서버가 만든 차량 id, 수정하면 고친 차량 id, 경고를 확인하면 수정한 차량 id 를 onDone 에 넘긴다", async () => {
+    mockCreate.mockResolvedValue({ ...existingBus, id: "31" });
+    const created = vi.fn();
+    const { unmount } = render(<BusForm onClose={vi.fn()} onDone={created} />);
+    const textboxes = screen.getAllByRole("textbox");
+    fireEvent.change(textboxes[0], { target: { value: "1호차" } });
+    fireEvent.change(textboxes[1], { target: { value: "12가3456" } });
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(created).toHaveBeenCalledWith("31"));
+    unmount();
+
+    mockUpdate.mockResolvedValue({ ...existingBus, warnings: [] });
+    const updated = vi.fn();
+    const second = render(<BusForm bus={existingBus} onClose={vi.fn()} onDone={updated} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(updated).toHaveBeenCalledWith("9"));
+    second.unmount();
+
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", serviceDate: "2026-09-30", departTime: "2026-09-30T08:00:00+09:00", direction: "to_academy", assignedCount: 12, studentCapacity: 8 }],
+    });
+    const confirmed = vi.fn();
+    render(<BusForm bus={existingBus} onClose={vi.fn()} onDone={confirmed} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    fireEvent.click(await screen.findByRole("button", { name: "확인" }));
+    expect(confirmed).toHaveBeenCalledWith("9");
+  });
+});
+

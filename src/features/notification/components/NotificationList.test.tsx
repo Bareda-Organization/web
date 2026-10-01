@@ -131,3 +131,20 @@ describe("NotificationList — 관계자 알림 구분", () => {
     expect(within(adminRow).getByText("관계자 알림")).toBeInTheDocument();
   });
 });
+
+// R46-FUWEB B1 #11 — 쪽 조회 훅(usePagedList)을 쓰는 목록도 [다시 시도] 로 같은 쪽을 다시 읽는다.
+describe("NotificationList — 다시 시도", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("조회에 실패하면 다시 시도 버튼이 있고, 누르면 다시 조회해 목록이 나온다", async () => {
+    mockGet.mockRejectedValueOnce(new Error("네트워크 요청이 실패했습니다"));
+    render(<NotificationList />);
+    await screen.findByText("알림 로그를 불러오지 못했습니다");
+
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("내용1")).toBeInTheDocument();
+  });
+});
+

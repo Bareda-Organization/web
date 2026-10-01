@@ -139,3 +139,24 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     expect(screen.getByText("새 조건의 보고")).toBeInTheDocument();
   });
 });
+
+// R46-FUWEB B1 #11 — 목록을 못 읽으면 새로고침 말고는 되돌릴 길이 없었다. 조회 조건은 그대로 두고 같은 조회를 다시 낸다.
+describe("ReportList — 다시 시도", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("조회에 실패하면 다시 시도 버튼이 있고, 누르면 같은 조건으로 다시 조회해 목록이 나온다", async () => {
+    mockGetDashboard.mockResolvedValue({ runs: [] } as never);
+    mockGet.mockRejectedValueOnce(new Error("네트워크 요청이 실패했습니다"));
+    render(<ReportList />);
+    await screen.findByText("운행 리포트를 불러오지 못했습니다");
+
+    mockGet.mockResolvedValue({
+      items: [{ reportId: "1", reportedAt: "2026-09-12T08:00:00", type: "no_show", busNo: "1호차", studentName: "김철수", reportedBy: "이기사", memo: "복구됨", handled: false }],
+    } as never);
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("복구됨")).toBeInTheDocument();
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+});
+

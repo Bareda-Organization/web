@@ -140,3 +140,29 @@ describe("ManagerForm — 앱 연결 안내", () => {
     expect(screen.queryByText(/앱에서 가입 신청하면/)).not.toBeInTheDocument();
   });
 });
+
+// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 매니저의 id 를 onDone 에 실어 보낸다.
+describe("ManagerForm — 저장한 매니저 id 전달", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("등록하면 서버가 만든 매니저 id, 수정하면 고친 매니저 id 를 onDone 에 넘긴다", async () => {
+    mockCreate.mockResolvedValue({ ...existingManager, id: "41" });
+    const created = vi.fn();
+    const { unmount } = render(<ManagerForm onClose={vi.fn()} onDone={created} />);
+    const textboxes = screen.getAllByRole("textbox");
+    fireEvent.change(textboxes[0], { target: { value: "김기사" } });
+    fireEvent.change(textboxes[1], { target: { value: "010-1234-5678" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(created).toHaveBeenCalledWith("41"));
+    unmount();
+
+    mockUpdate.mockResolvedValue(existingManager);
+    const updated = vi.fn();
+    render(<ManagerForm manager={existingManager} onClose={vi.fn()} onDone={updated} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(updated).toHaveBeenCalledWith("5"));
+  });
+});
+
