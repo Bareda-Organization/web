@@ -151,13 +151,12 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
   // `R20-B` 목표 2·3·4(조율자 결정) — "변경 전/변경 후" 두 열에 전체 소요시간·출발시간·
   // 도착시간 3개만 낸다. 도착시간은 출발시간 + 전체 소요시간(분)의 파생값이라 새로
-  // 계산하지 않는다. 타임존에 좌우되지 않도록 기대값도 같은 방식(toLocaleTimeString)으로
-  // 계산해 만든다 — 실행 환경의 로컬 시간대가 달라져도 이 시험은 그대로 통과해야 한다.
-  const formatClock = (iso: string) =>
-    new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  // 계산하지 않는다. 화면 시각은 PC 시간대와 무관하게 서울 기준이므로(`clockTime.ts`) 기대값도
+  // 서울 시각 문자열로 박는다 — 예전에는 기대값을 PC 시간대로 계산해, 시간대가 UTC 인
+  // GitHub Actions 에서만 화면(17:00)과 기대값(08:00)이 어긋났다(R46-CIFIX).
 
   describe("소요 시간 비교(변경 전/후)", () => {
-    const departTime = "2026-09-13T08:00:00Z";
+    const departTime = "2026-09-13T08:00:00Z"; // 서울 17:00
 
     it("전체 소요시간·출발시간·도착시간을 두 열에 나눠 보여주고, 소요시간 증감은 변경 후 열에만 부호로 낸다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime }); // 32분 → 38분
@@ -169,17 +168,12 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
       // 출발시간 — 재최적화가 출발 시각을 옮기지 않으므로 두 열에 같은 값이 나온다.
       // `R20-B2` 목표 2 — 같은 값이 버그로 읽히지 않도록 "전후 동일" 배지를 함께 낸다.
-      const departLabel = formatClock(departTime);
-      expect(await screen.findAllByText(departLabel)).toHaveLength(2);
+      expect(await screen.findAllByText("17:00")).toHaveLength(2);
       expect(await screen.findAllByText("전후 동일")).toHaveLength(2);
 
       // 도착시간 — 출발시간 + 전체 소요시간(분)의 파생값이라 전/후가 다르다.
-      const arrivalBefore = new Date(departTime);
-      arrivalBefore.setMinutes(arrivalBefore.getMinutes() + 32);
-      const arrivalAfter = new Date(departTime);
-      arrivalAfter.setMinutes(arrivalAfter.getMinutes() + 38);
-      expect(await screen.findByText(formatClock(arrivalBefore.toISOString()))).toBeInTheDocument();
-      expect(await screen.findByText(formatClock(arrivalAfter.toISOString()))).toBeInTheDocument();
+      expect(await screen.findByText("17:32")).toBeInTheDocument(); // 17:00 + 32분
+      expect(await screen.findByText("17:38")).toBeInTheDocument(); // 17:00 + 38분
     });
 
     it("줄어들면 - 부호로 보여준다", async () => {
@@ -231,7 +225,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
   // 시간 표기다. 실제 응답은 초·밀리초·날짜까지 포함한 풀 ISO 를 주므로 시:분으로 줄인다.
   describe("노선 비교 정류장 시각", () => {
     it("풀 ISO 로 온 정류장 도착예정시각을 시:분으로 줄여 보여준다", async () => {
-      const eta = "2026-09-19T12:55:41.464829Z";
+      const eta = "2026-09-19T12:55:41.464829Z"; // 서울 21:55
       mockGetDetail.mockResolvedValue({
         ...baseDetail,
         routePreview: {
@@ -241,7 +235,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       });
       render(<ChangeApprovalDetail approvalId="5" />);
 
-      expect(await screen.findByText(formatClock(eta))).toBeInTheDocument();
+      expect(await screen.findByText("21:55")).toBeInTheDocument();
       expect(screen.queryByText(eta)).not.toBeInTheDocument();
     });
 
