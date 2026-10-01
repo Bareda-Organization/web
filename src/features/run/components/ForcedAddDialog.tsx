@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl } from "@/shared/ui";
+import { StopAddressSearch } from "@/features/route";
 import { postForcedAdd, searchStudents } from "../api";
 import type { StudentSearchItemTypes } from "../types";
-import { StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
+import { StyledAddressHint, StyledAddressPicker, StyledDialogForm, StyledConfirmBody } from "./ForcedAddDialog.styled";
 
 type Mode = "existing" | "new";
 
@@ -200,12 +201,14 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
             onChange={(event) => setNewStudentName(event.target.value)}
           />
         )}
-        <Input
-          label="승하차 주소"
-          required
-          value={address}
-          onChange={(event) => setAddress(event.target.value)}
-        />
+        {/* 주소는 노선 편성과 같은 검색에서 후보를 골라 정한다 — 직접 쳐서 확정 단계에서 틀렸다고 알게 되지 않게 한다. */}
+        <StyledAddressPicker>
+          <span>승하차 주소 검색</span>
+          <StopAddressSearch onPick={(suggestion) => setAddress(suggestion.displayName)} />
+          <StyledAddressHint>
+            {address ? `선택한 주소: ${address}` : "검색한 뒤 후보에서 주소를 골라 주세요"}
+          </StyledAddressHint>
+        </StyledAddressPicker>
         <Input label="메모" value={note} onChange={(event) => setNote(event.target.value)} maxLength={NOTE_MAX_LENGTH} />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledDialogForm>

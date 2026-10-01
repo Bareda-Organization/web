@@ -12,6 +12,16 @@ vi.mock("../api", () => ({
   searchStudents: vi.fn(),
 }));
 
+// R46-FUWEB B1 #25 — 승하차 주소는 노선 편성과 같은 주소 검색에서 후보를 골라 정한다(직접 입력해 확정 단계에서 틀렸다고 알게 되던 흐름을 없앤다).
+// 검색 상자 자체는 `StopAddressSearch.test.tsx` 가 본다 — 여기서는 고른 후보의 주소가 서버로 가는 흐름만 본다.
+vi.mock("@/features/route", () => ({
+  StopAddressSearch: ({ onPick }: { onPick: (suggestion: { displayName: string; lat: number; lng: number; nearby: [] }) => void }) => (
+    <button type="button" onClick={() => onPick({ displayName: "서울시 정문로 1", lat: 37.5, lng: 127.0, nearby: [] })}>
+      주소 후보 고르기
+    </button>
+  ),
+}));
+
 const mockPostForcedAdd = vi.mocked(postForcedAdd);
 const mockSearchStudents = vi.mocked(searchStudents);
 
@@ -39,7 +49,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     await pickExistingStudent();
-    fireEvent.change(screen.getByLabelText(/승하차 주소/), { target: { value: "서울시 정문로 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "주소 후보 고르기" }));
 
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     // 확정 단계에는 ID 숫자가 아니라 학생 이름이 보인다.
@@ -77,7 +87,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     mockPostForcedAdd.mockRejectedValue(new ApiError(status, code, "서버 원문"));
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
     await pickExistingStudent();
-    fireEvent.change(screen.getByLabelText(/승하차 주소/), { target: { value: "서울시 정문로 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "주소 후보 고르기" }));
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     fireEvent.click(screen.getByRole("button", { name: "확정하고 추가" }));
 
@@ -103,9 +113,8 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "신규 학생" }));
-    const inputs = screen.getAllByRole("textbox");
-    fireEvent.change(inputs[0], { target: { value: "새학생" } });
-    fireEvent.change(inputs[1], { target: { value: "서울시 후문로 2" } });
+    fireEvent.change(screen.getByLabelText(/학생 이름/), { target: { value: "새학생" } });
+    fireEvent.click(screen.getByRole("button", { name: "주소 후보 고르기" }));
 
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     fireEvent.click(screen.getByRole("button", { name: "확정하고 추가" }));
@@ -114,7 +123,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
       expect(mockPostForcedAdd).toHaveBeenCalledWith("7", {
         studentId: undefined,
         newStudentName: "새학생",
-        address: "서울시 후문로 2",
+        address: "서울시 정문로 1",
         note: undefined,
       }),
     );
@@ -125,5 +134,19 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     await pickExistingStudent();
 
     expect(screen.getByRole("button", { name: "다음" })).toBeDisabled();
+  });
+
+  // B1 #25 — 주소를 손으로 치지 않고 후보에서 고른다. 고르기 전에는 다음으로 갈 수 없고, 고른 주소가 화면에 보인다.
+  it("주소는 후보에서 고르며, 고르기 전에는 다음이 비활성이고 고른 뒤에는 그 주소가 보인다", async () => {
+    render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await pickExistingStudent();
+
+    expect(screen.queryByLabelText(/승하차 주소$/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다음" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "주소 후보 고르기" }));
+
+    expect(screen.getByText("선택한 주소: 서울시 정문로 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다음" })).toBeEnabled();
   });
 });

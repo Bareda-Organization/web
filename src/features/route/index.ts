@@ -7,3 +7,5 @@ export * from "./types";
 // 전례(`docs/frontend/CONVENTIONS_REACT.md` "기능끼리 서로 import 하지 않는다"의 유일한 기존
 // 예외)를 따라 이 함수 하나만 공개 창구에 얹는다(보고서 §2, 확신 없는 지점).
 export { getRunRoute } from "./api";
+// 주소 자동완성 입력 — 강제 승하차지 추가(run)도 노선 편성과 같은 후보 목록에서 주소를 고른다(R46-FUWEB B1 #25).
+export { StopAddressSearch } from "./components/StopAddressSearch";
