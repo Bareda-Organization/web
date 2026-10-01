@@ -53,4 +53,14 @@ describe("서울 시간대 고정", () => {
       expect(formatClockTimeWithSeconds("2026-09-30T15:05:09Z")).toBe("00:05:09");
     }
   });
+
+  // R46-CIFIX — 오프셋이 없는 값은 `formatDateTime` 처럼 한국 시간으로 읽는다. 예전에는 PC 시간대로 읽어
+  // GitHub Actions(UTC)에서 `08:00` 이 `17:00` 으로 나왔다.
+  it("오프셋 없는 날짜시각은 PC 시간대와 무관하게 서울 벽시계 그대로 낸다", () => {
+    for (const tz of ["UTC", "America/Los_Angeles", "Asia/Seoul"]) {
+      process.env.TZ = tz;
+      expect(formatClockTime("2026-09-15T08:00:00")).toBe("08:00");
+      expect(formatClockTimeWithSeconds("2026-09-15T08:00:07.250")).toBe("08:00:07");
+    }
+  });
 });
