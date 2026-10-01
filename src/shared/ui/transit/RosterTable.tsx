@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState, type HTMLAttributes, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { RosterColumn } from "../../types";
+import { Button } from "../core/Button";
 import {
   StyledRosterTable,
   StyledRosterTableElement,
@@ -12,6 +13,7 @@ import {
   StyledRosterGroupCell,
   StyledRosterGroupButton,
   StyledRosterGroupCount,
+  StyledRosterEmptyAction,
 } from "./RosterTable.styled";
 
 export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLDivElement> & {
@@ -24,6 +26,12 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
   loading?: boolean;
   /** 조회가 실패했다 — 행이 없을 때 "표시할 내용이 없습니다" 대신 불러오지 못했다고 보인다(없는 것이 아니라 못 읽은 것) */
   hasError?: boolean;
+  /** 조회 실패로 행이 없을 때 [다시 시도] 버튼이 부를 재조회 — 안 주면 버튼을 내지 않는다 */
+  onRetry?: () => void;
+  /** 행이 0건일 때 빈 목록 문구 아래에 보일 다음 행동(예: 학생 등록) — 불러오는 중·조회 실패에는 내지 않는다 */
+  emptyAction?: { label: string; onClick: () => void };
+  /** 이 키(`getRowKey` 값)를 가진 행을 잠깐 강조한다 — 방금 저장한 행을 찾게 한다 */
+  highlightedKey?: string | number | null;
   /**
    * 행 고유 키 추출자. 원본은 `key={r.id || i}` 로 id 가 없으면 인덱스를 썼는데,
    * rows 가 제네릭이라 컴포넌트 스스로 내용 기반 키를 보장할 수 없다 — 호출자가
@@ -55,6 +63,9 @@ export const RosterTable = <T,>({
   emptyMessage = "표시할 내용이 없습니다",
   loading = false,
   hasError = false,
+  onRetry,
+  emptyAction,
+  highlightedKey = null,
   getRowKey = defaultRowKey,
   groupBy,
   ...rest
@@ -85,6 +96,8 @@ export const RosterTable = <T,>({
     <StyledRosterTableRow
       key={getRowKey(row, index)}
       $clickable={Boolean(onRowClick)}
+      $highlighted={highlightedKey !== null && getRowKey(row, index) === highlightedKey}
+      data-highlighted={highlightedKey !== null && getRowKey(row, index) === highlightedKey ? "true" : undefined}
       onClick={() => onRowClick?.(row)}
       // 클릭으로 여는 행은 키보드로도 열린다 — 행 안의 버튼에서 누른 키는 그 버튼 몫이라 넘기지 않는다.
       tabIndex={onRowClick ? 0 : undefined}
@@ -140,6 +153,20 @@ export const RosterTable = <T,>({
             <StyledRosterTableRow $clickable={false}>
               <StyledRosterTableCell $align="center" colSpan={columns.length || 1}>
                 {loading ? "불러오는 중입니다" : hasError ? "목록을 불러오지 못했습니다" : emptyMessage}
+                {!loading && hasError && onRetry ? (
+                  <StyledRosterEmptyAction>
+                    <Button variant="secondary" size="sm" onClick={onRetry}>
+                      다시 시도
+                    </Button>
+                  </StyledRosterEmptyAction>
+                ) : null}
+                {!loading && !hasError && emptyAction ? (
+                  <StyledRosterEmptyAction>
+                    <Button variant="secondary" size="sm" onClick={emptyAction.onClick}>
+                      {emptyAction.label}
+                    </Button>
+                  </StyledRosterEmptyAction>
+                ) : null}
               </StyledRosterTableCell>
             </StyledRosterTableRow>
           ) : null}

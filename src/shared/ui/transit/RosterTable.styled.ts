@@ -32,9 +32,12 @@ export const StyledRosterTableHeadCell = styled.th<{ $align: "left" | "center" |
   width: ${(props) => (props.$width !== undefined ? props.$width : "auto")};
 `;
 
-export const StyledRosterTableRow = styled.tr<{ $clickable: boolean }>`
+export const StyledRosterTableRow = styled.tr<{ $clickable: boolean; $highlighted?: boolean }>`
   border-top: 1px solid var(--border-subtle);
   cursor: ${(props) => (props.$clickable ? "pointer" : undefined)};
+  /* 방금 저장한 행 — 호출한 화면이 몇 초 뒤 키를 비우면 배경이 서서히 돌아온다. */
+  background: ${(props) => (props.$highlighted ? "var(--accent-primary-soft)" : undefined)};
+  transition: background-color 600ms ease;
 
   &:focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -80,4 +83,9 @@ export const StyledRosterGroupButton = styled.button`
 export const StyledRosterGroupCount = styled.span`
   color: var(--text-secondary);
   font: var(--fw-regular) var(--fs-micro) / 1 var(--font-sans);
+`;
+
+/* 빈 상태·조회 실패 문구 아래의 행동 버튼 한 줄. */
+export const StyledRosterEmptyAction = styled.div`
+  margin-top: 12px;
 `;

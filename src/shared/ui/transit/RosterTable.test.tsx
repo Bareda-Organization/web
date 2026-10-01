@@ -80,3 +80,66 @@ describe("RosterTable — 조회 실패", () => {
     expect(screen.queryByText("목록을 불러오지 못했습니다")).not.toBeInTheDocument();
   });
 });
+
+// R46-FUWEB B1 #11 — 목록을 못 읽었을 때 새로고침 말고는 되돌릴 길이 없었다.
+describe("RosterTable — 다시 시도", () => {
+  it("행이 없고 조회가 실패했으면 다시 시도 버튼이 있고, 누르면 재조회를 요청한다", () => {
+    const onRetry = vi.fn();
+    render(<RosterTable<Row> columns={columns} rows={[]} hasError onRetry={onRetry} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("재조회 수단을 주지 않았거나, 불러오는 중이거나, 받은 행이 있으면 버튼을 내지 않는다", () => {
+    const onRetry = vi.fn();
+    const { rerender } = render(<RosterTable<Row> columns={columns} rows={[]} hasError />);
+    expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
+
+    rerender(<RosterTable<Row> columns={columns} rows={[]} hasError loading onRetry={onRetry} />);
+    expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
+
+    rerender(<RosterTable<Row> columns={columns} rows={[{ id: "1", name: "김철수" }]} hasError onRetry={onRetry} />);
+    expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
+  });
+});
+
+// R46-FUWEB B1 #12 — 빈 목록이 다음에 할 일을 알려 주지 않았다.
+describe("RosterTable — 빈 상태 행동", () => {
+  it("행이 0건이면 빈 목록 문구 아래에 행동 버튼을 보이고, 누르면 그 동작을 부른다", () => {
+    const onClick = vi.fn();
+    render(<RosterTable<Row> columns={columns} rows={[]} emptyMessage="등록된 학생이 없습니다" emptyAction={{ label: "학생 등록", onClick }} />);
+
+    expect(screen.getByText("등록된 학생이 없습니다")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "학생 등록" }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("불러오는 중·조회 실패·행이 있을 때는 행동 버튼을 내지 않는다", () => {
+    const emptyAction = { label: "학생 등록", onClick: vi.fn() };
+    const { rerender } = render(<RosterTable<Row> columns={columns} rows={[]} loading emptyAction={emptyAction} />);
+    expect(screen.queryByRole("button", { name: "학생 등록" })).not.toBeInTheDocument();
+
+    rerender(<RosterTable<Row> columns={columns} rows={[]} hasError emptyAction={emptyAction} />);
+    expect(screen.queryByRole("button", { name: "학생 등록" })).not.toBeInTheDocument();
+
+    rerender(<RosterTable<Row> columns={columns} rows={[{ id: "1", name: "김철수" }]} emptyAction={emptyAction} />);
+    expect(screen.queryByRole("button", { name: "학생 등록" })).not.toBeInTheDocument();
+  });
+});
+
+// R46-FUWEB B1 #19 — 저장한 행이 어디에 있는지 알 수 없었다.
+describe("RosterTable — 저장한 행 강조", () => {
+  it("highlightedKey 와 행 키가 같은 행만 강조 표시를 받는다", () => {
+    const rows = [
+      { id: "1", name: "김철수" },
+      { id: "2", name: "이영희" },
+    ];
+    render(<RosterTable<Row> columns={columns} rows={rows} highlightedKey="2" />);
+
+    expect(screen.getByText("이영희").closest("tr")).toHaveAttribute("data-highlighted", "true");
+    expect(screen.getByText("김철수").closest("tr")).not.toHaveAttribute("data-highlighted");
+  });
+});
