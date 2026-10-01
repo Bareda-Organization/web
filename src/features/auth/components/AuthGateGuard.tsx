@@ -6,6 +6,7 @@ import { decideAuthRedirect } from "../lib/navigation";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { AuthSession } from "../types";
 import { StyledGuardFallback } from "./AuthGateGuard.styled";
+import { PasswordChangeDialog } from "./PasswordChangeButton";
 
 export type AuthGateGuardProps = {
   children: React.ReactNode;
@@ -36,6 +37,12 @@ export const AuthGateGuard = ({ children, requiredRole }: AuthGateGuardProps) =>
   if (bootstrapStatus === "loading" || target) {
     // 부트스트랩 중이거나 이동 중 — 로그인 폼도 보호된 화면도 그리지 않는다.
     return <StyledGuardFallback aria-busy="true" />;
+  }
+
+  // 임시 비밀번호 강제 변경(Ruling 540) — 서버도 이 표식이 켜진 동안 다른 API 를 403 으로 막는다. 화면은 그 전에
+  // 변경 대화상자만 보여 막힌 호출이 쏟아지지 않게 한다.
+  if (session?.mustChangePassword) {
+    return <PasswordChangeDialog forced />;
   }
 
   return <>{children}</>;

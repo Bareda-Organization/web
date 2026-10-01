@@ -21,11 +21,18 @@ export type AuthSessionContextValue = {
 
 export const AuthSessionContext = createContext<AuthSessionContextValue | null>(null);
 
-const toSession = (me: { accountId: string; role: AuthSession["role"]; status: AuthSession["status"]; academy?: AuthSession["academy"] }): AuthSession => ({
+const toSession = (me: {
+  accountId: string;
+  role: AuthSession["role"];
+  status: AuthSession["status"];
+  academy?: AuthSession["academy"];
+  mustChangePassword?: boolean;
+}): AuthSession => ({
   accountId: me.accountId,
   role: me.role,
   status: me.status,
   academy: me.academy ?? null,
+  mustChangePassword: me.mustChangePassword ?? false,
 });
 
 export const AuthSessionProvider = ({ children }: { children: React.ReactNode }) => {
@@ -115,6 +122,7 @@ export const AuthSessionProvider = ({ children }: { children: React.ReactNode })
       role: response.role,
       status: response.status,
       academy: response.academy,
+      mustChangePassword: response.mustChangePassword,
     };
     setSession(next);
     return next;

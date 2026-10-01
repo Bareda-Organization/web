@@ -17,6 +17,7 @@ export const getMe = async (): Promise<MeResponseTypes> => {
     manager_id?: string;
     manager_role?: string;
     linked_student_count?: number;
+    must_change_password: boolean;
   }>("/me", { method: "GET" });
   return {
     accountId: response.account_id,
@@ -30,5 +31,6 @@ export const getMe = async (): Promise<MeResponseTypes> => {
     managerId: response.manager_id,
     managerRole: response.manager_role,
     linkedStudentCount: response.linked_student_count,
+    mustChangePassword: response.must_change_password,
   };
 };
