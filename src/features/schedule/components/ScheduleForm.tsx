@@ -99,6 +99,7 @@ export const ScheduleForm = ({ schedule, onClose, onDone }: ScheduleFormProps) =
   return (
     <Dialog
       title={schedule ? "운행 스케줄 수정" : "운행 스케줄 등록"}
+      width={480}
       onClose={handleClose}
       footer={
         <>

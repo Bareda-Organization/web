@@ -20,9 +20,14 @@ export const StyledFilterRow = styled.div`
 // (run/components/DashboardPage.styled.ts 와 같은 비율 — 지도 3 : 목록 1).
 export const StyledMapTopRow = styled.div`
   display: grid;
-  grid-template-columns: 3fr 1fr;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+
+  /* 1100px 이하에서는 오른쪽 목록이 좁아 "1호차 · 등원" 이 두 줄로 꺾인다(화면 확인 1024) — 대시보드와 같이 지도 아래로 내려 쌓는다. */
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 export const StyledMapPane = styled.div`
