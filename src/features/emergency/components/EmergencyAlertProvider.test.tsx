@@ -2,14 +2,16 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope } from "@/shared/lib/ws";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { ackEmergency, getEmergencies } from "../api";
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "./EmergencyAlertProvider";
 
 vi.mock("@/features/auth", () => ({
   useAuthSession: () => ({ session: { academy: { id: "7", name: "바래다" } } }),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 const mockPush = vi.fn();
+const mockRouter = createStableRouter({ push: mockPush });
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 vi.mock("@/shared/hooks", async (importOriginal) => ({

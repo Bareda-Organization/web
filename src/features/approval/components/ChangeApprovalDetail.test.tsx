@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { MapSurfaceProps } from "@/features/map";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { ChangeApprovalDetail } from "./ChangeApprovalDetail";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import type { ChangeApprovalDetailResponseTypes } from "../types";
@@ -10,8 +11,9 @@ import type { ChangeApprovalDetailResponseTypes } from "../types";
 // 이 화면이 상세 조회로 받은 previewToken 을 그대로 승인 요청에 실어 보내는지가
 // 핵심 검증 대상이다. reject 는 사유 없이 거절할 수 없다는 §8.3 규칙도 함께 본다.
 const mockPush = vi.fn();
+const mockRouter = createStableRouter({ push: mockPush });
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => mockRouter,
 }));
 
 vi.mock("../api", () => ({

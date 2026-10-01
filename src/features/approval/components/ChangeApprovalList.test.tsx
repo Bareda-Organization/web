@@ -1,11 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { ChangeApprovalList } from "./ChangeApprovalList";
 import { getChangeApprovals } from "../api";
 import type { ChangeApprovalsResponseTypes } from "../types";
 
+const mockRouter = createStableRouter();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => mockRouter,
 }));
 
 vi.mock("../api", () => ({

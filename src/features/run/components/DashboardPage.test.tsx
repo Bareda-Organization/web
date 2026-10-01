@@ -2,6 +2,7 @@ import { render, screen, waitFor, act, fireEvent, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { DashboardPage } from "./DashboardPage";
 import { getDashboard, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
@@ -11,8 +12,9 @@ import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
 
 const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
+const mockRouter = createStableRouter({ push: mockPush });
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => mockRouter,
 }));
 
 // R18-B2 목표 2 — `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그

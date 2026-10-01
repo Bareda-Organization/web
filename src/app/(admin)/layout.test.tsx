@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import AdminLayout from "./layout";
 
+const mockRouter = createStableRouter();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/academies",
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => mockRouter,
 }));
 vi.mock("@/features/auth", () => ({
   AuthGateGuard: ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) => (

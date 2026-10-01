@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { getRouteDetail } from "../api";
 import type { RouteDetailResponseTypes } from "../types";
 import { RouteDetail } from "./RouteDetail";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const mockRouter = createStableRouter();
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("../api", () => ({ getRouteDetail: vi.fn() }));
 
 // 승하차지 패널이 언마운트됐다 다시 마운트되는지만 본다 — 저장 전 편집은 패널 상태에 있다.
