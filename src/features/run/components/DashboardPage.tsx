@@ -12,7 +12,7 @@ import {
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
+import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill, Switch } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
@@ -90,6 +90,8 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // B1 #26 — 기본은 오늘 회차 전부(종료 회차를 남긴다는 사용자 결정). 켜면 확정·운행 중 회차만 표에 남긴다.
+  const [activeOnly, setActiveOnly] = useState(false);
   // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
   const [approvalRequests, setApprovalRequests] = useState<{ approvalId: string; label: string }[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -339,6 +341,8 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   }, LIVE_POLL_INTERVAL_MS);
 
   const noShowRuns = runs.filter((run) => run.noShowCases.length > 0);
+  // 확정(출발 30분 전부터)·운행 중이 "곧 출발·운행 중" 이다. 대기(idle)는 아직 확정 전이라 뺀다.
+  const tableRuns = activeOnly ? runs.filter((run) => run.runStatus === "confirmed" || run.runStatus === "moving") : runs;
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
     { key: "busNo", label: "버스" },
@@ -555,11 +559,13 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
         </StyledBusListPane>
       </StyledMapTopRow>
 
+      <Switch label="운행 중·곧 출발만" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} />
       <Card padding={0}>
         <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
-          rows={runs}
+          rows={tableRuns}
+          emptyMessage={activeOnly ? "운행 중이거나 곧 출발하는 회차가 없습니다" : undefined}
           getRowKey={(row) => row.runId}
           onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}
         />

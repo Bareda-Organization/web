@@ -178,6 +178,37 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText("확인")).not.toBeInTheDocument();
   });
 
+  // B1 #26 — 버스가 많은 학원은 종료된 회차까지 표에 쌓인다. 기본은 전부 보이고(종료 회차를 남긴다는 사용자 결정),
+  // "운행 중·곧 출발만" 을 켜면 확정·운행 중 회차만 남는다.
+  it("'운행 중·곧 출발만' 을 켜면 확정·운행 중 회차만 표에 남고, 끄면 전부 돌아온다", async () => {
+    const run = (runId: string, busNo: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
+      ...baseDashboard.runs[0],
+      runId,
+      busNo,
+      runStatus,
+      driverName: null,
+      escortName: null,
+    });
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [run("1", "1호차", "finished"), run("2", "2호차", "moving"), run("3", "3호차", "confirmed"), run("4", "4호차", "idle")],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+    const table = (await screen.findByRole("table")) as HTMLElement;
+    expect(within(table).getAllByRole("row")).toHaveLength(5); // 머리줄 + 4행
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
+
+    expect(within(table).getByText("2호차")).toBeInTheDocument();
+    expect(within(table).getByText("3호차")).toBeInTheDocument();
+    expect(within(table).queryByText("1호차")).not.toBeInTheDocument();
+    expect(within(table).queryByText("4호차")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
+    expect(within(table).getAllByRole("row")).toHaveLength(5);
+  });
+
   it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {
     const startedAt = "2026-09-19T08:02:15Z";
     const finishedAt = "2026-09-19T08:41:03Z";
