@@ -28,6 +28,7 @@ import { getRunRoute } from "@/features/route";
 import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { RouteAckMark } from "./RouteAckMark";
 import {
   StyledDashboardLayout,
   StyledStatGrid,
@@ -349,8 +350,24 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
         <StatusPill status={RUN_STATUS_TO_PILL[row.runStatus]}>{RUN_STATUS_LABEL[row.runStatus]}</StatusPill>
       ),
     },
-    { key: "driverName", label: "기사", render: (row) => row.driverName ?? "미배치" },
-    { key: "escortName", label: "동승 매니저", render: (row) => row.escortName ?? "미배치" },
+    {
+      key: "driverName",
+      label: "기사",
+      render: (row) => (
+        <>
+          {row.driverName ?? "미배치"} <RouteAckMark name={row.driverName} acked={row.ackDriver} runStatus={row.runStatus} />
+        </>
+      ),
+    },
+    {
+      key: "escortName",
+      label: "동승 매니저",
+      render: (row) => (
+        <>
+          {row.escortName ?? "미배치"} <RouteAckMark name={row.escortName} acked={row.ackEscort} runStatus={row.runStatus} />
+        </>
+      ),
+    },
     {
       // R21-B 목표 1·3·4 — 예정 출발은 항상 있고, 실제 출발은 회차가 실제로 출발한
       // 뒤에만 채워진다(§5.3 startedAt). 초까지 보여 달라는 지시라 `formatClockTime`
