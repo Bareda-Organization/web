@@ -160,6 +160,7 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
               onChange={setStudentIds}
               multiple
               placeholder="학생 이름으로 검색"
+              initialQuery={request.name}
             />
           </>
         ) : null}
@@ -175,6 +176,7 @@ export const SignupDecideDialog = ({ request, onClose, onDone }: SignupDecideDia
               onChange={setManagerIds}
               multiple={false}
               placeholder="매니저 이름으로 검색"
+              initialQuery={request.name}
             />
           </>
         ) : null}
