@@ -19,3 +19,19 @@ export const StyledGuardianEmpty = styled.p`
   color: var(--text-secondary);
   font: var(--fw-regular) var(--fs-micro) / 1.5 var(--font-sans);
 `;
+
+// 요일별 승하차 주소 — 학부모가 등록한 값을 읽기만 한다(STU-06). 보호자 칸과 같은 구역 모양이다.
+export const StyledWeeklyAddressList = styled.ul`
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--fw-regular) var(--fs-body-sm) / 1.5 var(--font-sans);
+  color: var(--text-primary);
+`;
+
+export const StyledWeekdayLabel = styled.strong`
+  display: inline-block;
+  min-width: 2em;
+`;

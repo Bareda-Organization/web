@@ -62,3 +62,14 @@ export type StudentUpsertRequestTypes = {
   // 고친 보호자 연락처만 싣는다(수정 전용). 연결되지 않은 보호자는 서버가 422 로 막는다.
   guardians?: { guardianId: string; phone: string }[];
 };
+
+// GET /staff/students/{id}/weekly-address(STU-06 · Ruling 498) — 학부모가 등록한 요일 × 방향 주소. 관계자는 읽기만 한다.
+// 좌표·승하차지 id 는 화면이 쓰지 않아 옮기지 않는다(L3 를 필요한 만큼만 다룬다).
+export type StudentWeeklyAddressTypes = {
+  weekday: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+  direction: "to_academy" | "from_academy";
+  address: string;
+  addressDetail: string | null;
+  verified: boolean;
+};
+

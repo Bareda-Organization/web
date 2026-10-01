@@ -14,6 +14,7 @@ vi.mock("../api", () => ({
   createStudent: vi.fn(),
   updateStudent: vi.fn(),
   getStudentDetail: vi.fn(),
+  getStudentWeeklyAddresses: vi.fn(async () => []),
 }));
 
 const mockCreate = vi.mocked(createStudent);
