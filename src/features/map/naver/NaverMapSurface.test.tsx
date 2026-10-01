@@ -128,6 +128,28 @@ describe("NaverMapSurface — 인증 실패로 SDK 지도 객체가 비워질 �
   });
 });
 
+// R46-KFIXFE(leak K-6) — 정리가 마커·선·보간 루프만 치우고 지도 객체는 남겨, 관제↔대시보드를 오가는 동안
+// 화면 이동마다 지도 객체와 타일 DOM 이 SDK 안에 쌓일 수 있었다. 언마운트 때 `destroy()` 를 불러야 한다.
+describe("NaverMapSurface — 화면이 사라질 때(K-6)", () => {
+  it("만들어 둔 지도 객체를 destroy 한다", async () => {
+    const releaseScript = heldScriptLoad();
+    const destroy = vi.fn();
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+      setCenter: vi.fn(),
+      setZoom: vi.fn(),
+      destroy,
+    }));
+    const { unmount } = render(<NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 14 }} markers={[]} />);
+    await releaseScript();
+    await waitFor(() => expect(window.naver?.maps.Map).toHaveBeenCalledTimes(1));
+    expect(destroy).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+});
+
 // R21-A 추가 지시 ① — 사용자가 지도를 손으로 옮기거나 확대·축소한 뒤에도 버스
 // 위치가 갱신될 때마다 카메라가 되돌아가던 결함(사용자 지적). "무엇에 포커스
 // 됐는가"(선택된 버스 id)가 안 바뀌면 `setCenter`/`setZoom` 이 다시 불리면 안
