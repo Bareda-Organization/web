@@ -256,6 +256,20 @@ describe("AcademyRealtimeClient — 만료 전 무중단 갱신", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
+  it("갈아타는 중에 disconnect() 하면 두 연결을 모두 닫고 새 연결을 방송 받는 연결로 올리지 않는다", async () => {
+    const { client, handles } = connectedClient(() => Promise.resolve(makeJwt(nowSeconds() + 900)));
+    client.subscribe(DESTINATION, () => {});
+
+    await startSwap(handles);
+    client.disconnect();
+    await vi.advanceTimersByTimeAsync(SETTLE_MS * 2);
+
+    expect(handles[0].deactivateCalls).toBe(1);
+    expect(handles[1].deactivateCalls).toBe(1);
+    expect(client.getSnapshot()).toBe("disconnected");
+    expect(handles).toHaveLength(2);
+  });
+
   it("만료 시각을 읽을 수 없는 토큰이면 갈아타기를 예약하지 않는다", async () => {
     const refresh = vi.fn();
     const { factory, handles } = createFakeFactory();
