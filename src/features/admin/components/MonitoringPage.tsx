@@ -48,7 +48,7 @@ import {
 const LIVE_POLL_INTERVAL_MS = 7000;
 // 실시간 연결이 살아 있으면 방송(`stop_arrived`·`rider_changed`·`run_started`·`run_ended`)이 갱신을 가져온다 — 이 조회는 오늘
 // 취소 아닌 회차 전부를 정차 목록과 함께 돌려주는 가장 무거운 GET 이라(R46-LOAD L3) 안전망으로만 느리게 돈다.
-// 연결이 끊기면 서버 무송신 20초 초과를 10초 주기로 점검해 20~30초 안에 감지하고 7초로 돌아간다(`API_SPEC §7`).
+// 연결이 끊기면 서버 무송신 20초 초과를 10초 주기로 점검해 20~30초 안에 감지하고 7초로 돌아간다(`API_SPEC §7.2`).
 const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;

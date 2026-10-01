@@ -125,7 +125,7 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
     },
     [load],
   );
-  // 연결이 끊겼다 돌아오면 끊긴 사이의 신고를 서버 목록으로 한 번 메운다(`API_SPEC §7` 재연결 동기화).
+  // 연결이 끊겼다 돌아오면 끊긴 사이의 신고를 서버 목록으로 한 번 메운다(`API_SPEC §7.2` 재연결 직후 보충).
   useRealtimeChannel(destination, handleEnvelope, () => void load());
 
   const closeAcked = useCallback(

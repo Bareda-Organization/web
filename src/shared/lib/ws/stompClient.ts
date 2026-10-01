@@ -44,12 +44,11 @@ export type StompClientConfig = {
 
 export type StompClientFactory = (config: StompClientConfig) => StompClientLike;
 
-// STOMP 하트비트 간격 — `docs/API_SPEC.md §7` 은 양방향 10000ms 를 못박는다.
-// `baraeda_core` 의 `WsChannel`/`baraeda_websocket_client.dart` 도 같은 값을
-// 쓰므로(백엔드가 세션당 고정 협상값을 기대) 이 값을 임의로 바꾸지 않는다.
+// STOMP 하트비트 간격 — 양방향 10000ms. 연결 감시·재연결 값 전체는 `docs/API_SPEC.md §7.2` 표가 정하고 웹·Flutter(`baraeda_core`)가
+// 같은 값을 쓴다. 서버 `WebSocketConfig.HEARTBEAT_MS` 도 10초라 협상 결과가 10초다 — 값을 바꾸면 그 표와 세 클라이언트를 같이 고친다.
 const HEARTBEAT_MS = 10000;
 
-// CONNECTED 프레임을 기다리는 한도 — 소켓은 열렸는데 서버 응답이 안 오는 시도(인터넷 없는 Wi-Fi·서버 인바운드 포화)가
+// CONNECTED 프레임을 기다리는 한도(`API_SPEC §7.2`) — 소켓은 열렸는데 서버 응답이 안 오는 시도(인터넷 없는 Wi-Fi·서버 인바운드 포화)가
 // OS 한도(수십~백 수십 초)까지 `connecting` 에 머물지 않게 한다. 넘으면 소켓을 닫고 `onWebSocketClose` → 백오프 재연결로 이어진다
 // (R46-FIXCONN C-4). 3G 급 망에서도 10초면 핸드셰이크에 충분하다.
 const CONNECTION_TIMEOUT_MS = 10000;

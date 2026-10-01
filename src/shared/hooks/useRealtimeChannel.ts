@@ -59,7 +59,7 @@ export type UseRealtimeChannelResult = {
 // 타이밍을 따로 신경 쓸 필요가 없다(판단 근거, 보고서 §1).
 //
 // `onReconnected` 는 끊겼다(`reconnecting`·`gaveUp`) 다시 붙는(`connected`) 순간 한 번 불린다 — 끊긴 사이의 방송은 되찾을 길이
-// 없으므로 화면이 REST 로 한 번 메운다(`API_SPEC §7` 재연결 동기화, R46-FIXCONN C-6). 클라이언트는 재연결 대기가 끝나면
+// 없으므로 화면이 REST 로 한 번 메운다(`API_SPEC §7.2` 재연결 직후 보충, R46-FIXCONN C-6). 클라이언트는 재연결 대기가 끝나면
 // `connecting` 을 거쳐 `connected` 가 되므로 "직전 상태" 가 아니라 "끊김을 겪었는가" 로 판정한다.
 export const useRealtimeChannel = (
   destination: string,
