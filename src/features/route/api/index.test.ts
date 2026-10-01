@@ -21,7 +21,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
           success: true,
           data: {
             items: [
-              { id: 1, bus_id: 3, bus_no: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true },
+              { id: 1, bus_id: 3, bus_no: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true, stop_count: 3 },
             ],
             page: 0,
             size: 20,
@@ -35,7 +35,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     const result = await getRoutes(0, 20);
 
     expect(result.items).toEqual([
-      { id: "1", busId: "3", busNo: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true },
+      { id: "1", busId: "3", busNo: "1호차", weekday: "mon", direction: "to_academy", name: "1반 등원", active: true, stopCount: 3 },
     ]);
     expect(result.totalCount).toBe(1);
     expect(result.hasNext).toBe(false);

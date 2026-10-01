@@ -21,7 +21,8 @@ export type RouteStop = {
   change?: "added" | "skipped" | null;
 };
 
-export type RouteListItemResponseTypes = {
+// 편성 요약 — 목록·상세가 함께 싣는 필드.
+export type RouteSummaryTypes = {
   id: string;
   busId: string;
   busNo: string;
@@ -31,6 +32,9 @@ export type RouteListItemResponseTypes = {
   active: boolean;
 };
 
+// 목록 항목 — 요약 + 정차지 수(§5.9 `stop_count`, 정차지 없이 시작한 빈 편성은 0). 상세는 stops[] 를 싣는다.
+export type RouteListItemResponseTypes = RouteSummaryTypes & { stopCount: number };
+
 export type RouteListResponseTypes = {
   items: RouteListItemResponseTypes[];
   page: number;
@@ -39,8 +43,8 @@ export type RouteListResponseTypes = {
   hasNext: boolean;
 };
 
-// GET /staff/routes/{id} · POST · PATCH · optimize 응답 — 목록 필드 + stops[].
-export type RouteDetailResponseTypes = RouteListItemResponseTypes & {
+// GET /staff/routes/{id} · POST · PATCH · optimize 응답 — 요약 필드 + stops[].
+export type RouteDetailResponseTypes = RouteSummaryTypes & {
   stops: RouteStop[];
 };
 

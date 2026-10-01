@@ -2,10 +2,12 @@ import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type {
   RouteDetailResponseTypes,
+  RouteListItemResponseTypes,
   RouteListResponseTypes,
   RoutePathResponseTypes,
   RouteStop,
   RouteStopSaveItemTypes,
+  RouteSummaryTypes,
   RouteUpsertRequestTypes,
   RunDirection,
   RunRouteResponseTypes,
@@ -26,7 +28,7 @@ type RawRouteStop = {
   change?: "added" | "skipped" | null;
 };
 
-type RawRouteListItem = {
+type RawRouteSummary = {
   id: string | number;
   bus_id: string | number;
   bus_no: string;
@@ -36,6 +38,9 @@ type RawRouteListItem = {
   active: boolean;
 };
 
+// 목록 항목만 정차지 수(`stop_count`)를 싣는다 — 상세는 stops[] 를 싣는다(§5.9).
+type RawRouteListItem = RawRouteSummary & { stop_count: number };
+
 type RawRouteListResponse = {
   items: RawRouteListItem[];
   page: number;
@@ -44,7 +49,7 @@ type RawRouteListResponse = {
   has_next: boolean;
 };
 
-type RawRouteDetail = RawRouteListItem & { stops: RawRouteStop[] };
+type RawRouteDetail = RawRouteSummary & { stops: RawRouteStop[] };
 
 const toStop = (raw: RawRouteStop): RouteStop => ({
   stopId: asIdString(raw.stop_id),
@@ -57,7 +62,7 @@ const toStop = (raw: RawRouteStop): RouteStop => ({
   change: raw.change ?? null,
 });
 
-const toListItem = (raw: RawRouteListItem) => ({
+const toSummary = (raw: RawRouteSummary): RouteSummaryTypes => ({
   id: asIdString(raw.id),
   busId: asIdString(raw.bus_id),
   busNo: raw.bus_no,
@@ -67,8 +72,13 @@ const toListItem = (raw: RawRouteListItem) => ({
   active: raw.active,
 });
 
+const toListItem = (raw: RawRouteListItem): RouteListItemResponseTypes => ({
+  ...toSummary(raw),
+  stopCount: raw.stop_count,
+});
+
 const toDetail = (raw: RawRouteDetail): RouteDetailResponseTypes => ({
-  ...toListItem(raw),
+  ...toSummary(raw),
   stops: raw.stops.map(toStop),
 });
 
