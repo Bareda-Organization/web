@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
-import { getAcademyRunsLive, getAllAcademies, getEmergencies } from "../api";
+import { getAcademyRunsLive, getAllAcademies, getEmergencies, getRunAttention } from "../api";
 import { getRunRoute } from "@/features/route";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
@@ -35,6 +35,7 @@ vi.mock("../api", () => ({
   getAllAcademies: vi.fn(),
   getAcademyRunsLive: vi.fn(),
   getEmergencies: vi.fn(async () => ({ items: [], unackedCount: 0 })),
+  getRunAttention: vi.fn(async () => ({ items: [] })),
 }));
 
 // R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
@@ -46,6 +47,7 @@ const mockGetAcademies = vi.mocked(getAllAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
 const mockGetEmergencies = vi.mocked(getEmergencies);
+const mockGetRunAttention = vi.mocked(getRunAttention);
 
 // Goal 8·9 시험은 실제 WebSocket 을 열지 않는다 — `useRealtimeChannel` 을 가짜로
 // 바꿔 봉투 전달과 연결 상태를 직접 제어한다(DashboardPage.test.tsx 와 같은 방식,
@@ -899,3 +901,53 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
   });
 });
 
+// R46-FUFEAT ④(Ruling 543) — 전체 관제에서 어느 학원에 오늘 지연·확정 실패가 있는지도 한눈에 보인다.
+describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT ④)", () => {
+  const academies = [
+    { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+    { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+  ];
+
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(academies);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    mockGetEmergencies.mockResolvedValue({ items: [], unackedCount: 0 });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("지연·확정 실패가 있는 학원을 건수와 함께 요약하고 학원 선택 목록에도 표시한다", async () => {
+    mockGetRunAttention.mockResolvedValue({
+      items: [
+        { academyId: "2", delayedRuns: 1, confirmFailedRuns: 2 },
+        { academyId: "1", delayedRuns: 0, confirmFailedRuns: 3 },
+      ],
+    });
+    render(<MonitoringPage />);
+
+    expect(await screen.findByRole("button", { name: "송파학원 지연 1건 · 확정 실패 2건" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "강동학원 확정 실패 3건" })).toBeInTheDocument(); // 0 인 쪽은 적지 않는다
+    expect(screen.getByRole("option", { name: "송파학원 (서울) · 지연 1건 · 확정 실패 2건" })).toBeInTheDocument();
+  });
+
+  it("요약의 학원 버튼을 누르면 그 학원의 회차로 바뀐다", async () => {
+    mockGetRunAttention.mockResolvedValue({ items: [{ academyId: "2", delayedRuns: 1, confirmFailedRuns: 0 }] });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "송파학원 지연 1건" }));
+
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenLastCalledWith("2"));
+  });
+
+  it("문제가 없으면 요약을 그리지 않고, 집계를 못 받아도 관제 화면은 그대로 뜬다", async () => {
+    mockGetRunAttention.mockResolvedValue({ items: [] });
+    const { unmount } = render(<MonitoringPage />);
+    await screen.findByRole("option", { name: "강동학원 (서울)" });
+    expect(screen.queryByText(/지연·확정 실패가 있는 학원/)).not.toBeInTheDocument();
+    unmount();
+
+    mockGetRunAttention.mockRejectedValue(new Error("network"));
+    render(<MonitoringPage />);
+    expect(await screen.findByRole("option", { name: "강동학원 (서울)" })).toBeInTheDocument();
+  });
+});

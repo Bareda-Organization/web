@@ -31,4 +31,8 @@ export const StyledAlertBannerContent = styled.div<{ $hasTitle: boolean }>`
 
 export const StyledAlertBannerAction = styled.div`
   margin-top: 10px;
+  /* 버튼이 둘 이상이면 붙어 보인다 — 학원별 요약 띠가 여러 학원 버튼을 나란히 둔다 */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 `;

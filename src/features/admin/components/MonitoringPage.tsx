@@ -24,8 +24,8 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { getAcademyRunsLive, getAllAcademies, getEmergencies } from "../api";
-import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { getAcademyRunsLive, getAllAcademies, getEmergencies, getRunAttention } from "../api";
+import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { emergencyTypeLabel } from "../lib/emergencyType";
 import { countOpenEmergenciesByAcademy } from "../lib/openEmergencyCounts";
 import { RunRosterDialog } from "./RunRosterDialog";
@@ -45,8 +45,17 @@ import {
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
 const LIVE_POLL_INTERVAL_MS = 7000;
-// 학원별 미확인 비상 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
+// 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
+
+// "지연 1건 · 확정 실패 2건" — 0 인 쪽은 적지 않는다(Ruling 543).
+const attentionLabel = (item: RunAttentionItemTypes): string =>
+  [
+    item.delayedRuns > 0 ? `지연 ${item.delayedRuns}건` : null,
+    item.confirmFailedRuns > 0 ? `확정 실패 ${item.confirmFailedRuns}건` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
 
 // 위치 수신 전(모든 회차가 `position: null`)에도 지도가 빈 화면이 아니라 서울 시청
 // 좌표를 보여주도록 한다 — 네이버 지도 SDK 의 `MapOptions.center` 기본값과 같은 지점이다.
@@ -103,6 +112,8 @@ export const MonitoringPage = () => {
   const [liveAlerts, setLiveAlerts] = useState<LiveEmergencyAlert[]>([]);
   // B1 #24 — 학원 id → 그 학원의 미확인 비상 건수. 학원 선택 하나로 한 곳씩만 보이던 화면에서 어디를 봐야 하는지 알린다.
   const [openEmergencyCounts, setOpenEmergencyCounts] = useState<Record<string, number>>({});
+  // R46-FUFEAT ④ — 학원 id → 그 학원의 오늘 지연·확정 실패 집계(§6.15). 문제가 없는 학원은 키가 없다.
+  const [attentionByAcademy, setAttentionByAcademy] = useState<Record<string, RunAttentionItemTypes>>({});
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -417,7 +428,29 @@ export const MonitoringPage = () => {
 
   usePolling(loadEmergencySummary, EMERGENCY_SUMMARY_INTERVAL_MS);
 
+  // 학원별 오늘 지연·확정 실패는 `GET /admin/runs/attention` 한 번으로 받는다(Ruling 543 — 기존 API 로는 학원마다 §6.8 을
+  // 불러야 하고 지연은 응답에 필드가 없다). 실패해도 관제 화면을 막지 않는다 — 요약이 비어 보일 뿐이다.
+  const loadAttentionSummary = useCallback(async (): Promise<boolean> => {
+    try {
+      const data = await getRunAttention();
+      setAttentionByAcademy(Object.fromEntries(data.items.map((item) => [item.academyId, item])));
+      return true;
+    } catch (cause) {
+      console.warn("학원별 지연·확정 실패 요약을 불러오지 못했다", cause);
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      await loadAttentionSummary();
+    })();
+  }, [loadAttentionSummary]);
+
+  usePolling(loadAttentionSummary, EMERGENCY_SUMMARY_INTERVAL_MS);
+
   const academiesWithEmergency = academies.filter((academy) => (openEmergencyCounts[academy.id] ?? 0) > 0);
+  const academiesWithAttention = academies.filter((academy) => attentionByAcademy[academy.id] !== undefined);
 
   const handleSelectAcademy = (nextAcademyId: string) => {
     // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
@@ -516,6 +549,18 @@ export const MonitoringPage = () => {
         />
       ) : null}
 
+      {academiesWithAttention.length > 0 ? (
+        <AlertBanner
+          tone="moving"
+          title="지연·확정 실패가 있는 학원"
+          action={academiesWithAttention.map((academy) => (
+            <Button key={academy.id} size="sm" variant="secondary" onClick={() => handleSelectAcademy(academy.id)}>
+              {`${academy.name} ${attentionLabel(attentionByAcademy[academy.id])}`}
+            </Button>
+          ))}
+        />
+      ) : null}
+
       <StyledFilterRow>
         <Select
           label="학원"
@@ -523,7 +568,7 @@ export const MonitoringPage = () => {
           onChange={(event) => handleSelectAcademy(event.target.value)}
           options={academies.map((academy) => ({
             value: String(academy.id),
-            label: `${academy.name} (${academy.region})${openEmergencyCounts[academy.id] ? ` · 비상 ${openEmergencyCounts[academy.id]}건` : ""}`,
+            label: `${academy.name} (${academy.region})${openEmergencyCounts[academy.id] ? ` · 비상 ${openEmergencyCounts[academy.id]}건` : ""}${attentionByAcademy[academy.id] ? ` · ${attentionLabel(attentionByAcademy[academy.id])}` : ""}`,
           }))}
           disabled={loadingAcademies || academies.length === 0}
         />

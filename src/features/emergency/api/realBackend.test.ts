@@ -63,7 +63,7 @@ describe("emergency api — 실서버 계약", () => {
     // 리셋이 비활성화된 환경(§ 위 주석 "실패해도 조용히 넘어간다")에서 이미 확인된
     // 채로 시작할 수도 있다 — 그때만 최초 확인 호출을 건너뛴다.
     if (target && !target.acked) {
-      const result = await ackEmergency("1");
+      const result = await ackEmergency("1", "현장 확인 완료 — 학부모 연락함");
       // 응답 식별자는 문자열이다(Ruling 332·357).
       expect(result.emergencyId).toBe("1");
       expect(typeof result.ackedAt).toBe("string");
@@ -73,6 +73,8 @@ describe("emergency api — 실서버 계약", () => {
       const after = await getEmergencies({ status: "acked" });
       const updated = after.items.find((item) => item.emergencyId === "1");
       expect(updated?.acked).toBe(true);
+      // R46-FUFEAT ② — 확인할 때 남긴 조치 메모가 acked_by.memo 로 돌아온다(§5.16 · Ruling 541).
+      expect(updated?.ackedBy?.memo).toBe("현장 확인 완료 — 학부모 연락함");
     }
 
     // 같은 실행 안에서 곧바로 다시 부른다 — 방금(또는 이전에) 확인된 건이라

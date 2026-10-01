@@ -18,11 +18,12 @@ const validate = (currentPassword: string, newPassword: string, confirmPassword:
   return null;
 };
 
-type PasswordChangeDialogProps = { onClose: () => void };
+// forced — 임시 비밀번호 강제 변경(Ruling 540): 닫을 수 없고 [취소] 도 없다. 바꾸거나 로그아웃밖에 길이 없다.
+type PasswordChangeDialogProps = { onClose?: () => void; forced?: boolean };
 
 // 성공하면 서버가 이 계정의 refresh 토큰을 전부 무효화하므로(§2.8) 이 기기도 다시 로그인해야 한다 —
 // 안내를 보여 준 뒤 [다시 로그인] 에서 로그아웃하고, 세션이 비면 가드가 로그인 화면으로 보낸다.
-const PasswordChangeDialog = ({ onClose }: PasswordChangeDialogProps) => {
+export const PasswordChangeDialog = ({ onClose, forced = false }: PasswordChangeDialogProps) => {
   const { logout } = useAuthSession();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -68,9 +69,11 @@ const PasswordChangeDialog = ({ onClose }: PasswordChangeDialogProps) => {
           </Button>
         ) : (
           <>
-            <Button variant="ghost" onClick={onClose} disabled={submitting}>
-              취소
-            </Button>
+            {forced ? null : (
+              <Button variant="ghost" onClick={onClose} disabled={submitting}>
+                취소
+              </Button>
+            )}
             <Button variant="primary" onClick={handleSubmitClick} disabled={submitting}>
               {submitting ? "변경 중..." : "변경"}
             </Button>
@@ -82,6 +85,9 @@ const PasswordChangeDialog = ({ onClose }: PasswordChangeDialogProps) => {
         <p>비밀번호를 바꿨습니다. 보안을 위해 모든 기기에서 로그아웃됐으니 새 비밀번호로 다시 로그인해 주세요.</p>
       ) : (
         <>
+          {forced ? (
+            <AlertBanner tone="info" title="관리자가 초기화한 임시 비밀번호입니다. 새 비밀번호로 바꿔야 계속 사용할 수 있습니다." />
+          ) : null}
           <Input
             label="현재 비밀번호"
             required

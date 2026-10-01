@@ -59,6 +59,8 @@ export type LoginResponseTypes = {
   status: AccountStatus;
   accountId: string;
   academy: AcademyRefResponseTypes;
+  // 임시 비밀번호 강제 변경 표식(§2.5, Ruling 540) — 참이면 비밀번호를 바꾸기 전까지 다른 화면을 쓰지 못한다.
+  mustChangePassword: boolean;
 };
 
 export type MeResponseTypes = {
@@ -73,6 +75,7 @@ export type MeResponseTypes = {
   managerId?: string;
   managerRole?: string;
   linkedStudentCount?: number;
+  mustChangePassword: boolean;
 };
 
 export type ChangePasswordRequestTypes = {
@@ -107,6 +110,8 @@ export type AuthSession = {
   role: AccountRole;
   status: AccountStatus;
   academy: AcademyRefResponseTypes;
+  // 없으면 꺼진 것으로 읽는다 — 로그인·`/me` 응답이 항상 채운다.
+  mustChangePassword?: boolean;
 };
 
 // POST /staff/accounts/{accountId}/password-reset (§5.22) 응답 — 임시 비밀번호는 1회 반환.

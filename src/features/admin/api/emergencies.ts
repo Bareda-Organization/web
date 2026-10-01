@@ -29,7 +29,7 @@ type RawEmergencyItem = {
   staff_acked: boolean;
   acked_at: string | null;
   canceled_at: string | null;
-  acked_by: string | null;
+  acked_by: { name: string; memo: string | null } | null;
   elapsed_since_raised: number;
 };
 

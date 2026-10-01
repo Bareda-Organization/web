@@ -72,11 +72,12 @@ export const EmergencyList = () => {
   // 비상 알림은 지연 인지 자체가 위험이라 화면을 열어 둔 동안 5초마다 다시 불러온다 — 응답을 받은 뒤 다음 요청을 예약한다.
   usePolling(() => load(status, date, true), EMERGENCY_POLL_INTERVAL_MS);
 
-  const handleAck = async (emergencyId: string) => {
+  const handleAck = async (emergencyId: string, memo?: string) => {
     setAckingId(emergencyId);
     setError(null);
     try {
-      await ackEmergency(emergencyId);
+      await ackEmergency(emergencyId, memo);
+      setDetail(null);
       await load(status, date);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
@@ -168,7 +169,14 @@ export const EmergencyList = () => {
         />
       </Card>
 
-      {detail ? <EmergencyDetailDialog emergency={detail} onClose={() => setDetail(null)} /> : null}
+      {detail ? (
+        <EmergencyDetailDialog
+          emergency={detail}
+          onClose={() => setDetail(null)}
+          onAck={(memo) => handleAck(detail.emergencyId, memo)}
+          acking={ackingId === detail.emergencyId}
+        />
+      ) : null}
     </StyledEmergencyLayout>
   );
 };

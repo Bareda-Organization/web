@@ -10,6 +10,7 @@ import {
   getAcademies,
   getAcademy,
   getAcademyRunsLive,
+  getRunAttention,
   getAuditActors,
   getAuditLogs,
   getBlockedAccounts,
@@ -133,6 +134,69 @@ describe("admin api — 실서버 계약", () => {
 
     expect(Array.isArray(result.runs)).toBe(true);
     expect(result.runs.length).toBeGreaterThan(0);
+  });
+
+  // R46-FUFEAT ④ — §6.15. 시드 상태에서 값이 얼마인지는 고정하지 않는다(문제 학원만 오므로 비어 있을 수 있다).
+  it("getRunAttention 은 학원별 오늘 지연·확정 실패 집계의 형태를 지킨다(§6.15 · Ruling 543)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    const result = await getRunAttention();
+
+    expect(Array.isArray(result.items)).toBe(true);
+    for (const item of result.items) {
+      expect(typeof item.academyId).toBe("string");
+      expect(item.delayedRuns).toBeGreaterThanOrEqual(0);
+      expect(item.confirmFailedRuns).toBeGreaterThanOrEqual(0);
+      expect(item.delayedRuns + item.confirmFailedRuns).toBeGreaterThan(0); // 문제 없는 학원은 목록에 없다
+    }
+  });
+
+  // R46-FUFEAT ① — 초기화 → 임시 비밀번호 로그인 표식 → 다른 API 403 → 본인 변경 → 표식 해제를 서버에 끝까지 붙인다.
+  // staffC(account_id=20)의 비밀번호를 초기화했다가 같은 시험 안에서 원래 값("password")으로 되돌린다.
+  it("임시 비밀번호 강제 변경 — 초기화한 계정은 변경 전까지 다른 API 가 403 이고 변경하면 풀린다(§1.4·§6.7·§2.8 · Ruling 540)", async ({
+    skip,
+  }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+    const reset = await updateStaffAccount("20", { resetPassword: true });
+    const temporaryPassword = reset.temporaryPassword;
+    expect(typeof temporaryPassword).toBe("string");
+
+    const post = (path: string, body: unknown, token?: string) =>
+      fetch(`${API_BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+    const login = async (password: string) => {
+      const response = await post("/auth/login", { login_id: "staffC", password });
+      return (await response.json()) as { data: { access_token: string; must_change_password: boolean } };
+    };
+
+    const flagged = await login(temporaryPassword!);
+    expect(flagged.data.must_change_password).toBe(true);
+    const bearer = { Authorization: `Bearer ${flagged.data.access_token}` };
+    const blocked = await fetch(`${API_BASE_URL}/staff/dashboard`, { headers: bearer });
+    expect(blocked.status).toBe(403);
+    expect(((await blocked.json()) as { error: { code: string } }).error.code).toBe("PASSWORD_CHANGE_REQUIRED");
+    const me = await fetch(`${API_BASE_URL}/me`, { headers: bearer });
+    expect(me.status).toBe(200);
+    expect(((await me.json()) as { data: { must_change_password: boolean } }).data.must_change_password).toBe(true);
+
+    const changed = await post(
+      "/auth/password",
+      { current_password: temporaryPassword, new_password: "password" },
+      flagged.data.access_token,
+    );
+    expect(changed.status).toBe(204);
+
+    const restored = await login("password");
+    expect(restored.data.must_change_password).toBe(false);
+    const open = await fetch(`${API_BASE_URL}/staff/dashboard`, {
+      headers: { Authorization: `Bearer ${restored.data.access_token}` },
+    });
+    expect(open.status).toBe(200);
   });
 
   it("getRunRoster 는 회차의 정류장·학생 탑승 현황을 돌려준다(§6.9)", async ({ skip }) => {

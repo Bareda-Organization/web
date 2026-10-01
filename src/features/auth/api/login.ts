@@ -12,6 +12,7 @@ export const login = async (loginId: string, password: string): Promise<LoginRes
     status: LoginResponseTypes["status"];
     account_id: string;
     academy: LoginResponseTypes["academy"];
+    must_change_password: boolean;
   }>("/auth/login", {
     method: "POST",
     body: { login_id: loginId, password },
@@ -23,5 +24,6 @@ export const login = async (loginId: string, password: string): Promise<LoginRes
     status: response.status,
     accountId: response.account_id,
     academy: response.academy,
+    mustChangePassword: response.must_change_password,
   };
 };
