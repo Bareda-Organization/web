@@ -151,6 +151,64 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   // R21-B 목표 1·3·4 — 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
   // 포함 여부로 본다(판단 근거, 보고서 §1).
+  // A #3 — 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
+  it("확정·운행 중 회차는 기사·동승 매니저 옆에 노선 확인 여부를 보여 준다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], escortName: "이매니저", ackDriver: true, ackEscort: false }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차");
+    expect(screen.getByText("확인")).toBeInTheDocument();
+    expect(screen.getByText("미확인")).toBeInTheDocument();
+  });
+
+  it("노선이 아직 없는 대기 회차는 확인 여부를 보이지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], runStatus: "idle", ackDriver: false }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차");
+    expect(screen.queryByText("미확인")).not.toBeInTheDocument();
+    expect(screen.queryByText("확인")).not.toBeInTheDocument();
+  });
+
+  // B1 #26 — 버스가 많은 학원은 종료된 회차까지 표에 쌓인다. 기본은 전부 보이고(종료 회차를 남긴다는 사용자 결정),
+  // "운행 중·곧 출발만" 을 켜면 확정·운행 중 회차만 남는다.
+  it("'운행 중·곧 출발만' 을 켜면 확정·운행 중 회차만 표에 남고, 끄면 전부 돌아온다", async () => {
+    const run = (runId: string, busNo: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
+      ...baseDashboard.runs[0],
+      runId,
+      busNo,
+      runStatus,
+      driverName: null,
+      escortName: null,
+    });
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [run("1", "1호차", "finished"), run("2", "2호차", "moving"), run("3", "3호차", "confirmed"), run("4", "4호차", "idle")],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+    const table = (await screen.findByRole("table")) as HTMLElement;
+    expect(within(table).getAllByRole("row")).toHaveLength(5); // 머리줄 + 4행
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
+
+    expect(within(table).getByText("2호차")).toBeInTheDocument();
+    expect(within(table).getByText("3호차")).toBeInTheDocument();
+    expect(within(table).queryByText("1호차")).not.toBeInTheDocument();
+    expect(within(table).queryByText("4호차")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
+    expect(within(table).getAllByRole("row")).toHaveLength(5);
+  });
+
   it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {
     const startedAt = "2026-09-19T08:02:15Z";
     const finishedAt = "2026-09-19T08:41:03Z";

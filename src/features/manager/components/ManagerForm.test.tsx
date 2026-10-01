@@ -127,3 +127,16 @@ describe("ManagerForm — 수정 폼의 빈 값", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
+
+// B1 #8 — 등록 폼에는 아이디·비밀번호가 없다. 앱 연결이 어떻게 이뤄지는지 한 줄로 알려 줘야 첫날 막히지 않는다.
+describe("ManagerForm — 앱 연결 안내", () => {
+  it("등록 폼에는 앱에서 가입 신청하면 승인 때 이 기록에 연결된다는 안내가 있다", () => {
+    render(<ManagerForm onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.getByText(/앱에서 가입 신청하면/)).toBeInTheDocument();
+  });
+
+  it("이미 있는 매니저를 고치는 폼에는 그 안내가 없다", () => {
+    render(<ManagerForm manager={existingManager} onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.queryByText(/앱에서 가입 신청하면/)).not.toBeInTheDocument();
+  });
+});

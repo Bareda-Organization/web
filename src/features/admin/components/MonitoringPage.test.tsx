@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitoringPage } from "./MonitoringPage";
-import { getAcademyRunsLive, getAllAcademies } from "../api";
+import { getAcademyRunsLive, getAllAcademies, getEmergencies } from "../api";
 import { getRunRoute } from "@/features/route";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
@@ -34,6 +34,7 @@ vi.mock("@/features/map", async (importOriginal) => {
 vi.mock("../api", () => ({
   getAllAcademies: vi.fn(),
   getAcademyRunsLive: vi.fn(),
+  getEmergencies: vi.fn(async () => ({ items: [], unackedCount: 0 })),
 }));
 
 // R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
@@ -44,6 +45,7 @@ vi.mock("@/features/route", () => ({
 const mockGetAcademies = vi.mocked(getAllAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
+const mockGetEmergencies = vi.mocked(getEmergencies);
 
 // Goal 8·9 시험은 실제 WebSocket 을 열지 않는다 — `useRealtimeChannel` 을 가짜로
 // 바꿔 봉투 전달과 연결 상태를 직접 제어한다(DashboardPage.test.tsx 와 같은 방식,
@@ -849,3 +851,51 @@ describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09
     expect(polylines.every((line) => line.points[0].lat === 2)).toBe(true);
   });
 });
+
+// B1 #24 — 학원 선택으로 한 곳씩만 보이던 전체 관제에서 어느 학원에 미확인 비상이 있는지 한눈에 보인다.
+describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
+  const academies = [
+    { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+    { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+  ];
+  const emergency = (id: string, academyId: string, academyName: string, staffAcked = false) =>
+    ({ emergencyId: id, academy: { id: academyId, name: academyName, contact: "" }, staffAcked, canceledAt: null }) as never;
+
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(academies);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("미확인 비상이 있는 학원을 건수와 함께 요약하고 학원 선택 목록에도 표시한다", async () => {
+    mockGetEmergencies.mockResolvedValue({
+      items: [emergency("1", "2", "송파학원"), emergency("2", "2", "송파학원"), emergency("3", "1", "강동학원", true)],
+      unackedCount: 2,
+    });
+    render(<MonitoringPage />);
+
+    expect(await screen.findByRole("button", { name: "송파학원 비상 2건" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /강동학원 비상/ })).not.toBeInTheDocument(); // 확인된 건은 세지 않는다
+    expect(screen.getByRole("option", { name: "송파학원 (서울) · 비상 2건" })).toBeInTheDocument();
+    expect(mockGetEmergencies).toHaveBeenCalledWith("open");
+  });
+
+  it("요약의 학원 버튼을 누르면 그 학원의 회차로 바뀐다", async () => {
+    mockGetEmergencies.mockResolvedValue({ items: [emergency("1", "2", "송파학원")], unackedCount: 1 });
+    render(<MonitoringPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "송파학원 비상 1건" }));
+
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenLastCalledWith("2"));
+  });
+
+  it("비상이 없으면 요약을 그리지 않는다", async () => {
+    mockGetEmergencies.mockResolvedValue({ items: [], unackedCount: 0 });
+    render(<MonitoringPage />);
+
+    await screen.findByRole("option", { name: "강동학원 (서울)" });
+    expect(screen.queryByText(/미확인 비상이 있는 학원/)).not.toBeInTheDocument();
+  });
+});
+

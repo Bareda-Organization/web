@@ -144,3 +144,49 @@ describe("RouteForm — F02-17 편성 이름 지우기", () => {
     expect(vi.mocked(updateRoute).mock.calls[0][1].name).toBeUndefined();
   });
 });
+
+// B1 #7 — 월~금 운영 학원이 요일마다 폼을 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
+describe("RouteForm — B1 #7 요일 여러 개 한 번에", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const oneBus = {
+    items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+    page: 0, size: 100, totalCount: 1, hasNext: false,
+  };
+
+  it("월~금을 고르고 저장하면 요일마다 1건씩 5건을 만든다", async () => {
+    mockGetBuses.mockResolvedValue(oneBus);
+    mockCreate.mockResolvedValue({ id: "7" } as Awaited<ReturnType<typeof createRoute>>);
+    const onBatchDone = vi.fn();
+    render(<RouteForm onClose={vi.fn()} onDone={vi.fn()} onBatchDone={onBatchDone} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
+
+    for (const label of ["화", "수", "목", "금"]) fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(onBatchDone).toHaveBeenCalled());
+    expect(mockCreate.mock.calls.map(([request]) => request.weekday)).toEqual(["mon", "tue", "wed", "thu", "fri"]);
+  });
+
+  it("한 요일이 실패하면 그 요일과 사유를 보이고, 다시 저장하면 실패한 요일만 다시 만든다", async () => {
+    mockGetBuses.mockResolvedValue(oneBus);
+    mockCreate.mockImplementation(async (request) => {
+      if (request.weekday === "tue") throw new ApiError(409, "DUPLICATE_ROUTE", "이미 있는 편성입니다");
+      return { id: "7" } as Awaited<ReturnType<typeof createRoute>>;
+    });
+    const onBatchDone = vi.fn();
+    render(<RouteForm onClose={vi.fn()} onDone={vi.fn()} onBatchDone={onBatchDone} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
+
+    for (const label of ["화", "수"]) fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(await screen.findByText(/화요일 — 같은 차량·요일·방향의 편성이 이미 있습니다/)).toBeInTheDocument();
+    expect(onBatchDone).not.toHaveBeenCalled();
+
+    mockCreate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockCreate.mock.calls[0][0].weekday).toBe("tue");
+  });
+});

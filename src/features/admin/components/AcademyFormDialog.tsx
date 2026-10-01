@@ -83,7 +83,11 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
   const isDeactivating = isEditMode && detail?.status === "active" && status === "inactive";
 
   const isAddressMissing = address.trim().length === 0;
-  const canSubmit = name.trim().length > 0 && region.trim().length > 0 && !isAddressMissing;
+  // 주소 없이 저장된 옛 학원의 상태 변경(비활성화 등)은 주소 없이 허용한다 — 운영을 멈추는 조작을 주소 입력이 막으면
+  // 안 된다(조율자 결정 2026-10-01 · Ruling 496). 서버는 address 키가 없으면 기존 값을 유지한다(§6.3).
+  const canOmitAddress = isEditMode && detail !== null && (detail.address ?? "").trim() === "" && status !== detail.status;
+  const canSubmit =
+    name.trim().length > 0 && region.trim().length > 0 && (!isAddressMissing || canOmitAddress);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -93,7 +97,8 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
         await updateAcademy(academyId, {
           name: name.trim(),
           region: region.trim(),
-          address: address.trim(),
+          // 원래 비었고 그대로면 키를 보내지 않는다 — 빈 문자열을 보내면 서버가 422 로 거절한다(Ruling 450).
+          address: isAddressMissing ? undefined : address.trim(),
           contact: contact.trim() || undefined,
           memo: memo.trim() || undefined,
           status,
@@ -207,8 +212,14 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone }: AcademyFormDia
               value={address}
               onChange={(event) => setAddress(event.target.value)}
               // 수정 화면에서 비어 있으면 주소 없이 저장돼 있던 학원이라 처음부터 오류 색으로, 등록은 입력 안내로 보인다.
-              error={isAddressMissing && isEditMode ? ADDRESS_REQUIRED_MESSAGE : undefined}
-              hint={isAddressMissing && !isEditMode ? ADDRESS_REQUIRED_MESSAGE : undefined}
+              error={isAddressMissing && isEditMode && !canOmitAddress ? ADDRESS_REQUIRED_MESSAGE : undefined}
+              hint={
+                canOmitAddress && isAddressMissing
+                  ? "주소 없이 저장된 학원이라 상태만 바꾸는 저장은 주소 없이 됩니다. 그 밖의 수정은 주소를 입력해 주세요."
+                  : isAddressMissing && !isEditMode
+                    ? ADDRESS_REQUIRED_MESSAGE
+                    : undefined
+              }
             />
             <Input label="연락처" value={contact} onChange={(event) => setContact(event.target.value)} />
             <Textarea label="메모" value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} maxLength={MEMO_MAX_LENGTH} />

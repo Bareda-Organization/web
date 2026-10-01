@@ -41,6 +41,8 @@ export type LinkCandidateTypes = {
   id: string;
   name: string;
   detail?: string;
+  // 있으면 고를 수 없다 — 이미 다른 계정에 연결돼 승인 확정 때 거절될 후보(그 이유를 보여 준다).
+  disabledReason?: string;
 };
 
 export type SignupAccountStatus = "active" | "rejected";

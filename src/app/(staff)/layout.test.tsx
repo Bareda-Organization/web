@@ -13,6 +13,7 @@ vi.mock("@/features/auth", () => ({
     </div>
   ),
   LogoutButton: () => null,
+  PasswordChangeButton: () => null,
   TestDataResetButton: () => null,
   useAuthSession: () => ({ session: { academy: { id: "7", name: "바래다" } } }),
 }));

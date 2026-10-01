@@ -1,4 +1,4 @@
-// 바래다 디자인 시스템 컴포넌트 23개 — Emotion 이식본.
+// 바래다 디자인 시스템 컴포넌트 24개 — Emotion 이식본.
 // 원본은 frontend/design-system/components/ 이고 이쪽이 앱이 쓰는 구현이다.
 // 학부모·기사 앱 전용(탭바 성격의 BottomSheet·NotificationCard·CodeInput·AppHeader·
 // DelayPicker·RunSummaryCard·StopTimeline·StudentRow)은 웹이 안 써서 뺐다(F04-08).

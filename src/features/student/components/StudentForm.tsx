@@ -25,6 +25,7 @@ import {
   StyledGuardianSection,
   StyledGuardianTitle,
 } from "./StudentForm.styled";
+import { WeeklyAddressSection } from "./WeeklyAddressSection";
 
 type StudentFormProps = {
   /** 있으면 수정 대상 student_id, 없으면 신규 등록. */
@@ -322,6 +323,7 @@ export const StudentForm = ({
                 ) : null}
               </StyledGuardianSection>
             ) : null}
+            {studentId ? <WeeklyAddressSection studentId={studentId} /> : null}
             <Input
               label="메모"
               value={note}

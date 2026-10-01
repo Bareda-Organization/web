@@ -3,7 +3,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
-import { createStudent, deleteStudent, getStudentDetail, getStudents, updateStudent } from "./index";
+import {
+  createStudent,
+  deleteStudent,
+  getStudentDetail,
+  getStudents,
+  getStudentWeeklyAddresses,
+  updateStudent,
+} from "./index";
 
 // 학생 관리 화면(§5.11, STU-01~04, A-10)이 부르는 엔드포인트를 실제 F5-W1
 // 전용 백엔드에 붙여 확인한다. 등록·수정·퇴원(STU-02~04)은 사진 없이도 요청이
@@ -48,6 +55,19 @@ describe("student api — 실서버 계약", () => {
     expect(result.studentId).toBe("1");
     expect(typeof result.name).toBe("string");
     expect(typeof result.canGoAlone).toBe("boolean");
+  });
+
+  // STU-06(Ruling 498) — 관계자는 학부모가 등록한 요일별 주소를 읽기만 한다. 남의 학원 학생은 존재가 드러나지 않는다.
+  it("getStudentWeeklyAddresses 는 student_id=1 의 요일별 주소를 월요일 등원부터 돌려주고, 남의 학원 학생은 404 다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const entries = await getStudentWeeklyAddresses("1");
+
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries[0]).toMatchObject({ weekday: "mon", direction: "to_academy" });
+    expect(typeof entries[0].address).toBe("string");
+    await expect(getStudentWeeklyAddresses("6")).rejects.toMatchObject({ code: "STUDENT_NOT_FOUND" });
   });
 
   it("createStudent 로 등록한 학생을 updateStudent 로 고치고 deleteStudent(퇴원)로 지우면 목록·상세에서 사라진다", async ({

@@ -120,6 +120,20 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(mockGetRunRoster).toHaveBeenCalledWith("7");
   });
 
+  // A #3 — 선택한 회차의 기사·동승 매니저가 노선 확인 버튼을 눌렀는지 보인다(MON-05).
+  it("선택한 회차의 기사·동승 매니저 옆에 노선 확인 여부를 보여 준다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], ackDriver: false, ackEscort: true }],
+    });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    expect(screen.getByText("미확인")).toBeInTheDocument();
+    expect(screen.getByText("확인")).toBeInTheDocument();
+  });
+
   // `FEATURE_SPEC C-02` — `absent`(미등원)와 `no_show`(미승차)는 **반드시 구분**한다.
   // ⚠ 2026-09-21 에 앱 2종과 웹 2곳을 고치면서 이 화면만 "결석"·"미탑승" 으로 남아 있었다.
   it("미등원 학생은 사양 용어(미등원)로 표시된다 — 결석이 아니다", async () => {

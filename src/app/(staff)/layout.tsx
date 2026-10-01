@@ -6,7 +6,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
+import { AuthGateGuard, LogoutButton, PasswordChangeButton, TestDataResetButton, useAuthSession } from "@/features/auth";
 import { ApprovalPendingProvider, useApprovalPending } from "@/features/approval";
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
 import { useAttentionSignals } from "@/shared/hooks";
@@ -97,6 +97,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
             <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
             <AttentionAlertToggle />
             <TestDataResetButton />
+            <PasswordChangeButton />
             <LogoutButton />
           </StyledStaffHeaderSide>
         </StyledStaffHeader>

@@ -12,7 +12,7 @@ import {
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill } from "@/shared/ui";
+import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill, Switch } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
@@ -28,6 +28,7 @@ import { getRunRoute } from "@/features/route";
 import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { RouteAckMark } from "./RouteAckMark";
 import {
   StyledDashboardLayout,
   StyledStatGrid,
@@ -89,6 +90,8 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // B1 #26 — 기본은 오늘 회차 전부(종료 회차를 남긴다는 사용자 결정). 켜면 확정·운행 중 회차만 표에 남긴다.
+  const [activeOnly, setActiveOnly] = useState(false);
   // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
   const [approvalRequests, setApprovalRequests] = useState<{ approvalId: string; label: string }[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -338,6 +341,8 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   }, LIVE_POLL_INTERVAL_MS);
 
   const noShowRuns = runs.filter((run) => run.noShowCases.length > 0);
+  // 확정(출발 30분 전부터)·운행 중이 "곧 출발·운행 중" 이다. 대기(idle)는 아직 확정 전이라 뺀다.
+  const tableRuns = activeOnly ? runs.filter((run) => run.runStatus === "confirmed" || run.runStatus === "moving") : runs;
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
     { key: "busNo", label: "버스" },
@@ -349,8 +354,24 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
         <StatusPill status={RUN_STATUS_TO_PILL[row.runStatus]}>{RUN_STATUS_LABEL[row.runStatus]}</StatusPill>
       ),
     },
-    { key: "driverName", label: "기사", render: (row) => row.driverName ?? "미배치" },
-    { key: "escortName", label: "동승 매니저", render: (row) => row.escortName ?? "미배치" },
+    {
+      key: "driverName",
+      label: "기사",
+      render: (row) => (
+        <>
+          {row.driverName ?? "미배치"} <RouteAckMark name={row.driverName} acked={row.ackDriver} runStatus={row.runStatus} />
+        </>
+      ),
+    },
+    {
+      key: "escortName",
+      label: "동승 매니저",
+      render: (row) => (
+        <>
+          {row.escortName ?? "미배치"} <RouteAckMark name={row.escortName} acked={row.ackEscort} runStatus={row.runStatus} />
+        </>
+      ),
+    },
     {
       // R21-B 목표 1·3·4 — 예정 출발은 항상 있고, 실제 출발은 회차가 실제로 출발한
       // 뒤에만 채워진다(§5.3 startedAt). 초까지 보여 달라는 지시라 `formatClockTime`
@@ -538,11 +559,13 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
         </StyledBusListPane>
       </StyledMapTopRow>
 
+      <Switch label="운행 중·곧 출발만" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} />
       <Card padding={0}>
         <RosterTable hasError={Boolean(error)}
           columns={columns}
           loading={loading}
-          rows={runs}
+          rows={tableRuns}
+          emptyMessage={activeOnly ? "운행 중이거나 곧 출발하는 회차가 없습니다" : undefined}
           getRowKey={(row) => row.runId}
           onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}
         />

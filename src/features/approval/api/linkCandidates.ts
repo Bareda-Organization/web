@@ -4,7 +4,15 @@ import type { LinkCandidateTypes, SignupRole } from "../types";
 
 const CANDIDATE_PAGE_SIZE = 20;
 
-type RawStudentList = { items: { student_id: string | number; name: string; class_name: string | null }[] };
+type RawStudentList = {
+  items: {
+    student_id: string | number;
+    name: string;
+    class_name: string | null;
+    guardian_phone?: string | null;
+    account_linked?: boolean;
+  }[];
+};
 type RawManagerList = {
   items: { id: string | number; name: string; phone: string }[];
 };
@@ -16,7 +24,14 @@ export const searchStudentCandidates = async (q?: string): Promise<LinkCandidate
     method: "GET",
     query: { page: 0, size: CANDIDATE_PAGE_SIZE, q: q || undefined },
   });
-  return raw.items.map((s) => ({ id: asIdString(s.student_id), name: s.name, detail: s.class_name ?? undefined }));
+  // 동명이인은 반이 같을 수 있어 보호자 연락처(서버가 목록에 주는 값)로 가른다 — B1 #14.
+  return raw.items.map((s) => ({
+    id: asIdString(s.student_id),
+    name: s.name,
+    detail: [s.class_name, s.guardian_phone ? `보호자 ${s.guardian_phone}` : "보호자 미연결"].filter(Boolean).join(" · "),
+    // 학생 본인 계정이 이미 연결된 학생은 승인 확정 때 409 ALREADY_LINKED 로 거절되므로 미리 고를 수 없게 한다.
+    ...(s.account_linked ? { disabledReason: "이미 가입한 학생" } : {}),
+  }));
 };
 
 // GET /staff/managers?q=&role=&linked=false (§5.13, MGR-01 · Ruling 391) — 기사·동승자 승인의 매니저 연결 후보.

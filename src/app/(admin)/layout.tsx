@@ -7,7 +7,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGateGuard, LogoutButton, TestDataResetButton, useAuthSession } from "@/features/auth";
+import { AuthGateGuard, LogoutButton, PasswordChangeButton, TestDataResetButton, useAuthSession } from "@/features/auth";
 import { AdminPendingProvider, getAdminEmergencies, useAdminPending } from "@/features/admin";
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
 import type { EmergencyAlertSource } from "@/features/emergency";
@@ -95,6 +95,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
             <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
             <AttentionAlertToggle />
             <TestDataResetButton />
+            <PasswordChangeButton />
             <LogoutButton />
           </StyledAdminHeaderSide>
         </StyledAdminHeader>

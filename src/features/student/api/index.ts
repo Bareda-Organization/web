@@ -5,6 +5,7 @@ import type {
   StudentListItemResponseTypes,
   StudentListResponseTypes,
   StudentUpsertRequestTypes,
+  StudentWeeklyAddressTypes,
 } from "../types";
 
 type RawStudentListItem = {
@@ -129,3 +130,24 @@ export const updateStudent = async (
 export const deleteStudent = async (studentId: string): Promise<void> => {
   await apiFetch<void>(`/staff/students/${studentId}`, { method: "DELETE" });
 };
+
+type RawWeeklyAddress = {
+  weekday: StudentWeeklyAddressTypes["weekday"];
+  direction: StudentWeeklyAddressTypes["direction"];
+  address: string;
+  address_detail: string | null;
+  verified: boolean;
+};
+
+// GET /staff/students/{id}/weekly-address(STU-06 · Ruling 498) — 주소는 L3 라 서버가 조회마다 감사 기록을 남긴다. 관계자는 읽기만 한다.
+export const getStudentWeeklyAddresses = async (studentId: string): Promise<StudentWeeklyAddressTypes[]> => {
+  const raw = await apiFetch<{ entries: RawWeeklyAddress[] }>(`/staff/students/${studentId}/weekly-address`, { method: "GET" });
+  return raw.entries.map((entry) => ({
+    weekday: entry.weekday,
+    direction: entry.direction,
+    address: entry.address,
+    addressDetail: entry.address_detail,
+    verified: entry.verified,
+  }));
+};
+

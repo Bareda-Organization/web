@@ -6,6 +6,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, PageHeader } from "@/shared/ui";
 import { getRouteDetail } from "../api";
 import type { RouteDetailResponseTypes } from "../types";
+import { RouteCopyDialog } from "./RouteCopyDialog";
 import { RouteDeleteDialog } from "./RouteDeleteDialog";
 import { StyledRouteDetailActions, StyledRouteDetailLayout } from "./RouteDetail.styled";
 import { RouteForm } from "./RouteForm";
@@ -31,6 +32,7 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   // 로딩 표시는 첫 조회 때만 켠다 — 편성 정보를 저장한 뒤 다시 불러올 때 켜면 화면 전체가 "불러오는 중" 으로
   // 바뀌어 아직 저장하지 않은 승하차지 편집(RouteStopsPanel)이 언마운트로 사라진다.
@@ -67,6 +69,9 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
             <Button variant="secondary" onClick={() => setEditing(true)}>
               편성 정보 수정
             </Button>
+            <Button variant="secondary" onClick={() => setCopying(true)}>
+              다른 요일에 복사
+            </Button>
             <Button variant="danger" onClick={() => setDeleting(true)}>
               삭제
             </Button>
@@ -85,6 +90,17 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
           onDone={() => {
             setEditing(false);
             load();
+          }}
+        />
+      ) : null}
+
+      {copying ? (
+        <RouteCopyDialog
+          route={route}
+          onClose={() => setCopying(false)}
+          onDone={() => {
+            setCopying(false);
+            router.push("/route");
           }}
         />
       ) : null}

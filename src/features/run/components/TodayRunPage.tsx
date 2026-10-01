@@ -28,6 +28,7 @@ import type {
 } from "../types";
 import { ForcedAddDialog } from "./ForcedAddDialog";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
+import { RouteAckMark } from "./RouteAckMark";
 import { StudentTransferDialog } from "./StudentTransferDialog";
 import { TransferCancelDialog } from "./TransferCancelDialog";
 import {
@@ -560,11 +561,21 @@ export const TodayRunPage = () => {
             </StyledCrewRow>
             <StyledCrewRow>
               <StyledCrewLabel>기사</StyledCrewLabel>
-              <span>{selectedRun?.driverName ?? "미배치"}</span>
+              <span>
+                {selectedRun?.driverName ?? "미배치"}{" "}
+                {selectedRun ? (
+                  <RouteAckMark name={selectedRun.driverName} acked={selectedRun.ackDriver} runStatus={selectedRun.runStatus} />
+                ) : null}
+              </span>
             </StyledCrewRow>
             <StyledCrewRow>
               <StyledCrewLabel>동승 매니저</StyledCrewLabel>
-              <span>{selectedRun?.escortName ?? "미배치"}</span>
+              <span>
+                {selectedRun?.escortName ?? "미배치"}{" "}
+                {selectedRun ? (
+                  <RouteAckMark name={selectedRun.escortName} acked={selectedRun.ackEscort} runStatus={selectedRun.runStatus} />
+                ) : null}
+              </span>
             </StyledCrewRow>
             <StyledCrewRow>
               <StyledCrewLabel>출발 시각</StyledCrewLabel>

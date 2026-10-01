@@ -5,6 +5,7 @@ import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
 import { emergencyMapUrl } from "../lib/mapLink";
 import type { EmergencyItemResponseTypes } from "../types";
+import { PhoneContact } from "./PhoneContact";
 import { StyledEmergencyDetailBody, StyledEmergencyDetailRow } from "./EmergencyDetailDialog.styled";
 
 type EmergencyDetailDialogProps = {
@@ -26,7 +27,7 @@ export const EmergencyDetailDialog = ({ emergency, onClose }: EmergencyDetailDia
         <span>발신자</span>
         <span>
           {emergency.raisedBy.name ?? "미상"} ({EMERGENCY_ROLE_LABEL[emergency.raisedBy.role]}) ·{" "}
-          {emergency.raisedBy.phone ?? "번호 없음"}
+          <PhoneContact phone={emergency.raisedBy.phone} />
         </span>
       </StyledEmergencyDetailRow>
       <StyledEmergencyDetailRow>
@@ -47,7 +48,7 @@ export const EmergencyDetailDialog = ({ emergency, onClose }: EmergencyDetailDia
         <StyledEmergencyDetailRow key={`${contact.role}-${index}`}>
           <span>{EMERGENCY_ROLE_LABEL[contact.role]} 연락처</span>
           <span>
-            {contact.name ?? "미상"} · {contact.phone ?? "번호 없음"}
+            {contact.name ?? "미상"} · <PhoneContact phone={contact.phone} />
           </span>
         </StyledEmergencyDetailRow>
       ))}

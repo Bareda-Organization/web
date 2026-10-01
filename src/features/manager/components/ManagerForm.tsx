@@ -74,6 +74,9 @@ export const ManagerForm = ({ manager, onClose, onDone }: ManagerFormProps) => {
     >
       <Input label="이름" required value={name} onChange={(event) => setName(event.target.value)} />
       <Input label="전화번호" required value={phone} onChange={(event) => setPhone(event.target.value)} />
+      {manager ? null : (
+        <p>앱에서 가입 신청하면 승인할 때 이 기록에 연결됩니다. 아이디·비밀번호는 매니저가 가입할 때 직접 정합니다.</p>
+      )}
       <Select
         label="역할"
         options={ROLE_OPTIONS}

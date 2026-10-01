@@ -10,6 +10,9 @@ export type { SelectProps } from "./Select";
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 
+export { WeekdayPicker } from "./WeekdayPicker";
+export type { WeekdayPickerProps } from "./WeekdayPicker";
+
 export { Switch } from "./Switch";
 export type { SwitchProps } from "./Switch";
 

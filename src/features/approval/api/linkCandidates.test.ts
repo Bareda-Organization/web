@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { searchManagerCandidates } from "./linkCandidates";
+import { searchManagerCandidates, searchStudentCandidates } from "./linkCandidates";
 
 const jsonResponse = (body: unknown): Response =>
   ({ ok: true, status: 200, json: async () => ({ success: true, data: body }) }) as Response;
@@ -38,5 +38,30 @@ describe("searchManagerCandidates — 서버 필터로 연결 가능한 매니�
     expect(url.searchParams.get("role")).toBe("driver");
     expect(url.searchParams.get("linked")).toBe("false");
     expect(url.searchParams.get("q")).toBe("김");
+  });
+});
+
+// B1 #14 — 같은 이름 학생을 가르는 정보. 반이 같아도 보호자 연락처(서버가 목록에 주는 값)가 다르다.
+describe("searchStudentCandidates — 동명이인 구분 정보", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("반과 보호자 연락처를 함께 보여 주고, 보호자가 연결되지 않은 학생은 그렇게 적는다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          items: [
+            { student_id: 1, name: "김민수", class_name: "1반", guardian_phone: "010-1111-2222", guardian_count: 1 },
+            { student_id: 2, name: "김민수", class_name: "1반", guardian_phone: null, guardian_count: 0 },
+          ],
+        }),
+      ),
+    );
+
+    const candidates = await searchStudentCandidates("김민수");
+
+    expect(candidates.map((candidate) => candidate.detail)).toEqual(["1반 · 보호자 010-1111-2222", "1반 · 보호자 미연결"]);
   });
 });
