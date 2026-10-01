@@ -2,6 +2,7 @@ export { getAcademies, getAllAcademies, getAcademy, createAcademy, updateAcademy
 export { getStaffSignupRequests, decideStaffSignupRequest } from "./signupRequests";
 export { getStaffAccounts, updateStaffAccount } from "./staffAccounts";
 export { getAcademyRunsLive } from "./runsLive";
+export { getRunAttention } from "./runAttention";
 export { getRunRoster } from "./roster";
 export { getBlockedAccounts, unblockAccount } from "./blockedAccounts";
 export { getEmergencies } from "./emergencies";

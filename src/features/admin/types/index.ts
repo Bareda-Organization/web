@@ -295,6 +295,11 @@ export type EmergencyItemResponseTypes = {
   elapsedSinceRaised: number;
 };
 
+// §6.15 — 학원 1곳의 오늘 지연·확정 실패 회차 수. 둘 중 하나는 반드시 0 보다 크다.
+export type RunAttentionItemTypes = { academyId: string; delayedRuns: number; confirmFailedRuns: number };
+
+export type RunAttentionResponseTypes = { items: RunAttentionItemTypes[] };
+
 export type EmergenciesResponseTypes = {
   items: EmergencyItemResponseTypes[];
   unackedCount: number;
