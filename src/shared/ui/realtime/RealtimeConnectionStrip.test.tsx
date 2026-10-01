@@ -47,6 +47,17 @@ describe("RealtimeConnectionStrip", () => {
     expect(mockReconnect).toHaveBeenCalledTimes(1);
   });
 
+  // 화면 확인에서 발견 — 비상 알림 띠는 좌우 24px 여백을 두는데 연결 띠만 가장자리까지 붙어 띠 두 개의 폭이 어긋났다.
+  it("비상 알림 띠와 같은 좌우 24px 여백 안에 놓는다", () => {
+    mockConnectionState = "reconnecting";
+    render(<RealtimeConnectionStrip />);
+
+    const wrapper = screen.getByText("재연결 시도 중입니다").closest("[data-realtime-strip]");
+    expect(wrapper).not.toBeNull();
+    expect(getComputedStyle(wrapper as Element).paddingLeft).toBe("24px");
+    expect(getComputedStyle(wrapper as Element).paddingRight).toBe("24px");
+  });
+
   it("권한이 없으면 권한 없음 안내만 보이고 [다시 연결] 은 없다 — 다시 해도 거절된다", () => {
     mockConnectionState = "forbidden";
     render(<RealtimeConnectionStrip />);
