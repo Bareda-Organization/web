@@ -94,7 +94,7 @@ export const NotificationList = () => {
 
   return (
     <StyledNotificationLayout>
-      <PageHeader title="알림 로그" description={`총 ${totalCount}건 · 수신자 미확인 ${unackedCount}건`} />
+      <PageHeader title="알림 로그" description={error ? undefined : `총 ${totalCount}건 · 수신자 미확인 ${unackedCount}건`} />
 
       <StyledNotificationFilters>
         <Select

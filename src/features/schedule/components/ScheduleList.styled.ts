@@ -21,3 +21,18 @@ export const StyledScheduleSection = styled.div`
   flex-direction: column;
   gap: 20px;
 `;
+
+// 정규 스케줄 구역의 건수 · [스케줄 등록] 줄 — 화면 제목은 ScheduleScreen 이 이미 쥐고 있어 이 구역은 제목 없이 도구 줄만 둔다.
+export const StyledScheduleToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+export const StyledScheduleCount = styled.div`
+  font: var(--fw-light) var(--fs-caption) / 1.6 var(--font-sans);
+  letter-spacing: var(--ls-caption);
+  color: var(--text-secondary);
+`;

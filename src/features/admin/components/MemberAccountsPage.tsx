@@ -57,7 +57,7 @@ export const MemberAccountsPage = () => {
 
   return (
     <StyledMemberAccountsLayout>
-      <PageHeader title="관계자 계정 관리" description={`전체 ${totalCount}개 계정`} />
+      <PageHeader title="관계자 계정 관리" description={error ? undefined : `전체 ${totalCount}개 계정`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

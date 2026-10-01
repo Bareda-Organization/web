@@ -22,7 +22,7 @@ describe("MemberAccountsPage — 목록 조회 실패", () => {
     render(<MemberAccountsPage />);
 
     await waitFor(() => expect(screen.getByText("서버 처리 중 오류가 발생했습니다")).toBeInTheDocument());
-    expect(screen.getByText("전체 0개 계정")).toBeInTheDocument();
+    expect(screen.queryByText("전체 0개 계정")).not.toBeInTheDocument(); // 건수를 모르는 상태를 0 으로 보이지 않는다(Ruling 597)
   });
 });
 

@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, PageHeader, Pagination, RosterTable } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, Pagination, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getSchedules } from "../api";
 import type { ScheduleDirection, ScheduleItemResponseTypes, ScheduleWeekday } from "../types";
 import { ScheduleCopyDialog } from "./ScheduleCopyDialog";
 import { ScheduleDeleteDialog } from "./ScheduleDeleteDialog";
 import { ScheduleForm } from "./ScheduleForm";
-import { StyledScheduleSection } from "./ScheduleList.styled";
+import { StyledScheduleCount, StyledScheduleSection, StyledScheduleToolbar } from "./ScheduleList.styled";
 
 const PAGE_SIZE = 20;
 
@@ -116,15 +116,12 @@ export const ScheduleList = () => {
 
   return (
     <StyledScheduleSection>
-      <PageHeader
-        title="운행 스케줄"
-        description={`총 ${totalCount}건`}
-        actions={
-          <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
-            스케줄 등록
-          </Button>
-        }
-      />
+      <StyledScheduleToolbar>
+        <StyledScheduleCount>{error ? null : `총 ${totalCount}건`}</StyledScheduleCount>
+        <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
+          스케줄 등록
+        </Button>
+      </StyledScheduleToolbar>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

@@ -48,7 +48,7 @@ export const MemberApprovalsPage = () => {
 
   return (
     <StyledMemberApprovalsLayout>
-      <PageHeader title="관계자 가입 승인" description={`처리 대기 ${totalCount}건`} />
+      <PageHeader title="관계자 가입 승인" description={error ? undefined : `처리 대기 ${totalCount}건`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

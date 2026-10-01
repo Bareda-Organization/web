@@ -146,7 +146,7 @@ export const ManagerList = () => {
     <StyledManagerLayout>
       <PageHeader
         title="매니저 관리"
-        description={q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
+        description={error ? undefined : q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
         actions={
           <Button
             variant="primary"

@@ -66,7 +66,7 @@ export const BlockedAccountsPage = () => {
 
   return (
     <StyledBlockedAccountsLayout>
-      <PageHeader title="차단 계정 해제" description={`현재 차단된 계정 ${totalCount}건`} />
+      <PageHeader title="차단 계정 해제" description={error ? undefined : `현재 차단된 계정 ${totalCount}건`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

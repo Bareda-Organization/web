@@ -111,7 +111,7 @@ export const ChangeApprovalList = () => {
 
   return (
     <StyledChangeApprovalLayout>
-      <PageHeader title="구간 변경 승인" description={`처리 대기 ${pendingCount}건`} />
+      <PageHeader title="구간 변경 승인" description={error ? undefined : `처리 대기 ${pendingCount}건`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
