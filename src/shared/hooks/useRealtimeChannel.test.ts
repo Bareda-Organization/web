@@ -77,11 +77,12 @@ let useRealtimeChannel: (
   onEnvelope: (envelope: WebSocketEnvelope) => void,
   onReconnected?: () => void,
 ) => UseRealtimeChannelResult;
+let useRealtimeConnection: () => UseRealtimeChannelResult;
 
 beforeEach(async () => {
   instances = [];
   vi.resetModules();
-  ({ useRealtimeChannel } = await import("./useRealtimeChannel"));
+  ({ useRealtimeChannel, useRealtimeConnection } = await import("./useRealtimeChannel"));
 });
 
 afterEach(() => {
@@ -266,6 +267,30 @@ describe("useRealtimeChannel", () => {
       act(() => instances[0].emitState("connecting"));
       act(() => instances[0].emitState("connected"));
       expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+  });
+  // R46-FIXCONN C-12 — 연결 상태만 읽는 화면(레이아웃의 연결 띠)도 같은 공유 연결을 쓴다. 구독은 걸지 않는다.
+  describe("useRealtimeConnection (연결 상태만 읽기)", () => {
+    it("목적지를 구독하지 않고 공유 연결의 상태를 돌려준다", () => {
+      const { result } = renderHook(() => useRealtimeConnection());
+      expect(result.current.connectionState).toBe("disconnected");
+
+      act(() => instances[0].emitState("reconnecting"));
+      expect(result.current.connectionState).toBe("reconnecting");
+
+      act(() => instances[0].emitState("connected"));
+      expect(instances[0].subscribeCalls).toHaveLength(0);
+    });
+
+    it("채널을 쓰는 화면과 연결을 하나만 열어 공유하고, 마지막 쪽이 떠나야 닫는다", () => {
+      const channel = renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+      const strip = renderHook(() => useRealtimeConnection());
+      expect(instances).toHaveLength(1);
+
+      channel.unmount();
+      expect(instances[0].disconnectCalls).toBe(0);
+      strip.unmount();
+      expect(instances[0].disconnectCalls).toBe(1);
     });
   });
 });

@@ -15,6 +15,7 @@ import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
+import { RealtimeConnectionStrip } from "@/shared/ui/realtime";
 import { Button, SideNav } from "@/shared/ui";
 import {
   StyledStaffShell,
@@ -101,6 +102,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
             <LogoutButton />
           </StyledStaffHeaderSide>
         </StyledStaffHeader>
+        <RealtimeConnectionStrip />
         <EmergencyAlertStrip />
         {children}
       </StyledStaffMain>

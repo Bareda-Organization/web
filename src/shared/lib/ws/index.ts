@@ -34,3 +34,5 @@ export type {
 export { WS_BASE_URL } from "./wsUrl";
 export { AcademyRealtimeClient } from "./academyRealtimeClient";
 export type { AcademyRealtimeClientOptions } from "./academyRealtimeClient";
+export { getWsConnectionNotice } from "./wsConnectionNotice";
+export type { WsConnectionNotice } from "./wsConnectionNotice";

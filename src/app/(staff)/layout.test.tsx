@@ -25,6 +25,7 @@ vi.mock("@/features/emergency", () => ({
   EmergencyAlertStrip: () => <p>비상 띠</p>,
   useEmergencyUnackedCount: () => 3,
 }));
+vi.mock("@/shared/ui/realtime", () => ({ RealtimeConnectionStrip: () => <p>연결 띠</p> }));
 vi.mock("@/features/approval", () => ({
   ApprovalPendingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useApprovalPending: () => ({ signupCount: 2, changeCount: 1, nextDeadlineAt: null, isReady: true, refresh: async () => true }),
@@ -72,6 +73,21 @@ describe("(staff) 레이아웃 — 승인 대기 건수", () => {
 });
 
 // F03-12 — 접근 판정은 경로 목록이 아니라 라우트 그룹이 맡는다. (staff) 그룹은 staff 역할을 요구한다.
+// R46-FIXCONN C-12 — 비상·승인 화면처럼 연결 상태를 안 읽던 화면에서도 끊김이 보이도록 연결 띠를 레이아웃에 한 번만 둔다.
+describe("(staff) 레이아웃 — 실시간 연결 띠", () => {
+  it("연결 띠를 머리줄 아래 · 비상 알림 띠와 본문 앞에 그린다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    const connection = screen.getByText("연결 띠");
+    expect(connection.compareDocumentPosition(screen.getByText("비상 띠")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(connection.compareDocumentPosition(screen.getByText("본문")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
 describe("(staff) 레이아웃 — 그룹 역할", () => {
   it("가드에 staff 역할을 요구한다", () => {
     render(

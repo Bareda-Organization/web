@@ -25,6 +25,7 @@ vi.mock("@/features/emergency", () => ({
   EmergencyAlertStrip: () => <p>비상 띠</p>,
   useEmergencyUnackedCount: () => 1,
 }));
+vi.mock("@/shared/ui/realtime", () => ({ RealtimeConnectionStrip: () => <p>연결 띠</p> }));
 vi.mock("@/features/admin", () => ({
   AdminPendingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useAdminPending: () => ({ signupCount: 11, blockedCount: 1, isReady: true }),
@@ -104,5 +105,19 @@ describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
     expect(screen.queryByText("비상 띠")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /비상 알림/ })).toHaveTextContent("1");
     expect(document.title).toBe("(13) 비상 발생 · 바래다 관계자 웹");
+  });
+
+  // R46-FIXCONN C-12 — 전체 관제를 포함한 모든 관리자 화면에서 끊김이 보이게 연결 띠를 레이아웃에 한 번만 둔다.
+  it("연결 띠를 본문 앞에 그리고, 전체 관제 화면에서도 그린다", () => {
+    mockPathname = "/monitoring";
+    render(
+      <AdminLayout>
+        <p>본문</p>
+      </AdminLayout>,
+    );
+
+    const connection = screen.getByText("연결 띠");
+    expect(connection.compareDocumentPosition(screen.getByText("본문")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    mockPathname = "/academies";
   });
 });

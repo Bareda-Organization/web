@@ -388,14 +388,11 @@ export const MonitoringPage = () => {
   );
   // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다(R46-FIXCONN: 판정을
   // 훅이 맡는다 — 재연결 대기 뒤 `connecting` 을 거치므로 직전 렌더 상태 비교로는 못 잡았다).
-  const { connectionState, reconnect } = useRealtimeChannel(adminLiveDestination(), handleEnvelope, () => {
+  const { connectionState } = useRealtimeChannel(adminLiveDestination(), handleEnvelope, () => {
     if (academyId != null) void loadRuns(academyId);
   });
-  // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `runs` 는 REST
-  // 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록·EmptyState 를
-  // 대체하지 않고 그 위에 별도로 얹는다(DashboardPage.tsx 와 동일 판단).
-  const wsIsLost = connectionState === "gaveUp" || connectionState === "forbidden";
-  const wsIsReconnecting = connectionState === "reconnecting";
+  // 연결 끊김 안내는 이 화면이 아니라 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 모든 화면에서 한 번만 띄운다(R46-FIXCONN C-12).
+  // `runs` 는 REST 폴링이 WS 와 무관하게 계속 채우므로 연결이 끊겨도 목록·EmptyState 는 그대로다.
 
   useEffect(() => {
     if (academyId == null) {
@@ -532,28 +529,6 @@ export const MonitoringPage = () => {
 
       {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
 
-      {wsIsLost ? (
-        <AlertBanner
-          tone="missed"
-          title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
-          action={
-            connectionState === "gaveUp" ? (
-              <Button variant="secondary" size="sm" onClick={reconnect}>
-                다시 연결
-              </Button>
-            ) : undefined
-          }
-        >
-          {connectionState === "forbidden"
-            ? "전체 관제 채널을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
-            : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
-        </AlertBanner>
-      ) : null}
-      {wsIsReconnecting ? (
-        <AlertBanner tone="missed" title="재연결 시도 중입니다">
-          연결될 때까지 자동으로 계속 시도합니다. 그동안 목록은 7초마다 새로 받습니다.
-        </AlertBanner>
-      ) : null}
 
       {academiesWithEmergency.length > 0 ? (
         <AlertBanner

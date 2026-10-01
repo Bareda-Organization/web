@@ -19,6 +19,7 @@ import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { Button, SideNav } from "@/shared/ui";
+import { RealtimeConnectionStrip } from "@/shared/ui/realtime";
 import {
   StyledAdminShell,
   StyledAdminMain,
@@ -100,6 +101,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
           </StyledAdminHeaderSide>
         </StyledAdminHeader>
         {/* 전체 관제는 미확인 비상을 학원별 안내와 실시간 배너로 이미 보여 준다 — 띠까지 얹으면 같은 신고가 두 번 보이고 본문이 밀린다. */}
+        <RealtimeConnectionStrip />
         {pathname.startsWith("/monitoring") ? null : <EmergencyAlertStrip />}
         {children}
       </StyledAdminMain>

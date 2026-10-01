@@ -54,12 +54,11 @@ const mockGetRunAttention = vi.mocked(getRunAttention);
 // 훅 내부는 `useRealtimeChannel.test.ts` 가 따로 검증한다).
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
-const mockReconnect = vi.fn();
 let capturedOnReconnected: (() => void) | undefined;
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
   capturedOnEnvelope = onEnvelope;
   capturedOnReconnected = onReconnected;
-  return { connectionState: mockConnectionState, reconnect: mockReconnect };
+  return { connectionState: mockConnectionState, reconnect: vi.fn() };
 });
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
@@ -239,9 +238,9 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
   });
 });
 
-// Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. REST 폴링이 채우는
-// 목록·EmptyState 는 그대로 두고, WS 상태 배너만 추가로 뜨는지를 본다.
-describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
+// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다(R46-FIXCONN C-12). 이 화면은 REST 폴링이 채운
+// 목록·EmptyState 를 연결 상태와 무관하게 그대로 보여 준다.
+describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12)", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockGetAcademies.mockResolvedValue(baseAcademies.items);
@@ -249,65 +248,33 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   });
 
   afterEach(() => {
+    mockConnectionState = "connected";
     vi.clearAllMocks();
   });
 
-  it("gaveUp 이면 '실시간 연결 끊김' 배너가 뜨고, EmptyState 는 그대로 유지된다", async () => {
-    mockConnectionState = "gaveUp";
-    render(<MonitoringPage />);
+  it.each(["gaveUp", "forbidden", "reconnecting"] as const)(
+    "%s 여도 EmptyState 는 그대로이고, 이 화면은 연결 배너를 따로 띄우지 않는다",
+    async (state) => {
+      mockConnectionState = state;
+      render(<MonitoringPage />);
 
-    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
-    expect(await screen.findByText("지금 운행 중인 회차가 없습니다")).toBeInTheDocument();
-  });
+      expect(await screen.findByText("지금 운행 중인 회차가 없습니다")).toBeInTheDocument();
+      expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
+      expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
+      expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
+    },
+  );
 
-  it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다 — 권한 거부(forbidden)에는 버튼이 없다", async () => {
-    mockConnectionState = "gaveUp";
-    render(<MonitoringPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "다시 연결" }));
-    expect(mockReconnect).toHaveBeenCalledTimes(1);
-  });
-
-  it("forbidden 이면 '실시간 조회 권한 없음' 배너가 뜬다", async () => {
-    mockConnectionState = "forbidden";
-    render(<MonitoringPage />);
-
-    expect(await screen.findByText("실시간 조회 권한 없음")).toBeInTheDocument();
-  });
-
-  it("reconnecting 이면 '재연결 시도 중입니다' 배너가 뜬다", async () => {
-    mockConnectionState = "reconnecting";
-    render(<MonitoringPage />);
-
-    expect(await screen.findByText("재연결 시도 중입니다")).toBeInTheDocument();
-  });
-
-  it("connected 이면 두 배너 모두 뜨지 않는다", async () => {
-    mockConnectionState = "connected";
-    render(<MonitoringPage />);
-
-    await screen.findByText("지금 운행 중인 회차가 없습니다");
-    expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
-    expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
-    expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
-  });
-
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 배너(wsIsLost)와 빈 목록 EmptyState
-  // (runs.length === 0)가 같은 조건 하나로 묶여도 기존 시험은 전부 runs 가 빈
-  // 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해
-  // 두 조건이 서로 무관함을 고정한다.
-  it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, EmptyState 는 뜨지 않는다", async () => {
+  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
+  // 같은 조건으로 묶이지 않았음을 고정한다.
+  it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 목록은 보이고 EmptyState 는 뜨지 않는다", async () => {
     mockConnectionState = "gaveUp";
     mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<MonitoringPage />);
 
-    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이
-    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다. 이 표식을 먼저 기다려
-    // runs 가 채워진 뒤의 상태에서 배너를 확인한다 — 그러지 않으면 마운트
-    // 직후(runs 가 아직 빈 배열인 순간)의 배너만 우연히 잡고 넘어간다.
+    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이 실제로 채워졌다는 유일한 표식이다.
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
-    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
     expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
   });
 });

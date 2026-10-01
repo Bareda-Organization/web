@@ -339,14 +339,9 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
     },
     [scheduleRefresh],
   );
-  const { connectionState, reconnect } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
-  // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `liveRuns` 는
-  // REST 폴링(7초)이 WS 와 무관하게 계속 채우므로, WS 상태 배너는 목록을
-  // 대체하지 않고 그 위에 별도로 얹는다 — WS 가 끊겨도 REST 로 받은 "지금
-  // 이동 중인 버스가 없습니다"는 여전히 사실이라 숨기면 오히려 잘못된 정보다
-  // (판단 근거, 보고서 §1).
-  const wsIsLost = connectionState === "gaveUp" || connectionState === "forbidden";
-  const wsIsReconnecting = connectionState === "reconnecting";
+  useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+  // 연결 끊김 안내는 이 화면이 아니라 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 모든 화면에서 한 번만 띄운다(R46-FIXCONN C-12).
+  // `liveRuns` 는 REST 폴링(7초)이 WS 와 무관하게 계속 채우므로 WS 가 끊겨도 "오늘 등록된 회차가 없습니다" 는 여전히 사실이다.
 
   useEffect(() => {
     let cancelled = false;
@@ -534,28 +529,6 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
 
         <StyledBusListPane>
           <p>버스 현황</p>
-          {wsIsLost ? (
-            <AlertBanner
-              tone="missed"
-              title={connectionState === "forbidden" ? "실시간 조회 권한 없음" : "실시간 연결 끊김"}
-              action={
-                connectionState === "gaveUp" ? (
-                  <Button variant="secondary" size="sm" onClick={reconnect}>
-                    다시 연결
-                  </Button>
-                ) : undefined
-              }
-            >
-              {connectionState === "forbidden"
-                ? "이 학원의 실시간 갱신을 볼 권한이 없습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."
-                : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
-            </AlertBanner>
-          ) : null}
-          {wsIsReconnecting ? (
-            <AlertBanner tone="missed" title="재연결 시도 중입니다">
-              연결될 때까지 자동으로 계속 시도합니다. 그동안 목록은 7초마다 새로 받습니다.
-            </AlertBanner>
-          ) : null}
           {runs.length === 0 ? (
             <StyledBusListEmpty>오늘 등록된 회차가 없습니다</StyledBusListEmpty>
           ) : (

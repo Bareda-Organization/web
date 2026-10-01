@@ -51,10 +51,9 @@ vi.mock("@/features/auth", () => ({
 // 이미 따로 검증하므로 여기서 다시 열지 않는다.
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
-const mockReconnect = vi.fn();
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
   capturedOnEnvelope = onEnvelope;
-  return { connectionState: mockConnectionState, reconnect: mockReconnect };
+  return { connectionState: mockConnectionState, reconnect: vi.fn() };
 });
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
@@ -432,98 +431,42 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   });
 });
 
-// Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. REST 폴링이 채운
-// "오늘 등록된 회차가 없습니다"(R15-T2 이전 문구는 "지금 이동 중인 버스가 없습니다")는
-// WS 상태와 무관하게 항상 사실이라는 판단(보고서 §1)을 고정 — 배너는 목록을 대체하지
-// 않고 위에 별도로 뜬다.
-describe("DashboardPage — WS 연결 상태 배너(Goal 9)", () => {
+// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다(R46-FIXCONN C-12). 이 화면은 REST 폴링이 채운 목록을
+// 연결 상태와 무관하게 그대로 보여 준다 — WS 가 끊겨도 "오늘 등록된 회차가 없습니다" 는 여전히 사실이다.
+describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12)", () => {
   afterEach(() => {
+    mockConnectionState = "connected";
     vi.clearAllMocks();
   });
 
-  // R15-T2 — 우측 버스 목록은 이제 getRunsLive(moving 전용)가 아니라 getDashboard(4종
-  // 상태 전부)로 채운다(docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3). "빈 목록" 의 기준도 그에 맞춰 runs 로 옮겨서,
-  // runs 가 빈 배열일 때만 빈 목록 문구가 뜬다는 것을 확인한다.
-  it("F04-07: gaveUp 배너의 [다시 연결] 을 누르면 연결을 다시 연다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
-    mockConnectionState = "gaveUp";
-    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
+  const session = { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } };
 
-    fireEvent.click(await screen.findByRole("button", { name: "다시 연결" }));
-    expect(mockReconnect).toHaveBeenCalledTimes(1);
-  });
+  it.each(["gaveUp", "forbidden", "reconnecting"] as const)(
+    "%s 여도 runs 가 비어 있으면 빈 목록 문구를 그대로 보여 주고, 이 화면은 연결 배너를 따로 띄우지 않는다",
+    async (state) => {
+      mockUseAuthSession.mockReturnValue({ session });
+      mockConnectionState = state;
+      mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
+      mockGetRunsLive.mockResolvedValue(emptyLive);
+      render(<DashboardPage />);
 
-  it("연결이 끊기면(gaveUp) 연결 끊김 배너를 띄우고, runs 가 비어 있으면 빈 목록 문구도 함께 유지한다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
-    mockConnectionState = "gaveUp";
-    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
+      expect(await screen.findByText("오늘 등록된 회차가 없습니다")).toBeInTheDocument();
+      expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
+      expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
+      expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
+    },
+  );
 
-    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
-    expect(screen.getByText("오늘 등록된 회차가 없습니다")).toBeInTheDocument();
-  });
-
-  it("forbidden 이면 권한 없음 문구를 띄운다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
-    mockConnectionState = "forbidden";
-    mockGetDashboard.mockResolvedValue(baseDashboard);
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
-
-    expect(await screen.findByText("실시간 조회 권한 없음")).toBeInTheDocument();
-  });
-
-  it("reconnecting 이면 재연결 시도 중 배너를 띄운다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
-    mockConnectionState = "reconnecting";
-    mockGetDashboard.mockResolvedValue(baseDashboard);
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
-
-    expect(await screen.findByText("재연결 시도 중입니다")).toBeInTheDocument();
-  });
-
-  it("connected 상태면 두 배너 모두 뜨지 않는다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
-    mockConnectionState = "connected";
-    mockGetDashboard.mockResolvedValue(baseDashboard);
-    mockGetRunsLive.mockResolvedValue(emptyLive);
-    render(<DashboardPage />);
-    await screen.findByText("1호차");
-
-    expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
-    expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
-  });
-
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 배너(wsIsLost)와 빈 목록 문구
-  // (liveRuns.length === 0)가 같은 조건 하나로 묶여도 기존 시험은 전부
-  // liveRuns 가 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이
-  // 끊긴 경우를 더해 두 조건이 서로 무관함을 고정한다.
-  it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 배너가 뜨고, 빈 목록 문구는 뜨지 않는다", async () => {
-    mockUseAuthSession.mockReturnValue({
-      session: { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } },
-    });
+  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 빈 목록 문구가 연결 상태와 같은 조건으로 묶여도 기존 시험은 전부 liveRuns 가
+  // 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 둘이 서로 무관함을 고정한다.
+  it("목록에 항목이 있으면(runs 비어있지 않음) 연결이 끊겨도 목록이 보이고 빈 목록 문구는 뜨지 않는다", async () => {
+    mockUseAuthSession.mockReturnValue({ session });
     mockConnectionState = "gaveUp";
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<DashboardPage />);
 
-    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이
-    // 실제로 채워졌다는 것을 보여주는 유일한 표식이다("1호차"는 대시보드 표에도 있어 유일하지 않다).
-    expect(await screen.findByText("실시간 연결 끊김")).toBeInTheDocument();
+    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이 실제로 채워졌다는 유일한 표식이다.
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
     expect(screen.queryByText("오늘 등록된 회차가 없습니다")).not.toBeInTheDocument();
   });

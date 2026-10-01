@@ -137,3 +137,28 @@ export const useRealtimeChannel = (
 
   return { connectionState, reconnect };
 };
+
+// 연결 상태만 읽는 훅 — 목적지를 구독하지 않고 공유 연결의 상태만 돌려준다. 레이아웃의 연결 띠처럼 방송 내용은 필요 없고 끊김만
+// 알리면 되는 화면이 쓴다(R46-FIXCONN C-12). 연결은 `useRealtimeChannel` 과 같은 참조 계수를 쓰므로 마지막 사용자가 떠나야 닫힌다.
+export const useRealtimeConnection = (): UseRealtimeChannelResult => {
+  const [connectionState, setConnectionState] = useState<WsConnectionState>("disconnected");
+  const clientRef = useRef<AcademyRealtimeClient | null>(null);
+
+  useEffect(() => {
+    const client = acquireClient();
+    clientRef.current = client;
+    // 최초 연결 상태 동기화 — `useRealtimeChannel` 과 같은 사정으로 effect 안에서 읽는다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 최초 연결 상태 동기화
+    setConnectionState(client.getSnapshot());
+    const unsubscribeState = client.onConnectionStateChange(() => setConnectionState(client.getSnapshot()));
+    return () => {
+      unsubscribeState();
+      clientRef.current = null;
+      releaseClient();
+    };
+  }, []);
+
+  const reconnect = () => clientRef.current?.connect();
+
+  return { connectionState, reconnect };
+};
