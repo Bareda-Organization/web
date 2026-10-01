@@ -9,6 +9,7 @@ import {
   getChangeApprovalDetail,
   getChangeApprovals,
   getSignupRequests,
+  searchStudentCandidates,
 } from "./index";
 
 // 가입 승인(§5.1·§5.2, A-02)·구간 변경 승인(§5.5·§5.6, A-05) 화면이 부르는
@@ -174,4 +175,18 @@ describe("approval api — 실서버 계약", () => {
       return true;
     });
   });
+
+  // B1 #14(Ruling 495) — 학생 목록이 계정 연결 여부(account_linked)를 줘 승인 화면이 연결된 학생을 고를 수 없게 한다.
+  it("searchStudentCandidates 는 학생 본인 계정이 연결된 학생(이하늘)만 선택 불가로 표시하고 동명이인 구분 정보를 낸다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    const linked = await searchStudentCandidates("이하늘");
+    const unlinked = await searchStudentCandidates("김철수");
+
+    expect(linked[0].disabledReason).toBe("이미 가입한 학생");
+    expect(unlinked[0].disabledReason).toBeUndefined();
+    expect(unlinked[0].detail).toContain("보호자");
+  });
 });
+
