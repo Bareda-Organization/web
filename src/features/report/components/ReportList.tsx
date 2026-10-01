@@ -101,7 +101,7 @@ export const ReportList = () => {
 
   return (
     <StyledReportLayout>
-      <PageHeader title="운행 리포트" description={`총 ${items.length}건`} />
+      <PageHeader title="운행 리포트" description={error ? undefined : `총 ${items.length}건`} />
 
       <StyledReportFilters>
         <Select label="종류" options={TYPE_OPTIONS} value={type} onChange={(event) => setType(event.target.value)} />

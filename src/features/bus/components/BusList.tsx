@@ -71,7 +71,7 @@ export const BusList = () => {
     <StyledBusLayout>
       <PageHeader
         title="차량 관리"
-        description={`총 ${totalCount}대`}
+        description={error ? undefined : `총 ${totalCount}대`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
             차량 등록

@@ -109,7 +109,7 @@ export const StudentList = () => {
     <StyledStudentLayout>
       <PageHeader
         title="학생 관리"
-        description={q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
+        description={error ? undefined : q ? `'${q}' 검색 결과 ${totalCount}명` : `총 ${totalCount}명`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
             학생 등록

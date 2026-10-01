@@ -66,7 +66,7 @@ export const RouteList = () => {
     <StyledRouteLayout>
       <PageHeader
         title="고정 노선 편성"
-        description={`총 ${totalCount}건`}
+        description={error ? undefined : `총 ${totalCount}건`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
             편성 등록

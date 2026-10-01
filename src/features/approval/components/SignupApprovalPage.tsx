@@ -89,7 +89,7 @@ export const SignupApprovalPage = () => {
 
   return (
     <StyledSignupApprovalLayout>
-      <PageHeader title="가입 승인" description={`처리 대기 ${pendingCount}건`} />
+      <PageHeader title="가입 승인" description={error ? undefined : `처리 대기 ${pendingCount}건`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

@@ -72,7 +72,7 @@ export const AcademiesPage = () => {
     <StyledAcademiesLayout>
       <PageHeader
         title="학원 관리"
-        description={`총 ${totalCount}개 학원`}
+        description={error ? undefined : `총 ${totalCount}개 학원`}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setDialogTarget({})}>
             학원 등록

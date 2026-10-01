@@ -137,7 +137,7 @@ export const EmergencyList = () => {
 
   return (
     <StyledEmergencyLayout>
-      <PageHeader title="비상 알림 수신" description={`미확인 ${unackedCount}건`} />
+      <PageHeader title="비상 알림 수신" description={error ? undefined : `미확인 ${unackedCount}건`} />
 
       <StyledEmergencyFilters>
         <SegmentedControl
