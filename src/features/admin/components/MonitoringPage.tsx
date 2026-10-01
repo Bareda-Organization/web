@@ -554,7 +554,7 @@ export const MonitoringPage = () => {
           tone="moving"
           title="지연·확정 실패가 있는 학원"
           action={academiesWithAttention.map((academy) => (
-            <Button key={academy.id} size="sm" variant="ghost" onClick={() => handleSelectAcademy(academy.id)}>
+            <Button key={academy.id} size="sm" variant="secondary" onClick={() => handleSelectAcademy(academy.id)}>
               {`${academy.name} ${attentionLabel(attentionByAcademy[academy.id])}`}
             </Button>
           ))}
