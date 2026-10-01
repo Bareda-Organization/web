@@ -40,6 +40,10 @@ const ACTION_FILTER_OPTIONS = [
 
 const BLOCK_ACTION_LABEL = { block: "차단", unblock: "해제" } as const;
 
+// 서버는 시작일(`from`)을 안 주면 종료일(없으면 지금)로부터 30일 전부터만 돌려준다(Ruling 632, `API_SPEC §6.13`) — 시작일을 비워도
+// 전체 기간이 아니다. 더 오래된 이력은 시작일을 직접 골라야 한다(R46-FIXCONN).
+const FROM_HINT = "비우면 종료일(없으면 지금)로부터 최근 30일만 조회합니다";
+
 // §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
 // 이 화면은 §1.12 가 마스킹하는 필드(보호자 연락처 등)를 응답에 아예 담지 않지만, 대신
 // 계정별 로그인 IP·시각 전체를 무제한으로 펼쳐 보이는 것 자체가 노출 범위 문제라
@@ -177,13 +181,13 @@ export const AuditLogPage = () => {
           </StyledFilterField>
         ) : null}
         <StyledFilterField>
-          <Input label="시작일" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+          <Input label="시작일" type="date" value={from} onChange={(event) => setFrom(event.target.value)} hint={FROM_HINT} />
         </StyledFilterField>
         <StyledFilterField>
           <Input label="종료일" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
         </StyledFilterField>
         <Button variant="secondary" onClick={() => setFrom("")}>
-          전체 기간 보기
+          최근 30일 보기
         </Button>
         <Button variant="primary" onClick={() => setApplied({ academyId, accountId, action, from, to })}>
           조회

@@ -6,7 +6,7 @@ import { todayInSeoul } from "@/shared/lib/format/dateTime";
 
 // §6.13, BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다". 판단 근거(코드 주석)는
 // 무제한 로그인·접속 이력을 기본으로 펼치지 않는 것이므로, 이 검사는 "오늘"로 좁힌
-// from 필터가 실제 조회에 실리는지, "전체 기간 보기"를 눌러야 그 제한이 풀리는지를 본다.
+// from 필터가 실제 조회에 실리는지, "최근 30일 보기"를 눌러야 시작일 제한이 풀리는지를 본다.
 vi.mock("../api", () => ({
   getAuditLogs: vi.fn(),
   getLoginHistory: vi.fn(),
@@ -56,13 +56,35 @@ describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
     }
   });
 
-  it("'전체 기간 보기'를 누르면 from 이 비워진 채로 재조회한다", async () => {
+  // R46-FIXCONN Ruling 632 — 서버는 from 을 안 주면 to(없으면 지금)로부터 30일 전부터만 돌려준다. 시작일을 비운다고 전체 기간이
+  // 아니므로 화면이 그렇게 안내해야 하고, 시작일을 비우는 버튼도 "전체 기간" 이라 부르면 거짓이다.
+  it("시작일 칸에 '비우면 최근 30일' 안내가 있고, 두 이력 탭 모두에서 보인다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetLoginHistory.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+
+    expect(screen.getByText(/비우면 종료일.*30일/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
+
+    expect(screen.getByText(/비우면 종료일.*30일/)).toBeInTheDocument();
+  });
+
+  it("시작일을 비우는 버튼은 '전체 기간' 이 아니라 '최근 30일' 이라 부른다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+
+    expect(screen.getByRole("button", { name: "최근 30일 보기" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "전체 기간 보기" })).not.toBeInTheDocument();
+  });
+
+  it("'최근 30일 보기'를 누르면 from 이 비워진 채로 재조회한다", async () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
     await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole("button", { name: "전체 기간 보기" }));
+    fireEvent.click(screen.getByRole("button", { name: "최근 30일 보기" }));
     fireEvent.click(screen.getByRole("button", { name: "조회" }));
 
     await waitFor(() =>
