@@ -96,6 +96,8 @@ describe("auth api — 실서버 계약", () => {
     const result = await login(throwawayLoginId, "password");
 
     expect(result.status).toBe("pending");
+    // R46-FUFEAT ① — 임시 비밀번호 강제 변경 표식(§2.5)은 항상 값이 있다(초기화한 적 없는 계정은 false).
+    expect(result.mustChangePassword).toBe(false);
     pendingAccessToken = result.accessToken;
   });
 
@@ -118,6 +120,7 @@ describe("auth api — 실서버 계약", () => {
 
     expect(me.loginId).toBe(throwawayLoginId);
     expect(me.status).toBe("pending");
+    expect(me.mustChangePassword).toBe(false); // §2.10 — 항상 값이 있다(Ruling 540)
   });
 
   it("registerDevice·unregisterDevice 는 pending 계정에서도 허용된다 — pending 허용 목록 안(§1.4·§2.11)", async ({
