@@ -12,7 +12,7 @@ export const buildAttentionTitle = (emergencyCount: number, approvalCount: numbe
   return `(${total}) ${emergencyCount > 0 ? "비상 발생 · " : ""}${BASE_TITLE}`;
 };
 
-// 미확인 비상·승인 대기 건수를 탭 제목에 반영하고, 건수가 늘면 소리·브라우저 알림을 낸다(사용자가 켠 경우에만).
+// 미확인 비상·승인 대기 건수를 탭 제목에 반영하고, 건수가 늘면 브라우저 알림을 낸다(사용자가 켠 경우에만).
 // `isReady` 전에는 건수가 아직 안 온 것이라 늘었다고 보지 않는다 — 처음 받은 값이 기준선이다.
 export const useAttentionSignals = (emergencyCount: number, approvalCount: number, isReady: boolean): void => {
   useEffect(() => {

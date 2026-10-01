@@ -151,6 +151,8 @@ export const NaverMapSurface = ({
       markerRefsAtMount.clear();
       polylineRefsAtMount.forEach((line) => line.setMap(null));
       polylineRefsAtMount.clear();
+      // 마커·선을 떼어 낸 뒤 지도 객체 자체를 해제한다 — 안 하면 화면을 오갈 때마다 SDK 안에 지도와 타일 DOM 이 남는다(K-6).
+      mapRef.current?.destroy();
       mapRef.current = null;
       setMapReady(false);
     };

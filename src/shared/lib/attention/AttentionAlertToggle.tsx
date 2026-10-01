@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/shared/ui";
 import { isAttentionAlertEnabled, requestBrowserNotificationPermission, setAttentionAlertEnabled } from "./attentionAlert";
 
-// 머리줄의 "알림음" 스위치 — 켜면 비상·승인 요청이 늘 때 소리와 브라우저 알림을 낸다. 기본은 꺼짐.
+// 머리줄의 "브라우저 알림" 스위치 — 켜면 비상·승인 요청이 늘 때 브라우저 알림을 낸다. 기본은 꺼짐.
 // 브라우저 알림 권한은 사용자가 켜는 이 조작 안에서만 요청한다.
 export const AttentionAlertToggle = () => {
   const [isEnabled, setIsEnabled] = useState(() => isAttentionAlertEnabled());
@@ -24,7 +24,7 @@ export const AttentionAlertToggle = () => {
       aria-pressed={isEnabled}
       onClick={handleToggle}
     >
-      {isEnabled ? "알림음 켜짐" : "알림음 꺼짐"}
+      {isEnabled ? "브라우저 알림 켜짐" : "브라우저 알림 꺼짐"}
     </Button>
   );
 };
