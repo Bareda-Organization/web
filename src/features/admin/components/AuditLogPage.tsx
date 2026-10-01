@@ -14,7 +14,7 @@ import type {
   LoginHistoryItemResponseTypes,
   LoginHistoryResponseTypes,
 } from "../types";
-import { StyledActorSearchField, StyledAuditLogLayout, StyledFieldLabel, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
+import { StyledActorSearchBox, StyledActorSearchField, StyledAuditLogLayout, StyledFieldLabel, StyledFilterField, StyledFilterRow } from "./AuditLogPage.styled";
 import { formatDateTime, todayInSeoul } from "@/shared/lib/format/dateTime";
 
 const PAGE_SIZE = 20;
@@ -155,7 +155,9 @@ export const AuditLogPage = () => {
         </StyledFilterField>
         <StyledActorSearchField>
           <StyledFieldLabel>행위자 찾기</StyledFieldLabel>
-          <SearchField value={actorQuery} onChange={(event) => setActorQuery(event.target.value)} onSubmit={searchActors} placeholder="이름 또는 아이디" />
+          <StyledActorSearchBox>
+            <SearchField value={actorQuery} onChange={(event) => setActorQuery(event.target.value)} onSubmit={searchActors} placeholder="이름 또는 아이디" />
+          </StyledActorSearchBox>
         </StyledActorSearchField>
         <StyledFilterField>
           <Select

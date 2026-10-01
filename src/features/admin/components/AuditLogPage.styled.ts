@@ -28,3 +28,14 @@ export const StyledFieldLabel = styled.span`
   font: var(--fw-medium) var(--fs-label-sm) / 1.2 var(--font-sans);
   color: var(--text-secondary);
 `;
+
+/* 행위자 검색칸(44px)을 다른 칸(Select·Input 48px)과 같은 높이 상자에 넣는다 — 줄이 아래 맞춤이라 4px 낮은 칸의 라벨만 4px 내려와 앉았다. */
+export const StyledActorSearchBox = styled.div`
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+
+  & > form {
+    flex: 1;
+  }
+`;
