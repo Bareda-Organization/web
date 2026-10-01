@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../lib/http";
+import { usePolling } from "./usePolling";
 
 export type PagedPage<T> = { items: T[]; totalCount: number; hasNext: boolean };
 
@@ -10,7 +11,7 @@ const EMPTY_PAGE = { items: [], totalCount: 0, hasNext: false };
 type Options = {
   /** 이 값이 바뀌면(필터·탭 변경) 0쪽부터 다시 읽는다 */
   resetKey?: string;
-  /** 주기 갱신(ms) — 갱신 실패는 이미 보이던 목록을 지우지 않는다 */
+  /** 주기 갱신(ms) — 응답을 받은 뒤 다음 요청을 예약하고(`usePolling`), 갱신 실패는 이미 보이던 목록을 지우지 않는다 */
   pollMs?: number;
   /** 서버 오류 문구가 없을 때 쓸 문구 */
   errorMessage: string;
@@ -36,18 +37,21 @@ export const usePagedList = <R extends PagedPage<unknown>>(fetchPage: (page: num
     fetchRef.current = fetchPage;
   });
 
+  // 돌려주는 값은 폴링용 성공 여부다 — 실패하면 `usePolling` 이 간격을 늘린다. 늦은 응답은 실패가 아니다.
   const load = useCallback(
-    async (targetPage: number, showLoading: boolean) => {
+    async (targetPage: number, showLoading: boolean): Promise<boolean> => {
       const requestId = ++requestRef.current;
       if (showLoading) setLoading(true);
       try {
         const next = await fetchRef.current(targetPage);
-        if (requestId !== requestRef.current) return;
+        if (requestId !== requestRef.current) return true;
         setData(next);
         setError(null);
+        return true;
       } catch (cause) {
-        if (requestId !== requestRef.current) return;
+        if (requestId !== requestRef.current) return true;
         setError(cause instanceof ApiError ? cause.message : errorMessage);
+        return false;
       } finally {
         if (requestId === requestRef.current) setLoading(false);
       }
@@ -59,10 +63,8 @@ export const usePagedList = <R extends PagedPage<unknown>>(fetchPage: (page: num
     (async () => {
       await load(page, true);
     })();
-    if (!pollMs) return;
-    const timer = setInterval(() => void load(page, false), pollMs);
-    return () => clearInterval(timer);
-  }, [load, page, resetKey, pollMs]);
+  }, [load, page, resetKey]);
+  usePolling(() => load(page, false), pollMs ?? 0, Boolean(pollMs));
 
   const setPage = useCallback((next: number) => setPageState({ page: next, key: resetKey }), [resetKey]);
   const reload = useCallback(() => load(page, true), [load, page]);

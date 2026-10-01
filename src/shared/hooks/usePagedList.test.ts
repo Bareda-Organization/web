@@ -82,4 +82,54 @@ describe("usePagedList", () => {
       vi.useRealTimers();
     }
   });
+
+  // R46-FUWEB — 주기 갱신은 응답을 받은 뒤 다음 요청을 예약한다(`usePolling`). 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
+  it("주기 갱신 응답이 오기 전에는 다음 요청을 내지 않는다", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchPage = vi
+        .fn<(page: number) => Promise<ReturnType<typeof pageOf>>>()
+        .mockResolvedValueOnce(pageOf(["a"]))
+        .mockImplementation(() => new Promise(() => {}));
+      renderHook(() => usePagedList(fetchPage, { ...OPTIONS, pollMs: 5000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000 * 4);
+      });
+
+      expect(fetchPage).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("주기 갱신이 실패하면 다음 요청까지의 간격이 늘어난다", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchPage = vi
+        .fn<(page: number) => Promise<ReturnType<typeof pageOf>>>()
+        .mockResolvedValueOnce(pageOf(["a"]))
+        .mockRejectedValue(new ApiError(503, "UNKNOWN", "점검 중"));
+      renderHook(() => usePagedList(fetchPage, { ...OPTIONS, pollMs: 5000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(fetchPage).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(fetchPage).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(fetchPage).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

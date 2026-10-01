@@ -126,6 +126,19 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
 
     expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
+
+  // R46-FUWEB — 응답을 받은 뒤 다음 갱신을 예약한다(`usePolling`) — 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
+  it("갱신 응답이 오기 전에는 다음 갱신 요청을 내지 않는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGet.mockResolvedValueOnce({ items: [], unackedCount: 0 });
+    mockGet.mockImplementation(() => new Promise(() => {}));
+    render(<EmergencyList />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(5000 * 4);
+
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
 });
 
 // F01-08·F01-05 — 무음 주기 갱신의 실패·늦은 응답이 화면의 목록을 바꾸면 안 된다.

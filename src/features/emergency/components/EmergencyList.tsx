@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
+import { usePolling } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, Input, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -40,21 +41,24 @@ export const EmergencyList = () => {
   // 요청 번호 — 필터를 바꾸기 전에 나간 요청의 늦은 응답이 새 필터의 목록을 덮지 않게 최신 요청만 반영한다(F01-05).
   const requestSeq = useRef(0);
 
-  const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string, silent = false) => {
+  // 돌려주는 값은 폴링용 성공 여부다 — 실패하면 `usePolling` 이 간격을 늘린다. 늦은 응답은 실패가 아니다.
+  const load = useCallback(async (nextStatus: EmergencyStatus, nextDate: string, silent = false): Promise<boolean> => {
     const mine = ++requestSeq.current;
     // 주기 갱신(silent)은 표를 '불러오는 중' 으로 바꾸지 않는다.
     if (!silent) setLoading(true);
     try {
       const data = await getEmergencies({ status: nextStatus, date: nextDate || undefined });
-      if (mine !== requestSeq.current) return;
+      if (mine !== requestSeq.current) return true;
       setItems(data.items);
       setUnackedCount(data.unackedCount);
       setError(null);
+      return true;
     } catch (cause) {
-      if (mine !== requestSeq.current) return;
+      if (mine !== requestSeq.current) return true;
       setError(cause instanceof ApiError ? cause.message : "비상 알림 목록을 불러오지 못했습니다");
       // F01-08 — 주기 갱신이 한 번 실패했다고 보이던 미확인 건을 지우면 "없다" 로 읽힌다. 오류 배너만 띄운다.
       if (!silent) setItems([]);
+      return false;
     } finally {
       if (mine === requestSeq.current) setLoading(false);
     }
@@ -64,10 +68,9 @@ export const EmergencyList = () => {
     (async () => {
       await load(status, date);
     })();
-    // 비상 알림은 지연 인지 자체가 위험이라 화면을 열어 둔 동안 5초마다 다시 불러온다.
-    const timer = setInterval(() => void load(status, date, true), EMERGENCY_POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
   }, [status, date, load]);
+  // 비상 알림은 지연 인지 자체가 위험이라 화면을 열어 둔 동안 5초마다 다시 불러온다 — 응답을 받은 뒤 다음 요청을 예약한다.
+  usePolling(() => load(status, date, true), EMERGENCY_POLL_INTERVAL_MS);
 
   const handleAck = async (emergencyId: string) => {
     setAckingId(emergencyId);
