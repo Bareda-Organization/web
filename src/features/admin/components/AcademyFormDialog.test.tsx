@@ -166,3 +166,37 @@ describe("AcademyFormDialog — 주소 필수(Ruling 450)", () => {
     );
   });
 });
+
+// 조율자 결정(2026-10-01 02:10) — 주소 없는 옛 학원을 운영에서 내리는 조작을 주소 입력이 막으면 안 된다.
+// 원래 비었고 그대로면 상태만 바꾸는 저장에 한해 `address` 키를 보내지 않는다(서버는 키 없음 = 유지로 이미 허용).
+describe("AcademyFormDialog — 주소 없는 옛 학원의 상태 변경(Ruling 496)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("주소 없이 저장된 학원을 비활성으로 바꾸면 주소를 넣지 않아도 저장되고 요청에 address 키가 없다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, address: null });
+    mockUpdate.mockResolvedValue(undefined as never);
+    const onDone = vi.fn();
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={onDone} />);
+    await screen.findByDisplayValue("바래다 학원");
+
+    fireEvent.click(screen.getByRole("tab", { name: "비활성" }));
+    expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    fireEvent.click(await screen.findByRole("button", { name: "비활성으로 저장" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("address", expect.anything());
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it("상태를 바꾸지 않은 수정은 주소가 없으면 여전히 저장할 수 없다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, address: null });
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("바래다 학원");
+
+    fireEvent.change(screen.getByLabelText(/학원명/), { target: { value: "이름만 바꿈" } });
+
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+  });
+});
+
