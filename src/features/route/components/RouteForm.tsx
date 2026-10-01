@@ -7,12 +7,12 @@ import type { WeekdayOutcome } from "@/shared/lib/format/weekdayBatch";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select, Switch, WeekdayPicker } from "@/shared/ui";
 import { createRoute, updateRoute } from "../api";
-import type { RouteListItemResponseTypes, RunDirection, Weekday } from "../types";
+import type { RouteSummaryTypes, RunDirection, Weekday } from "../types";
 import { describeRouteFailure, DUPLICATE_ROUTE_MESSAGE } from "./describeRouteFailure";
 
 type RouteFormProps = {
   /** 있으면 수정, 없으면 신규 편성. stop_ids 는 이 폼에서 다루지 않는다(RouteStopsPanel 몫). */
-  route?: RouteListItemResponseTypes;
+  route?: RouteSummaryTypes;
   onClose: () => void;
   // 등록이면 만든 편성의 id 를 넘긴다(목록이 상세로 이어 주는 데 쓴다). 수정이면 그 편성의 id.
   onDone: (saved: { id: string }) => void;

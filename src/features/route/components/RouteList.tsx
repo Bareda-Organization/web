@@ -53,6 +53,8 @@ export const RouteList = () => {
     { key: "weekday", label: "요일", render: (row) => WEEKDAY_LABEL[row.weekday] },
     { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     { key: "name", label: "편성 이름", render: (row) => row.name ?? "-" },
+    // B1 #10 — 정차지를 아직 안 넣은 빈 편성(0곳)을 목록에서 가른다.
+    { key: "stopCount", label: "정차지 수", render: (row) => `${row.stopCount}곳` },
     {
       key: "active",
       label: "상태",
