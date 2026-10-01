@@ -52,7 +52,7 @@ const resolveActiveValue = (pathname: string): string => {
 const AdminShell = ({ children }: { children: React.ReactNode }) => {
   const emergencyUnackedCount = useEmergencyUnackedCount();
   const { signupCount, blockedCount, isReady } = useAdminPending();
-  // 탭 제목·알림음 — 다른 탭에 있어도 비상·승인 대기를 알아채게 한다(알림음은 사용자가 켠 경우에만).
+  // 탭 제목·브라우저 알림 — 다른 탭에 있어도 비상·승인 대기를 알아채게 한다(브라우저 알림은 사용자가 켠 경우에만).
   useAttentionSignals(emergencyUnackedCount, signupCount + blockedCount, isReady);
   const badgeCounts: Record<string, number> = {
     "member-approvals": signupCount,

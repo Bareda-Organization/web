@@ -1,9 +1,8 @@
-// 놓치면 안 되는 일(비상 알림·승인 요청)을 다른 탭에 있어도 알아채게 하는 소리·브라우저 알림.
+// 놓치면 안 되는 일(비상 알림·승인 요청)을 다른 탭에 있어도 알아채게 하는 브라우저 알림. 소리는 내지 않는다(Ruling 700).
 // 기본은 꺼짐이며 사용자가 켠 경우에만 동작한다 — 권한 요청도 켜는 조작 안에서만 나간다.
+// 저장 키는 소리가 있던 때 이름 그대로 둔다 — 이미 켠 사람이 계속 켜진 채로 있게 한다.
 
 const PREFERENCE_KEY = "attention-alert-enabled";
-const TONE_FREQUENCY_HZ = 880;
-const TONE_DURATION_S = 0.4;
 
 export const isAttentionAlertEnabled = (): boolean => {
   try {
@@ -27,25 +26,9 @@ export const requestBrowserNotificationPermission = async (): Promise<void> => {
   await Notification.requestPermission();
 };
 
-const playTone = (): void => {
-  if (typeof AudioContext === "undefined") return;
-  const context = new AudioContext();
-  const oscillator = context.createOscillator();
-  oscillator.frequency.value = TONE_FREQUENCY_HZ;
-  oscillator.connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + TONE_DURATION_S);
-  oscillator.onended = () => void context.close();
-};
-
-// 켜져 있을 때만 소리와 브라우저 알림을 낸다. 꺼져 있으면 아무 것도 하지 않는다.
+// 켜져 있을 때만 브라우저 알림을 낸다. 꺼져 있으면 아무 것도 하지 않는다.
 export const notifyAttention = (title: string, body: string): void => {
   if (!isAttentionAlertEnabled()) return;
-  try {
-    playTone();
-  } catch {
-    // 자동 재생 정책 등으로 소리가 막혀도 브라우저 알림은 시도한다.
-  }
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
     new Notification(title, { body });
   }

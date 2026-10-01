@@ -57,7 +57,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const { canGoBack, goBack } = useBackNavigation();
   const emergencyUnackedCount = useEmergencyUnackedCount();
   const { signupCount, changeCount, isReady } = useApprovalPending();
-  // 탭 제목·알림음 — 다른 탭에 있어도 비상·승인 요청을 알아채게 한다(알림음은 사용자가 켠 경우에만).
+  // 탭 제목·브라우저 알림 — 다른 탭에 있어도 비상·승인 요청을 알아채게 한다(브라우저 알림은 사용자가 켠 경우에만).
   useAttentionSignals(emergencyUnackedCount, signupCount + changeCount, isReady);
 
   // 사이드바 배지 — 비상은 미확인 수, 승인 두 종은 처리 대기 수. 0 이면 배지를 달지 않는다.

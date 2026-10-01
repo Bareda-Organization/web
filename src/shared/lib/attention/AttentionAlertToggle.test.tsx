@@ -24,7 +24,7 @@ describe("AttentionAlertToggle", () => {
   it("기본은 꺼짐이고 권한도 묻지 않는다", () => {
     render(<AttentionAlertToggle />);
 
-    expect(screen.getByRole("button", { name: /알림음 꺼짐/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /브라우저 알림 꺼짐/ })).toHaveAttribute("aria-pressed", "false");
     expect(isAttentionAlertEnabled()).toBe(false);
     expect(requestPermission).not.toHaveBeenCalled();
   });
@@ -32,11 +32,11 @@ describe("AttentionAlertToggle", () => {
   it("눌러서 켤 때만 브라우저 알림 권한을 요청하고, 다시 누르면 꺼진다", async () => {
     render(<AttentionAlertToggle />);
 
-    fireEvent.click(screen.getByRole("button", { name: /알림음 꺼짐/ }));
+    fireEvent.click(screen.getByRole("button", { name: /브라우저 알림 꺼짐/ }));
     await waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1));
     expect(isAttentionAlertEnabled()).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /알림음 켜짐/ }));
+    fireEvent.click(screen.getByRole("button", { name: /브라우저 알림 켜짐/ }));
     expect(isAttentionAlertEnabled()).toBe(false);
     expect(requestPermission).toHaveBeenCalledTimes(1);
   });
