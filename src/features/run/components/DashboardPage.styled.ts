@@ -15,7 +15,7 @@ export const StyledStatGrid = styled.div`
   gap: 12px;
 `;
 
-// R15-T2 §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
 // 3fr:1fr 로 나눠 지도가 대부분을 차지하면서도 목록이 항상 옆에 보이게 한다.
 export const StyledMapTopRow = styled.div`
   display: grid;

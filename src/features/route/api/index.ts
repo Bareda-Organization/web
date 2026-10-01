@@ -230,7 +230,7 @@ type RawStaffRunRoute = {
 
 // GET /staff/runs/{runId}/route(§5.19, RTE-02, R15-T2 목표 4 · R19 목표 1 · Ruling 321) —
 // 선택한 버스의 노선(도로 경로)과 정차지를 지도에 그리는 데 쓴다. 이름은
-// `IMPLEMENTATION_PLAN.md §8.23` 고정 계약을 그대로 따른다.
+// `docs/archive/rounds/be-rounds-r15-r21.md §8.23` 고정 계약을 그대로 따른다.
 export const getRunRoute = async (runId: string): Promise<RunRouteResponseTypes> => {
   const raw = await apiFetch<RawStaffRunRoute>(`/staff/runs/${runId}/route`, { method: "GET" });
   return {

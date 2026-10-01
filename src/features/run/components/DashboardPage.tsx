@@ -51,7 +51,7 @@ const LIVE_POLL_INTERVAL_MS = 7000;
 // 아니게 한다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
-// R15-T2 §8.23 목표 3 이 못박은 표기 그대로 — idle(대기)·confirmed(확정)·
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3 이 못박은 표기 그대로 — idle(대기)·confirmed(확정)·
 // moving(운행 중)·finished(운행 종료). `finished` 도 이 목록에서 걸러내지 않는다
 // (사용자 확정 — "운행종료 버스도 목록에 남긴다").
 const RUN_STATUS_LABEL: Record<RunStatus, string> = {
@@ -94,7 +94,7 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선. 목록 자체는 `runs`(getDashboard,
   // 4종 상태 전부)를 쓰고, 위치만 `liveRuns`(getRunsLive, moving 전용)에서 run_id 로
-  // 합친다(§8.23 목표 3 이 못박은 함정 회피).
+  // 합친다(docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3 이 못박은 함정 회피).
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
   const [routeFallback, setRouteFallback] = useState(false);

@@ -484,7 +484,7 @@ export const MonitoringPage = () => {
         />
       </StyledFilterRow>
 
-      {/* R15-T2 §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
+      {/* R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
           이 화면의 목록은 §6.8 정의상 그 학원의 오늘 회차 전부(idle·confirmed·moving·finished 4종)다
           (Ruling 315 — 2026-09-19 개정. 임시 취소된 회차는 뺀다, Ruling 375). 처음 정한 "moving 만"(Ruling 313)은
           이 개정으로 대체됐다. 아래 상세 표(EmptyState/RosterTable)는 그대로 둔다. */}

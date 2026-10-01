@@ -59,7 +59,7 @@ export type LatLng = { lat: number; lng: number };
 
 // GET /staff/runs/{runId}/route(§5.19, RTE-02) — R15-T2 는 지도에 그릴 도로 경로 좌표를
 // 쓰고, R19 목표 1 이 정차지 마커용 stops 를 더한다(R15-T1 이 같이 만드는 고정 계약,
-// `IMPLEMENTATION_PLAN.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
+// `docs/archive/rounds/be-rounds-r15-r21.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
 // 더 있지만 여기서는 옮기지 않는다 — 필요해지면 그때 추가한다(YAGNI).
 // Ruling 321 — 확정 전(idle) 회차도 고정 노선 기반 "예정" 경로를 보여준다. 백엔드
 // (r20-a) 가 이 필드로 확정 여부를 알린다 — 화면은 "예정"과 "확정"을 반드시

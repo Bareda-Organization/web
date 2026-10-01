@@ -496,7 +496,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
   });
 });
 
-// R15-T2 §8.23 목표 3·4·5 — 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3·4·5 — 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
 // 회차의 §5.19 노선을 지도에 그린다.
 describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", () => {
   const fourStatusDashboard: DashboardResponseTypes = {

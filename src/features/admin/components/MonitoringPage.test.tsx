@@ -306,7 +306,7 @@ describe("MonitoringPage — WS 연결 상태 배너(Goal 9)", () => {
   });
 });
 
-// R15-T2 §8.23 목표 2·4·5 — 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
+// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2·4·5 — 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
 // 유지). 버스를 고르면 그 노선을 지도에 그리고, 근사 경로면 안내한다.
 describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () => {
   beforeEach(() => {
@@ -578,7 +578,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   });
 });
 
-// R16 §8.25 목표 7 — §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
+// R16 docs/archive/rounds/be-rounds-r15-r21.md §8.25 목표 7 — §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
 // 이 화면은 받은 것을 거르지 않고 그대로 그려야 한다. ⚠ 특히 `finished` 는
 // 사용자가 "운행종료 버스도 목록에 남긴다" 로 확정한 항목이라(Ruling 310) 단독으로 못박는다.
 describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
