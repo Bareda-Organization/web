@@ -24,9 +24,10 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { getAcademyRunsLive, getAllAcademies } from "../api";
+import { getAcademyRunsLive, getAllAcademies, getEmergencies } from "../api";
 import type { AcademySummaryResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { emergencyTypeLabel } from "../lib/emergencyType";
+import { countOpenEmergenciesByAcademy } from "../lib/openEmergencyCounts";
 import { RunRosterDialog } from "./RunRosterDialog";
 import {
   StyledFilterRow,
@@ -44,6 +45,8 @@ import {
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
 const LIVE_POLL_INTERVAL_MS = 7000;
+// 학원별 미확인 비상 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
+const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
 
 // 위치 수신 전(모든 회차가 `position: null`)에도 지도가 빈 화면이 아니라 서울 시청
 // 좌표를 보여주도록 한다 — 네이버 지도 SDK 의 `MapOptions.center` 기본값과 같은 지점이다.
@@ -98,6 +101,8 @@ export const MonitoringPage = () => {
   const [error, setError] = useState<string | null>(null);
   // F03-05 — 비상 알림은 한 줄이 아니라 목록이다. 건마다 emergencyId 로 구분해 나중 이벤트가 앞 이벤트를 덮지 않는다.
   const [liveAlerts, setLiveAlerts] = useState<LiveEmergencyAlert[]>([]);
+  // B1 #24 — 학원 id → 그 학원의 미확인 비상 건수. 학원 선택 하나로 한 곳씩만 보이던 화면에서 어디를 봐야 하는지 알린다.
+  const [openEmergencyCounts, setOpenEmergencyCounts] = useState<Record<string, number>>({});
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -391,6 +396,35 @@ export const MonitoringPage = () => {
   // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
   usePolling(() => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)), LIVE_POLL_INTERVAL_MS, academyId != null);
 
+  // 한 번의 `GET /admin/emergencies?status=open` 으로 전 학원의 미확인 비상을 받아 학원별로 센다(Ruling 497 — 학원마다
+  // §6.8 을 부르면 학원 수에 비례해 요청이 늘어난다). 실패해도 관제 화면을 막지 않는다 — 요약이 비어 보일 뿐이다.
+  const loadEmergencySummary = useCallback(async (): Promise<boolean> => {
+    try {
+      const data = await getEmergencies("open");
+      setOpenEmergencyCounts(countOpenEmergenciesByAcademy(data.items));
+      return true;
+    } catch (cause) {
+      console.warn("학원별 비상 요약을 불러오지 못했다", cause);
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      await loadEmergencySummary();
+    })();
+  }, [loadEmergencySummary]);
+
+  usePolling(loadEmergencySummary, EMERGENCY_SUMMARY_INTERVAL_MS);
+
+  const academiesWithEmergency = academies.filter((academy) => (openEmergencyCounts[academy.id] ?? 0) > 0);
+
+  const handleSelectAcademy = (nextAcademyId: string) => {
+    // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
+    setRuns([]);
+    setAcademyId(nextAcademyId);
+  };
+
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
     { key: "busNo", label: "버스" },
     { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
@@ -470,16 +504,27 @@ export const MonitoringPage = () => {
       ) : null}
       {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
 
+      {academiesWithEmergency.length > 0 ? (
+        <AlertBanner
+          tone="missed"
+          title="미확인 비상이 있는 학원"
+          action={academiesWithEmergency.map((academy) => (
+            <Button key={academy.id} size="sm" variant="danger" onClick={() => handleSelectAcademy(academy.id)}>
+              {`${academy.name} 비상 ${openEmergencyCounts[academy.id]}건`}
+            </Button>
+          ))}
+        />
+      ) : null}
+
       <StyledFilterRow>
         <Select
           label="학원"
           value={academyId ?? ""}
-          onChange={(event) => {
-            // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
-            setRuns([]);
-            setAcademyId(event.target.value);
-          }}
-          options={academies.map((academy) => ({ value: String(academy.id), label: `${academy.name} (${academy.region})` }))}
+          onChange={(event) => handleSelectAcademy(event.target.value)}
+          options={academies.map((academy) => ({
+            value: String(academy.id),
+            label: `${academy.name} (${academy.region})${openEmergencyCounts[academy.id] ? ` · 비상 ${openEmergencyCounts[academy.id]}건` : ""}`,
+          }))}
           disabled={loadingAcademies || academies.length === 0}
         />
       </StyledFilterRow>
