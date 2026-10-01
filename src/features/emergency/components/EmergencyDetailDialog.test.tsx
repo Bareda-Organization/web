@@ -20,8 +20,45 @@ const EMERGENCY = {
   ackedAt: null,
   canceledAt: null,
   acked: false,
-  ackedBy: null,
+  ackedBy: null as { name: string; memo: string | null } | null,
 };
+
+// Ruling 541 — 확인할 때 조치 메모를 남기고(선택), 확인된 건은 확인자와 메모를 보여 준다.
+describe("EmergencyDetailDialog — 조치 메모", () => {
+  it("미확인 건은 메모 입력칸과 [확인] 버튼이 있고, 입력한 메모로 확인을 요청한다", () => {
+    const onAck = vi.fn();
+    render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={onAck} />);
+
+    fireEvent.change(screen.getByLabelText(/조치 메모/), { target: { value: "119 신고 완료" } });
+    fireEvent.click(screen.getByRole("button", { name: "확인" }));
+
+    expect(onAck).toHaveBeenCalledWith("119 신고 완료");
+  });
+
+  it("메모를 비워 두고 확인하면 메모 없이 요청한다", () => {
+    const onAck = vi.fn();
+    render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={onAck} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "확인" }));
+
+    expect(onAck).toHaveBeenCalledWith(undefined);
+  });
+
+  it("메모 입력칸은 200자까지만 받는다 — 서버 상한과 같다", () => {
+    render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={vi.fn()} />);
+
+    expect(screen.getByLabelText(/조치 메모/)).toHaveAttribute("maxlength", "200");
+  });
+
+  it("확인된 건은 입력칸 대신 확인자와 조치 메모를 보여 준다", () => {
+    const acked = { ...EMERGENCY, acked: true, ackedAt: "2026-09-12T08:05:00", ackedBy: { name: "김관계", memo: "119 신고 완료" } };
+    render(<EmergencyDetailDialog emergency={acked} onClose={vi.fn()} onAck={vi.fn()} />);
+
+    expect(screen.queryByLabelText(/조치 메모/)).not.toBeInTheDocument();
+    expect(screen.getByText("김관계")).toBeInTheDocument();
+    expect(screen.getByText("119 신고 완료")).toBeInTheDocument();
+  });
+});
 
 // B1 #17 — 비상 때 가장 급한 일은 기사·동승자에게 전화하는 것이다. 번호가 글자로만 있으면 옮겨 적어야 한다.
 describe("EmergencyDetailDialog — 연락처", () => {

@@ -69,11 +69,12 @@ export const EmergencyList = () => {
     return () => clearInterval(timer);
   }, [status, date, load]);
 
-  const handleAck = async (emergencyId: string) => {
+  const handleAck = async (emergencyId: string, memo?: string) => {
     setAckingId(emergencyId);
     setError(null);
     try {
-      await ackEmergency(emergencyId);
+      await ackEmergency(emergencyId, memo);
+      setDetail(null);
       await load(status, date);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
@@ -165,7 +166,14 @@ export const EmergencyList = () => {
         />
       </Card>
 
-      {detail ? <EmergencyDetailDialog emergency={detail} onClose={() => setDetail(null)} /> : null}
+      {detail ? (
+        <EmergencyDetailDialog
+          emergency={detail}
+          onClose={() => setDetail(null)}
+          onAck={(memo) => handleAck(detail.emergencyId, memo)}
+          acking={ackingId === detail.emergencyId}
+        />
+      ) : null}
     </StyledEmergencyLayout>
   );
 };

@@ -290,7 +290,8 @@ export type EmergencyItemResponseTypes = {
   staffAcked: boolean;
   ackedAt: string | null;
   canceledAt: string | null;
-  ackedBy: string | null;
+  // 서버는 `{name, memo}` 객체를 준다(§6.11) — memo 는 확인할 때 남긴 조치 메모(Ruling 541).
+  ackedBy: { name: string; memo: string | null } | null;
   elapsedSinceRaised: number;
 };
 

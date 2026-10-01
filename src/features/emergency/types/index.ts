@@ -38,7 +38,8 @@ export type EmergencyItemResponseTypes = {
   // 표에는 없으나 실측 응답에 존재 — acked_at 유무만으로도 판정 가능하지만
   // 서버가 이미 계산해 주는 값이라 그대로 쓴다.
   acked: boolean;
-  ackedBy: { name: string } | null;
+  // memo — 확인할 때 남긴 조치 메모(Ruling 541), 없으면 null.
+  ackedBy: { name: string; memo: string | null } | null;
 };
 
 // BE-R1 목표 2 이전에는 §5.16 이 적은 `items[]` 와 달리 실측 응답 키가 `emergencies` 였다.

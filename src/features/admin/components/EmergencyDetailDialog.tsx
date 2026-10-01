@@ -46,8 +46,14 @@ export const EmergencyDetailDialog = ({ emergency, onClose }: EmergencyDetailDia
       ))}
       <StyledEmergencyDetailRow>
         <span>학원 확인</span>
-        <span>{emergency.staffAcked ? `확인됨 (${emergency.ackedBy ?? "-"})` : "미확인"}</span>
+        <span>{emergency.staffAcked ? `확인됨 (${emergency.ackedBy?.name ?? "-"})` : "미확인"}</span>
       </StyledEmergencyDetailRow>
+      {emergency.staffAcked ? (
+        <StyledEmergencyDetailRow>
+          <span>조치 메모</span>
+          <span>{emergency.ackedBy?.memo ?? "-"}</span>
+        </StyledEmergencyDetailRow>
+      ) : null}
       <StyledEmergencyDetailRow>
         <span>학원 연락처</span>
         <span>{emergency.academy.contact}</span>

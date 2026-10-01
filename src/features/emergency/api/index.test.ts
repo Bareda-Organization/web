@@ -84,4 +84,48 @@ describe("emergency api — snake_case ↔ camelCase 변환", () => {
 
     expect(result).toEqual({ emergencyId: "1", ackedAt: "2026-09-15T08:12:00" });
   });
+
+  // Ruling 541 — 조치 메모는 선택이다. 메모가 있을 때만 본문 `{memo}` 를 보내고, 없으면 본문 없이 확인한다.
+  it("ackEmergency 는 조치 메모가 있으면 본문 memo 로, 없으면 본문 없이 보낸다", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(mockJsonResponse(200, { success: true, data: { emergency_id: 1, acked_at: "2026-09-15T08:12:00" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await ackEmergency("1", "119 신고 완료");
+    await ackEmergency("2");
+
+    const [withMemo, withoutMemo] = fetchMock.mock.calls.map((call) => call[1] as RequestInit);
+    expect(JSON.parse(withMemo.body as string)).toEqual({ memo: "119 신고 완료" });
+    expect(withoutMemo.body).toBeUndefined();
+  });
+
+  it("getEmergencies 는 acked_by.memo 를 ackedBy.memo 로 옮긴다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            items: [
+              {
+                emergency_id: 1, type: "accident", memo: null,
+                raised_by: { name: "이기사", role: "driver", phone: null },
+                run_id: 7, bus_no: "1호차", direction: "to_academy",
+                position: { lat: 37.5, lng: 127.1, recorded_at: null },
+                rider_count: 1, contacts: [], raised_at: "2026-09-15T08:10:00",
+                acked_at: "2026-09-15T08:12:00", canceled_at: null, acked: true,
+                acked_by: { name: "김관계", memo: "119 신고 완료" },
+              },
+            ],
+            unacked_count: 0,
+          },
+        }),
+      ),
+    );
+
+    const result = await getEmergencies();
+
+    expect(result.items[0].ackedBy).toEqual({ name: "김관계", memo: "119 신고 완료" });
+  });
 });

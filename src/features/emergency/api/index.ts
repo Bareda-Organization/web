@@ -25,7 +25,7 @@ type RawEmergencyItem = {
   acked_at: string | null;
   canceled_at: string | null;
   acked: boolean;
-  acked_by: { name: string } | null;
+  acked_by: { name: string; memo: string | null } | null;
 };
 
 // BE-R1 목표 2 이전에는 실측 봉투가 `items[]` 가 아니라 `emergencies[]` 였다. 서버가 §5.16 대로
@@ -80,11 +80,12 @@ export const getEmergencies = async (
   };
 };
 
-// POST /staff/emergencies/{id}/ack — 이미 확인된 건은 409 ALREADY_ACKED.
-export const ackEmergency = async (emergencyId: string): Promise<AckEmergencyResponseTypes> => {
+// POST /staff/emergencies/{id}/ack — 이미 확인된 건은 409 ALREADY_ACKED. 조치 메모(선택, 200자 이하 · Ruling 541)가
+// 있을 때만 본문 `{memo}` 를 보낸다 — 본문 없는 확인도 그대로 동작한다.
+export const ackEmergency = async (emergencyId: string, memo?: string): Promise<AckEmergencyResponseTypes> => {
   const raw = await apiFetch<{ emergency_id: string | number; acked_at: string }>(
     `/staff/emergencies/${emergencyId}/ack`,
-    { method: "POST" },
+    memo ? { method: "POST", body: { memo } } : { method: "POST" },
   );
   return { emergencyId: asIdString(raw.emergency_id), ackedAt: raw.acked_at };
 };
