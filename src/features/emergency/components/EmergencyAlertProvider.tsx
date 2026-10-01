@@ -186,7 +186,9 @@ export const EmergencyAlertStrip = () => {
           }
         >
           {alert.raisedByName ? `${alert.raisedByName} 님이 신고했습니다. ` : ""}
-          {isAckable ? "확인하기 전까지 이 알림은 계속 표시됩니다." : "관계자가 확인하면 사라집니다."}
+          {isAckable
+            ? "[확인]은 알림을 봤다는 표시이지 조치를 마쳤다는 뜻이 아닙니다. 누르면 이 띠가 사라지고 다른 관계자 화면에서도 확인됨으로 바뀝니다."
+            : "학원 관계자가 확인하면 사라집니다."}
         </AlertBanner>
       ))}
       {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
