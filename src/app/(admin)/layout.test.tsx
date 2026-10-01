@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createStableRouter } from "@/shared/testing/stableRouter";
 import AdminLayout from "./layout";
 
 const mockRouter = createStableRouter();
+let mockPathname = "/academies";
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/academies",
+  usePathname: () => mockPathname,
   useRouter: () => mockRouter,
 }));
 vi.mock("@/features/auth", () => ({
@@ -83,5 +84,25 @@ describe("(admin) 레이아웃 — 본문 바로가기", () => {
     const skip = screen.getByRole("link", { name: "본문 바로가기" });
     expect(skip).toHaveAttribute("href", "#main-content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+  });
+});
+
+// R46-FUWEB — 전체 관제 화면은 미확인 비상을 학원별 안내와 실시간 배너로 이미 보여 준다. 레이아웃 띠까지 얹으면 같은 신고가 두 번 보인다.
+describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
+  afterEach(() => {
+    mockPathname = "/academies";
+  });
+
+  it("전체 관제 화면에서는 비상 알림 띠를 그리지 않고, 사이드바 건수·탭 제목은 그대로다", () => {
+    mockPathname = "/monitoring";
+    render(
+      <AdminLayout>
+        <p>본문</p>
+      </AdminLayout>,
+    );
+
+    expect(screen.queryByText("비상 띠")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /비상 알림/ })).toHaveTextContent("1");
+    expect(document.title).toBe("(13) 비상 발생 · 바래다 관계자 웹");
   });
 });

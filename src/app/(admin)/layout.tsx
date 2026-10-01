@@ -99,7 +99,8 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
             <LogoutButton />
           </StyledAdminHeaderSide>
         </StyledAdminHeader>
-        <EmergencyAlertStrip />
+        {/* 전체 관제는 미확인 비상을 학원별 안내와 실시간 배너로 이미 보여 준다 — 띠까지 얹으면 같은 신고가 두 번 보이고 본문이 밀린다. */}
+        {pathname.startsWith("/monitoring") ? null : <EmergencyAlertStrip />}
         {children}
       </StyledAdminMain>
     </StyledAdminShell>
