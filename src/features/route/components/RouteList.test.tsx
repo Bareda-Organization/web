@@ -1,10 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createStableRouter } from "@/shared/testing/stableRouter";
 import { getRoutes } from "../api";
 import type { RouteListItemResponseTypes } from "../types";
 import { RouteList } from "./RouteList";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const mockRouter = createStableRouter();
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("../api", () => ({ getRoutes: vi.fn() }));
 vi.mock("./RouteForm", () => ({ RouteForm: () => null }));
 
