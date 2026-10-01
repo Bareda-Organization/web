@@ -169,6 +169,19 @@ describe("AcademyRealtimeClient — 만료 전 무중단 갱신", () => {
     expect(received).toHaveBeenCalledTimes(5);
   });
 
+  it("갈아타는 중에 새로 건 구독도 새 연결로 옮겨져 옛 연결을 닫은 뒤에도 방송을 받는다", async () => {
+    const { client, handles } = connectedClient(() => Promise.resolve(makeJwt(nowSeconds() + 900)));
+
+    await startSwap(handles);
+    const received = vi.fn();
+    client.subscribe(OTHER_DESTINATION, received);
+    expect(handles[1].subscribed).toEqual([OTHER_DESTINATION]);
+
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    handles[1].emit(OTHER_DESTINATION, envelope(1));
+    expect(received).toHaveBeenCalledTimes(1);
+  });
+
   it("재발급이 실패하면 연결을 그대로 두고, 만료 뒤에는 기존 흐름(TOKEN_EXPIRED → 재발급 → 재연결)으로 넘어간다", async () => {
     const refresh = vi
       .fn<() => Promise<string>>()
