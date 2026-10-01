@@ -7,3 +7,9 @@ export const StyledEmergencyPopupStack = styled.div`
   gap: 8px;
   padding: 12px 24px 0;
 `;
+
+// 접기 버튼 한 줄 — 신고 배너 아래 오른쪽에 둔다.
+export const StyledFoldRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+`;

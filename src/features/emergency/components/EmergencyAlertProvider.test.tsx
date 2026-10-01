@@ -228,3 +228,38 @@ describe("EmergencyAlertProvider — 메인 관리자 출처", () => {
     expect(mockGet).not.toHaveBeenCalled();
   });
 });
+
+// R46-FUWEB B1 #1 — 비상 띠가 본문을 오래 밀어 내려도 접을 방법이 없었다. 접어도 건수는 남고, 새 비상은 접힌 띠를 다시 펼친다.
+describe("EmergencyAlertStrip — 접기", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("접기를 누르면 신고 내용 대신 미확인 건수 한 줄만 남고, 펼치기로 되돌린다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    renderProvider();
+    await screen.findByText(/2호차/);
+
+    fireEvent.click(screen.getByRole("button", { name: "접기" }));
+
+    expect(screen.queryByText(/2호차/)).not.toBeInTheDocument();
+    expect(screen.getByText("미확인 비상 알림 1건")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "펼치기" }));
+
+    expect(screen.getByText(/2호차/)).toBeInTheDocument();
+  });
+
+  it("접은 뒤에 새 비상이 들어오면 다시 펼쳐 새 신고를 보여 준다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    renderProvider();
+    await screen.findByText(/2호차/);
+    fireEvent.click(screen.getByRole("button", { name: "접기" }));
+
+    mockGet.mockResolvedValue({
+      items: [ITEM, { ...ITEM, emergencyId: "10", busNo: "3호차" }],
+      unackedCount: 2,
+    });
+    act(() => capturedOnEnvelope?.(envelope("emergency_raised", { ...RAISED, emergency_id: 10, bus_no: "3호차" })));
+
+    expect(await screen.findByText(/3호차/)).toBeInTheDocument();
+  });
+});

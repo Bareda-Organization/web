@@ -14,7 +14,7 @@ import {
 import { AlertBanner, Button } from "@/shared/ui";
 import { ackEmergency, getEmergencies } from "../api";
 import { toEmergencyTypeLabel } from "../lib/emergencyLabels";
-import { StyledEmergencyPopupStack } from "./EmergencyAlertProvider.styled";
+import { StyledEmergencyPopupStack, StyledFoldRow } from "./EmergencyAlertProvider.styled";
 
 // 팝업 한 건에 필요한 것만 — REST 목록과 WebSocket 통지 양쪽에서 같은 모양으로 만든다.
 export type EmergencyAlert = { emergencyId: string; busNo: string; type: string; raisedByName: string | null };
@@ -160,10 +160,31 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
 };
 
 // 미확인 비상 알림 띠 — 레이아웃의 머리줄 바로 아래에 둔다. 화면 위에 띄우지 않고 흐름에 넣어, 등록·배치 변경 같은 버튼을 가리지 않는다.
+//
+// 접으면 신고 내용 대신 미확인 건수 한 줄만 남는다. 접은 시점에 없던 신고가 들어오면 접힌 상태를 풀어 새 신고를 보여 준다
+// (접은 건 아이디를 기억해 두고 비교 — 건수만 비교하면 한 건 확인 뒤 새 신고가 와도 같은 건수라 접힌 채 가려진다).
 export const EmergencyAlertStrip = () => {
   const router = useRouter();
   const { alerts, ackingId, ackFailedId, isAckable, listPath, onAck } = useContext(EmergencyAlertContext);
+  const [foldedIds, setFoldedIds] = useState<ReadonlySet<string> | null>(null);
   if (alerts.length === 0) return null;
+
+  const isFolded = foldedIds !== null && alerts.every((alert) => foldedIds.has(alert.emergencyId));
+  if (isFolded) {
+    return (
+      <StyledEmergencyPopupStack role="alert">
+        <AlertBanner
+          tone="missed"
+          title={`미확인 비상 알림 ${alerts.length}건`}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setFoldedIds(null)}>
+              펼치기
+            </Button>
+          }
+        />
+      </StyledEmergencyPopupStack>
+    );
+  }
 
   return (
     <StyledEmergencyPopupStack role="alert">
@@ -194,6 +215,11 @@ export const EmergencyAlertStrip = () => {
       {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
         <AlertBanner tone="missed" title="확인 처리에 실패했습니다. 다시 눌러 주세요." />
       ) : null}
+      <StyledFoldRow>
+        <Button size="sm" variant="ghost" onClick={() => setFoldedIds(new Set(alerts.map((alert) => alert.emergencyId)))}>
+          접기
+        </Button>
+      </StyledFoldRow>
     </StyledEmergencyPopupStack>
   );
 };
