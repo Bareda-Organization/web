@@ -47,6 +47,8 @@ import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다(판단 근거, 보고서 §1).
 const LIVE_POLL_INTERVAL_MS = 7000;
+// 방송 이벤트 뒤 재조회를 묶는 간격 — MonitoringPage.tsx 의 `RUNS_REFRESH_DEBOUNCE_MS` 와 같다(R46-FIXRT L4).
+const EVENT_REFRESH_DEBOUNCE_MS = 300;
 
 // MonitoringPage.tsx 와 같은 기본 좌표(서울 시청) — 위치 수신 전에도 지도가 빈 화면이
 // 아니게 한다.
@@ -265,6 +267,32 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   // 최신값을 받는 효과만 노리고, payload 조각으로 상태를 억지로 재구성하지
   // 않는다(판단 근거, 보고서 §1). `AuthGateGuard` 가 관계자 role 에서만 이
   // 화면을 그리므로 `session.academy` 는 항상 값이 있다고 본다(서버 불변식).
+  // 이벤트 뒤 재조회 묶음 — 첫 이벤트가 타이머를 걸고, 타이머가 도는 동안의 이벤트는 그 묶음에 들어간다(타이머를
+  // 밀지 않는다 — 이벤트가 쉬지 않고 와도 화면이 `EVENT_REFRESH_DEBOUNCE_MS` 보다 오래 낡지 않는다). 지표·회차 표는
+  // 묶음 안에 그 이벤트가 하나라도 있을 때만 다시 받는다.
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshDashboardRef = useRef(false);
+  const scheduleRefresh = useCallback(
+    (withDashboard: boolean) => {
+      if (withDashboard) refreshDashboardRef.current = true;
+      if (refreshTimerRef.current !== null) return;
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null;
+        const needsDashboard = refreshDashboardRef.current;
+        refreshDashboardRef.current = false;
+        void loadLive();
+        if (needsDashboard) void loadDashboard(true);
+      }, EVENT_REFRESH_DEBOUNCE_MS);
+    },
+    [loadLive, loadDashboard],
+  );
+  useEffect(
+    () => () => {
+      // 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
+      if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current);
+    },
+    [],
+  );
   const handleEnvelope = useCallback(
     (envelope: WebSocketEnvelope) => {
       switch (envelope.event) {
@@ -283,15 +311,15 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
           );
           return;
         }
+        // 잇단 이벤트는 짧게 묶어 한 번만 읽는다(R46-FIXRT L4 — MonitoringPage 와 같다).
         case "stop_arrived":
-          loadLive();
+          scheduleRefresh(false);
           return;
         // 탑승 수·회차 상태는 위치 응답이 아니라 대시보드 응답에 있어 함께 다시 불러온다(F01-01).
         case "rider_changed":
         case "run_started":
         case "run_ended":
-          loadLive();
-          loadDashboard(true);
+          scheduleRefresh(true);
           return;
         // 비상 알림(`emergency_raised`·`emergency_canceled`)은 `(staff)` 레이아웃의
         // EmergencyAlertProvider 가 전 화면에서 받는다(R32-W5) — 여기서 또 처리하면 이중 표시다.
@@ -309,7 +337,7 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
           return;
       }
     },
-    [loadLive, loadDashboard],
+    [scheduleRefresh],
   );
   const { connectionState, reconnect } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
   // Goal 9 — "데이터 없음"과 "WebSocket 연결 끊김"을 구분한다. `liveRuns` 는
@@ -523,7 +551,11 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
                 : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
             </AlertBanner>
           ) : null}
-          {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
+          {wsIsReconnecting ? (
+            <AlertBanner tone="missed" title="재연결 시도 중입니다">
+              연결될 때까지 자동으로 계속 시도합니다. 그동안 목록은 7초마다 새로 받습니다.
+            </AlertBanner>
+          ) : null}
           {runs.length === 0 ? (
             <StyledBusListEmpty>오늘 등록된 회차가 없습니다</StyledBusListEmpty>
           ) : (

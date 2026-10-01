@@ -44,7 +44,12 @@ import {
 } from "./MonitoringPage.styled";
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
+// 실시간 연결이 끊겼을 때(재연결 중·권한 거부)의 안전망 간격이다.
 const LIVE_POLL_INTERVAL_MS = 7000;
+// 실시간 연결이 살아 있으면 방송(`stop_arrived`·`rider_changed`·`run_started`·`run_ended`)이 갱신을 가져온다 — 이 조회는 오늘
+// 취소 아닌 회차 전부를 정차 목록과 함께 돌려주는 가장 무거운 GET 이라(R46-LOAD L3) 안전망으로만 느리게 돈다.
+// 연결이 끊기면 하트비트(10초)가 감지해 7초로 돌아간다.
+const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
 
@@ -405,7 +410,22 @@ export const MonitoringPage = () => {
   }, [academyId, loadRuns]);
 
   // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
-  usePolling(() => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)), LIVE_POLL_INTERVAL_MS, academyId != null);
+  // 간격은 실시간 연결 상태를 따른다 — 연결되어 있으면 30초, 아니면 7초(R46-FIXRT L3).
+  usePolling(
+    () => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)),
+    connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS,
+    academyId != null,
+  );
+
+  // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다.
+  const previousConnectionRef = useRef(connectionState);
+  useEffect(() => {
+    const previous = previousConnectionRef.current;
+    previousConnectionRef.current = connectionState;
+    if (connectionState === "connected" && (previous === "reconnecting" || previous === "gaveUp") && academyId != null) {
+      void loadRuns(academyId);
+    }
+  }, [connectionState, academyId, loadRuns]);
 
   // 한 번의 `GET /admin/emergencies?status=open` 으로 전 학원의 미확인 비상을 받아 학원별로 센다(Ruling 497 — 학원마다
   // §6.8 을 부르면 학원 수에 비례해 요청이 늘어난다). 실패해도 관제 화면을 막지 않는다 — 요약이 비어 보일 뿐이다.
@@ -535,7 +555,11 @@ export const MonitoringPage = () => {
             : "실시간 갱신 연결이 끊어졌습니다. 목록은 자동 새로고침으로 계속 갱신됩니다."}
         </AlertBanner>
       ) : null}
-      {wsIsReconnecting ? <AlertBanner tone="missed" title="재연결 시도 중입니다" /> : null}
+      {wsIsReconnecting ? (
+        <AlertBanner tone="missed" title="재연결 시도 중입니다">
+          연결될 때까지 자동으로 계속 시도합니다. 그동안 목록은 7초마다 새로 받습니다.
+        </AlertBanner>
+      ) : null}
 
       {academiesWithEmergency.length > 0 ? (
         <AlertBanner

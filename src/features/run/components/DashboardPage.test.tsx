@@ -802,6 +802,66 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
+  // R46-FIXRT L4 — 같은 일을 하는 MonitoringPage 는 300ms 로 묶는데 대시보드는 방송마다 바로 다시 불러왔다.
+  // 등원 피크에 한 학원의 승차 이벤트가 몰리면 탭마다 같은 조회가 초당 수 회 나간다.
+  it("이벤트가 잇따라 와도 300ms 안에서는 회차 목록·지표를 한 번씩만 다시 불러온다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+    const dashboardBefore = mockGetDashboard.mock.calls.length;
+    const liveBefore = mockGetRunsLive.mock.calls.length;
+
+    await act(async () => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}));
+      capturedOnEnvelope?.(envelope("stop_arrived", {}));
+      capturedOnEnvelope?.(envelope("rider_changed", {}));
+    });
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardBefore);
+    expect(mockGetRunsLive.mock.calls.length).toBe(liveBefore);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(350);
+    });
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardBefore + 1);
+    expect(mockGetRunsLive.mock.calls.length).toBe(liveBefore + 1);
+  });
+
+  it("도착(stop_arrived)만 이어지면 위치만 다시 받고 지표·회차 표는 다시 받지 않는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+    const dashboardBefore = mockGetDashboard.mock.calls.length;
+    const liveBefore = mockGetRunsLive.mock.calls.length;
+
+    await act(async () => {
+      capturedOnEnvelope?.(envelope("stop_arrived", {}));
+      await vi.advanceTimersByTimeAsync(350);
+    });
+
+    expect(mockGetRunsLive.mock.calls.length).toBe(liveBefore + 1);
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardBefore);
+  });
+
+  it("묶음을 기다리는 중에 화면을 떠나면 예약한 재조회를 버린다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    const view = render(<DashboardPage />);
+    await screen.findByText("42");
+    const dashboardBefore = mockGetDashboard.mock.calls.length;
+
+    await act(async () => {
+      capturedOnEnvelope?.(envelope("rider_changed", {}));
+    });
+    view.unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardBefore);
+  });
+
   it("주기 갱신이 한 번 실패해도 이미 보이던 지표·표를 지우거나 오류로 덮지 않는다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockGetDashboard.mockResolvedValueOnce(baseDashboard);

@@ -144,7 +144,7 @@ describe("AcademyRealtimeClient", () => {
     vi.useFakeTimers();
     try {
       const { factory, handles } = createFakeClientFactory();
-      const policy = new WsBackoffPolicy({ initialDelayMs: 100, multiplier: 2, maxDelayMs: 1000, maxAttempts: 6 });
+      const policy = new WsBackoffPolicy({ initialDelayMs: 100, multiplier: 2, maxDelayMs: 1000, maxAttempts: 6, jitterRatio: 0 });
       const client = new AcademyRealtimeClient({
         url: "ws://x",
         createClient: factory,
@@ -164,6 +164,53 @@ describe("AcademyRealtimeClient", () => {
       vi.advanceTimersByTime(1);
       expect(handles).toHaveLength(2);
       expect(handles[1].activateCalls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // R46-FIXRT S-5 — 상한을 주지 않은 기본 정책은 서버가 오래 꺼져 있어도 포기하지 않는다.
+  it("상한이 없는 정책은 7번째 이후에도 계속 재연결을 시도하고 gaveUp 이 되지 않는다", () => {
+    vi.useFakeTimers();
+    try {
+      const { factory, handles } = createFakeClientFactory();
+      const client = new AcademyRealtimeClient({
+        url: "ws://x",
+        createClient: factory,
+        readAccessToken: () => null,
+        backoffPolicy: new WsBackoffPolicy({ initialDelayMs: 10, multiplier: 1, maxDelayMs: 10, jitterRatio: 0 }),
+      });
+      client.connect();
+      for (let i = 0; i < 20; i += 1) {
+        handles[handles.length - 1].config.onWebSocketClose({});
+        expect(client.getSnapshot()).toBe("reconnecting");
+        vi.advanceTimersByTime(10);
+      }
+      // 옛 기본값(6회 뒤 포기)이면 최초 1 + 재시도 6 = 7개에서 멈춘다.
+      expect(handles).toHaveLength(21);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("재연결 대기에는 지터가 붙는다 — 한꺼번에 끊긴 탭이 같은 순간에 붙지 않게", () => {
+    vi.useFakeTimers();
+    try {
+      const { factory, handles } = createFakeClientFactory();
+      const client = new AcademyRealtimeClient({
+        url: "ws://x",
+        createClient: factory,
+        readAccessToken: () => null,
+        backoffPolicy: new WsBackoffPolicy({ initialDelayMs: 1000, maxDelayMs: 30000 }),
+        random: () => 1, // 가장 많이 줄어든 쪽 — 1000ms × 0.7 = 700ms
+      });
+      client.connect();
+      handles[0].config.onWebSocketClose({});
+
+      vi.advanceTimersByTime(699);
+      expect(handles).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(handles).toHaveLength(2);
     } finally {
       vi.useRealTimers();
     }
@@ -267,7 +314,7 @@ describe("AcademyRealtimeClient", () => {
     vi.useFakeTimers();
     try {
       const { factory, handles } = createFakeClientFactory();
-      const policy = new WsBackoffPolicy({ initialDelayMs: 100, multiplier: 2, maxDelayMs: 1000, maxAttempts: 6 });
+      const policy = new WsBackoffPolicy({ initialDelayMs: 100, multiplier: 2, maxDelayMs: 1000, maxAttempts: 6, jitterRatio: 0 });
       const client = new AcademyRealtimeClient({
         url: "ws://x",
         createClient: factory,

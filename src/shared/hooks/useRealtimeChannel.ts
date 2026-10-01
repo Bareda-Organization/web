@@ -38,7 +38,8 @@ const releaseClient = (): void => {
 
 export type UseRealtimeChannelResult = {
   connectionState: WsConnectionState;
-  // 재연결을 포기(`gaveUp`)한 연결을 사용자가 다시 여는 창구 — 화면의 "다시 연결" 버튼용.
+  // 재연결을 포기(`gaveUp`)한 연결을 사용자가 다시 여는 창구 — 화면의 "다시 연결" 버튼용. 기본 재연결
+  // 정책은 포기하지 않아 운영에서는 거의 쓰이지 않는다.
   reconnect: () => void;
 };
 
@@ -87,17 +88,20 @@ export const useRealtimeChannel = (
     const unsubscribeState = client.onConnectionStateChange(() => {
       setConnectionState(client.getSnapshot());
     });
-    // 재연결을 포기한 뒤(서버·사무실 망이 약 1분 넘게 끊김)에는 스스로 살아나는
-    // 경로가 없다 — 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때 한 번 더 연다.
-    const reopenIfGaveUp = () => {
+    // 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때, 끊겨 재연결 대기 중(`reconnecting`)이거나
+    // 포기한(`gaveUp`) 연결을 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 연다. 기본 재연결 정책은
+    // 포기하지 않아(R46-FIXRT S-5) 운영에서는 `reconnecting` 이 이 경로를 탄다. 연결 중·연결된 연결은
+    // 건드리지 않는다.
+    const reopenIfStalled = () => {
       if (document.visibilityState === "hidden") return;
-      if (client.getSnapshot() === "gaveUp") client.connect();
+      const state = client.getSnapshot();
+      if (state === "gaveUp" || state === "reconnecting") client.connect();
     };
-    window.addEventListener("online", reopenIfGaveUp);
-    document.addEventListener("visibilitychange", reopenIfGaveUp);
+    window.addEventListener("online", reopenIfStalled);
+    document.addEventListener("visibilitychange", reopenIfStalled);
     return () => {
-      window.removeEventListener("online", reopenIfGaveUp);
-      document.removeEventListener("visibilitychange", reopenIfGaveUp);
+      window.removeEventListener("online", reopenIfStalled);
+      document.removeEventListener("visibilitychange", reopenIfStalled);
       unsubscribeState();
       clientRef.current = null;
       releaseClient();

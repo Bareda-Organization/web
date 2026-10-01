@@ -26,6 +26,8 @@ export type AcademyRealtimeClientOptions = {
   // 401 처리와 같은 `notifyAuthGate` 라 화면은 로그인 만료를 한 경로로만 받는다.
   onSessionExpired?: () => void;
   onDebugMessage?: (message: string) => void;
+  // 재연결 대기의 지터를 뽑는 난수 — 시험이 고정값을 넣어 대기를 정확히 잰다. 기본은 `Math.random`.
+  random?: () => number;
 };
 
 type ConnectionStateListener = () => void;
@@ -44,7 +46,7 @@ const SCOPE_VIOLATION_MESSAGE = "ACADEMY_SCOPE_VIOLATION";
 //    전이하고, Dart 와 달리 **재연결을 멈춘다**(`wsConnectionState.ts` 의
 //    forbidden 상태 설명 참고 — 이 앱은 화면 하나가 목적지 하나에 고정
 //    구독하므로 다른 목적지로 바꿔 재시도할 여지가 없다).
-// 3. 끊기면 `WsBackoffPolicy` 로 계산한 간격만큼 대기했다가 자동 재연결한다.
+// 3. 끊기면 `WsBackoffPolicy` 로 계산한 간격(30초 상한 · 지터)만큼 대기했다가 자동 재연결한다 — 기본 정책은 포기하지 않는다.
 // 4. 수신한 프레임을 `WebSocketEnvelope` 로 파싱해 넘긴다(id 흡수 포함).
 //
 // **구독 정리** — `subscribe()` 가 돌려주는 해제 함수를 호출부가 반드시
@@ -81,12 +83,14 @@ export class AcademyRealtimeClient {
   // `destination` 헤더를 싣지 않으므로(Dart 쪽에서 실측 확인) 어느 구독이
   // 거부됐는지 이 목록으로 추론한다. `academy-web` 은 화면당 목적지가 항상
   // 하나뿐이라 모호함이 없다.
+  private readonly random: () => number;
   private readonly pendingDestinations = new Set<string>();
   private readonly listeners = new Set<ConnectionStateListener>();
 
   constructor(options: AcademyRealtimeClientOptions) {
     this.url = options.url;
     this.backoffPolicy = options.backoffPolicy ?? new WsBackoffPolicy();
+    this.random = options.random ?? Math.random;
     this.createClient = options.createClient ?? createStompClient;
     this.readAccessToken = options.readAccessToken ?? getAccessToken;
     this.refreshAccessToken = options.refreshAccessToken ?? defaultRefreshAccessToken;
@@ -234,7 +238,7 @@ export class AcademyRealtimeClient {
     this.scheduleReconnect();
   }
 
-  // 백오프 횟수를 하나 쓰고 다음 재연결을 예약한다 — 한도에 닿으면 `gaveUp`.
+  // 백오프 횟수를 하나 쓰고 다음 재연결을 예약한다 — 정책에 상한이 있고 닿으면 `gaveUp`(기본 정책은 상한이 없다).
   private scheduleReconnect(): void {
     this.reconnectAttempt += 1;
     if (this.backoffPolicy.shouldGiveUp(this.reconnectAttempt)) {
@@ -243,7 +247,7 @@ export class AcademyRealtimeClient {
     }
 
     this.setState("reconnecting");
-    const delay = this.backoffPolicy.delayFor(this.reconnectAttempt);
+    const delay = this.backoffPolicy.jitteredDelayFor(this.reconnectAttempt, this.random);
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => this.doConnect(), delay);
   }

@@ -796,6 +796,71 @@ describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
   });
 });
 
+// R46-FIXRT L3 — 관제 회차 목록(`/admin/academies/{id}/runs/live`)은 가장 무거운 GET 이다. 실시간 연결이 살아 있으면 방송이
+// 갱신을 가져오므로 폴링은 안전망일 뿐이라 30초로 늦추고, 연결이 끊겼을 때(재연결 중·권한 거부)만 7초를 유지한다.
+describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른다(L3)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockConnectionState = "connected";
+    capturedOnEnvelope = undefined;
+    mockGetAcademies.mockResolvedValue(baseAcademies.items);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it("실시간 연결이 connected 면 7초가 아니라 30초마다 다시 받는다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    const before = mockGetRunsLive.mock.calls.length;
+
+    await advance(29_000);
+    expect(mockGetRunsLive.mock.calls.length).toBe(before);
+
+    await advance(1_500);
+    expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
+  });
+
+  it("실시간 연결이 끊기면(재연결 중) 7초 안전망 폴링으로 돌아가고, 다시 붙으면 바로 한 번 받은 뒤 30초로 늦춘다", async () => {
+    const view = render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    mockConnectionState = "reconnecting";
+    view.rerender(<MonitoringPage />);
+    const afterDrop = mockGetRunsLive.mock.calls.length;
+    await advance(7_500);
+    expect(mockGetRunsLive.mock.calls.length).toBe(afterDrop + 1);
+
+    // 다시 붙었다 — 끊긴 사이 놓친 방송은 되찾을 길이 없으므로 30초를 기다리지 않고 한 번 받는다.
+    mockConnectionState = "connected";
+    view.rerender(<MonitoringPage />);
+    await advance(100);
+    const afterBackfill = mockGetRunsLive.mock.calls.length;
+    expect(afterBackfill).toBe(afterDrop + 2);
+
+    await advance(10_000);
+    expect(mockGetRunsLive.mock.calls.length).toBe(afterBackfill);
+  });
+
+  it("권한 거부(forbidden)로 실시간을 못 받는 동안도 7초 폴링을 유지한다", async () => {
+    mockConnectionState = "forbidden";
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    const before = mockGetRunsLive.mock.calls.length;
+
+    await advance(7_500);
+
+    expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
+  });
+});
+
 // F03-09 — 겹친 요청에서 늦은 응답이 새 선택을 덮었다.
 describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09)", () => {
   const academyB = { id: "2", code: "B002", name: "둘째 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };

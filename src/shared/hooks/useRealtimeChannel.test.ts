@@ -179,4 +179,36 @@ describe("useRealtimeChannel", () => {
     });
     expect(instances[0].connectCalls).toBe(2);
   });
+
+  // R46-FIXRT S-5 — 기본 재연결 정책은 포기하지 않아 끊긴 연결은 계속 `reconnecting` 이다. 브라우저가 다시 온라인이
+  // 되거나 탭이 다시 보일 때 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 붙는다.
+  it("브라우저가 다시 온라인이 되면 재연결 대기 중인 연결을 바로 다시 붙인다", () => {
+    renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+    act(() => {
+      instances[0].emitState("reconnecting");
+    });
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(instances[0].connectCalls).toBe(2);
+  });
+
+  it("탭이 다시 보이면 재연결 대기 중인 연결을 바로 다시 붙이고, 연결된 연결은 건드리지 않는다", () => {
+    renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+    act(() => {
+      instances[0].emitState("connected");
+    });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(instances[0].connectCalls).toBe(1);
+
+    act(() => {
+      instances[0].emitState("reconnecting");
+    });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(instances[0].connectCalls).toBe(2);
+  });
 });
