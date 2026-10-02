@@ -26,6 +26,7 @@ type RawEmergencyItem = {
   rider_count: number;
   contacts: RawPerson[];
   raised_at: string;
+  occurred_at?: string | null;
   staff_acked: boolean;
   acked_at: string | null;
   canceled_at: string | null;
@@ -65,6 +66,7 @@ const toEmergencyItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => (
   riderCount: raw.rider_count,
   contacts: raw.contacts.map(toPerson),
   raisedAt: raw.raised_at,
+  occurredAt: raw.occurred_at ?? null,
   staffAcked: raw.staff_acked,
   ackedAt: raw.acked_at,
   canceledAt: raw.canceled_at,

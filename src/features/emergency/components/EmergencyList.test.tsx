@@ -33,6 +33,28 @@ const ITEM = {
   ackedBy: null,
 };
 
+// R47 Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발생 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
+describe("EmergencyList — 단말 기록 시각 병기", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("두 시각이 7분 벌어지면 접수 시각 아래에 단말 기록 시각을 참고로 보이고, 1분 안이면 보이지 않는다", async () => {
+    mockGet.mockResolvedValue({
+      items: [
+        { ...ITEM, emergencyId: "1", raisedAt: "2026-09-12T08:10:00+09:00", occurredAt: "2026-09-12T08:03:00+09:00" },
+        { ...ITEM, emergencyId: "2", raisedAt: "2026-09-12T08:20:00+09:00", occurredAt: "2026-09-12T08:19:30+09:00" },
+      ],
+      unackedCount: 2,
+    });
+    render(<EmergencyList />);
+
+    expect(await screen.findByText("단말 기록 08:03(참고)")).toBeInTheDocument();
+    expect(screen.getAllByText(/단말 기록/)).toHaveLength(1);
+    expect(screen.getByText("2026-09-12 08:10")).toBeInTheDocument();
+  });
+});
+
 // Z-04(Ruling 379 ①) — §5.16 은 최근 200건까지만 준다.
 describe("EmergencyList — 200건 상한 안내", () => {
   afterEach(() => {

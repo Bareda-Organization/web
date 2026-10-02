@@ -38,6 +38,8 @@ describe("emergency api — 실서버 계약", () => {
     expect(typeof result.unackedCount).toBe("number");
     // 응답 식별자는 문자열이다(Ruling 332·357).
     expect(typeof result.items[0].emergencyId).toBe("string");
+    // R47 Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
+    expect(typeof result.items[0].occurredAt).toBe("string");
   });
 
   // r12-t1 목표1① — ackEmergency(§5.16, EXC-04, A-16) 실제 재현. emergency_id=1 은

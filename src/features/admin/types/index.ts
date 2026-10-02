@@ -287,6 +287,8 @@ export type EmergencyItemResponseTypes = {
   riderCount: number;
   contacts: EmergencyPersonResponseTypes[];
   raisedAt: string;
+  // 단말이 누른 시각(참고값 · R47 Ruling 744) — 서버가 항상 채우지만 없어도 견딘다.
+  occurredAt?: string | null;
   staffAcked: boolean;
   ackedAt: string | null;
   canceledAt: string | null;
