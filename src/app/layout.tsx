@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { EmotionRegistry } from "@/shared/lib/EmotionRegistry";
 import { AuthSessionProvider } from "@/features/auth";
 import "./globals.css";
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               전부 이 컨텍스트를 구독한다. */}
           <AuthSessionProvider>{children}</AuthSessionProvider>
         </EmotionRegistry>
+        <SpeedInsights />
       </body>
     </html>
   );
