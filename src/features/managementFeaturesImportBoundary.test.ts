@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-// F02-05 — `docs/frontend/CONVENTIONS_REACT.md` "지켜야 할 의존 방향": 기능끼리는 예외 목록의 방향으로만 import 하고,
+// F02-05 — `docs/CONVENTIONS_REACT.md` "지켜야 할 의존 방향": 기능끼리는 예외 목록의 방향으로만 import 하고,
 // 다른 기능은 `features/<기능>/index.ts` 공개 창구로만 읽는다. 기능 전부를 검사한다(F02-05 는 6개, X-02 가 `admin`·`run`,
 // W2-02 가 나머지 — `emergency → auth`·`report → run` 이 목록에 없다가 실제 코드에만 있던 것이 드러났다).
 const FEATURES_DIR = path.resolve(__dirname);

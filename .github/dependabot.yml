@@ -1,0 +1,39 @@
+# 의존성·이미지·액션 버전 갱신 — 주 1회, 생태계별로 한 묶음(PR 이 쏟아지지 않게).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
+    # 주 버전 무시 — @types/node 는 런타임 Node 22 에 맞춘다(Ruling 727) · eslint 10 · typescript 7 은 lint 가 실패해 거절했다
+    # (Ruling 753 — 재검토 조건: eslint-config-next 의 ESLint 10 지원 · typescript-eslint 의 TS 7 지원)
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns: ["*"]
+    # 런타임 이미지는 LTS 만(Ruling 727) — node 는 운영 웹(Vercel) 런타임 22 에 맞춘다. 주 버전은 사람이 따로 올린다
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

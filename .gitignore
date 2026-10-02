@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 로컬 색인 · 도구 캐시(재생성 가능)
+graft/
+.docgraph/
+.mcp.json

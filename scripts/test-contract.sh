@@ -10,7 +10,9 @@
 # ⚠ 백엔드·DB 컨테이너를 통째로 다시 만든다(약 1분). 고친 부분만 볼 때는 이 스크립트가 아니라
 #   평범하게 그 검사 파일만 돌려라 — `node node_modules/vitest/vitest.mjs run <파일>`.
 set -euo pipefail
-cd "$(dirname "$0")/../../../.."          # 저장소 루트
+WEB_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# compose 파일은 backend 저장소에 있다(2026-10-02 저장소 분리) — 기본은 형제 clone
+cd "${BACKEND_ROOT:-$WEB_ROOT/../backend}"
 export PATH="/Applications/Code/Docker.app/Contents/Resources/bin:$PATH"
 
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.app.yml"
@@ -26,6 +28,6 @@ for _ in $(seq 1 60); do
   printf "."; sleep 3
 done
 
-cd frontend/apps/academy-web
+cd "$WEB_ROOT"
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000 \
   node node_modules/vitest/vitest.mjs run "${@:-src}"

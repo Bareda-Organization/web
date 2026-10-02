@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import Link from "next/link";
 
 // div 위계 — Layout(화면 전체) → Container(카드 폭 고정) → Wrapper(안쪽 배치) → Style
-// (`docs/frontend/CONVENTIONS_REACT.md` "스타일"). 로그인·가입·대기 화면 3개가 같은 위계를 쓴다.
+// (`docs/CONVENTIONS_REACT.md` "스타일"). 로그인·가입·대기 화면 3개가 같은 위계를 쓴다.
 export const StyledLayout = styled.div`
   min-height: 100dvh;
   display: flex;

@@ -11,7 +11,7 @@ type ApiErrorEnvelope = {
 };
 
 // http 응답이 실패했을 때 던지는 타입. 컴포넌트는 raw Response 를 보지 않고
-// 이 타입 하나만 다룬다 — `docs/frontend/CONVENTIONS_REACT.md` "API 호출은 기능 안에서만".
+// 이 타입 하나만 다룬다 — `docs/CONVENTIONS_REACT.md` "API 호출은 기능 안에서만".
 export class ApiError extends Error {
   readonly status: number;
   // §8 사전에 없는 코드가 올 수도 있어(신규 코드 추가 지연 · 프록시 오류 등)

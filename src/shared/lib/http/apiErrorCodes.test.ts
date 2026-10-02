@@ -7,7 +7,11 @@ import { API_ERROR_CODES } from "./apiErrorCodes";
 // W10 — 이 파일 머리 주석 "정본과 대조해 갱신"을 사람 손에 맡기지 않는다. `docs/API_SPEC.md`
 // §8(에러 코드 사전)의 표 첫 열을 직접 파싱해 이 파일의 사전과 양방향으로 대조한다 — 누락(§8 에는 있고 목록에 없음)과
 // 잔재(목록에는 있고 §8 에서 지워짐 — R46-LATERRT 가 찾은 `DUPLICATE_NOTIFICATION`) 둘 다 이 시험이 실패로 알린다.
-const specPath = path.resolve(fileURLToPath(import.meta.url), "../../../../../../../../docs/API_SPEC.md");
+// 사양은 backend 저장소에 있다(2026-10-02 저장소 분리) — 로컬은 형제 clone(`../backend`), CI 는 `API_SPEC_PATH` 로 받는다.
+// 파일이 없으면 건너뛰지 않고 실패한다: 건너뛰면 사양과 어긋나도 아무도 모른다.
+const specPath =
+  process.env.API_SPEC_PATH ??
+  path.resolve(fileURLToPath(import.meta.url), "../../../../../../backend/docs/API_SPEC.md");
 
 const codesFromSpec = (): string[] => {
   const text = readFileSync(specPath, "utf-8");

@@ -1,0 +1,42 @@
+# PR·main 검증: 타입 · lint · 단위 시험. 배포는 Vercel 이 이 저장소를 직접 빌드한다 — 이 워크플로는 아무것도 배포하지 않는다.
+# 실서버 계약 시험(realBackend)은 돌지 않는다(백엔드 부재). 로컬 재현은 scripts/verify.sh.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 PR 에 새 커밋이 오면 앞선 실행을 취소한다. main push 는 취소하지 않는다(모든 커밋의 결과가 남는다).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # 에러 코드 사전 대조 시험이 읽는 사양 — backend 저장소(같은 조직, 공개)의 docs/API_SPEC.md 한 파일만 받는다.
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/backend
+          path: .backend-spec
+          sparse-checkout: docs/API_SPEC.md
+          sparse-checkout-cone-mode: false
+
+      # 22 는 Dockerfile 의 런타임 · Vercel 런타임과 같은 주 버전이다.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 타입 · lint · 단위 시험(실서버 계약 시험 제외)
+        env:
+          API_SPEC_PATH: .backend-spec/docs/API_SPEC.md
+        run: scripts/verify.sh

@@ -1,3 +1,3 @@
-// report 기능의 공개 창구. 밖에서는 이 파일만 import 한다 (`docs/frontend/CONVENTIONS_REACT.md` "디렉터리").
+// report 기능의 공개 창구. 밖에서는 이 파일만 import 한다 (`docs/CONVENTIONS_REACT.md` "디렉터리").
 export { ReportList } from "./components/ReportList";
 export * from "./types";
