@@ -38,25 +38,28 @@ export const StaleMovingRunsPage = () => {
     })();
   }, [load]);
 
+  // 좁은 폭(1024px)에서 짧은 칸이 글자 단위로 줄바꿈되지 않게 방향·버스·버튼 칸에 폭을 준다. 종료 보류 표시는 탑승 중 칸에 함께 둔다.
   const columns: RosterColumn<StaleMovingRunItemResponseTypes>[] = [
     { key: "academyName", label: "학원" },
-    { key: "serviceDate", label: "운행일" },
-    { key: "direction", label: "방향", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
-    { key: "busNo", label: "버스" },
+    { key: "serviceDate", label: "운행일", width: "112px" },
+    { key: "direction", label: "방향", width: "64px", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
+    { key: "busNo", label: "버스", width: "80px" },
     { key: "startedAt", label: "운행 시작", render: (row) => formatDateTime(row.startedAt) },
     {
       key: "boardedCount",
       label: "탑승 중",
-      render: (row) => (row.boardedCount > 0 ? <Badge tone="red">{row.boardedCount}명 미하차</Badge> : "없음"),
-    },
-    {
-      key: "finishPending",
-      label: "",
-      render: (row) => (row.finishPending ? <Badge tone="amber">종료 보류</Badge> : null),
+      width: "120px",
+      render: (row) => (
+        <>
+          {row.boardedCount > 0 ? <Badge tone="red">{row.boardedCount}명 미하차</Badge> : "없음"}
+          {row.finishPending ? <Badge tone="amber">종료 보류</Badge> : null}
+        </>
+      ),
     },
     {
       key: "action",
       label: "",
+      width: "144px",
       render: (row) => (
         <Button variant="danger" onClick={() => setTarget(row)}>
           강제 종료
