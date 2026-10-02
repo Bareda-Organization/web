@@ -155,8 +155,11 @@ export class AcademyRealtimeClient {
   };
 
   // 연결을 시작한다. `forbidden`·`gaveUp` 상태에서 다시 호출하면 플래그와
-  // 시도 횟수가 초기화되어 재시도가 재개된다.
+  // 시도 횟수가 초기화되어 재시도가 재개된다. 연결 중·연결됨이면 무시한다 — Dart
+  // `BaraedaWebSocketClient.connect()` 와 같은 가드라, 호출부가 상태를 확인한 뒤
+  // 부르는 사이 상태가 바뀌어도 살아 있는 연결을 버리고 새로 만들지 않는다(R47 R-1).
   connect(): void {
+    if (this.state === "connecting" || this.state === "connected") return;
     this.manuallyDisconnected = false;
     this.forbidden = false;
     this.reconnectAttempt = 0;
@@ -227,6 +230,11 @@ export class AcademyRealtimeClient {
     const token = overrideToken ?? this.readAccessToken();
     const attempt = (this.attemptSeq += 1);
     this.currentAttempt = attempt;
+    // 쥐고 있던 연결을 닫고 바꾼다 — TOKEN_EXPIRED 재발급을 기다리는 사이 `connect()` 가 먼저 만든 연결이 재발급 뒤 새 토큰 연결에
+    // 덮이면 아무도 닫지 못하고 하트비트만 보내는 고아가 된다(R47 R-1). 번호표를 올린 뒤에 닫아야 닫힘 신호가 현재 연결로 오인되지 않는다.
+    this.client?.deactivate().catch(() => {
+      // 이미 닫힌 연결일 수 있다 — 닫으려던 것이니 무시한다([disconnect] 와 같은 사정).
+    });
     this.client = this.createClient({
       brokerURL: this.url,
       connectHeaders: token === null ? {} : { Authorization: `Bearer ${token}` },

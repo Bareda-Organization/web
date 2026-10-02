@@ -410,4 +410,81 @@ describe("AcademyRealtimeClient", () => {
     expect(client.getSnapshot()).toBe("forbidden");
     expect(handles).toHaveLength(1);
   });
+
+  // R47 R-1 — `connect()` 가 이미 연결됐거나 연결 중인 클라이언트를 닫지 않고 새로 만들어 덮으면, 덮인 쪽이 하트비트를 계속 보내는 고아가 된다.
+  it("R-1: 연결됐거나 연결 중인 클라이언트에 connect() 를 다시 불러도 새 클라이언트를 만들지 않는다 (Dart 와 같은 가드)", () => {
+    const { factory, handles } = createFakeClientFactory();
+    const client = new AcademyRealtimeClient({ url: "ws://x", createClient: factory, readAccessToken: () => null });
+
+    client.connect();
+    client.connect();
+    expect(handles).toHaveLength(1);
+    expect(client.getSnapshot()).toBe("connecting");
+
+    handles[0].connected = true;
+    handles[0].config.onConnect({ headers: {}, body: "" });
+    client.connect();
+    expect(handles).toHaveLength(1);
+    expect(handles[0].deactivateCalls).toBe(0);
+    expect(client.getSnapshot()).toBe("connected");
+  });
+
+  it("R-1: TOKEN_EXPIRED 재발급을 기다리는 사이(reconnecting) connect() 가 만든 연결은, 재발급 뒤 새 연결이 열릴 때 닫힌다", async () => {
+    const { factory, handles } = createFakeClientFactory();
+    let resolveRefresh: (token: string) => void = () => {};
+    const refreshAccessToken = vi.fn(() => new Promise<string>((resolve) => (resolveRefresh = resolve)));
+    const client = new AcademyRealtimeClient({
+      url: "ws://x",
+      createClient: factory,
+      readAccessToken: () => "old-token",
+      refreshAccessToken,
+    });
+    client.connect();
+    handles[0].config.onStompError({ headers: { message: "TOKEN_EXPIRED" }, body: "" });
+    handles[0].config.onWebSocketClose({});
+    expect(client.getSnapshot()).toBe("reconnecting");
+
+    // 탭이 다시 보이거나 온라인이 되면 `reopenIfStalled` 가 reconnecting 에서 `connect()` 를 부른다.
+    client.connect();
+    expect(handles).toHaveLength(2);
+
+    resolveRefresh("new-token");
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(handles).toHaveLength(3);
+    expect(handles[1].deactivateCalls).toBe(1);
+    expect(handles[2].deactivateCalls).toBe(0);
+  });
+
+  it("R-1: gaveUp·forbidden 에서 connect() 를 다시 부르면 새 클라이언트로 재시작한다", () => {
+    vi.useFakeTimers();
+    try {
+      const { factory, handles } = createFakeClientFactory();
+      const policy = new WsBackoffPolicy({ initialDelayMs: 10, multiplier: 1, maxDelayMs: 10, maxAttempts: 0 });
+      const client = new AcademyRealtimeClient({
+        url: "ws://x",
+        createClient: factory,
+        readAccessToken: () => null,
+        backoffPolicy: policy,
+      });
+      client.connect();
+      handles[0].config.onWebSocketClose({});
+      expect(client.getSnapshot()).toBe("gaveUp");
+
+      client.connect();
+      expect(handles).toHaveLength(2);
+      expect(client.getSnapshot()).toBe("connecting");
+
+      handles[1].config.onStompError({ headers: { message: "FORBIDDEN" }, body: "" });
+      handles[1].config.onWebSocketClose({});
+      expect(client.getSnapshot()).toBe("forbidden");
+
+      client.connect();
+      expect(handles).toHaveLength(3);
+      expect(client.getSnapshot()).toBe("connecting");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
