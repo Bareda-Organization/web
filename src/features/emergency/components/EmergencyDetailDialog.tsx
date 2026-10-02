@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { Badge, Button, Dialog, Textarea } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
 import { emergencyMapUrl } from "../lib/mapLink";
 import { FREE_TEXT_PRIVACY_NOTICE } from "@/shared/lib/freeTextNotice";
 import type { EmergencyItemResponseTypes } from "../types";
 import { PhoneContact } from "./PhoneContact";
 import { StyledEmergencyDetailBody, StyledEmergencyDetailRow } from "./EmergencyDetailDialog.styled";
+import { StyledEmergencyDeviceTime } from "./EmergencyList.styled";
 
 // 서버 상한과 같다(`EmergencyAckRequest` @Size(max = 200)) — 넘기면 서버가 422 로 거절한다.
 const ACK_MEMO_MAX_LENGTH = 200;
@@ -26,6 +28,7 @@ type EmergencyDetailDialogProps = {
 export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = false }: EmergencyDetailDialogProps) => {
   const [ackMemo, setAckMemo] = useState("");
   const canAck = onAck !== undefined && !emergency.acked && emergency.canceledAt === null;
+  const deviceNote = deviceTimeNote(emergency.raisedAt, emergency.occurredAt);
 
   return (
     <Dialog
@@ -48,7 +51,10 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
         <Badge tone="red">{EMERGENCY_TYPE_LABEL[emergency.type]}</Badge>
         <StyledEmergencyDetailRow>
           <span>발생 시각</span>
-          <span>{formatDateTime(emergency.raisedAt)}</span>
+          <span>
+            {formatDateTime(emergency.raisedAt)}
+            {deviceNote ? <StyledEmergencyDeviceTime>{deviceNote}</StyledEmergencyDeviceTime> : null}
+          </span>
         </StyledEmergencyDetailRow>
         <StyledEmergencyDetailRow>
           <span>발신자</span>
