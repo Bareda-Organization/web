@@ -379,7 +379,7 @@ export const MonitoringPage = () => {
           return;
         }
         default:
-          // `approval_requested` 는 관리자 채널에 안 오고(`docs/API_SPEC.md §7`
+          // `approval_requested` 는 관리자 채널에 안 오고(`docs/planning/API_SPEC.md §7`
           // 채널 표), 그 밖의 미지 이벤트는 이 화면이 무시한다.
           return;
       }

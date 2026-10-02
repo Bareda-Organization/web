@@ -44,7 +44,7 @@ export type StompClientConfig = {
 
 export type StompClientFactory = (config: StompClientConfig) => StompClientLike;
 
-// STOMP 하트비트 간격 — 양방향 10000ms. 연결 감시·재연결 값 전체는 `docs/API_SPEC.md §7.2` 표가 정하고 웹·Flutter(`baraeda_core`)가
+// STOMP 하트비트 간격 — 양방향 10000ms. 연결 감시·재연결 값 전체는 `docs/planning/API_SPEC.md §7.2` 표가 정하고 웹·Flutter(`baraeda_core`)가
 // 같은 값을 쓴다. 서버 `WebSocketConfig.HEARTBEAT_MS` 도 10초라 협상 결과가 10초다 — 값을 바꾸면 그 표와 세 클라이언트를 같이 고친다.
 const HEARTBEAT_MS = 10000;
 

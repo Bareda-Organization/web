@@ -1,6 +1,6 @@
 // `API_SPEC §7` 공통 봉투의 `event` 필드 — 이 앱이 구독하는 두 채널이 방송하는
 // 이벤트 전부(학원 채널 8종, 관리자 채널은 그중 approval_requested 를 뺀 7종 —
-// `docs/API_SPEC.md §7` 채널 표, BRIEF-W.md 항목 7·8).
+// `docs/planning/API_SPEC.md §7` 채널 표, BRIEF-W.md 항목 7·8).
 //
 // ⚠ `emergency_acked` 는 여기 없다 — Ruling 277(커밋 19b9c5f5·caeddb8c)로 매니저
 // 채널 전용으로 바뀌었고, 학원·관리자 채널에는 원래도 오지 않는다. `baraeda_core`

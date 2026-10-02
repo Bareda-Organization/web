@@ -22,12 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # 에러 코드 사전 대조 시험이 읽는 사양 — backend 저장소(같은 조직, 공개)의 docs/API_SPEC.md 한 파일만 받는다.
+      # 에러 코드 사전 대조 시험이 읽는 사양 — 작업 공간 저장소(workspace, 같은 조직, 공개)의 한 파일만 받는다.
       - uses: actions/checkout@v7
         with:
-          repository: ${{ github.repository_owner }}/backend
-          path: .backend-spec
-          sparse-checkout: docs/API_SPEC.md
+          repository: ${{ github.repository_owner }}/workspace
+          path: .workspace-docs
+          sparse-checkout: docs/planning/API_SPEC.md
           sparse-checkout-cone-mode: false
 
       # 22 는 Dockerfile 의 런타임 · Vercel 런타임과 같은 주 버전이다.
@@ -38,5 +38,5 @@ jobs:
 
       - name: 타입 · lint · 단위 시험(실서버 계약 시험 제외)
         env:
-          API_SPEC_PATH: .backend-spec/docs/API_SPEC.md
+          API_SPEC_PATH: .workspace-docs/docs/planning/API_SPEC.md
         run: scripts/verify.sh

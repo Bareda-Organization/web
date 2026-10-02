@@ -3,7 +3,7 @@
 // `baraeda_core`(Dart) 의 `WsChannel` 은 4개(studentRun · managerRun · academyLive ·
 // adminLive) 를 전부 갖는다 — 학부모·학생 앱과 매니저 앱이 그 나머지 2개를 쓰기
 // 때문이다. `academy-web` 은 관계자(학원 채널)와 메인 관리자(관리자 채널)만
-// 존재하는 역할이라(BRIEF-W.md §2, `docs/API_SPEC.md §7`) 여기 없는 2개를 만들면
+// 존재하는 역할이라(BRIEF-W.md §2, `docs/planning/API_SPEC.md §7`) 여기 없는 2개를 만들면
 // 이 앱 안에서 아무도 호출하지 않는 죽은 코드가 된다 — 판단 근거, 보고서 §1.
 //
 // Dart 쪽은 `WsChannel` 이라는 이름 없는 생성자 클래스로 4개를 정적 메서드로

@@ -168,7 +168,7 @@ export const parseWsEmergencyCanceledPayload = (
 });
 
 // `approval_requested` — 관계자 채널 전용(REQ-05). 관리자 채널에는 오지 않는다
-// (`wsEventType.ts` 주석 · `docs/API_SPEC.md §7` 채널 표).
+// (`wsEventType.ts` 주석 · `docs/planning/API_SPEC.md §7` 채널 표).
 export type WsApprovalRequestedPayload = {
   approvalId: string;
   studentName: string;
