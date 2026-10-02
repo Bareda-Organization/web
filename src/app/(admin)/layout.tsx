@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { value: "blocked-accounts", label: "차단 해제", icon: "shield-off" },
   { value: "emergency-alerts", label: "비상 알림", icon: "siren" },
   { value: "force-confirm", label: "회차 강제 확정", icon: "gavel" },
+  { value: "stale-runs", label: "끝나지 않은 회차", icon: "hourglass" },
   { value: "audit-log", label: "감사 · 접속 이력", icon: "history" },
 ] as const;
 
