@@ -44,3 +44,4 @@ next-env.d.ts
 graft/
 .docgraph/
 .mcp.json
+.ignore
