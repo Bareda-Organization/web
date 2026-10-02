@@ -72,6 +72,28 @@ describe("SignupStatusPanel — 승인 상태별 분기", () => {
   });
 });
 
+// BR-301(Ruling 781) — 학원이 대표 연락처를 등록하지 않으면 academy_contact 가 null 이다. 빈 칸 대신 대체 문구.
+describe("SignupStatusPanel — 학원 문의처(BR-301)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("문의처가 null 이면 '등록된 문의처 없음' 을 보여준다", async () => {
+    mockGetSignupStatus.mockResolvedValue({ ...baseStatus, academyContact: null });
+    setupSession();
+    render(<SignupStatusPanel />);
+
+    expect(await screen.findByText("등록된 문의처 없음")).toBeInTheDocument();
+  });
+
+  it("문의처가 있으면 그 값을 보여주고 대체 문구는 없다", async () => {
+    mockGetSignupStatus.mockResolvedValue(baseStatus);
+    setupSession();
+    render(<SignupStatusPanel />);
+
+    expect(await screen.findByText("02-1234-5678")).toBeInTheDocument();
+    expect(screen.queryByText("등록된 문의처 없음")).not.toBeInTheDocument();
+  });
+});
+
 // R32-W14 — 승인 상태를 불러오지 못했을 때 화면에 누를 것이 없어, 새로고침 말고는 복구 수단이 없었다.
 describe("SignupStatusPanel — 불러오기 실패(R32-W14)", () => {
   afterEach(() => {

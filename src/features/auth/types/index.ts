@@ -40,7 +40,8 @@ export type SignupStatusResponseTypes = {
   academy: { name: string; region: string; code: string };
   requestedAt: string;
   rejectReason?: string;
-  academyContact: string;
+  // 학원이 대표 연락처를 등록하지 않았으면 null (§2.3 · Ruling 781)
+  academyContact: string | null;
 };
 
 export type ReapplySignupResponseTypes = {

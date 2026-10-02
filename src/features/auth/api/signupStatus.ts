@@ -9,7 +9,7 @@ export const getSignupStatus = async (): Promise<SignupStatusResponseTypes> => {
     academy: SignupStatusResponseTypes["academy"];
     requested_at: string;
     reject_reason?: string;
-    academy_contact: string;
+    academy_contact: string | null;
   }>("/auth/signup-status", { method: "GET" });
   return {
     status: response.status,

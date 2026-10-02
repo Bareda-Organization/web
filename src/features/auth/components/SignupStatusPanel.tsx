@@ -149,7 +149,7 @@ export const SignupStatusPanel = () => {
               </StyledField>
               <StyledField>
                 <span>학원 문의처</span>
-                <span>{status.academyContact}</span>
+                <span>{status.academyContact ?? "등록된 문의처 없음"}</span>
               </StyledField>
             </StyledFieldList>
           </Card>
