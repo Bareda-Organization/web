@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "design-system/**", // 디자인 시스템 사본 — 읽기 전용이라 lint 하지 않는다
   ]),
 ]);
 
