@@ -8,7 +8,7 @@ updates:
     groups:
       npm:
         patterns: ["*"]
-    # 주 버전 무시 — @types/node 는 런타임 Node 22 에 맞춘다(Ruling 727) · eslint 10 · typescript 7 은 lint 가 실패해 거절했다
+    # 주 버전 무시 — @types/node 는 런타임 Node 24 에 맞춘다(Ruling 727·780) · eslint 10 · typescript 7 은 lint 가 실패해 거절했다
     # (Ruling 753 — 재검토 조건: eslint-config-next 의 ESLint 10 지원 · typescript-eslint 의 TS 7 지원)
     ignore:
       - dependency-name: "@types/node"
