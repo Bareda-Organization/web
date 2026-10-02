@@ -3,7 +3,7 @@ import { createBus, getBuses, updateBus } from "./index";
 
 // §5.12 BUS-01·02 — snake_case 응답을 camelCase 로 바꾸는 경계(toBus)가 이 계층의
 // 전부다. 필드 하나가 잘못 매핑되면 화면 전체가 엉뚱한 값을 그린다 — 브라우저 없이도
-// 재현 가능한 순수 변환 로직이라 vitest.config.ts 가 말하는 대상에 해당한다.
+// 재현 가능한 순수 변환 로직이라 vitest.config.mts 가 말하는 대상에 해당한다.
 const mockJsonResponse = (status: number, body: unknown): Response =>
   ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
 
