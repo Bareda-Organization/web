@@ -46,16 +46,18 @@ beforeEach(() => {
     maps: {
       // 실제 SDK 의 `Map` 이 갖는 것 중 이 컴포넌트가 부르는 것만 흉내 낸다 —
       // 빠뜨리면 카메라 effect 가 던져서 뒤따르는 노선 effect 까지 멈춘다.
-      Map: vi.fn(() => ({ setCenter: vi.fn(), setZoom: vi.fn(), destroy: vi.fn() })),
+      // `new` 로 불리는 가짜는 화살표 함수가 아니라 `function` 으로 쓴다 — vitest 4 부터 `Reflect.construct` 로 만들어
+      // 화살표 함수는 `is not a constructor` 로 던진다(R47 vitest 5).
+      Map: vi.fn(function () { return { setCenter: vi.fn(), setZoom: vi.fn(), destroy: vi.fn() }; }),
       LatLng: vi.fn(function (this: unknown, lat: number, lng: number) {
         Object.assign(this as object, { lat, lng });
       }),
-      Marker: vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() })),
-      Polyline: polylineCtor.mockImplementation(() => ({
+      Marker: vi.fn(function () { return { setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() }; }),
+      Polyline: polylineCtor.mockImplementation(function () { return {
         setMap: vi.fn(),
         setPath: vi.fn(),
         setOptions: vi.fn(),
-      })),
+      }; }),
       Event: { addListener: vi.fn(), removeListener: vi.fn() },
     },
   };
@@ -134,11 +136,11 @@ describe("NaverMapSurface — 화면이 사라질 때(K-6)", () => {
   it("만들어 둔 지도 객체를 destroy 한다", async () => {
     const releaseScript = heldScriptLoad();
     const destroy = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter: vi.fn(),
       setZoom: vi.fn(),
       destroy,
-    }));
+    }; });
     const { unmount } = render(<NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 14 }} markers={[]} />);
     await releaseScript();
     await waitFor(() => expect(window.naver?.maps.Map).toHaveBeenCalledTimes(1));
@@ -159,11 +161,11 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
     const setZoom = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter,
       setZoom,
       destroy: vi.fn(),
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface
@@ -189,11 +191,11 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
   it("다른 버스를 선택하면 카메라가 다시 옮겨간다", async () => {
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter,
       setZoom: vi.fn(),
       destroy: vi.fn(),
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface
@@ -223,11 +225,11 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
   it("버스 마커 없이 노선만 새로 생겨도 카메라가 옮겨간다", async () => {
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter,
       setZoom: vi.fn(),
       destroy: vi.fn(),
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 12 }} markers={[]} polylines={[]} />,
@@ -262,11 +264,11 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
   it("선택이 없어도 버스 마커가 처음 들어오면 카메라를 다시 맞춘다", async () => {
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter,
       setZoom: vi.fn(),
       destroy: vi.fn(),
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface camera={{ lat: 37.5, lng: 127, zoom: 12 }} markers={[]} polylines={[]} />,
@@ -345,11 +347,11 @@ describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목�
   it("승하차지 마커도 selected 가 켜지면 아이콘을 다시 굳힌다", async () => {
     const releaseScript = heldScriptLoad();
     const setIcon = vi.fn();
-    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(function () { return {
       setMap: vi.fn(),
       setPosition: vi.fn(),
       setIcon,
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface
@@ -377,11 +379,11 @@ describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목�
   it("아이콘 내용이 그대로면 다시 굳히지 않는다", async () => {
     const releaseScript = heldScriptLoad();
     const setIcon = vi.fn();
-    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = vi.fn(function () { return {
       setMap: vi.fn(),
       setPosition: vi.fn(),
       setIcon,
-    }));
+    }; });
 
     const { rerender } = render(
       <NaverMapSurface
@@ -412,7 +414,7 @@ describe("NaverMapSurface — 비상 마커 강조(W2-01)", () => {
   it("이미 떠 있던 버스에 emergency 가 켜지면 아이콘을 붉은 테두리로 다시 굳힌다", async () => {
     const releaseScript = heldScriptLoad();
     const setIcon = vi.fn();
-    const Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon }));
+    const Marker = vi.fn(function () { return { setMap: vi.fn(), setPosition: vi.fn(), setIcon }; });
     (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = Marker;
     const camera = { lat: 37.5, lng: 127, zoom: 14 };
 
@@ -429,7 +431,7 @@ describe("NaverMapSurface — 비상 마커 강조(W2-01)", () => {
 
   it("비상 중에 처음 그려지는 버스도 붉은 테두리로 만들어진다", async () => {
     const releaseScript = heldScriptLoad();
-    const Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() }));
+    const Marker = vi.fn(function () { return { setMap: vi.fn(), setPosition: vi.fn(), setIcon: vi.fn() }; });
     (window as unknown as { naver: { maps: { Marker: unknown } } }).naver.maps.Marker = Marker;
 
     render(
@@ -451,12 +453,12 @@ describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {
     const setCenter = vi.fn();
     const setZoom = vi.fn();
     const fitBounds = vi.fn();
-    (window as unknown as { naver: { maps: { Map: unknown; LatLngBounds: unknown } } }).naver.maps.Map = vi.fn(() => ({
+    (window as unknown as { naver: { maps: { Map: unknown; LatLngBounds: unknown } } }).naver.maps.Map = vi.fn(function () { return {
       setCenter,
       setZoom,
       fitBounds,
       destroy: vi.fn(),
-    }));
+    }; });
     (window as unknown as { naver: { maps: { LatLngBounds: unknown } } }).naver.maps.LatLngBounds = vi.fn();
 
     render(
@@ -500,13 +502,13 @@ describe("NaverMapSurface — 끌 수 있는 마커(2026-09-23)", () => {
     const setOptions = vi.fn();
     const setPosition = vi.fn();
     const naverMaps = (window as unknown as { naver: { maps: Record<string, unknown> } }).naver.maps;
-    naverMaps.Map = vi.fn(() => ({
+    naverMaps.Map = vi.fn(function () { return {
       setCenter: vi.fn(), setZoom: vi.fn(), destroy: vi.fn(), setOptions, getProjection: () => 투영,
-    }));
+    }; });
     naverMaps.Point = vi.fn(function (this: unknown, x: number, y: number) {
       Object.assign(this as object, { x, y });
     });
-    naverMaps.Marker = vi.fn(() => ({ setMap: vi.fn(), setPosition, setIcon: vi.fn() }));
+    naverMaps.Marker = vi.fn(function () { return { setMap: vi.fn(), setPosition, setIcon: vi.fn() }; });
     const onMarkerDragEnd = vi.fn();
     const onMapClick = vi.fn();
     const { container } = render(
