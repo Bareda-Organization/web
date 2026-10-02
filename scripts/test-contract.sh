@@ -16,6 +16,9 @@ cd "${BACKEND_ROOT:-$WEB_ROOT/../backend}"
 export PATH="/Applications/Code/Docker.app/Contents/Resources/bin:$PATH"
 
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.app.yml"
+# 계약 시험은 시험 전용 시드(db/fixture)로 띄운 서버에 돈다 — 기본(local)은 QA Mock(db/qa-seed)이라 시험이 붙드는
+# 계정·회차 id 가 없다(2026-10-03 backend 시드 분리). 이 변수는 backend docker-compose.app.yml 이 읽는다.
+export BACKEND_PROFILES=local,fixture
 echo "시드를 새로 깐다 — 컨테이너 재생성"
 $COMPOSE down >/dev/null 2>&1
 $COMPOSE up -d >/dev/null 2>&1
