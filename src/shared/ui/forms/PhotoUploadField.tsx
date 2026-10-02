@@ -10,6 +10,8 @@ import { StyledHelperText, StyledHiddenInput, StyledLabel, StyledPreview, Styled
 // 기준은 어디까지나 사양이 정한 5MB 다 — 두 값을 섞어 안내하지 않는다.
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+// §5.11.1 · Ruling 745 — 서버에 WebP 쓰기가 없어 올린 WebP 는 JPEG 로(투명 배경이 있으면 PNG 로) 저장된다.
+const WEBP_NOTE = "WebP 는 JPEG 로 저장됩니다 (투명 배경이 있으면 PNG)";
 
 export type PhotoUploadFieldProps = {
   label?: string;
@@ -33,6 +35,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
   const [removed, setRemoved] = useState(false);
   const previewUrl = removed ? undefined : (localPreviewUrl ?? existingSrc);
   const [localError, setLocalError] = useState<string | undefined>(undefined);
+  const [localNote, setLocalNote] = useState<string | undefined>(undefined);
 
   // 언마운트 갈래 — 마지막으로 만든 blob: URL 을 해제한다. 안 하면 화면을 오래 쓸수록
   // 미리보기용 객체 URL 이 메모리에 쌓인다.
@@ -69,6 +72,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
     objectUrlRef.current = nextUrl;
 
     setLocalError(undefined);
+    setLocalNote(file.type === "image/webp" ? WEBP_NOTE : undefined);
     setRemoved(false);
     setLocalPreviewUrl(nextUrl);
     onChange(file);
@@ -80,6 +84,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
       objectUrlRef.current = undefined;
     }
     setLocalError(undefined);
+    setLocalNote(undefined);
     setLocalPreviewUrl(undefined);
     setRemoved(true);
     onChange(null);
@@ -88,7 +93,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
     }
   };
 
-  const helperText = localError ?? error;
+  const helperText = localError ?? error ?? localNote;
 
   return (
     <StyledWrap>
