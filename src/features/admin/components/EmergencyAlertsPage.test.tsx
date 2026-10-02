@@ -27,6 +27,49 @@ describe("EmergencyAlertsPage — 목록 조회 실패", () => {
   });
 });
 
+// R47 Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발신 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
+describe("EmergencyAlertsPage — 단말 기록 시각 병기", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const item = (id: string, raisedAt: string, occurredAt: string) => ({
+    emergencyId: id,
+    academy: { id: "1", name: `학원${id}`, contact: "02-000-0000" },
+    type: "accident" as const,
+    memo: null,
+    raisedBy: { name: "이기사", role: "driver" as const, phone: "010-1111-2222" },
+    runId: "1",
+    busNo: "1호차",
+    direction: "to_academy" as const,
+    position: { lat: 37.5, lng: 127.0, recordedAt: null },
+    riderCount: 1,
+    contacts: [],
+    raisedAt,
+    occurredAt,
+    staffAcked: false,
+    ackedAt: null,
+    canceledAt: null,
+    ackedBy: null,
+    elapsedSinceRaised: 10,
+  });
+
+  it("두 시각이 7분 벌어지면 접수 시각 아래에 단말 기록 시각을 참고로 보이고, 1분 안이면 보이지 않는다", async () => {
+    mockGetEmergencies.mockResolvedValue({
+      items: [
+        item("1", "2026-09-30T08:10:00+09:00", "2026-09-30T08:03:00+09:00"),
+        item("2", "2026-09-30T08:20:00+09:00", "2026-09-30T08:19:30+09:00"),
+      ],
+      unackedCount: 2,
+    });
+    render(<EmergencyAlertsPage />);
+
+    expect(await screen.findByText("단말 기록 08:03(참고)")).toBeInTheDocument();
+    expect(screen.getAllByText(/단말 기록/)).toHaveLength(1);
+    expect(screen.getByText("2026-09-30 08:10")).toBeInTheDocument();
+  });
+});
+
 // Z-04(Ruling 379 ①) — §6.11 은 최근 200건까지만 주고 날짜로 좁히는 수단도 없다.
 describe("EmergencyAlertsPage — 200건 상한 안내", () => {
   afterEach(() => {

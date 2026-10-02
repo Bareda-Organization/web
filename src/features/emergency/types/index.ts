@@ -33,6 +33,8 @@ export type EmergencyItemResponseTypes = {
   riderCount: number;
   contacts: EmergencyPersonTypes[];
   raisedAt: string;
+  // 단말이 누른 시각 — 서버가 항상 채우지만(안 보냈으면 접수 시각과 같다) 참고값이라 없어도 견딘다(R47 Ruling 744).
+  occurredAt?: string | null;
   ackedAt: string | null;
   canceledAt: string | null;
   // 표에는 없으나 실측 응답에 존재 — acked_at 유무만으로도 판정 가능하지만

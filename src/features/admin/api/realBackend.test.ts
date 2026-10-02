@@ -238,6 +238,8 @@ describe("admin api — 실서버 계약", () => {
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
+    // R47 Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
+    expect(typeof result.items[0].occurredAt).toBe("string");
   });
 
   // AUTH_ACCOUNT_BLOCKED(목표 14) 재현 — 2026-09-14 Ruling 282 수정 병합 후

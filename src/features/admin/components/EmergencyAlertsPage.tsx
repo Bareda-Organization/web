@@ -8,8 +8,13 @@ import { getEmergencies } from "../api";
 import type { EmergencyItemResponseTypes } from "../types";
 import { emergencyTypeLabel } from "../lib/emergencyType";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
-import { StyledEmergencyAlertsLayout, StyledEmergencyHeaderRow } from "./EmergencyAlertsPage.styled";
+import {
+  StyledEmergencyAlertsLayout,
+  StyledEmergencyDeviceTime,
+  StyledEmergencyHeaderRow,
+} from "./EmergencyAlertsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { formatRole } from "@/shared/lib/format/roleLabel";
 import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
@@ -48,7 +53,19 @@ export const EmergencyAlertsPage = () => {
     { key: "raisedBy", label: "발신자", render: (row) => `${row.raisedBy.name ?? "미상"} (${formatRole(row.raisedBy.role)})` },
     // §6.11 elapsed_since_raised — 관계자가 몇 분째 응답하지 않았는지가 이 화면의 핵심 정보다(미응답 지연 인지).
     { key: "elapsed", label: "경과", render: (row) => formatElapsed(row.elapsedSinceRaised) },
-    { key: "raisedAt", label: "발신 시각", render: (row) => formatDateTime(row.raisedAt) },
+    {
+      key: "raisedAt",
+      label: "발신 시각",
+      render: (row) => {
+        const note = deviceTimeNote(row.raisedAt, row.occurredAt);
+        return (
+          <>
+            {formatDateTime(row.raisedAt)}
+            {note ? <StyledEmergencyDeviceTime>{note}</StyledEmergencyDeviceTime> : null}
+          </>
+        );
+      },
+    },
     {
       key: "staffAcked",
       label: "학원 확인",

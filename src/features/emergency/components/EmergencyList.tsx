@@ -6,12 +6,18 @@ import { usePolling } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, Input, PageHeader, RosterTable, SegmentedControl } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { ackEmergency, getEmergencies } from "../api";
 import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
 import { emergencyMapUrl } from "../lib/mapLink";
 import type { EmergencyItemResponseTypes, EmergencyStatus } from "../types";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
-import { StyledEmergencyFilters, StyledEmergencyLayout, StyledEmergencyPosition } from "./EmergencyList.styled";
+import {
+  StyledEmergencyDeviceTime,
+  StyledEmergencyFilters,
+  StyledEmergencyLayout,
+  StyledEmergencyPosition,
+} from "./EmergencyList.styled";
 import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 
 // 메인 관리자 화면(EmergencyAlertsPage)과 같은 주기.
@@ -87,7 +93,19 @@ export const EmergencyList = () => {
   };
 
   const columns: RosterColumn<EmergencyItemResponseTypes>[] = [
-    { key: "raisedAt", label: "발생 시각", render: (row) => formatDateTime(row.raisedAt) },
+    {
+      key: "raisedAt",
+      label: "발생 시각",
+      render: (row) => {
+        const note = deviceTimeNote(row.raisedAt, row.occurredAt);
+        return (
+          <>
+            {formatDateTime(row.raisedAt)}
+            {note ? <StyledEmergencyDeviceTime>{note}</StyledEmergencyDeviceTime> : null}
+          </>
+        );
+      },
+    },
     { key: "type", label: "종류", render: (row) => <Badge tone="red">{EMERGENCY_TYPE_LABEL[row.type]}</Badge> },
     {
       key: "bus",
