@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
 import {
@@ -316,7 +316,8 @@ export const MonitoringPage = () => {
   // F03-10 — 이 채널은 전 학원을 방송한다. 지금 보는 학원 목록에 있는 회차의 이벤트만 재조회하고,
   // 잇단 이벤트는 짧게 묶어 한 번만 읽는다.
   const runsRef = useRef(runs);
-  useEffect(() => {
+  // 레이아웃 효과로 맞춘다 — 일반 효과는 커밋보다 늦게 돌아, 목록이 화면에 나온 직후 도착한 방송이 아직 비어 있는 목록을 읽고 버려졌다.
+  useLayoutEffect(() => {
     runsRef.current = runs;
   });
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
