@@ -35,7 +35,7 @@ const open강제종료 = async (busNo: string) => {
 
 describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("목록에 학원·운행일·방향·남은 탑승자 수·종료 보류를 보여준다", async () => {
