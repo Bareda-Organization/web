@@ -20,7 +20,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/navermaps": "^3.9.2",
     "@types/node": "^22.20.5",
