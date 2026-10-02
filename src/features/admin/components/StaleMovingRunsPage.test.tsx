@@ -58,6 +58,26 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
     expect(await screen.findByText("끝나지 않은 회차가 없습니다")).toBeInTheDocument();
   });
 
+  // §6.16 — 서버는 최대 200건만 주고 오래된 회차부터 자른다. 정확히 200건이면 더 있을 수 있어 "일부만 표시" 를 알린다.
+  it("목록이 상한 200건에 닿으면 일부만 표시한다는 안내를 보여준다", async () => {
+    const items = Array.from({ length: 200 }, (_, index) => run({ runId: String(index + 1), busNo: `${index + 1}호` }));
+    mockGetRuns.mockResolvedValue({ items });
+
+    render(<StaleMovingRunsPage />);
+
+    expect(await screen.findByText(/오래된 회차부터 200건만 표시/)).toBeInTheDocument();
+  });
+
+  it("목록이 상한 미만이면 일부만 표시한다는 안내를 보이지 않는다", async () => {
+    const items = Array.from({ length: 199 }, (_, index) => run({ runId: String(index + 1), busNo: `${index + 1}호` }));
+    mockGetRuns.mockResolvedValue({ items });
+
+    render(<StaleMovingRunsPage />);
+
+    expect(await screen.findByText("199호")).toBeInTheDocument();
+    expect(screen.queryByText(/200건만 표시/)).not.toBeInTheDocument();
+  });
+
   it("대화상자는 남은 탑승자 수를 경고하고 사유가 비면 실행 버튼이 비활성이다", async () => {
     mockGetRuns.mockResolvedValue({ items: [run({ boardedCount: 3 })] });
     render(<StaleMovingRunsPage />);

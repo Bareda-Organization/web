@@ -7,6 +7,7 @@ import {
   createAcademy,
   decideStaffSignupRequest,
   forceConfirmRun,
+  forceFinishRun,
   getAcademies,
   getAcademy,
   getAcademyRunsLive,
@@ -17,6 +18,7 @@ import {
   getEmergencies,
   getLoginHistory,
   getRunRoster,
+  getStaleMovingRuns,
   getStaffAccounts,
   getStaffSignupRequests,
   unblockAccount,
@@ -24,9 +26,9 @@ import {
   updateStaffAccount,
 } from "./index";
 
-// (admin) 8화면(academies·audit-log·blocked-accounts·emergency-alerts·
-// force-confirm·member-accounts·member-approvals·monitoring)이 쓰는 §6 엔드포인트
-// 16개 전부를 F5-W2 전용 백엔드에 붙여 확인한다. 이 라우트 그룹은 전부 sysadmin
+// (admin) 9화면(academies·audit-log·blocked-accounts·emergency-alerts·
+// force-confirm·stale-runs·member-accounts·member-approvals·monitoring)이 쓰는 §6 엔드포인트
+// 전부를 F5-W2 전용 백엔드에 붙여 확인한다. 이 라우트 그룹은 전부 sysadmin
 // 전용이다(판단 근거, 보고서 §1).
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
@@ -341,6 +343,73 @@ describe("admin api — 실서버 계약", () => {
     await expect(forceConfirmRun("99999", "F5-W2 계약 시험")).rejects.toMatchObject({
       status: 404,
       code: "RUN_NOT_FOUND",
+    });
+  });
+
+  // R47 Ruling 724 — §6.16. 시드에는 운행일이 이틀 넘게 지난 이동 중 회차가 없어(회차는 전부 적용일 당일) 대개 빈 목록이다.
+  // 그래서 "비어 있어도 형태가 맞고, 있으면 항목 형태·정렬·상한이 맞는다" 만 고정한다(§6.15 와 같은 방식).
+  it("getStaleMovingRuns 는 끝나지 않은 이동 중 회차 목록의 형태를 지킨다(§6.16 · Ruling 724)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    const result = await getStaleMovingRuns();
+
+    expect(Array.isArray(result.items)).toBe(true);
+    expect(result.items.length).toBeLessThanOrEqual(200);
+    for (const item of result.items) {
+      expect(typeof item.runId).toBe("string");
+      expect(typeof item.academyId).toBe("string");
+      expect(typeof item.academyName).toBe("string");
+      expect(item.serviceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(["to_academy", "from_academy"]).toContain(item.direction);
+      expect(typeof item.busNo).toBe("string");
+      expect(typeof item.finishPending).toBe("boolean");
+      expect(item.boardedCount).toBeGreaterThanOrEqual(0);
+    }
+    const dates = result.items.map((item) => item.serviceDate);
+    expect(dates).toEqual([...dates].sort()); // 운행일 오름차순
+  });
+
+  // §6.17 — 성공 경로는 시드에 대상 회차가 없고 되돌릴 수 없어 두지 않는다. 시드를 바꾸지 않는 오류 경로 4갈래만 서버에 붙인다.
+  it("RUN_NOT_FOUND — 존재하지 않는 회차를 강제 종료하면 404 로 거부된다(§6.17)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    await expect(forceFinishRun("99999", "F2 계약 시험")).rejects.toMatchObject({
+      status: 404,
+      code: "RUN_NOT_FOUND",
+    });
+  });
+
+  // run 3 은 시드 기준 오늘 운행 중인 회차라 이동 중이긴 하나 운행일이 어제보다 이르지 않다.
+  it("RUN_NOT_STALE — 운행일이 오늘인 이동 중 회차를 강제 종료하면 409 로 거부된다(§6.17)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    await expect(forceFinishRun("3", "F2 계약 시험")).rejects.toMatchObject({
+      status: 409,
+      code: "RUN_NOT_STALE",
+    });
+  });
+
+  // run 4 는 시드 기준 이미 종료된 회차다.
+  it("RUN_NOT_MOVING — 이미 끝난 회차를 강제 종료하면 409 로 거부된다(§6.17)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    await expect(forceFinishRun("4", "F2 계약 시험")).rejects.toMatchObject({
+      status: 409,
+      code: "RUN_NOT_MOVING",
+    });
+  });
+
+  it("VALIDATION_FAILED — 사유가 공백뿐이면 422 로 거부된다(§6.17)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
+
+    await expect(forceFinishRun("3", "   ")).rejects.toMatchObject({
+      status: 422,
+      code: "VALIDATION_FAILED",
     });
   });
 });

@@ -65,6 +65,52 @@ describe("PhotoUploadField — blob: URL 해제", () => {
   });
 });
 
+// §5.11.1 · Ruling 745 — 서버에 WebP 쓰기가 없어 WebP 는 JPEG(투명 배경이면 PNG)로 저장된다. 고른 파일이 WebP 일 때만 알린다.
+describe("PhotoUploadField — WebP 저장 형식 안내", () => {
+  const webpFile = () => new File(["fake-image-bytes"], "photo.webp", { type: "image/webp" });
+  const jpegFile = () => new File(["fake-image-bytes"], "photo.jpg", { type: "image/jpeg" });
+  const NOTE = /WebP 는 JPEG 로 저장됩니다/;
+
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:mock");
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  const pick = (file: File) => {
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+  };
+
+  it("WebP 를 고르면 JPEG(투명하면 PNG)로 저장된다는 안내를 보여준다", () => {
+    render(<PhotoUploadField onChange={vi.fn()} />);
+
+    pick(webpFile());
+
+    expect(screen.getByText(NOTE)).toBeInTheDocument();
+    expect(screen.getByText(/투명 배경이 있으면 PNG/)).toBeInTheDocument();
+  });
+
+  it("JPEG 를 고르면 안내가 없다", () => {
+    render(<PhotoUploadField onChange={vi.fn()} />);
+
+    pick(jpegFile());
+
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
+  });
+
+  it("WebP 를 고른 뒤 JPEG 로 바꾸거나 제거하면 안내가 사라진다", () => {
+    render(<PhotoUploadField onChange={vi.fn()} />);
+
+    pick(webpFile());
+    pick(jpegFile());
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
+
+    pick(webpFile());
+    fireEvent.click(screen.getByText("제거"));
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
+  });
+});
+
 // Ruling 377 — 기존 사진이 상대 경로면 토큰을 실어 받아 blob: URL 로 그린다. 실패하면 사진 없음 표시.
 describe("PhotoUploadField — 보호된 기존 사진", () => {
   const okImage = () =>

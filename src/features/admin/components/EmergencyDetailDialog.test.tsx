@@ -39,3 +39,32 @@ describe("메인 관리자 EmergencyDetailDialog — 조치 메모", () => {
     expect(screen.getByText("조치 메모").nextSibling).toHaveTextContent("-");
   });
 });
+
+// R47 Ruling 744 — 단말이 누른 시각은 참고값이다. 접수 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.
+describe("메인 관리자 EmergencyDetailDialog — 단말 기록 시각", () => {
+  const RAISED = "2026-09-12T08:10:00+09:00";
+
+  it("접수 시각과 1분 넘게 벌어진 단말 시각을 접수 시각 아래에 병기한다", () => {
+    render(
+      <EmergencyDetailDialog
+        emergency={{ ...EMERGENCY, raisedAt: RAISED, occurredAt: "2026-09-12T08:02:00+09:00" }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("단말 기록 08:02(참고)")).toBeInTheDocument();
+  });
+
+  it("단말 시각이 접수 시각과 비슷하거나 없으면 병기하지 않는다", () => {
+    const { rerender } = render(
+      <EmergencyDetailDialog
+        emergency={{ ...EMERGENCY, raisedAt: RAISED, occurredAt: "2026-09-12T08:09:30+09:00" }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/단말 기록/)).not.toBeInTheDocument();
+
+    rerender(<EmergencyDetailDialog emergency={{ ...EMERGENCY, raisedAt: RAISED, occurredAt: null }} onClose={vi.fn()} />);
+    expect(screen.queryByText(/단말 기록/)).not.toBeInTheDocument();
+  });
+});

@@ -11,6 +11,9 @@ import type { StaleMovingRunItemResponseTypes } from "../types";
 import { ForceFinishDialog } from "./ForceFinishDialog";
 import { StyledForceConfirmLayout } from "./ForceConfirmPage.styled";
 
+// §6.16 서버가 한 번에 주는 최대 건수 — 이만큼 오면 더 있을 수 있다(오래된 회차부터 자른다).
+const STALE_MOVING_RUN_LIMIT = 200;
+
 // §6.16·§6.17 끝나지 않은 이동 중 회차(Ruling 724). `StaleMovingRun` 경보가 세는 회차를 메인 관리자가 학원에 확인한 뒤 닫는다.
 // 목록은 서버가 운행일 오름차순으로 준다 — 오래된 회차부터 처리하고, 처리한 행은 다시 불러온 목록에서 사라진다.
 export const StaleMovingRunsPage = () => {
@@ -77,6 +80,12 @@ export const StaleMovingRunsPage = () => {
 
       {notice ? <AlertBanner tone="boarded" title={notice} /> : null}
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {runs.length >= STALE_MOVING_RUN_LIMIT ? (
+        <AlertBanner
+          tone="info"
+          title={`오래된 회차부터 ${STALE_MOVING_RUN_LIMIT}건만 표시합니다 — 처리하면 다음 회차가 올라옵니다`}
+        />
+      ) : null}
 
       <Card padding={0} aria-busy={loading}>
         {!loading && !error && runs.length === 0 ? (

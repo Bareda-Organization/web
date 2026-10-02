@@ -183,6 +183,38 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     },
   );
 
+  // 간헐 실패(10회 중 1회)의 원인 고정 — 목록이 화면에 나온 직후부터 passive effect(`runsRef` 갱신)가 돌기 전까지의 틈에 도착한 이벤트가
+  // 비어 있는 `runsRef` 를 읽어 "지금 보는 학원의 회차가 아님" 으로 버려졌다. 그 틈은 렌더가 스케줄러 한 조각(약 5ms)을 넘기거나 CPU 가 바쁠 때만
+  // 열려 재현이 드물다 — 지도를 12ms 걸려 그려 조각을 넘기게 하고, 커밋 직후 마이크로태스크(MutationObserver)에서 이벤트를 보내 틈을 결정적으로 만든다.
+  it("목록이 그려진 직후(passive effect 보다 먼저) 도착한 stop_arrived 도 재조회를 일으킨다", async () => {
+    mockMapSurface.mockImplementation(() => {
+      const startedAt = performance.now();
+      while (performance.now() - startedAt < 12) {
+        // 렌더 지연을 흉내 내는 바쁜 대기
+      }
+      return null;
+    });
+    try {
+      let callsBefore = -1;
+      const arrivedRightAfterCommit = new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (!screen.queryByText("위치 확인 대기")) return;
+          observer.disconnect();
+          callsBefore = mockGetRunsLive.mock.calls.length;
+          capturedOnEnvelope?.(envelope("stop_arrived", {}));
+          resolve();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+      render(<MonitoringPage />);
+      await arrivedRightAfterCommit;
+
+      await waitFor(() => expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore + 1));
+    } finally {
+      mockMapSurface.mockImplementation(() => null); // 다른 시험의 렌더를 늦추지 않는다
+    }
+  });
+
   it("emergency_raised 이벤트는 학원 필터와 무관하게 비상 배너를 띄운다", async () => {
     render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
