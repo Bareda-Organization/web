@@ -202,8 +202,10 @@ export const MonitoringPage = () => {
         const items = await getAllAcademies();
         if (!cancelled) {
           setAcademies(items);
-          if (items.length > 0) {
-            setAcademyId(items[0].id);
+          // 목록은 최근 등록 순이라 첫 항목이 셔틀 없는 비활성 학원일 수 있다 — 첫 활성 학원을 고른다
+          const initial = items.find((academy) => academy.status === "active") ?? items[0];
+          if (initial) {
+            setAcademyId(initial.id);
           }
         }
       } catch (cause) {

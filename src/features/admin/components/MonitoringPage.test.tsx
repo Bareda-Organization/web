@@ -125,6 +125,25 @@ describe("MonitoringPage — 학원 목록 조회 실패", () => {
   });
 });
 
+describe("MonitoringPage — 처음 고르는 학원", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // 학원 목록은 최근 등록 순이라 첫 항목이 셔틀 없는 비활성 학원일 수 있다 — 처음 화면이 빈 지도로 열리지 않게 첫 활성 학원을 고른다.
+  it("목록 첫 항목이 비활성 학원이면 첫 활성 학원의 회차를 조회한다", async () => {
+    mockGetAcademies.mockResolvedValue([
+      { id: "3", code: "C001", name: "휴원 학원", region: "서울", staffCount: 1, userCount: 1, status: "inactive" },
+      { id: "2", code: "B001", name: "운행 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" },
+    ]);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<MonitoringPage />);
+
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalled());
+    expect(mockGetRunsLive.mock.calls[0][0]).toBe("2");
+  });
+});
+
 describe("MonitoringPage — 실시간 회차 조회 실패", () => {
   afterEach(() => {
     vi.clearAllMocks();
