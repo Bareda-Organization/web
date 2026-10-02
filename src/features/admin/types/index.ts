@@ -382,3 +382,27 @@ export type ForceConfirmResponseTypes = {
   fallbackUsed: true;
   confirmedAt: string;
 };
+
+// ── §6.16·§6.17 끝나지 않은 이동 중 회차 목록·강제 종료 (Ruling 724) — 되돌릴 수 없다 ──
+export type StaleMovingRunItemResponseTypes = {
+  runId: string;
+  academyId: string;
+  academyName: string;
+  serviceDate: string;
+  direction: "to_academy" | "from_academy";
+  busNo: string;
+  startedAt: string | null;
+  finishPending: boolean;
+  // 아직 `boarded` 인 탑승자 수 — 강제 종료하면 하차 처리 없이 남겨지는 인원이다.
+  boardedCount: number;
+};
+
+export type StaleMovingRunListResponseTypes = {
+  items: StaleMovingRunItemResponseTypes[];
+};
+
+export type ForceFinishResponseTypes = {
+  runId: string;
+  finishedAt: string;
+  boardedCount: number;
+};

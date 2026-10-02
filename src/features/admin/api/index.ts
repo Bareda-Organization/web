@@ -8,3 +8,4 @@ export { getBlockedAccounts, unblockAccount } from "./blockedAccounts";
 export { getEmergencies } from "./emergencies";
 export { getAuditActors, getAuditLogs, getLoginHistory } from "./auditLog";
 export { forceConfirmRun } from "./forceConfirm";
+export { getStaleMovingRuns, forceFinishRun } from "./staleMovingRuns";
