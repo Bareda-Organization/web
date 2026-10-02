@@ -4,7 +4,7 @@
 
 학원 통학버스 관리 플랫폼의 **관계자 웹**(Next.js) — 학원 관계자 화면과 메인 관리자 콘솔(`(admin)` 라우트 그룹). 운영 배포는 **Vercel**.
 
-- **같은 조직의 형제 저장소** — `backend`(Spring Boot · 세 저장소 공통 사양 `docs/`) · `mobile`(Flutter 앱 2종). 로컬에서는 세 저장소를 같은 폴더 아래 나란히 clone 한다
+- **같은 조직(`Bareda-Organization`)의 형제 저장소** — `backend`(Spring Boot · 세 저장소 공통 사양 `docs/`) · `mobile`(Flutter 앱 2종). 로컬에서는 세 저장소를 같은 폴더 아래 나란히 clone 한다
 - **사양은 backend 저장소 `docs/` 가 단일 기준이다** — 진입점 `../backend/docs/README.md`. 웹 구현 계획은 `../backend/docs/frontend/IMPLEMENTATION_PLAN.md`. 이 저장소에 사양을 복사하지 않는다
 - **코드 규칙은 `docs/CONVENTIONS_REACT.md`**
 - **디자인 시스템 사본 `design-system/` 은 읽기 전용**(정본은 claude.ai 원격) — 고칠 값은 `src/shared/styles/tokens.css` 에서 덮는다
