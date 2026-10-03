@@ -49,6 +49,7 @@ describe("RunRosterDialog — 닫기와 긴 명단", () => {
     expect(within(scrollArea).queryByRole("button", { name: "닫기" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
     expect(scrollArea).toHaveStyle({ overflowY: "auto" });
-    expect(getComputedStyle(scrollArea).maxHeight).not.toBe("");
+    // 상한이 없으면 "none" 이라 NaN — 상한이 화면보다 작아야 닫기 버튼이 스크롤 없이 보인다.
+    expect(parseFloat(getComputedStyle(scrollArea).maxHeight)).toBeLessThan(window.innerHeight);
   });
 });
