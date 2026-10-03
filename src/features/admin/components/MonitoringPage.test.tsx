@@ -1128,6 +1128,50 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
     expect(screen.getByRole("button", { name: /강동1호차 · 등원/ })).toHaveAttribute("aria-pressed", "true");
   });
 
+  // 노선 안내(경로 정보 없음·고정 노선 없음·예정 경로)와 노선 오류 배너는 고른 회차 몫이라 학원을 바꾸면 함께 사라져야 한다.
+  const noticeCases: Array<[string, RunLiveItemResponseTypes["runStatus"], Awaited<ReturnType<typeof getRunRoute>>, string | RegExp]> = [
+    ["경로 정보 없음", "moving", { roadPath: [], fallbackUsed: false, stops: [], confirmed: true }, "확정됐지만 경로 정보가 아직 없습니다"],
+    [
+      "고정 노선 없음",
+      "idle",
+      { roadPath: [], fallbackUsed: false, stops: [], confirmed: false },
+      "이 회차의 고정 노선이 없습니다 — 고정 노선 편성에서 등록하세요",
+    ],
+    [
+      "예정 경로",
+      "idle",
+      { roadPath: [{ lat: 37.1, lng: 127.1 }], fallbackUsed: false, stops: [], confirmed: false },
+      /예정 경로 — 확정 시 달라질 수 있음/,
+    ],
+  ];
+
+  it.each(noticeCases)("%s 안내가 떠 있어도 학원을 바꾸면 사라진다", async (_name, runStatus, routeResponse, notice) => {
+    mockGetRunsLive.mockImplementation(async (id: string) => ({
+      runs: [{ ...(id === "1" ? movingRun("10", "강동1호차") : movingRun("20", "송파1호차")), runStatus }],
+    }));
+    mockGetRunRoute.mockResolvedValue(routeResponse);
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
+    expect(await screen.findByText(notice)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+
+    await screen.findByRole("button", { name: /송파1호차 · 등원/ });
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  });
+
+  it("노선 조회 오류 배너가 떠 있어도 학원을 바꾸면 사라진다", async () => {
+    mockGetRunRoute.mockRejectedValue(new Error("network"));
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
+    expect(await screen.findByText("노선을 불러오지 못했습니다")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+
+    await screen.findByRole("button", { name: /송파1호차 · 등원/ });
+    expect(screen.queryByText("노선을 불러오지 못했습니다")).not.toBeInTheDocument();
+  });
+
   it("노선 응답을 기다리는 중에 학원을 바꾸면 늦게 온 옛 노선을 그리지 않는다", async () => {
     let resolveRoute: (value: typeof route) => void = () => {};
     mockGetRunRoute.mockReturnValue(new Promise((resolve) => (resolveRoute = resolve)));
