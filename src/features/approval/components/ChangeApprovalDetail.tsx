@@ -9,6 +9,7 @@ import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import { toDecideFailure } from "../lib/decideErrorMessage";
 import { formatRemaining, useNowEverySecond } from "../lib/remainingTime";
+import { useApprovalPending } from "./ApprovalPendingProvider";
 import type {
   ChangeApprovalDetailResponseTypes,
   RoutePathPointResponseTypes,
@@ -148,6 +149,7 @@ const renderRouteMap = (path: RoutePathPointResponseTypes[], markers: MapMarker[
 // 순번·ETA 목록이라 그대로 표로 그린다(지도 좌표 렌더는 하지 않는다).
 export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) => {
   const router = useRouter();
+  const { refresh: refreshPending } = useApprovalPending();
   const [detail, setDetail] = useState<ChangeApprovalDetailResponseTypes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +187,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     setDecideError(null);
     try {
       await decideChangeApproval(approvalId, { approve: true, previewToken: detail.previewToken });
+      void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
       // 예전 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
@@ -202,6 +205,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     setDecideError(null);
     try {
       await decideChangeApproval(approvalId, { approve: false, rejectReason: rejectReason.trim() });
+      void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
       const failure = toDecideFailure(cause, "거절 처리에 실패했습니다");

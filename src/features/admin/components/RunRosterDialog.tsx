@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Dialog } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Dialog } from "@/shared/ui";
 import { getRunRoster } from "../api";
 import type { RosterBoardStatus, RunRosterResponseTypes } from "../types";
-import { StyledRosterStopBlock, StyledRosterStopTitle, StyledRosterStudentRow } from "./MonitoringPage.styled";
+import {
+  StyledRosterDialogScroll,
+  StyledRosterStopBlock,
+  StyledRosterStopTitle,
+  StyledRosterStudentRow,
+} from "./MonitoringPage.styled";
 
 type RunRosterDialogProps = {
   runId: string;
@@ -60,21 +65,31 @@ export const RunRosterDialog = ({ runId, busNo, onClose }: RunRosterDialogProps)
   }, [runId]);
 
   return (
-    <Dialog title={`${busNo} 탑승 명단`} onClose={onClose}>
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
-      {loading ? <p>불러오는 중...</p> : null}
-      {!loading && roster && roster.stops.length === 0 ? <p>등록된 승하차지가 없습니다</p> : null}
-      {roster?.stops.map((stop) => (
-        <StyledRosterStopBlock key={stop.stopId}>
-          <StyledRosterStopTitle>{stop.name}</StyledRosterStopTitle>
-          {stop.students.map((student) => (
-            <StyledRosterStudentRow key={student.studentId}>
-              <span>{student.name}</span>
-              <Badge tone={BOARD_STATUS_TONE[student.status]}>{BOARD_STATUS_LABEL[student.status]}</Badge>
-            </StyledRosterStudentRow>
-          ))}
-        </StyledRosterStopBlock>
-      ))}
+    <Dialog
+      title={`${busNo} 탑승 명단`}
+      onClose={onClose}
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          닫기
+        </Button>
+      }
+    >
+      <StyledRosterDialogScroll role="region" aria-label="탑승 명단" tabIndex={0}>
+        {error ? <AlertBanner tone="missed" title={error} /> : null}
+        {loading ? <p>불러오는 중...</p> : null}
+        {!loading && roster && roster.stops.length === 0 ? <p>등록된 승하차지가 없습니다</p> : null}
+        {roster?.stops.map((stop) => (
+          <StyledRosterStopBlock key={stop.stopId}>
+            <StyledRosterStopTitle>{stop.name}</StyledRosterStopTitle>
+            {stop.students.map((student) => (
+              <StyledRosterStudentRow key={student.studentId}>
+                <span>{student.name}</span>
+                <Badge tone={BOARD_STATUS_TONE[student.status]}>{BOARD_STATUS_LABEL[student.status]}</Badge>
+              </StyledRosterStudentRow>
+            ))}
+          </StyledRosterStopBlock>
+        ))}
+      </StyledRosterDialogScroll>
     </Dialog>
   );
 };

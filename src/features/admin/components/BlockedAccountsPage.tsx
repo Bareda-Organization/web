@@ -6,6 +6,7 @@ import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTa
 import type { RosterColumn } from "@/shared/types";
 import { getBlockedAccounts } from "../api";
 import type { BlockedAccountItemResponseTypes } from "../types";
+import { useAdminPending } from "./AdminPendingProvider";
 import { UnblockConfirmDialog } from "./UnblockConfirmDialog";
 import { StyledBlockedAccountsLayout } from "./BlockedAccountsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -26,6 +27,7 @@ const PAGE_SIZE = 20;
 // 목록에 그대로 두고, 확인 다이얼로그에서 같은 정보를 한 번 더 보여준다.
 export const BlockedAccountsPage = () => {
   const [target, setTarget] = useState<BlockedAccountItemResponseTypes | null>(null);
+  const { refresh: refreshPending } = useAdminPending();
   const {
     items: accounts,
     totalCount,
@@ -87,6 +89,7 @@ export const BlockedAccountsPage = () => {
           onDone={() => {
             setTarget(null);
             reload();
+            void refreshPending();
           }}
         />
       ) : null}

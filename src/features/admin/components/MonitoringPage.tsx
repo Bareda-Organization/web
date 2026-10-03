@@ -249,20 +249,25 @@ export const MonitoringPage = () => {
   // 선택을 해제한다(DashboardPage.tsx 와 같은 토글).
   // F03-09 — 버스를 연달아 고르면 마지막에 고른 버스의 노선만 지도에 그린다.
   const routeRequestRef = useRef(0);
+  // 고른 버스와 그 노선(선·정차지 마커·안내)을 푼다 — 요청 번호도 올려 아직 오지 않은 노선 응답은 버린다.
+  const clearBusSelection = useCallback(() => {
+    routeRequestRef.current += 1;
+    setSelectedRunId(null);
+    setRoutePolylines([]);
+    setRouteFallback(false);
+    setRouteMissing(false);
+    setRouteNoPlannedRoute(false);
+    setRoutePlanned(false);
+    setRouteError(null);
+    setRouteStopMarkers([]);
+  }, []);
   const handleSelectBus = useCallback(
     async (runId: string) => {
-      const routeRequestId = ++routeRequestRef.current;
       if (selectedRunId === runId) {
-        setSelectedRunId(null);
-        setRoutePolylines([]);
-        setRouteFallback(false);
-        setRouteMissing(false);
-        setRouteNoPlannedRoute(false);
-        setRoutePlanned(false);
-        setRouteError(null);
-        setRouteStopMarkers([]);
+        clearBusSelection();
         return;
       }
+      const routeRequestId = ++routeRequestRef.current;
       setSelectedRunId(runId);
       setRouteError(null);
       // Ruling 321 — 확정 경로일 때만 회차 상태별 색(POLYLINE_KIND_BY_STATUS)을
@@ -291,7 +296,7 @@ export const MonitoringPage = () => {
         setRouteError(cause instanceof ApiError ? cause.message : "노선을 불러오지 못했습니다");
       }
     },
-    [selectedRunId, runs],
+    [selectedRunId, runs, clearBusSelection],
   );
 
   // R23 목표 4 — 지도 위 마커 클릭. 버스 마커만 회차 선택으로 넘긴다 — 정차지·출발지·도착지는
@@ -467,8 +472,12 @@ export const MonitoringPage = () => {
   const academiesWithAttention = academies.filter((academy) => attentionByAcademy[academy.id] !== undefined);
 
   const handleSelectAcademy = (nextAcademyId: string) => {
-    // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
+    // 이미 보고 있는 학원이면 그대로 둔다 — 학원 id 가 안 바뀌면 회차 재조회 효과가 안 돌아, 비우기만 하면 다음 갱신까지 화면이 빈다.
+    if (nextAcademyId === academyId) return;
+    // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09). 고른 버스와 그 노선도 옛 학원 것이라 함께 푼다 —
+    // 남으면 지도가 고른 id 의 버스만 그려 새 학원 버스가 안 보이고 옛 노선이 남는다.
     setRuns([]);
+    clearBusSelection();
     setAcademyId(nextAcademyId);
   };
 

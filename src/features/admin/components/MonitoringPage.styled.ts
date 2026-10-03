@@ -108,6 +108,13 @@ export const StyledMapSurface = styled.div`
   border: 1px solid var(--border-default);
 `;
 
+/* 명단이 길면 대화상자가 화면보다 길어져 닫기 버튼이 밀려난다(실측 1,422px · 화면 720px) — 이 상자 안에서 스크롤한다.
+   높이는 고정 px 가 아니라 화면에 맞춘다(TodayRunPage 의 StyledRosterScroll 과 같은 값). */
+export const StyledRosterDialogScroll = styled.div`
+  max-height: min(60vh, 720px);
+  overflow-y: auto;
+`;
+
 export const StyledRosterStopBlock = styled.div`
   display: flex;
   flex-direction: column;

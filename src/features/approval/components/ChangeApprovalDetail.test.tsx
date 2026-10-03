@@ -29,6 +29,12 @@ vi.mock("@/features/map", () => ({
   MapSurface: (props: MapSurfaceProps) => mockMapSurface(props),
 }));
 
+// 처리 직후 사이드바 배지를 바로 다시 세는지만 본다 — 배지를 세는 쪽은 ApprovalPendingProvider.test 가 맡는다.
+const mockRefreshPending = vi.fn(async () => true);
+vi.mock("./ApprovalPendingProvider", () => ({
+  useApprovalPending: () => ({ refresh: mockRefreshPending }),
+}));
+
 const mockGetDetail = vi.mocked(getChangeApprovalDetail);
 const mockDecide = vi.mocked(decideChangeApproval);
 
@@ -526,5 +532,49 @@ describe("ChangeApprovalDetail — F02-06 결정 실패 뒤 최신 상태로", (
 
     expect(await screen.findByText("처리할 수 있는 시간이 지났습니다 — 기한이 지나 자동 거절됐거나 운행이 시작됐습니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
+  });
+});
+
+// 구간 변경 대기 건수는 새 신청이 올 때만 실시간으로 갱신된다 — 승인·거절로 줄어드는 것은 처리한 화면이 다시 세게 해야 한다.
+describe("ChangeApprovalDetail — 처리 직후 사이드바 배지 갱신", () => {
+  // 기한 지난 건은 버튼이 꺼지므로 위 묶음과 같이 기한 전 시각으로 시계를 고정한다.
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  const decidedResponse = {
+    status: "approved" as const,
+    stopRemoved: false,
+    routeVersion: 2,
+    decidedBy: "staff-1",
+    decidedAt: "2026-09-12T00:00:00Z",
+  };
+
+  it("승인하면 배지를 다시 센다", async () => {
+    mockGetDetail.mockResolvedValue(baseDetail);
+    mockDecide.mockResolvedValue(decidedResponse);
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+
+  it("거절하면 배지를 다시 센다", async () => {
+    mockGetDetail.mockResolvedValue(baseDetail);
+    mockDecide.mockResolvedValue({ ...decidedResponse, status: "rejected" });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "거절" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
 });

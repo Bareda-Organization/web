@@ -7,6 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getSignupRequests } from "../api";
 import { SIGNUP_ROLE_LABEL } from "../lib/signupRoleLabel";
 import type { SignupRequestItemResponseTypes } from "../types";
+import { useApprovalPending } from "./ApprovalPendingProvider";
 import { SignupDecideDialog } from "./SignupDecideDialog";
 import { StyledSignupApprovalLayout } from "./SignupApprovalPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -35,6 +36,7 @@ export const SignupApprovalPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<SignupRequestItemResponseTypes | null>(null);
+  const { refresh: refreshPending } = useApprovalPending();
 
   // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
   const requestSeq = useRef(0);
@@ -108,6 +110,7 @@ export const SignupApprovalPage = () => {
           onDone={() => {
             setTarget(null);
             loadRequests(status, page);
+            void refreshPending();
           }}
         />
       ) : null}
