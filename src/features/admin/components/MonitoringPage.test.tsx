@@ -1054,3 +1054,92 @@ describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT �
     expect(await screen.findByRole("option", { name: "강동학원 (서울)" })).toBeInTheDocument();
   });
 });
+
+// 버스를 고른 채 학원을 바꾸면 고른 회차 id 와 노선(선·정차지 마커·안내)이 옛 학원 것으로 남는다 —
+// `visibleMarkers` 가 고른 id 의 버스만 남기므로 새 학원 버스가 지도에서 사라지고 옛 노선만 그려졌다.
+describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 노선을 푼다", () => {
+  const academies = [
+    { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+    { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
+  ];
+  const movingRun = (runId: string, busNo: string): RunLiveItemResponseTypes => ({
+    ...baseLiveRun,
+    runId,
+    busNo,
+    position: { lat: 37.5, lng: 127.1, receivedAt: "2026-10-03T00:00:00Z" },
+  });
+  const route = {
+    roadPath: [
+      { lat: 37.1, lng: 127.1 },
+      { lat: 37.2, lng: 127.2 },
+    ],
+    fallbackUsed: false,
+    stops: [],
+    confirmed: true,
+  };
+
+  const lastMapProps = () => mockMapSurface.mock.calls.at(-1)![0];
+  const markerIds = () => (lastMapProps().markers ?? []).map((marker) => marker.id);
+
+  beforeEach(() => {
+    mockConnectionState = "connected";
+    mockGetAcademies.mockResolvedValue(academies);
+    mockGetRunsLive.mockImplementation(async (id: string) => ({
+      runs: [id === "1" ? movingRun("10", "강동1호차") : movingRun("20", "송파1호차")],
+    }));
+    mockGetRunRoute.mockResolvedValue(route);
+    mockGetRunAttention.mockResolvedValue({
+      items: [
+        { academyId: "1", delayedRuns: 1, confirmFailedRuns: 0 },
+        { academyId: "2", delayedRuns: 1, confirmFailedRuns: 0 },
+      ],
+    });
+    mockGetEmergencies.mockResolvedValue({ items: [], unackedCount: 0 });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  const selectFirstAcademyBus = async () => {
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
+    await waitFor(() => expect(lastMapProps().polylines?.length).toBeGreaterThan(0));
+  };
+
+  it.each([
+    ["학원 선택 상자", () => fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } })],
+    ["지연·확정 실패 요약 버튼", async () => fireEvent.click(await screen.findByRole("button", { name: "송파학원 지연 1건" }))],
+  ])("%s 경로로 학원을 바꾸면 옛 노선과 선택이 사라지고 새 학원 버스가 지도에 나온다", async (_path, switchAcademy) => {
+    await selectFirstAcademyBus();
+
+    await switchAcademy();
+
+    const newAcademyBus = await screen.findByRole("button", { name: /송파1호차 · 등원/ });
+    await waitFor(() => expect(markerIds()).toEqual(["20"])); // 옛 노선의 출발·도착 마커(origin-10 …)가 없다
+    expect(lastMapProps().polylines).toHaveLength(0);
+    expect(newAcademyBus).toHaveAttribute("aria-pressed", "false");
+  });
+
+  // 같은 학원 재선택은 아무것도 비우지 않는다(2282144) — 선택 해제도 그 가드 뒤에 있어야 한다.
+  it("지금 보고 있는 학원의 요약 버튼을 다시 눌러도 고른 버스와 노선은 그대로다", async () => {
+    await selectFirstAcademyBus();
+
+    fireEvent.click(await screen.findByRole("button", { name: "강동학원 지연 1건" }));
+
+    expect(lastMapProps().polylines?.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /강동1호차 · 등원/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("노선 응답을 기다리는 중에 학원을 바꾸면 늦게 온 옛 노선을 그리지 않는다", async () => {
+    let resolveRoute: (value: typeof route) => void = () => {};
+    mockGetRunRoute.mockReturnValue(new Promise((resolve) => (resolveRoute = resolve)));
+    render(<MonitoringPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
+    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    await screen.findByRole("button", { name: /송파1호차 · 등원/ });
+
+    await act(async () => resolveRoute(route));
+
+    expect(lastMapProps().polylines).toHaveLength(0);
+    expect(markerIds()).toEqual(["20"]);
+  });
+});
+
