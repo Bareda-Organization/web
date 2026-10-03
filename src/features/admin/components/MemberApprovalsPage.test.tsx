@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemberApprovalsPage } from "./MemberApprovalsPage";
 import { getStaffSignupRequests } from "../api";
@@ -35,5 +35,37 @@ describe("MemberApprovalsPage — 목록 조회 실패", () => {
 
     await waitFor(() => expect(screen.getByText("서버 처리 중 오류가 발생했습니다")).toBeInTheDocument());
     expect(screen.queryByText("처리할 가입 요청이 없습니다")).not.toBeInTheDocument();
+  });
+});
+
+// 정원이 찬 학원(재직 관계자 1명 이상)의 요청은 승인할 수 없다 — 열어 보기 전에 목록에서 알아본다.
+describe("MemberApprovalsPage — 정원이 찬 학원 표시", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const row = (requestId: string, academyName: string, academyStaffCount: number) => ({
+    requestId,
+    name: `신청자${requestId}`,
+    phone: "010-1111-2222",
+    academy: { id: requestId, code: `C${requestId}`, name: academyName, region: "서울" },
+    requestedAt: "2026-09-10T09:00:00Z",
+    academyStaffCount,
+  });
+
+  it("재직 관계자가 있는 학원의 행에만 정원 표시를 붙인다", async () => {
+    mockGetRequests.mockResolvedValue({
+      items: [row("1", "꽉찬학원", 1), row("2", "빈학원", 0)],
+      page: 0,
+      size: 20,
+      totalCount: 2,
+      hasNext: false,
+    });
+    render(<MemberApprovalsPage />);
+
+    const fullRow = (await screen.findByText("꽉찬학원 (서울)")).closest("tr") as HTMLElement;
+    const emptyRow = screen.getByText("빈학원 (서울)").closest("tr") as HTMLElement;
+    expect(within(fullRow).getByText("정원 참")).toBeInTheDocument();
+    expect(within(emptyRow).queryByText("정원 참")).not.toBeInTheDocument();
   });
 });

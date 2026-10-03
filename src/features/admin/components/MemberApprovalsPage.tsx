@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTable } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, Pagination, RosterTable } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getStaffSignupRequests } from "../api";
+import { isStaffQuotaFull } from "../lib/staffQuota";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 import { MemberApprovalDecideDialog } from "./MemberApprovalDecideDialog";
 import { StyledMemberApprovalsLayout } from "./MemberApprovalsPage.styled";
@@ -33,7 +34,17 @@ export const MemberApprovalsPage = () => {
     { key: "name", label: "이름" },
     { key: "phone", label: "연락처" },
     { key: "academy", label: "소속 학원", render: (row) => `${row.academy.name} (${row.academy.region})` },
-    { key: "academyStaffCount", label: "현재 관계자 수", align: "right" },
+    // 정원이 찬 학원은 승인할 수 없다(API_SPEC §6.5) — 처리 창을 열기 전에 목록에서 알아본다.
+    {
+      key: "academyStaffCount",
+      label: "현재 관계자 수",
+      align: "right",
+      render: (row) => (
+        <>
+          {row.academyStaffCount} {isStaffQuotaFull(row.academyStaffCount) ? <Badge tone="red">정원 참</Badge> : null}
+        </>
+      ),
+    },
     { key: "requestedAt", label: "신청 일시", render: (row) => formatDateTime(row.requestedAt) },
     {
       key: "action",
