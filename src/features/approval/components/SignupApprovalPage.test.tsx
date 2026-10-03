@@ -15,6 +15,12 @@ vi.mock("../api", () => ({
   searchManagerCandidates: vi.fn(),
 }));
 
+// 처리 직후 사이드바 배지를 바로 다시 세는지만 본다 — 배지를 세는 쪽은 ApprovalPendingProvider.test 가 맡는다.
+const mockRefreshPending = vi.fn(async () => true);
+vi.mock("./ApprovalPendingProvider", () => ({
+  useApprovalPending: () => ({ refresh: mockRefreshPending }),
+}));
+
 const mockGetSignupRequests = vi.mocked(getSignupRequests);
 const mockDecideSignupRequest = vi.mocked(decideSignupRequest);
 const mockSearchStudents = vi.mocked(searchStudentCandidates);
@@ -303,5 +309,37 @@ describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침",
     fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
 
     expect(await screen.findByText("승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다")).toBeInTheDocument();
+  });
+});
+
+// 가입 신청은 실시간 통지가 없어 배지를 새로 세는 길이 30초 폴링뿐이다 — 처리하고 나면 바로 다시 세야 한다.
+describe("SignupApprovalPage — 처리 직후 사이드바 배지 갱신", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("승인하면 배지를 다시 센다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+
+  it("거절하면 배지를 다시 센다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockResolvedValue({ accountStatus: "rejected", decidedAt: "2026-09-12T00:00:00Z" });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: "거절" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "서류 미비" } });
+    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
 });

@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemberApprovalsPage } from "./MemberApprovalsPage";
-import { getStaffSignupRequests } from "../api";
+import { decideStaffSignupRequest, getStaffSignupRequests } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
 // A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 가입 요청 목록 조회가
@@ -13,9 +13,26 @@ import { ApiError } from "@/shared/lib/http";
 // 실패해야 한다.
 vi.mock("../api", () => ({
   getStaffSignupRequests: vi.fn(),
+  decideStaffSignupRequest: vi.fn(),
+}));
+
+// 처리 직후 사이드바 배지를 바로 다시 세는지만 본다 — 배지를 세는 쪽은 AdminPendingProvider.test 가 맡는다.
+const mockRefreshPending = vi.fn(async () => true);
+vi.mock("./AdminPendingProvider", () => ({
+  useAdminPending: () => ({ signupCount: 0, blockedCount: 0, isReady: true, refresh: mockRefreshPending }),
 }));
 
 const mockGetRequests = vi.mocked(getStaffSignupRequests);
+const mockDecide = vi.mocked(decideStaffSignupRequest);
+
+const row = (requestId: string, academyName: string, academyStaffCount: number) => ({
+  requestId,
+  name: `신청자${requestId}`,
+  phone: "010-1111-2222",
+  academy: { id: requestId, code: `C${requestId}`, name: academyName, region: "서울" },
+  requestedAt: "2026-09-10T09:00:00Z",
+  academyStaffCount,
+});
 
 describe("MemberApprovalsPage — 목록 조회 실패", () => {
   afterEach(() => {
@@ -44,15 +61,6 @@ describe("MemberApprovalsPage — 정원이 찬 학원 표시", () => {
     vi.clearAllMocks();
   });
 
-  const row = (requestId: string, academyName: string, academyStaffCount: number) => ({
-    requestId,
-    name: `신청자${requestId}`,
-    phone: "010-1111-2222",
-    academy: { id: requestId, code: `C${requestId}`, name: academyName, region: "서울" },
-    requestedAt: "2026-09-10T09:00:00Z",
-    academyStaffCount,
-  });
-
   it("재직 관계자가 있는 학원의 행에만 정원 표시를 붙인다", async () => {
     mockGetRequests.mockResolvedValue({
       items: [row("1", "꽉찬학원", 1), row("2", "빈학원", 0)],
@@ -67,5 +75,38 @@ describe("MemberApprovalsPage — 정원이 찬 학원 표시", () => {
     const emptyRow = screen.getByText("빈학원 (서울)").closest("tr") as HTMLElement;
     expect(within(fullRow).getByText("정원 참")).toBeInTheDocument();
     expect(within(emptyRow).queryByText("정원 참")).not.toBeInTheDocument();
+  });
+});
+
+// 처리하고 나면 사이드바 "가입 승인" 배지가 30초 폴링을 기다리지 않고 바로 줄어야 한다.
+describe("MemberApprovalsPage — 처리 직후 사이드바 배지 갱신", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const openDecideDialog = async () => {
+    mockGetRequests.mockResolvedValue({ items: [row("1", "빈학원", 0)], page: 0, size: 20, totalCount: 1, hasNext: false });
+    render(<MemberApprovalsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+  };
+
+  it("승인하면 배지를 다시 센다", async () => {
+    mockDecide.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
+    await openDecideDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+
+  it("거절하면 배지를 다시 센다", async () => {
+    mockDecide.mockResolvedValue({ accountStatus: "rejected", decidedAt: "2026-09-12T00:00:00Z" });
+    await openDecideDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "거절" }));
+    fireEvent.change(screen.getByLabelText("거절 사유"), { target: { value: "서류 미비" } });
+    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+
+    await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
 });

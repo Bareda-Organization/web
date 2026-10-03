@@ -7,6 +7,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getStaffSignupRequests } from "../api";
 import { isStaffQuotaFull } from "../lib/staffQuota";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
+import { useAdminPending } from "./AdminPendingProvider";
 import { MemberApprovalDecideDialog } from "./MemberApprovalDecideDialog";
 import { StyledMemberApprovalsLayout } from "./MemberApprovalsPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -17,6 +18,7 @@ const PAGE_SIZE = 20;
 // 학원 경계를 넘는 유일한 역할이라(BRIEF-a1.md §2) 어느 학원 요청인지 없이는 처리할 수 없다.
 export const MemberApprovalsPage = () => {
   const [target, setTarget] = useState<StaffSignupRequestItemResponseTypes | null>(null);
+  const { refresh: refreshPending } = useAdminPending();
   const {
     items: requests,
     totalCount,
@@ -80,6 +82,7 @@ export const MemberApprovalsPage = () => {
           onDone={() => {
             setTarget(null);
             reload();
+            void refreshPending();
           }}
         />
       ) : null}
