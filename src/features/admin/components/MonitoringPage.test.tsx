@@ -1025,6 +1025,23 @@ describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT �
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenLastCalledWith("2"));
   });
 
+  // 이미 보고 있는 학원이면 학원 id 가 그대로라 회차 재조회 효과가 안 돈다 — 먼저 비우면 다음 갱신(7초) 전까지 표·지도가 빈다.
+  it("이미 보고 있는 학원의 요약 버튼을 다시 눌러도 회차 표와 지도 마커가 그대로다", async () => {
+    mockGetRunAttention.mockResolvedValue({ items: [{ academyId: "1", delayedRuns: 1, confirmFailedRuns: 0 }] });
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseLiveRun, position: { lat: 37.5, lng: 127.1, receivedAt: "2026-10-03T00:00:00Z" } }],
+    });
+    render(<MonitoringPage />);
+    const summaryButton = await screen.findByRole("button", { name: "강동학원 지연 1건" });
+    await waitFor(() => expect(mockMapSurface.mock.calls.at(-1)?.[0].markers).toHaveLength(1));
+
+    fireEvent.click(summaryButton);
+    fireEvent.click(summaryButton);
+
+    expect(within(screen.getByRole("table")).getByText("1호차")).toBeInTheDocument();
+    expect(mockMapSurface.mock.calls.at(-1)?.[0].markers).toHaveLength(1);
+  });
+
   it("문제가 없으면 요약을 그리지 않고, 집계를 못 받아도 관제 화면은 그대로 뜬다", async () => {
     mockGetRunAttention.mockResolvedValue({ items: [] });
     const { unmount } = render(<MonitoringPage />);

@@ -467,6 +467,8 @@ export const MonitoringPage = () => {
   const academiesWithAttention = academies.filter((academy) => attentionByAcademy[academy.id] !== undefined);
 
   const handleSelectAcademy = (nextAcademyId: string) => {
+    // 이미 보고 있는 학원이면 그대로 둔다 — 학원 id 가 안 바뀌면 회차 재조회 효과가 안 돌아, 비우기만 하면 다음 갱신까지 화면이 빈다.
+    if (nextAcademyId === academyId) return;
     // 옛 학원의 회차·지도 마커가 새 학원 화면에 남지 않게 먼저 비운다(F03-09).
     setRuns([]);
     setAcademyId(nextAcademyId);
