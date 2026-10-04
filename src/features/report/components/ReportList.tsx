@@ -41,6 +41,8 @@ export const ReportList = () => {
   // 종류별 건수 — 종류를 고르지 않은 조회에서만 새로 센다(고르면 다른 종류의 건수를 모른다).
   const [typeCounts, setTypeCounts] = useState<Record<ReportType, number> | null>(null);
   const [selected, setSelected] = useState<ReportItemResponseTypes | null>(null);
+  // "며칠째 미처리" 계산의 기준 시각 — 조회 결과를 받을 때 갱신한다(렌더 중에 시계를 읽지 않는다).
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [marking, setMarking] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
   const { show } = useToast();
@@ -86,6 +88,7 @@ export const ReportList = () => {
         if (mine !== requestSeq.current) return;
         setItems(result.items);
         setCounts(result.counts);
+        setNowMs(Date.now());
         if (type === "") {
           const next: Record<ReportType, number> = { guardian_absent: 0, road_block: 0, vehicle_issue: 0, etc: 0 };
           result.items.forEach((item) => {
@@ -104,7 +107,6 @@ export const ReportList = () => {
     })();
   }, [type, date, runId, handled, retryCount]);
 
-  const nowMs = Date.now();
   const unhandledItems = items.filter((item) => !item.handled);
   const oldest = unhandledItems.reduce<ReportItemResponseTypes | null>(
     (acc, item) => (acc === null || Date.parse(item.reportedAt) < Date.parse(acc.reportedAt) ? item : acc),
