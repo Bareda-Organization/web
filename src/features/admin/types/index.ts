@@ -334,9 +334,13 @@ export type RunAttentionTodayItemTypes = {
 // today 는 서버가 아직 안 주면 null — 학원 레일은 이때 학원 목록으로 대신 그린다.
 export type RunAttentionResponseTypes = { items: RunAttentionItemTypes[]; today?: RunAttentionTodayItemTypes[] | null };
 
+// §6.11 응답 최상위 `counts`(Ruling 837) — `status` 만 뺀 같은 조건의 상태별 건수(200건 상한과 무관). 서버가 아직 안 주면(옛 서버) 없다 — 탭 건수를 숨긴다.
+export type EmergencyStatusCountsTypes = { open: number; acked: number; canceled: number };
+
 export type EmergenciesResponseTypes = {
   items: EmergencyItemResponseTypes[];
   unackedCount: number;
+  counts?: EmergencyStatusCountsTypes;
 };
 
 // ── §6.13 감사 · 접속 이력 (O-04) ─────────────────────────────────────────

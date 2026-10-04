@@ -104,7 +104,7 @@ describe("메인 관리자 목록 — 재조회 실패에도 직전 목록 유�
         position: null, riderCount: 3, contacts: [], raisedAt: "2026-09-30T05:00:00Z", staffAcked: false,
         ackedAt: null, canceledAt: null, ackedBy: null, elapsedSinceRaised: 60,
       };
-      // R48 — 한 번 읽을 때 상태 3개(미확인 · 확인됨 · 취소됨)를 요청한다. 첫 읽기는 성공, 다음 갱신은 전부 실패시킨다.
+      // 한 번 읽을 때 요청은 고른 탭의 상태 1번이다(Ruling 837). 첫 읽기는 성공, 다음 갱신은 실패시킨다.
       let failing = false;
       vi.mocked(getEmergencies).mockImplementation(async (status?: string) => {
         if (failing) throw new ApiError(503, "UNKNOWN", "점검 중");

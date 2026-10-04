@@ -50,4 +50,15 @@ describe("admin emergencies api — occurred_at 변환", () => {
     expect(result.items[0].occurredAt).toBe("2026-09-15T08:03:00");
     expect(result.items[1].occurredAt).toBeNull();
   });
+
+  // Ruling 837 — 응답 최상위 counts(세 상태 건수)를 그대로 옮긴다. 옛 서버처럼 없으면 undefined 로 견딘다.
+  it("응답 최상위 counts 를 옮기고, 없으면 undefined 다", async () => {
+    const respond = (data: Record<string, unknown>) => vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockJsonResponse(200, { success: true, data })));
+
+    respond({ items: [raw({})], unacked_count: 1, counts: { open: 1, acked: 4, canceled: 2 } });
+    expect((await getEmergencies("open")).counts).toEqual({ open: 1, acked: 4, canceled: 2 });
+
+    respond({ items: [raw({})], unacked_count: 1 });
+    expect((await getEmergencies("open")).counts).toBeUndefined();
+  });
 });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EmergencyAlertsPage } from "./EmergencyAlertsPage";
 import { getEmergencies } from "../api";
@@ -139,10 +139,11 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     ...patch,
   });
 
+  // 서버는 요청한 상태의 목록과 함께 응답 최상위 `counts`(세 상태 건수)를 준다(§6.11 · Ruling 837).
   const byStatus = (open: unknown[], acked: unknown[], canceled: unknown[]) =>
     mockGetEmergencies.mockImplementation(async (status?: string) => {
       const items = status === "open" ? open : status === "acked" ? acked : canceled;
-      return { items, unackedCount: open.length } as never;
+      return { items, unackedCount: open.length, counts: { open: open.length, acked: acked.length, canceled: canceled.length } } as never;
     });
 
   it("세 상태의 건수를 탭에 붙이고, 미확인이 있으면 몇 분째 응답이 없는지 띠로 알린다", async () => {
@@ -155,6 +156,50 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     expect(screen.getByText("미확인 비상 1건 — 학원 관계자가 14분째 응답하지 않았습니다")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "학원에 전화" })).toHaveAttribute("href", "tel:032-000-0137");
     expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toHaveAttribute("href", "/monitoring");
+  });
+
+  // Ruling 837 — 탭 건수 때문에 상태별로 3번 부르던 것을 응답의 `counts` 로 1번에 끝낸다. 되돌리면(상태별 요청) 이 시험만 실패한다.
+  it("한 번 읽을 때 요청은 고른 탭의 상태 1번뿐이고, 5초 갱신마다도 1번이다", async () => {
+    vi.useFakeTimers();
+    try {
+      byStatus([emergency("1")], [emergency("2", { staffAcked: true })], []);
+      render(<EmergencyAlertsPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByRole("tab", { name: "확인됨 1건" })).toBeInTheDocument();
+      expect(mockGetEmergencies.mock.calls).toEqual([["open"]]);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(mockGetEmergencies.mock.calls).toEqual([["open"], ["open"]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("다른 탭을 누르면 그 상태 1번만 새로 읽고, 건수는 응답의 counts 로 그린다", async () => {
+    byStatus([emergency("1")], [emergency("2", { staffAcked: true }), emergency("3", { staffAcked: true })], []);
+    render(<EmergencyAlertsPage />);
+    fireEvent.click(await screen.findByRole("tab", { name: /확인됨/ }));
+
+    await screen.findByRole("button", { name: "학원2 2호차 상세" });
+    expect(mockGetEmergencies.mock.calls).toEqual([["open"], ["acked"]]);
+    expect(screen.getByRole("tab", { name: "미확인 1건" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "확인됨 2건" })).toBeInTheDocument();
+  });
+
+  // 옛 서버(counts 없음)에서도 화면은 열린다 — 건수만 숨긴다.
+  it("응답에 counts 가 없으면 탭 건수를 숨기고 목록은 그린다", async () => {
+    mockGetEmergencies.mockResolvedValue({ items: [emergency("1")], unackedCount: 1 } as never);
+    render(<EmergencyAlertsPage />);
+
+    expect(await screen.findByRole("tab", { name: "미확인" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "확인됨" })).toBeInTheDocument();
+    expect(screen.getAllByText("학원1").length).toBeGreaterThan(0);
   });
 
   it("미확인이 0 이면 띠가 초록 안내로 바뀐다", async () => {

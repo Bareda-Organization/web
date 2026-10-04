@@ -40,15 +40,14 @@ const EMERGENCY_POLL_INTERVAL_MS = 5000;
 
 const directionText = (direction: EmergencyItemResponseTypes["direction"]) => (direction === "to_academy" ? "등원" : "하원");
 
-// 세 상태를 한 번에 읽는다 — 탭 건수가 서로의 건수를 알아야 해서다(§6.11 은 상태 하나씩만 준다). 고른 탭의 목록만 화면에 쓴다.
+// 고른 탭의 상태 하나만 읽는다 — 탭 3개의 건수는 응답 최상위 `counts` 가 준다(§6.11 · Ruling 837). 옛 서버처럼 `counts` 가 없으면 건수만 숨긴다.
 const fetchTab = async (tab: StatusTab) => {
-  const [open, acked, canceled] = await Promise.all([getEmergencies("open"), getEmergencies("acked"), getEmergencies("canceled")]);
-  const current = tab === "open" ? open : tab === "acked" ? acked : canceled;
+  const response = await getEmergencies(tab);
   return {
-    items: current.items,
-    unackedCount: open.unackedCount,
-    counts: { open: open.items.length, acked: acked.items.length, canceled: canceled.items.length },
-    totalCount: current.items.length,
+    items: response.items,
+    unackedCount: response.unackedCount,
+    counts: response.counts,
+    totalCount: response.items.length,
     hasNext: false,
   };
 };

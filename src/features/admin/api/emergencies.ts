@@ -36,7 +36,7 @@ type RawEmergencyItem = {
 
 // BE-R1 목표 2 이전에는 실제 응답의 최상위 키가 `emergencies` 였다(§6.11 문서와 어긋났었다).
 // 서버가 §6.11·§5.16 대로 `items` 를 내려보내게 고쳐져 이 어댑터도 함께 맞춘다.
-type RawEmergenciesResponse = { items: RawEmergencyItem[]; unacked_count: number };
+type RawEmergenciesResponse = { items: RawEmergencyItem[]; unacked_count: number; counts?: { open: number; acked: number; canceled: number } };
 
 const toAcademyRef = (raw: RawAcademyRef): EmergencyAcademyRefResponseTypes => ({
   id: asIdString(raw.id),
@@ -83,5 +83,6 @@ export const getEmergencies = async (status?: string, academyId?: string): Promi
   return {
     items: raw.items.map(toEmergencyItem),
     unackedCount: raw.unacked_count,
+    counts: raw.counts,
   };
 };
