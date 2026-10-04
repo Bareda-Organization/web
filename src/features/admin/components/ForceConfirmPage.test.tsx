@@ -164,3 +164,18 @@ describe("ForceConfirmPage — 대상과 대기 두 묶음(U-03)", () => {
     expect(await screen.findByRole("tab", { name: "테스트 학원 · 실패 2" })).toBeInTheDocument();
   });
 });
+
+describe("ForceConfirmPage — 처음 고르는 학원", () => {
+  it("목록 맨 앞이 비활성 학원이어도 첫 운영 중 학원의 회차부터 읽는다", async () => {
+    const base = { code: "C", region: "서울", staffCount: 1, userCount: 1 };
+    mockGetAcademies.mockResolvedValue([
+      { id: "1", name: "비활성 학원", status: "inactive" as const, ...base },
+      { id: "2", name: "운영 학원", status: "active" as const, ...base },
+    ]);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<ForceConfirmPage />);
+
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("2"));
+    expect(mockGetRunsLive).not.toHaveBeenCalledWith("1");
+  });
+});

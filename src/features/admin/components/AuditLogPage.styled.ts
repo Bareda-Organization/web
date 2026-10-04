@@ -44,7 +44,6 @@ export const StyledActorSearchBox = styled.div`
 export const StyledFilterPanel = styled.div`
   display: grid;
   gap: var(--s3);
-  margin: var(--s4) 0;
   padding: var(--s4);
   border-radius: var(--radius-card);
   background: var(--surface-sunken);

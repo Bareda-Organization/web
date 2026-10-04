@@ -17,6 +17,7 @@ const StyledLinkButton = styled(Link, { shouldForwardProp: (prop) => !String(pro
   color: ${({ $variant }) => ($variant === "primary" ? "var(--text-inverse)" : "var(--text-primary)")};
   font: var(--fw-medium) var(--fs-sm) / 1 var(--font-sans);
   text-decoration: none;
+  border-bottom: 0;
   white-space: nowrap;
 
   &:focus-visible {

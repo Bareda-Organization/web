@@ -43,6 +43,7 @@ export const StyledAcademyCell = styled.div`
 
   a {
     text-decoration: none;
+    border-bottom: 0;
   }
 `;
 

@@ -56,6 +56,7 @@ export const StyledStatusCell = styled.div`
 
   a {
     text-decoration: none;
+    border-bottom: 0;
   }
 `;
 

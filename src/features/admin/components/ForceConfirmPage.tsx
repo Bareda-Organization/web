@@ -49,8 +49,10 @@ export const ForceConfirmPage = () => {
         const items = await getAllAcademies();
         if (!cancelled) {
           setAcademies(items);
-          if (items.length > 0) {
-            setAcademyId(items[0].id);
+          // 목록은 최근 등록 순이라 첫 항목이 회차 없는 비활성 학원일 수 있다 — 첫 운영 중 학원부터 보인다(전체 관제와 같은 규칙).
+          const initial = items.find((item) => item.status === "active") ?? items[0];
+          if (initial) {
+            setAcademyId(initial.id);
           }
         }
       } catch (cause) {
