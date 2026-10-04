@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotificationList } from "./NotificationList";
+import type { NotificationListItemResponseTypes } from "../types";
 import { getNotifications } from "../api";
 
 // §5.17 NTF-10·11 · API_SPEC §1.9 — 조회 전용 화면이라 두 갈래만 고정한다:
@@ -64,7 +65,7 @@ const row = (id: number) => ({
   notificationId: String(id), sentAt: "2026-09-30T05:00:00Z", busNo: "1호차", recipientName: `수신${id}`, recipientRole: "parent" as string,
   type: "no_show_escalated" as const, body: `내용${id}`, acked: false,
 });
-const pageOf = (items: ReturnType<typeof row>[], page: number, hasNext: boolean) => ({ items, page, size: 20, totalCount: 45, hasNext, unackedCount: 3 });
+const pageOf = (items: NotificationListItemResponseTypes[], page: number, hasNext: boolean) => ({ items, page, size: 20, totalCount: 45, hasNext, unackedCount: 3 });
 
 describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", () => {
   afterEach(() => vi.clearAllMocks());
@@ -179,9 +180,14 @@ describe("NotificationList — 묶어 보기 · 관계자 알림만(Ruling 813)"
   });
 
   it("묶음 행은 첫 수신자 외 N명과 확인 수를 보여 준다", async () => {
-    mockGet.mockResolvedValue(
-      pageOf([{ ...row(1), recipientName: "장주희", recipientCount: 4, ackedCount: 0, recipients: [{ recipientName: "장주희", recipientRole: "parent" }] }], 0, false),
-    );
+    const grouped: NotificationListItemResponseTypes = {
+      ...row(1),
+      recipientName: "장주희",
+      recipientCount: 4,
+      ackedCount: 0,
+      recipients: [{ recipientName: "장주희", recipientRole: "parent" }],
+    };
+    mockGet.mockResolvedValue(pageOf([grouped], 0, false));
     render(<NotificationList />);
 
     expect(await screen.findByText("외 3명")).toBeInTheDocument();
