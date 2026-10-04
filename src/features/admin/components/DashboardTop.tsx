@@ -185,7 +185,7 @@ export const AttentionCard = ({ attention, now }: { attention: DashboardResponse
             <ListRow
               tone="warn"
               title={<RowLink href="/monitoring">운행 지연</RowLink>}
-              description={`${runLabel(delayed[0])}${delayed[0].delayMinutes === null ? "" : ` · ${delayed[0].delayMinutes}분`}${delayed.length > 1 ? ` 외 ${delayed.length - 1}건` : ""}`}
+              description={`${runLabel(delayed[0])}${delayed[0].delayMinutes ? ` · ${delayed[0].delayMinutes}분` : ""}${delayed.length > 1 ? ` 외 ${delayed.length - 1}건` : ""}`}
               count={<StyledWarnText>{delayed.length}</StyledWarnText>}
             />
           ) : null}

@@ -5,7 +5,7 @@ import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { AlertBanner, Button, EmptyState, FilterBar, FilterGroup, PageHeader, SegmentedControl } from "@/shared/ui";
 import { useDashboard } from "../lib/useDashboard";
 import type { DashboardDays } from "../types/dashboard";
-import { MetricsCard, RecentEventsCard, TodayRunsCard, makeAcademySlot } from "./DashboardBottom";
+import { MetricsCard, RecentEventsCard, TodayRunsCard } from "./DashboardBottom";
 import type { StampTone } from "./DashboardPage.styled";
 import { StyledBannerSlot, StyledDashboardPage, StyledGridThree, StyledGridTwo, StyledStack, StyledStamp, StyledStampDot } from "./DashboardPage.styled";
 import { DashboardSkeleton } from "./DashboardSkeleton";
@@ -29,11 +29,11 @@ export const DashboardPage = () => {
   const stampText = error ? `${asOfClock ? `${asOfClock} 기준 · ` : ""}갱신 실패` : data ? `${asOfClock} 기준 · 30초마다 갱신` : "불러오는 중…";
 
   const academyChoices = [{ value: "all", label: "전체" }, ...academyOptions.map((option) => ({ value: option.academyId, label: option.academyName }))];
-  const slotOf = data ? makeAcademySlot(data.academies, data.todayRuns) : () => 0 as const;
 
   return (
     <StyledDashboardPage>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="대시보드"
         description="전체 학원의 운행 · 변경 요청 · 로그인 현황 — 기간과 학원을 바꿔 가며 본다"
         actions={
@@ -78,9 +78,9 @@ export const DashboardPage = () => {
             <ResultCard data={data} />
           </StyledGridThree>
           <StyledGridTwo>
-            <TodayRunsCard data={data} slotOf={slotOf} />
+            <TodayRunsCard data={data} />
             <StyledStack>
-              <MetricsCard data={data} days={days} slotOf={slotOf} />
+              <MetricsCard data={data} days={days} />
               <RecentEventsCard data={data} />
             </StyledStack>
           </StyledGridTwo>

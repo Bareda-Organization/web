@@ -198,7 +198,7 @@ export const AuditLogPage = () => {
 
   return (
     <StyledAuditLogLayout>
-      <PageHeader title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 오늘" />
+      <PageHeader style={{ marginBottom: 20 }} title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 오늘" />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {filterError ? <AlertBanner tone="missed" title={filterError} /> : null}

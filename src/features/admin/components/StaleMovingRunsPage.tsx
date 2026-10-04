@@ -125,7 +125,7 @@ export const StaleMovingRunsPage = () => {
 
   return (
     <StyledForceConfirmLayout>
-      <PageHeader title="끝나지 않은 회차" description="운행일이 지났는데 ‘운행 중’으로 남은 회차 — 학원에 먼저 확인한 뒤 종료합니다" />
+      <PageHeader style={{ marginBottom: 20 }} title="끝나지 않은 회차" description="운행일이 지났는데 ‘운행 중’으로 남은 회차 — 학원에 먼저 확인한 뒤 종료합니다" />
 
       {notice ? (
         <StyledBandSlot>

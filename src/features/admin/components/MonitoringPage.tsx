@@ -527,6 +527,7 @@ export const MonitoringPage = () => {
   return (
     <StyledMonitoringLayout>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="전체 관제"
         description="학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · 위치는 실시간, 회차 목록은 30초마다 갱신"
         actions={

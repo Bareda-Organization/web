@@ -169,6 +169,7 @@ export const EmergencyAlertsPage = () => {
   return (
     <StyledEmergencyAlertsLayout>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="비상 알림"
         description="전 학원의 비상 알림을 학원 관계자와 동시에 받습니다 · 5초마다 갱신"
         actions={

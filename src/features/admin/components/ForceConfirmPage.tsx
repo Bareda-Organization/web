@@ -169,7 +169,7 @@ export const ForceConfirmPage = () => {
 
   return (
     <StyledForceConfirmLayout>
-      <PageHeader title="회차 강제 확정" description="확정이 계속 실패하는 회차를 직선거리 계산으로 확정합니다 · 사유 입력 필수 · 되돌릴 수 없음" />
+      <PageHeader style={{ marginBottom: 20 }} title="회차 강제 확정" description="확정이 계속 실패하는 회차를 직선거리 계산으로 확정합니다 · 사유 입력 필수 · 되돌릴 수 없음" />
 
       {error ? (
         <StyledBandSlot>

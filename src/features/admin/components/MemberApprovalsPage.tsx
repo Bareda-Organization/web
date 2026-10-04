@@ -101,7 +101,7 @@ export const MemberApprovalsPage = () => {
 
   return (
     <StyledMemberApprovalsLayout>
-      <PageHeader title="관계자 가입 승인" description={error ? undefined : `학원 관계자 계정은 메인 관리자가 승인합니다 · 학원당 1명 · 처리 대기 ${totalCount}건`} />
+      <PageHeader style={{ marginBottom: 20 }} title="관계자 가입 승인" description={error ? undefined : `학원 관계자 계정은 메인 관리자가 승인합니다 · 학원당 1명 · 처리 대기 ${totalCount}건`} />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 

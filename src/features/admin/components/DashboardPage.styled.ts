@@ -190,6 +190,12 @@ export const StyledTable = styled.table`
   td {
     padding: 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
+  }
+
+  /* 학원 이름이 시안보다 긴 실서버 값에서도 메모 칸이 카드 밖으로 잘리지 않게 줄바꿈을 허용하고, 시각 · 칩은 한 줄로 둔다 */
+  td b,
+  td:nth-child(4),
+  td:nth-child(5) {
     white-space: nowrap;
   }
 

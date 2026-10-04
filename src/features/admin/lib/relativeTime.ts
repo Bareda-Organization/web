@@ -40,8 +40,13 @@ export const eventTimeCell = (raw: string, now: Date = new Date()): { main: stri
   return { main, sub: agoText(raw, now) };
 };
 
-// 학원 구분 색 — 같은 학원은 어느 화면에서도 같은 색이다(이름 글자 합의 홀짝으로 두 색을 가른다).
-export const academyDotColor = (academyName: string): string => {
-  const sum = [...academyName].reduce((total, char) => total + char.charCodeAt(0), 0);
-  return sum % 2 === 0 ? "var(--c-a1)" : "var(--c-a2)";
+// 학원 구분 색 — 같은 학원은 어느 화면에서도 같은 색이다. 색은 두 가지(시안의 학원 구분 2색)라 이름에서 한 비트를 뽑아 정한다(이름이 같으면 항상 같은 색).
+// 학원 목록의 순서나 id 에 기대지 않는 이유 — 이름만 주는 응답(차단 계정 · 감사 로그)에서도 같은 규칙으로 색을 낼 수 있어야 한다.
+// ponytail: 두 색뿐이라 서로 다른 두 학원이 같은 색일 수 있다 — 이름 옆에 항상 글자가 있어 색만으로 구별하지 않는다.
+export const academySlot = (academyName: string): 0 | 1 => {
+  let hash = 0;
+  for (const char of academyName) hash = (Math.imul(hash, 33) + char.charCodeAt(0)) >>> 0;
+  return ((hash >>> 3) & 1) as 0 | 1;
 };
+
+export const academyDotColor = (academyName: string): string => (academySlot(academyName) === 0 ? "var(--c-a1)" : "var(--c-a2)");

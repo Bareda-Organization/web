@@ -7,6 +7,7 @@ import { AlertBanner, Button, EmptyState, FilterBar, PageHeader, Pagination, Ros
 import type { StatStripItem } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademies } from "../api";
+import { academyDotColor } from "../lib/relativeTime";
 import { useAdminPending } from "./AdminPendingProvider";
 import type { AcademiesSummaryTypes, AcademyStatus, AcademySummaryResponseTypes } from "../types";
 import { AcademyFormDialog } from "./AcademyFormDialog";
@@ -25,8 +26,7 @@ const PAGE_SIZE = 20;
 const STAFF_QUOTA = 1;
 
 // 시안의 학원 구분 색 — 운영 중 학원은 두 색을 번갈아, 비활성은 회색(끝남 모양과 같은 색)
-const dotColor = (academy: AcademySummaryResponseTypes, index: number): string =>
-  academy.status === "inactive" ? "var(--c-end)" : index % 2 === 0 ? "var(--c-a1)" : "var(--c-a2)";
+const dotColor = (academy: AcademySummaryResponseTypes): string => (academy.status === "inactive" ? "var(--c-end)" : academyDotColor(academy.name));
 
 const Bars = ({ parts, label }: { parts: { value: number; color: string }[]; label: string }) => {
   const total = parts.reduce((sum, part) => sum + part.value, 0);
@@ -72,7 +72,7 @@ const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: Ac
           학부모 · 학생 · 매니저 합계
           <Bars
             label="이 쪽 학원별 이용자 비율"
-            parts={items.map((academy, index) => ({ value: academy.userCount, color: index % 2 === 0 ? "var(--c-a1)" : "var(--c-a2)" }))}
+            parts={items.map((academy) => ({ value: academy.userCount, color: dotColor(academy) }))}
           />
         </>
       ),
@@ -149,7 +149,7 @@ export const AcademiesPage = () => {
       label: "학원",
       render: (row) => (
         <StyledAcademyName>
-          <StyledAcademyDot $color={dotColor(row, academies.indexOf(row))} aria-hidden="true" />
+          <StyledAcademyDot $color={dotColor(row)} aria-hidden="true" />
           <b>{row.name}</b>
           <small>{row.region}</small>
         </StyledAcademyName>
@@ -213,6 +213,7 @@ export const AcademiesPage = () => {
   return (
     <StyledAcademiesLayout>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="학원 관리"
         description={error ? undefined : `학원 ${summary ? summary.total : totalCount}곳 · 학원 코드는 등록하면 서버가 자동으로 만들어 줍니다`}
         actions={

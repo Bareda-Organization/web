@@ -32,3 +32,11 @@ describe("untilText — 기준 시각까지", () => {
     expect(untilText("2026-10-03T12:45:20+09:00", now)).toBe("곧");
   });
 });
+
+describe("academyDotColor — 학원 구분 색 한 규칙", () => {
+  it("같은 이름은 항상 같은 색이고, QA 시드의 두 운영 학원은 서로 다른 색이다", async () => {
+    const { academyDotColor } = await import("./relativeTime");
+    expect(academyDotColor("하늘수학학원 부천중동점")).toBe(academyDotColor("하늘수학학원 부천중동점"));
+    expect(academyDotColor("하늘수학학원 부천중동점")).not.toBe(academyDotColor("새봄영어학원 역곡점"));
+  });
+});

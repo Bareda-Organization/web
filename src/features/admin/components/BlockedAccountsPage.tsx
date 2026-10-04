@@ -97,6 +97,7 @@ export const BlockedAccountsPage = () => {
   return (
     <StyledBlockedAccountsLayout>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="차단 해제"
         description={error ? undefined : `로그인 5회 실패로 차단된 계정 ${totalCount}건 · 해제는 메인 관리자만 할 수 있습니다`}
       />

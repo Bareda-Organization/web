@@ -1,6 +1,7 @@
 import { Card, EmptyState, Feed, RunStatusChip, StatusChip } from "@/shared/ui";
 import type { FeedItem } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { academySlot } from "../lib/relativeTime";
 import { academyStatusCounts, directionLabel, eventSentence, eventTime, onTimeText, runProgress } from "../lib/dashboardView";
 import type { DashboardDays, DashboardHealthKey, DashboardResponseTypes, DashboardTodayRunResponseTypes } from "../types/dashboard";
 import {
@@ -19,15 +20,6 @@ import {
   StyledTrack,
   StyledWarnText,
 } from "./DashboardPage.styled";
-
-export type AcademySlot = (academyId: string) => 0 | 1;
-
-// 학원 구분 색(시안의 두 색)은 학원 이름순 위치로 번갈아 준다 — 같은 학원은 표 · 막대 · 지표에서 늘 같은 색이다.
-export const makeAcademySlot = (academies: DashboardResponseTypes["academies"], runs: DashboardTodayRunResponseTypes[]): AcademySlot => {
-  const order = [...academies.map((academy) => academy.academyId), ...runs.map((run) => run.academyId)];
-  const unique = [...new Set(order)];
-  return (academyId) => (unique.indexOf(academyId) % 2 === 0 ? 0 : 1);
-};
 
 const RUN_FILL: Record<string, string> = { finished: "var(--c-end)", moving: "var(--c-move)" };
 
@@ -61,7 +53,7 @@ const STATUS_SEGMENTS = [
   { key: "idle", label: "운행 전", color: "var(--c-wait)" },
 ] as const;
 
-export const TodayRunsCard = ({ data, slotOf }: { data: DashboardResponseTypes; slotOf: AcademySlot }) => {
+export const TodayRunsCard = ({ data }: { data: DashboardResponseTypes;  }) => {
   const runs = data.todayRuns;
   const nowMs = new Date(data.asOf).getTime();
   const counts = academyStatusCounts(runs);
@@ -98,7 +90,7 @@ export const TodayRunsCard = ({ data, slotOf }: { data: DashboardResponseTypes; 
                         <b>{formatClockTime(run.departTime)}</b>
                       </td>
                       <td>
-                        <StyledAcademyDot $slot={slotOf(run.academyId)} aria-hidden="true" />
+                        <StyledAcademyDot $slot={academySlot(run.academyName)} aria-hidden="true" />
                         {run.academyName}
                       </td>
                       <td>
@@ -127,7 +119,7 @@ export const TodayRunsCard = ({ data, slotOf }: { data: DashboardResponseTypes; 
             {rows.map((row) => (
               <StyledStatusBarRow key={row.academyId}>
                 <span>
-                  {row.academyId === "all" ? null : <StyledAcademyDot $slot={slotOf(row.academyId)} aria-hidden="true" />}
+                  {row.academyId === "all" ? null : <StyledAcademyDot $slot={academySlot(row.academyName)} aria-hidden="true" />}
                   {row.academyName} <b>{row.total}회</b>
                 </span>
                 <StyledStatusBar role="img" aria-label={STATUS_SEGMENTS.map((segment) => `${segment.label} ${row.counts[segment.key]}`).join(" · ")}>
@@ -160,7 +152,7 @@ const HEALTH_TONE = { ok: "ok", warn: "warn", down: "bad" } as const;
 
 const PERIOD_TITLE: Record<DashboardDays, string> = { 1: "오늘 지표", 7: "주간 지표", 30: "30일 지표" };
 
-export const MetricsCard = ({ data, days, slotOf }: { data: DashboardResponseTypes; days: DashboardDays; slotOf: AcademySlot }) => (
+export const MetricsCard = ({ data, days }: { data: DashboardResponseTypes; days: DashboardDays;  }) => (
   <Card padding={0}>
     <StyledCardBody aria-labelledby="dashboard-metrics-title">
       <StyledCardHeading id="dashboard-metrics-title">{PERIOD_TITLE[days]}</StyledCardHeading>
@@ -180,7 +172,7 @@ export const MetricsCard = ({ data, days, slotOf }: { data: DashboardResponseTyp
             {data.academies.map((academy) => (
               <tr key={academy.academyId}>
                 <td>
-                  <StyledAcademyDot $slot={slotOf(academy.academyId)} aria-hidden="true" />
+                  <StyledAcademyDot $slot={academySlot(academy.academyName)} aria-hidden="true" />
                   {academy.academyName}
                 </td>
                 <td className="num">{academy.runCount}</td>

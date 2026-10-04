@@ -8,6 +8,7 @@ import { AlertBanner, Button, FilterBar, PageHeader, Pagination, RosterTable, Se
 import type { RosterColumn } from "@/shared/types";
 import { getAllAcademies, getStaffAccounts } from "../api";
 import { lastLoginCell } from "../lib/lastLogin";
+import { academyDotColor } from "../lib/relativeTime";
 import type { AcademySummaryResponseTypes, StaffAccountItemResponseTypes, StaffAccountStatus } from "../types";
 import { MemberAccountFormDialog } from "./MemberAccountFormDialog";
 import {
@@ -20,13 +21,6 @@ import {
 } from "./MemberAccountsPage.styled";
 
 const PAGE_SIZE = 20;
-
-const academyDotColor = (academyId: string | undefined, options: AcademySummaryResponseTypes[]): string => {
-  const academy = options.find((option) => option.id === academyId);
-  if (academy?.status === "inactive") return "var(--c-end)";
-  const index = options.findIndex((option) => option.id === academyId);
-  return index % 2 === 0 ? "var(--c-a1)" : "var(--c-a2)";
-};
 
 // §6.6~§6.7 관계자 계정 관리(O-02). 목록에 소속 학원 열을 둔다 — 메인 관리자만
 // 여러 학원의 계정을 한 화면에서 다루므로 이 열이 없으면 어느 학원 소속인지 알 수 없다.
@@ -85,7 +79,7 @@ export const MemberAccountsPage = () => {
       label: "소속 학원",
       render: (row) => (
         <StyledAcademyCell>
-          <StyledAcademyDot $color={academyDotColor(row.academyId, academies)} aria-hidden="true" />
+          <StyledAcademyDot $color={academyDotColor(row.academyName)} aria-hidden="true" />
           {row.academyName}
           {(row.academyPendingSignupCount ?? 0) > 0 ? (
             <Link href="/member-approvals" aria-label={`${row.academyName} 가입 대기 ${row.academyPendingSignupCount}건 — 가입 승인으로 이동`}>
@@ -141,6 +135,7 @@ export const MemberAccountsPage = () => {
   return (
     <StyledMemberAccountsLayout>
       <PageHeader
+        style={{ marginBottom: 20 }}
         title="계정 관리"
         description={error ? undefined : `학원 관계자 계정 ${counts ? counts.active + counts.inactive : totalCount}개 · 학원당 1명 · 퇴사 처리하면 즉시 로그인이 막힙니다`}
       />
