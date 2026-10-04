@@ -52,6 +52,8 @@ describe("report api — snake_case ↔ camelCase 변환", () => {
         reportedAt: "2026-09-15T08:00:00",
         handled: false,
         handledAt: null,
+        reportedByRole: null,
+        handledByName: null,
       },
     ]);
   });

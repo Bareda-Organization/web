@@ -15,9 +15,12 @@ export type ReportItemResponseTypes = {
   // guardian_absent 일 때만 채워진다. 실측 확인.
   studentName: string | null;
   reportedBy: string;
+  // Ruling 814 — 신고자 역할 · 처리한 관계자 이름. 서버가 아직 안 주면 null.
+  reportedByRole: "driver" | "escort" | null;
   reportedAt: string;
   handled: boolean;
   handledAt: string | null;
+  handledByName: string | null;
 };
 
 // ⚠ §5.20 은 §1.8 페이징 표현(`page`·`size`·`total_count`·`has_next`)을 안 썼고,
@@ -26,10 +29,14 @@ export type ReportItemResponseTypes = {
 // 붙이지 않는다.
 export type ReportListResponseTypes = {
   items: ReportItemResponseTypes[];
+  // Ruling 814 — `handled` 쿼리만 뺀 같은 조건의 건수(200건 상한과 무관). 서버가 아직 안 주면 null.
+  counts: { handled: number; unhandled: number } | null;
 };
 
 export type ReportListQueryTypes = {
   type?: ReportType;
   date?: string;
   runId?: string;
+  // Ruling 814 — 처리 여부 필터. 비우면 전체.
+  handled?: boolean;
 };
