@@ -164,7 +164,9 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <Card flush aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(serviceDate)} emptyMessage="이 날짜의 회차가 없습니다" columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} />
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(serviceDate)} emptyMessage="이 날짜의 회차가 없습니다" columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id}
+          // 기사가 안 정해진 아직 안 끝난 회차는 위험 행(오늘 현황과 같은 기준).
+          rowTone={(row) => (!row.canceledAt && row.status !== "finished" && !row.assignments.some((assignment) => assignment.role === "driver") ? "bad" : undefined)} />
         <StyledRunNote>확정 시각은 출발 30분 전입니다. 휴원 · 특강은 임시 추가 · 취소로 처리하고 정규 스케줄은 바꾸지 않습니다. 이미 운행이 시작된 회차는 취소할 수 없습니다.</StyledRunNote>
       </Card>
 

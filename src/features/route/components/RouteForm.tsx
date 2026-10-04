@@ -49,7 +49,7 @@ export const RouteForm = ({ route, onClose, onDone, onBatchDone, initial, existi
   const busId = selectedBusId ?? busOptions.buses[0]?.id;
 
   // 같은 차량 · 방향에서 이미 편성된 요일은 고를 수 없다 — 고른 뒤 차량·방향을 바꿔 막히게 된 요일은 저장에서 뺀다.
-  const takenWeekdays = existing.filter((item) => item.busId === busId && item.direction === direction).map((item) => item.weekday);
+  const takenWeekdays = WEEKDAY_OPTIONS.map((option) => option.value).filter((day) => existing.some((item) => item.busId === busId && item.direction === direction && item.weekday === day));
   const pickedWeekdays = weekdays.filter((day) => !takenWeekdays.includes(day));
   const canSubmit = busId !== undefined && (route !== undefined || pickedWeekdays.length > 0) && !submitting;
   const savedAny = outcomes?.some((outcome) => outcome.failure === null) ?? false;

@@ -5,8 +5,8 @@ export const StyledRouteDetailLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
-  padding: 0 24px 24px;
+  /* 맨 위가 빵부스러기라(PageHeader 가 아니라) 위 여백을 여기서 준다 */
+  padding: 24px;
 `;
 
 export const StyledRouteDetailActions = styled.div`
@@ -19,7 +19,7 @@ export const StyledBreadcrumb = styled.nav`
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: calc(var(--s2) * -1);
+  margin-bottom: -36px;
   font-size: var(--fs-sm);
   color: var(--text-secondary);
 
@@ -33,12 +33,16 @@ export const StyledBreadcrumb = styled.nav`
 // 요일 탭(왼쪽) + 방향 전환(오른쪽) 한 줄.
 export const StyledRouteDetailTabs = styled.div`
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--s4);
 
   & > div:first-of-type {
     flex: 1;
+  }
+  /* 방향 전환은 탭 줄 안쪽에 맞춘다 */
+  & > div:last-of-type {
+    margin-top: 8px;
   }
 `;
 
