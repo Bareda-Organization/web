@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, PageHeader, Textarea } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, StatStrip, StatusChip, Textarea, useToast } from "@/shared/ui";
+import type { StatStripItem } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { decideChangeApproval, getChangeApprovalDetail } from "../api";
 import { toDecideFailure } from "../lib/decideErrorMessage";
 import { formatRemaining, useNowEverySecond } from "../lib/remainingTime";
@@ -23,7 +26,7 @@ import {
   StyledRouteStopRow,
   StyledInfoRow,
   StyledInfoLabel,
-  StyledActionRow,
+  StyledBreadcrumb,
   StyledMapSurface,
 } from "./ChangeApprovalDetail.styled";
 
@@ -158,6 +161,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   const [submitting, setSubmitting] = useState(false);
   const [decideError, setDecideError] = useState<string | null>(null);
   const now = useNowEverySecond();
+  const { show } = useToast();
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -187,6 +191,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     setDecideError(null);
     try {
       await decideChangeApproval(approvalId, { approve: true, previewToken: detail.previewToken });
+      show({ title: `${detail.studentName} 구간 변경을 승인했습니다`, detail: "노선을 다시 확정해 기사·동승 매니저에게 재배포하고 학부모에게 알립니다" });
       void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
@@ -257,16 +262,91 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   const approveConfirmText =
     removedStopCount > 0 ? `이 변경을 승인합니다 (삭제 예정 승하차지 ${removedStopCount}곳)` : "이 변경을 승인합니다";
 
+  const directionLabel = detail.direction === "to_academy" ? "등원" : "하원";
+  const crew = [detail.driverName ? `기사 ${detail.driverName}` : null, detail.escortName ? `동승 ${detail.escortName}` : null].filter(Boolean).join(" · ");
+  const canDecide = !isAlreadyDecided && !isExpired;
+  const route = detail.routePreview;
+
+  // 바뀌는 것 4칸 — 무엇이 바뀌고 정원은 괜찮은가를 첫 화면에 둔다. 값은 §5.5 응답에서 계산한다(새 필드 없음).
+  const summaryItems: StatStripItem[] = route
+    ? [
+        {
+          label: "삭제될 승하차지",
+          value: route.removed.length,
+          unit: "곳",
+          tone: route.removed.length > 0 ? "bad" : "neutral",
+          detail: route.removed.length > 0 ? `${route.removed.map((ref) => ref.stopName).join(" · ")}\n잔여 인원 ${detail.remainingRiders}명` : "삭제되는 승하차지가 없습니다",
+        },
+        {
+          label: "순서가 바뀌는 승하차지",
+          value: route.reordered.length,
+          unit: "곳",
+          detail: route.reordered.length > 0 ? `${route.reordered.map((ref) => ref.stopName).join(" · ")}\n재계산 결과` : "순서가 바뀌는 승하차지가 없습니다",
+        },
+        {
+          label: "전체 소요 시간",
+          value: detail.estDurationBefore !== null && detail.estDurationAfter !== null ? `${detail.estDurationBefore} → ${detail.estDurationAfter}` : "-",
+          unit: "분",
+          detail:
+            detail.estDurationBefore !== null && detail.estDurationAfter !== null
+              ? `${detail.estDurationAfter - detail.estDurationBefore >= 0 ? "+" : ""}${detail.estDurationAfter - detail.estDurationBefore}분 · 출발 ${detail.departTime ? formatClockTime(detail.departTime) : "-"} 변경 없음`
+              : "예전 확정 노선이라 소요시간 정보가 없습니다",
+        },
+        {
+          label: "정원",
+          value: `${detail.capacity.assigned}/${detail.capacity.studentCapacity}`,
+          unit: "명",
+          detail: `현재 탑승 인원 · 영향 학생 ${detail.affectedStudents.length}명`,
+        },
+      ]
+    : [];
+
   return (
     <StyledDetailLayout>
+      <StyledBreadcrumb aria-label="경로">
+        <Link href="/change-approval">구간 변경 승인</Link>
+        <span aria-hidden="true">›</span>
+        <span>{detail.studentName}</span>
+      </StyledBreadcrumb>
       <PageHeader
         title={`${detail.studentName} 구간 변경`}
-        description={
-          remaining === null
-            ? `처리 기한 ${formatClockTime(detail.deadlineAt)} — 처리 기한이 지났습니다`
-            : `처리 기한 ${formatClockTime(detail.deadlineAt)} · 남은 시간 ${remaining}`
+        description={`${detail.busNo} · ${directionLabel}${detail.departTime ? ` · ${formatClockTime(detail.departTime)} 출발` : ""} — ${
+          isAlreadyDecided ? "이미 결정된 건입니다" : `승인하면 노선을 다시 확정해 ${crew || "기사·동승 매니저"}에게 재배포하고 학부모에게 알립니다`
+        }`}
+        actions={
+          isAlreadyDecided ? null : (
+            <>
+              <Button variant="dangerQuiet" onClick={() => setMode("reject")} disabled={submitting || isExpired}>
+                거절
+              </Button>
+              <Button variant="primary" icon="circle-check" onClick={() => setMode("approve")} disabled={submitting || isExpired}>
+                승인
+              </Button>
+            </>
+          )
         }
       />
+
+      {isAlreadyDecided ? (
+        <AlertBanner
+          tone={detail.status === "approved" ? "boarded" : detail.status === "rejected" ? "missed" : "moving"}
+          title={
+            detail.status === "approved"
+              ? "승인 완료 — 노선이 다시 확정되었습니다"
+              : detail.status === "rejected"
+                ? "거절됨 — 기존 노선이 유지되었습니다"
+                : detail.status === "auto_rejected"
+                  ? "자동 거절됨 — 처리 기한이 지나 기존 노선이 유지되었습니다"
+                  : "이미 결정된 건입니다"
+          }
+        >
+          {[detail.decidedAt ? formatDateTime(detail.decidedAt) : null, detail.decidedByName ? `처리자 ${detail.decidedByName}` : null].filter(Boolean).join(" · ")}
+        </AlertBanner>
+      ) : (
+        <AlertBanner tone={isExpired ? "missed" : "moving"} title={isExpired ? "처리 기한이 지나 자동 거절됩니다" : `처리 기한 ${formatClockTime(detail.deadlineAt)} — 남은 시간 ${remaining}`}>
+          기한이 지나면 자동 거절되어 기존 노선이 유지되고, 학부모에게 실패가 통지됩니다.
+        </AlertBanner>
+      )}
 
       {detail.previewStale ? (
         <AlertBanner
@@ -281,7 +361,18 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       ) : null}
       {decideError ? <AlertBanner tone="missed" title={decideError} /> : null}
 
+      {summaryItems.length > 0 ? <StatStrip items={summaryItems} style={{ whiteSpace: "pre-line" }} /> : null}
+
       <Card>
+        <p>요청 내용</p>
+        <StyledInfoRow>
+          <StyledInfoLabel>학생</StyledInfoLabel>
+          <span>{detail.studentName}</span>
+        </StyledInfoRow>
+        <StyledInfoRow>
+          <StyledInfoLabel>요청 유형</StyledInfoLabel>
+          <span>{detail.source === "intent" ? "예고(등하원 토글)" : "구간 변경 신청(일일 스케줄 변경)"}</span>
+        </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>버스</StyledInfoLabel>
           <span>{detail.busNo}</span>
@@ -289,12 +380,14 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         <StyledInfoRow>
           <StyledInfoLabel>승하차지</StyledInfoLabel>
           <span>
-            {detail.stopName} {detail.willRemoveStop ? <Badge tone="removed">삭제 예정</Badge> : null}
+            {detail.stopName} {detail.willRemoveStop ? <StatusChip tone="bad">삭제 예정</StatusChip> : null}
           </span>
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>잔여 인원</StyledInfoLabel>
-          <span>{detail.remainingRiders}</span>
+          <span>
+            {detail.remainingRiders}명{detail.willRemoveStop ? " — 이 승하차지에 남는 학생이 없음" : ""}
+          </span>
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>정원</StyledInfoLabel>
@@ -305,6 +398,14 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         <StyledInfoRow>
           <StyledInfoLabel>영향받는 학생</StyledInfoLabel>
           <span>{detail.affectedStudents.map((s) => s.name).join(", ") || "-"}</span>
+        </StyledInfoRow>
+        <StyledInfoRow>
+          <StyledInfoLabel>접수</StyledInfoLabel>
+          <span>{formatClockTime(detail.requestedAt)} · {detail.source === "intent" ? "예고" : "학부모 신청"}</span>
+        </StyledInfoRow>
+        <StyledInfoRow>
+          <StyledInfoLabel>처리 기한</StyledInfoLabel>
+          <span>{formatClockTime(detail.deadlineAt)} (출발 시각){remaining === null ? " — 처리 기한이 지났습니다" : ""}</span>
         </StyledInfoRow>
       </Card>
 
@@ -400,50 +501,45 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         </Card>
       ) : null}
 
-      {isAlreadyDecided ? null : (
-        <Card>
-          {isExpired ? <AlertBanner tone="missed" title="처리 기한이 지나 자동 거절됩니다" /> : null}
-          {mode === "reject" ? (
-            <>
-              <Textarea
-                label="거절 사유"
-                required
-                value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
-              />
-              <StyledActionRow>
-                <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
-                  뒤로
-                </Button>
-                <Button variant="danger" onClick={handleReject} disabled={submitting || isExpired || !rejectReason.trim()}>
-                  {submitting ? "처리 중..." : "거절 확정"}
-                </Button>
-              </StyledActionRow>
-            </>
-          ) : mode === "approve" ? (
-            <>
-              <p>{approveConfirmText}</p>
-              <StyledActionRow>
-                <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
-                  뒤로
-                </Button>
-                <Button variant="primary" onClick={handleApprove} disabled={submitting || isExpired}>
-                  {submitting ? "처리 중..." : "승인 확정"}
-                </Button>
-              </StyledActionRow>
-            </>
-          ) : (
-            <StyledActionRow>
-              <Button variant="danger" onClick={() => setMode("reject")} disabled={submitting || isExpired}>
-                거절
-              </Button>
-              <Button variant="primary" onClick={() => setMode("approve")} disabled={submitting || isExpired}>
-                승인
-              </Button>
-            </StyledActionRow>
-          )}
-        </Card>
-      )}
+      {/* 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 영향을 한 번 더 보여 주는 확인 대화상자(U-04 · F02-14). */}
+      <Dialog
+        open={canDecide && mode === "approve"}
+        title={`${detail.studentName} 구간 변경 승인`}
+        showClose
+        onClose={() => setMode(null)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
+              뒤로
+            </Button>
+            <Button variant="danger" onClick={handleApprove} disabled={submitting || isExpired}>
+              {submitting ? "처리 중..." : "구간 변경 승인"}
+            </Button>
+          </>
+        }
+      >
+        <p>{approveConfirmText}</p>
+        <p>승인하면 노선을 다시 확정해 {crew || "기사·동승 매니저"}에게 재배포하고 학부모에게 알립니다. 되돌릴 수 없습니다.</p>
+      </Dialog>
+      <Dialog
+        open={canDecide && mode === "reject"}
+        title={`${detail.studentName} 구간 변경 거절`}
+        showClose
+        onClose={() => setMode(null)}
+        actionHint={rejectReason.trim() ? undefined : "사유를 입력하면 [구간 변경 거절] 버튼이 켜집니다."}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
+              뒤로
+            </Button>
+            <Button variant="danger" onClick={handleReject} disabled={submitting || isExpired || !rejectReason.trim()}>
+              {submitting ? "처리 중..." : "구간 변경 거절"}
+            </Button>
+          </>
+        }
+      >
+        <Textarea label="거절 사유" required maxLength={200} hint="학부모에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
+      </Dialog>
     </StyledDetailLayout>
   );
 };

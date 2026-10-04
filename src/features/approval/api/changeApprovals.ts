@@ -103,6 +103,12 @@ const toRouteStopRef = (raw: RawRouteStopRef): RouteStopRefResponseTypes => ({
 type RawRoutePathPoint = { lat: number; lng: number };
 
 type RawChangeApprovalDetail = RawChangeApprovalSummary & {
+  // Ruling 812 — 아직 안 주는 서버를 견디려고 선택 필드로 둔다.
+  status?: "pending" | "approved" | "rejected" | "auto_rejected";
+  decided_at?: string | null;
+  decided_by_name?: string | null;
+  driver_name?: string | null;
+  escort_name?: string | null;
   // `R20-B` 목표 3 — `r20-a` 가 아직 병합 전이라 백엔드가 이 키 자체를 안 줄 수 있다
   // (`undefined`). optional 로 받아 두고 아래에서 `null` 로 흡수한다.
   depart_time?: string | null;
@@ -152,6 +158,11 @@ export const getChangeApprovalDetail = async (approvalId: string): Promise<Chang
           roadPathAfter: raw.route_preview.road_path_after,
         }
       : null,
+    status: raw.status ?? "pending",
+    decidedAt: raw.decided_at ?? null,
+    decidedByName: raw.decided_by_name ?? null,
+    driverName: raw.driver_name ?? null,
+    escortName: raw.escort_name ?? null,
     departTime: raw.depart_time ?? null,
     estTimeBefore: raw.est_time_before,
     estTimeAfter: raw.est_time_after,

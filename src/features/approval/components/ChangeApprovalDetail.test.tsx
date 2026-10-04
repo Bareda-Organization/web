@@ -75,6 +75,11 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   capacity: { studentCapacity: 20, assigned: 12 },
   previewToken: "token-abc",
   previewStale: false,
+  status: "pending",
+  decidedAt: null,
+  decidedByName: null,
+  driverName: null,
+  escortName: null,
 };
 
 // shouldAdvanceTime 을 쓰면 실제 시간이 흐르는 만큼 가짜 시계도 흘러, 기계가 바쁠 때 렌더가 1초 늦으면
@@ -105,7 +110,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 승인" }));
 
     await waitFor(() =>
       expect(mockDecide).toHaveBeenCalledWith("5", { approve: true, previewToken: "token-abc" }),
@@ -119,7 +124,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
 
-    expect(screen.getByRole("button", { name: "거절 확정" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "구간 변경 거절" })).toBeDisabled();
   });
 
   it("409 PREVIEW_STALE 응답을 받으면 오류 문구를 보여주고 상세를 다시 불러온다", async () => {
@@ -128,7 +133,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 승인" }));
 
     expect(await screen.findByText("미리보기가 만료됐습니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
@@ -471,7 +476,7 @@ describe("ChangeApprovalDetail — F02-14 승인 확인 단계", () => {
     expect(mockDecide).not.toHaveBeenCalled();
     expect(screen.getByText("이 변경을 승인합니다")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 승인" }));
     await waitFor(() => expect(mockDecide).toHaveBeenCalledTimes(1));
   });
 
@@ -491,7 +496,7 @@ describe("ChangeApprovalDetail — F02-14 승인 확인 단계", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "뒤로" }));
     expect(screen.getByRole("button", { name: "승인" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "승인 확정" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "구간 변경 승인" })).not.toBeInTheDocument();
   });
 });
 
@@ -514,7 +519,7 @@ describe("ChangeApprovalDetail — F02-06 결정 실패 뒤 최신 상태로", (
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 승인" }));
 
     expect(await screen.findByText("이미 다른 관계자가 처리한 요청입니다 — 최신 상태로 새로 불러옵니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
@@ -528,7 +533,7 @@ describe("ChangeApprovalDetail — F02-06 결정 실패 뒤 최신 상태로", (
 
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "사유" } });
-    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 거절" }));
 
     expect(await screen.findByText("처리할 수 있는 시간이 지났습니다 — 기한이 지나 자동 거절됐거나 운행이 시작됐습니다")).toBeInTheDocument();
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
@@ -561,7 +566,7 @@ describe("ChangeApprovalDetail — 처리 직후 사이드바 배지 갱신", ()
     render(<ChangeApprovalDetail approvalId="5" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 승인" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
@@ -573,7 +578,7 @@ describe("ChangeApprovalDetail — 처리 직후 사이드바 배지 갱신", ()
 
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "사유" } });
-    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "구간 변경 거절" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });

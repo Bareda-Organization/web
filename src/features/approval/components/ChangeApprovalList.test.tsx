@@ -132,7 +132,7 @@ describe("ChangeApprovalList — 자동 거절까지 남은 시간", () => {
     render(<ChangeApprovalList />);
 
     // 머리글은 응답이 오기 전에도 그려져 있다 — 행의 값을 기다려야 응답이 한 틱 늦어도 실패하지 않는다(20회 반복에서 1회 실패한 경합).
-    expect(await screen.findByText("15분 0초")).toBeInTheDocument();
+    expect(await screen.findByText("15분 0초 남음")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "자동 거절까지" })).toBeInTheDocument();
     expect(screen.getByText("기한 지남")).toBeInTheDocument();
   });

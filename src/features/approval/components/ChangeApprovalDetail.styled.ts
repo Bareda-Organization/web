@@ -60,3 +60,17 @@ export const StyledMapSurface = styled.div`
   overflow: hidden;
   border: 1px solid var(--border-default);
 `;
+
+// 경로 — 구간 변경 승인 › 학생. 목록으로 돌아가는 길.
+export const StyledBreadcrumb = styled.nav`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  a {
+    color: var(--text-primary);
+    text-decoration: underline;
+  }
+`;
