@@ -183,6 +183,7 @@ export const StaleMovingRunsPage = () => {
           <RosterTable
             hasError={Boolean(error)}
             onRetry={load}
+            {...{ style: { background: "transparent", boxShadow: "none", borderRadius: 0 } }}
             columns={columns}
             loading={loading}
             rows={runs}

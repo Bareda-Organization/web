@@ -125,6 +125,7 @@ export const MemberApprovalsPage = () => {
                 onRetry={reload}
                 columns={columns}
                 loading={loading}
+                {...{ style: { background: "transparent", boxShadow: "none", borderRadius: 0 } }}
                 rows={requests}
                 getRowKey={(row) => row.requestId}
                 selectedKey={selected?.requestId ?? null}

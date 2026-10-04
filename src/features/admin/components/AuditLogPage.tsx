@@ -269,19 +269,22 @@ export const AuditLogPage = () => {
       </StyledFilterRow>
       </StyledFilterPanel>
 
-      <Card padding={0} aria-busy={loading}>
-        {tab === "audit" ? (
-          auditItems.length === 0 && !loading && !error ? (
+      {/* 표(RosterTable)는 자체가 카드라 바깥을 또 카드로 감싸지 않는다 — 빈 상태만 카드에 담는다(카드 안의 카드 방지). */}
+      {tab === "audit" ? (
+        auditItems.length === 0 && !loading && !error ? (
+          <Card padding={0}>
             <EmptyState icon="file-search" title="조건에 맞는 감사 로그가 없습니다" />
-          ) : (
-            <RosterTable hasError={Boolean(error)} onRetry={paging.reload} columns={auditColumns} loading={loading} rows={auditItems} getRowKey={(row, index) => `${row.targetType}-${row.targetId}-${index}`} />
-          )
-        ) : loginItems.length === 0 && !loading && !error ? (
-          <EmptyState icon="file-search" title="조건에 맞는 접속 이력이 없습니다" />
+          </Card>
         ) : (
-          <RosterTable hasError={Boolean(error)} onRetry={paging.reload} columns={loginColumns} loading={loading} rows={loginItems} getRowKey={(row, index) => `${row.accountId}-${index}`} />
-        )}
-      </Card>
+          <RosterTable aria-busy={loading} hasError={Boolean(error)} onRetry={paging.reload} columns={auditColumns} loading={loading} rows={auditItems} getRowKey={(row, index) => `${row.targetType}-${row.targetId}-${index}`} />
+        )
+      ) : loginItems.length === 0 && !loading && !error ? (
+        <Card padding={0}>
+          <EmptyState icon="file-search" title="조건에 맞는 접속 이력이 없습니다" />
+        </Card>
+      ) : (
+        <RosterTable aria-busy={loading} hasError={Boolean(error)} onRetry={paging.reload} columns={loginColumns} loading={loading} rows={loginItems} getRowKey={(row, index) => `${row.accountId}-${index}`} />
+      )}
 
       <Pagination hasError={Boolean(error)} page={paging.page} size={PAGE_SIZE} totalCount={paging.totalCount} hasNext={paging.hasNext} onPageChange={paging.setPage} />
     </StyledAuditLogLayout>

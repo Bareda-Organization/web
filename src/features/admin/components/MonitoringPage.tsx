@@ -621,6 +621,7 @@ export const MonitoringPage = () => {
               </small>
             </StyledTableHeading>
             <RosterTable
+              {...{ style: { background: "transparent", boxShadow: "none", borderRadius: 0 } }}
               columns={columns}
               loading={loadingRuns}
               rows={sortedRuns}
