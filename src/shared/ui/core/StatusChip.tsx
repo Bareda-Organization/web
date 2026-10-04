@@ -17,7 +17,7 @@ export type StatusChipProps = HTMLAttributes<HTMLSpanElement> & {
 };
 
 export const StatusChip = ({ tone = "conf", marker = true, quiet = false, children, ...rest }: StatusChipProps) => (
-  <StyledStatusChip $tone={tone} $quiet={quiet} {...rest}>
+  <StyledStatusChip $tone={tone} $quiet={quiet} data-tone={tone} data-quiet={quiet ? "true" : undefined} {...rest}>
     {marker ? <StyledMarker $tone={tone} aria-hidden="true" /> : null}
     {children}
   </StyledStatusChip>

@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
-import { Button } from "../core/Button";
-import { StyledPagination, StyledPaginationControls, StyledPaginationPage, StyledPaginationSummary } from "./Pagination.styled";
+import { Icon } from "../core/Icon";
+import { StyledPageButton, StyledPagination, StyledPaginationControls, StyledPaginationPage, StyledPaginationSummary } from "./Pagination.styled";
 
 export type PaginationProps = HTMLAttributes<HTMLElement> & {
   /** §1.8 — 0 기점 */
@@ -30,27 +30,15 @@ export const Pagination = ({ page, size, totalCount, hasNext, onPageChange, hasE
         총 {totalCount}건 중 {from}-{to}
       </StyledPaginationSummary>
       <StyledPaginationControls>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon="chevron-left"
-          aria-label="이전"
-          disabled={page <= 0}
-          onClick={() => onPageChange(page - 1)}
-        />
+        <StyledPageButton type="button" aria-label="이전" disabled={page <= 0} onClick={() => onPageChange(page - 1)}>
+          <Icon name="chevron-left" size={16} />
+        </StyledPageButton>
         <StyledPaginationPage aria-current="page" aria-label={`${page + 1} 페이지`}>
           {page + 1}
         </StyledPaginationPage>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon="chevron-right"
-          aria-label="다음"
-          disabled={!hasNext}
-          onClick={() => onPageChange(page + 1)}
-        />
+        <StyledPageButton type="button" aria-label="다음" disabled={!hasNext} onClick={() => onPageChange(page + 1)}>
+          <Icon name="chevron-right" size={16} />
+        </StyledPageButton>
       </StyledPaginationControls>
     </StyledPagination>
   );

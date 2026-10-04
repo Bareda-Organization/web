@@ -103,6 +103,11 @@ export const StyledRosterTableRow = styled.tr<{ $clickable: boolean; $highlighte
               inset 0 1px 0 var(--selected-edge),
               inset 0 -1px 0 var(--selected-edge);
           }
+          /* 확정 칩의 면(green-100)이 선택 행의 면과 같아 윤곽이 사라지는 것을 막는다 */
+          & [data-tone="conf"]:not([data-quiet]),
+          & [data-tone="ok"]:not([data-quiet]) {
+            box-shadow: inset 0 0 0 1px var(--green-300);
+          }
         `
       : null}
 

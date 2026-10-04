@@ -55,7 +55,7 @@ export const StyledTextarea = styled.textarea`
 export const StyledHintRow = styled.span`
   display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--s2);
+  gap: 0 6px;
   font: var(--fw-regular) var(--fs-xs) / 1.5 var(--font-sans);
   color: var(--text-secondary);
 `;
@@ -69,7 +69,7 @@ export const StyledHint = styled.span`
 
   &::before {
     content: "·";
-    margin-right: var(--s2);
+    margin-right: 6px;
   }
 `;
 
