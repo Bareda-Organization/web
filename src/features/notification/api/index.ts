@@ -16,6 +16,11 @@ type RawNotificationItem = {
   type: NotificationType;
   body: string;
   acked: boolean;
+  // 묶음 항목(group=true, Ruling 813) — 묶지 않은 응답에는 없다. 묶음 항목은 acked · recipient_* 대신 이 값들을 준다.
+  group_key?: string;
+  recipient_count?: number;
+  acked_count?: number;
+  recipients?: { recipient_name: string; recipient_role: string }[];
 };
 
 type RawNotificationListResponse = {
@@ -31,11 +36,18 @@ const toItem = (raw: RawNotificationItem): NotificationListItemResponseTypes => 
   notificationId: asIdString(raw.notification_id),
   sentAt: raw.sent_at,
   busNo: raw.bus_no,
-  recipientName: raw.recipient_name,
-  recipientRole: raw.recipient_role,
+  recipientName: raw.recipient_name ?? raw.recipients?.[0]?.recipient_name ?? "",
+  recipientRole: raw.recipient_role ?? raw.recipients?.[0]?.recipient_role ?? "",
   type: raw.type,
   body: raw.body,
-  acked: raw.acked,
+  acked: raw.acked ?? (raw.recipient_count !== undefined && raw.acked_count === raw.recipient_count),
+  ...(raw.recipient_count !== undefined
+    ? {
+        recipientCount: raw.recipient_count,
+        ackedCount: raw.acked_count ?? 0,
+        recipients: (raw.recipients ?? []).map((r) => ({ recipientName: r.recipient_name, recipientRole: r.recipient_role })),
+      }
+    : {}),
 });
 
 // GET /staff/notifications (§5.17, NTF-10·11) — 조회 전용, 쓰기 엔드포인트 없음.
@@ -47,7 +59,7 @@ export const getNotifications = async (
 ): Promise<NotificationListResponseTypes> => {
   const raw = await apiFetch<RawNotificationListResponse>("/staff/notifications", {
     method: "GET",
-    query: { page, size, type: filters.type, date: filters.date, acked: filters.acked },
+    query: { page, size, type: filters.type, date: filters.date, acked: filters.acked, recipient_role: filters.recipientRole, group: filters.group },
   });
   return {
     items: raw.items.map(toItem),

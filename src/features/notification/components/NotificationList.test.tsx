@@ -28,7 +28,7 @@ describe("NotificationList — 조회 갈래", () => {
     // aria-busy)를 먼저 기다린다.
     await waitFor(() => expect(container.querySelector('[aria-busy="false"]')).toBeTruthy());
 
-    expect(screen.getByText("총 0건 · 수신자 미확인 0건")).toBeInTheDocument();
+    expect(screen.getByText(/총 0건 · 수신자 미확인 0건/)).toBeInTheDocument();
     // 데이터 행은 없고, 머리글 아래에 빈 목록 문구(R32-W10)가 한 줄 있다.
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
@@ -54,7 +54,8 @@ describe("NotificationList — 시각 표기(R32-W9)", () => {
     } as never);
     render(<NotificationList />);
 
-    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    // 표에는 시:분만(날짜는 날짜 묶음 줄에) — 한국 시간으로 바뀐 값이다.
+    expect(await screen.findByText("17:00")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
   });
 });
@@ -76,7 +77,7 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
     await screen.findByText("내용2");
     mockGet.mockClear();
 
-    fireEvent.change(screen.getByLabelText("수신자 확인 여부"), { target: { value: "false" } });
+    fireEvent.click(screen.getByRole("tab", { name: /수신자 미확인/ }));
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
     expect(mockGet).toHaveBeenCalledWith(0, 20, expect.objectContaining({ acked: false }));
@@ -97,7 +98,7 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
     mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
     render(<NotificationList />);
 
-    expect(await screen.findByText("수신1 (학부모)")).toBeInTheDocument();
+    expect(await screen.findByText("수신1")).toBeInTheDocument();
     expect(screen.getAllByText(/미승차 무응답/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/escalation/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(parent\)/)).not.toBeInTheDocument();
@@ -123,9 +124,9 @@ describe("NotificationList — 관계자 알림 구분", () => {
     );
     render(<NotificationList />);
 
-    const parentRow = (await screen.findByText("김학부모 (학부모)")).closest("tr")!;
-    const staffRow = screen.getByText("이관계자 (학원 관계자)").closest("tr")!;
-    const adminRow = screen.getByText("박관리자 (메인 관리자)").closest("tr")!;
+    const parentRow = (await screen.findByText("김학부모")).closest("tr")!;
+    const staffRow = screen.getByText("이관계자").closest("tr")!;
+    const adminRow = screen.getByText("박관리자").closest("tr")!;
     expect(within(parentRow).queryByText("관계자 알림")).not.toBeInTheDocument();
     expect(within(staffRow).getByText("관계자 알림")).toBeInTheDocument();
     expect(within(adminRow).getByText("관계자 알림")).toBeInTheDocument();
@@ -148,3 +149,42 @@ describe("NotificationList — 다시 시도", () => {
   });
 });
 
+
+// Ruling 813 — 같은 알림의 수신자를 한 줄로 묶는다(기본 켬). 토글과 "관계자에게 온 알림만" 이 서버 쿼리(group · recipient_role)로 간다.
+describe("NotificationList — 묶어 보기 · 관계자 알림만(Ruling 813)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("처음에는 묶어 보기(group=true)로 요청하고, 끄면 group=false 로 다시 요청한다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+    expect(mockGet).toHaveBeenLastCalledWith(0, 20, expect.objectContaining({ group: true }));
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "같은 알림 묶어 보기" }));
+
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(0, 20, expect.objectContaining({ group: false })));
+  });
+
+  it("관계자에게 온 알림만을 켜면 recipient_role=staff 로 요청한다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+    expect(mockGet).toHaveBeenLastCalledWith(0, 20, expect.objectContaining({ recipientRole: undefined }));
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "관계자에게 온 알림만" }));
+
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(0, 20, expect.objectContaining({ recipientRole: "staff" })));
+  });
+
+  it("묶음 행은 첫 수신자 외 N명과 확인 수를 보여 준다", async () => {
+    mockGet.mockResolvedValue(
+      pageOf([{ ...row(1), recipientName: "장주희", recipientCount: 4, ackedCount: 0, recipients: [{ recipientName: "장주희", recipientRole: "parent" }] }], 0, false),
+    );
+    render(<NotificationList />);
+
+    expect(await screen.findByText("외 3명")).toBeInTheDocument();
+    expect(screen.getByText("미확인 4/4")).toBeInTheDocument();
+  });
+});

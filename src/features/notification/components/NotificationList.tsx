@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Badge, Card, Input, PageHeader, Pagination, RosterTable, Select } from "@/shared/ui";
+import { AlertBanner, Card, FilterBar, Input, PageHeader, Pagination, RosterTable, Select, StatusChip, Switch, Tabs } from "@/shared/ui";
+import type { StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getNotifications } from "../api";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
-import { StyledNotificationFilters, StyledNotificationLayout, StyledStaffRecipientMark } from "./NotificationList.styled";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { StyledNotificationLayout, StyledNotificationFooter, StyledRecipientCell } from "./NotificationList.styled";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
+import { formatHeaderDate, todayInSeoul } from "@/shared/lib/format/dateTime";
 import { formatRole } from "@/shared/lib/format/roleLabel";
 
 const PAGE_SIZE = 20;
@@ -40,18 +42,49 @@ const TYPE_LABEL: Record<NotificationType, string> = {
 const STAFF_ROLES = new Set(["staff", "system_admin"]);
 
 const TYPE_OPTIONS = [{ value: "", label: "전체 종류" }, ...Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))];
-const ACKED_OPTIONS = [
-  { value: "", label: "전체" },
-  { value: "false", label: "미확인" },
-  { value: "true", label: "확인됨" },
-];
+// 종류 칩의 색 — 위험(비상 · 미승차) · 주의(지연) · 정보(승인 계열)만 눈에 띄게, 나머지는 조용한 회색. 모양이 함께 붙어 색만으로 말하지 않는다.
+const TYPE_TONE: Partial<Record<NotificationType, StatusChipTone>> = {
+  emergency: "bad",
+  emergency_canceled: "off",
+  no_show: "bad",
+  no_show_escalated: "bad",
+  delay: "warn",
+  approval_requested: "info",
+  signup_decided: "info",
+  change_decided: "info",
+};
+
+// 날짜 묶음 줄 — "오늘 · 10월 3일 (토)" · "어제 · 10월 2일 (금)".
+const dayKey = (sentAt: string): string => {
+  const parsed = new Date(sentAt);
+  return Number.isNaN(parsed.getTime()) ? "-" : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(parsed);
+};
+const dayHeading = (key: string): string => {
+  if (key === "-") return "날짜 미상";
+  const today = todayInSeoul();
+  const yesterday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date(Date.parse(`${today}T12:00:00+09:00`) - 86_400_000));
+  const label = formatHeaderDate(new Date(`${key}T12:00:00+09:00`));
+  return key === today ? `오늘 · ${label}` : key === yesterday ? `어제 · ${label}` : label;
+};
+
+// 수신자 확인 칸 — 묶음은 "미확인 2/2" · "확인 14/20" · "확인됨", 낱개는 "미확인" · "확인됨".
+const ackSummary = (row: NotificationListItemResponseTypes): { label: string; tone: StatusChipTone; quiet: boolean } => {
+  if (row.recipientCount === undefined) return row.acked ? { label: "확인됨", tone: "ok", quiet: true } : { label: "미확인", tone: "warn", quiet: false };
+  const acked = row.ackedCount ?? 0;
+  if (acked >= row.recipientCount) return { label: "확인됨", tone: "ok", quiet: true };
+  if (acked === 0) return { label: `미확인 ${row.recipientCount}/${row.recipientCount}`, tone: "warn", quiet: false };
+  return { label: `확인 ${acked}/${row.recipientCount}`, tone: "ok", quiet: true };
+};
 
 // §5.17 GET /staff/notifications(NTF-10·11, A-13) — 알림 로그, 조회 전용.
 // 푸시가 off 로 막힌 건도 레코드로 남으므로 이 화면은 "발송 시도 전수" 를 보여준다.
 export const NotificationList = () => {
   const [type, setType] = useState("");
   const [date, setDate] = useState("");
+  // 탭 = 수신자 확인 여부("" 전체 · false 미확인 · true 확인됨). 묶어 보기는 기본 켬, 관계자 알림만은 기본 끔.
   const [acked, setAcked] = useState("");
+  const [grouped, setGrouped] = useState(true);
+  const [staffOnly, setStaffOnly] = useState(false);
   // 필터가 바뀌면 0쪽부터 다시 읽는다 — 쪽 번호와 필터를 한 곳(usePagedList)에서 다뤄 요청이 한 번만 나가고,
   // 늦게 온 옛 응답은 무시하며, 조회가 실패해도 보이던 목록은 그대로 둔다.
   const { items, data, totalCount, hasNext, page, setPage, loading, error, reload } = usePagedList(
@@ -60,70 +93,99 @@ export const NotificationList = () => {
         type: type ? (type as NotificationType) : undefined,
         date: date || undefined,
         acked: acked ? acked === "true" : undefined,
+        group: grouped,
+        recipientRole: staffOnly ? "staff" : undefined,
       }),
-    { resetKey: `${type}|${date}|${acked}`, errorMessage: "알림 로그를 불러오지 못했습니다" },
+    { resetKey: `${type}|${date}|${acked}|${grouped}|${staffOnly}`, errorMessage: "알림 로그를 불러오지 못했습니다" },
   );
   const unackedCount = data?.unackedCount ?? 0;
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
-    { key: "sentAt", label: "발송 시각", render: (row) => formatDateTime(row.sentAt) },
+    { key: "sentAt", label: "발송", render: (row) => <b>{formatClockTime(row.sentAt)}</b> },
     { key: "busNo", label: "차량", render: (row) => row.busNo ?? "-" },
     {
       key: "recipient",
       label: "수신자",
-      render: (row) => (
-        <>
-          {`${row.recipientName} (${formatRole(row.recipientRole)})`}
-          {/* 학부모·동승자에게 간 알림의 "수신자 확인" 은 그 수신자의 일이고, 관계자에게 간 알림만 학원이 직접 확인한다. */}
-          {STAFF_ROLES.has(row.recipientRole) ? (
-            <StyledStaffRecipientMark>
-              <Badge tone="brand">관계자 알림</Badge>
-            </StyledStaffRecipientMark>
-          ) : null}
-        </>
-      ),
+      render: (row) => {
+        const others = (row.recipientCount ?? 1) - 1;
+        return (
+          <StyledRecipientCell>
+            <span>
+              <b>{row.recipientName}</b>
+              {others > 0 ? <b> 외 {others}명</b> : null} <small>{formatRole(row.recipientRole)}</small>
+            </span>
+            {/* 학부모·동승자에게 간 알림의 "수신자 확인" 은 그 수신자의 일이고, 관계자에게 간 알림만 학원이 직접 확인한다. */}
+            {STAFF_ROLES.has(row.recipientRole) ? (
+              <StatusChip tone="info" marker={false}>
+                관계자 알림
+              </StatusChip>
+            ) : null}
+          </StyledRecipientCell>
+        );
+      },
     },
-    { key: "type", label: "종류", render: (row) => TYPE_LABEL[row.type] },
+    { key: "type", label: "종류", render: (row) => <StatusChip tone={TYPE_TONE[row.type] ?? "off"} marker={false}>{TYPE_LABEL[row.type]}</StatusChip> },
     { key: "body", label: "내용" },
     {
       key: "acked",
       label: "수신자 확인",
-      render: (row) => <Badge tone={row.acked ? "added" : "amber"}>{row.acked ? "확인됨" : "미확인"}</Badge>,
+      render: (row) => {
+        const summary = ackSummary(row);
+        return (
+          <StatusChip tone={summary.tone} marker={false} quiet={summary.quiet}>
+            {summary.label}
+          </StatusChip>
+        );
+      },
     },
   ];
 
+  const ackedCountLabel = grouped ? undefined : Math.max(0, totalCount - unackedCount);
+
   return (
     <StyledNotificationLayout>
-      <PageHeader title="알림 로그" description={error ? undefined : `총 ${totalCount}건 · 수신자 미확인 ${unackedCount}건`} />
+      <PageHeader
+        title="알림 로그"
+        description={error ? undefined : `총 ${totalCount}건 · 수신자 미확인 ${unackedCount}건 — 푸시를 꺼 둔 수신자에게 막힌 알림도 기록으로 남습니다`}
+      />
 
-      <StyledNotificationFilters>
-        <Select
-          label="종류"
-          value={type}
-          options={TYPE_OPTIONS}
-          onChange={(event) => setType(event.target.value)}
-        />
-        <Input
-          label="날짜"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-        <Select
-          label="수신자 확인 여부"
-          value={acked}
-          options={ACKED_OPTIONS}
-          onChange={(event) => setAcked(event.target.value)}
-        />
-      </StyledNotificationFilters>
+      <Tabs
+        aria-label="수신자 확인 여부"
+        items={[
+          { value: "", label: "전체", count: totalCount },
+          { value: "false", label: "수신자 미확인", count: unackedCount },
+          { value: "true", label: "수신자 확인됨", count: ackedCountLabel },
+        ]}
+        value={acked}
+        onChange={setAcked}
+      />
+
+      <FilterBar>
+        <Select label="종류" value={type} options={TYPE_OPTIONS} onChange={(event) => setType(event.target.value)} />
+        <Input label="날짜" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Switch label="같은 알림 묶어 보기" checked={grouped} onChange={(event) => setGrouped(event.target.checked)} />
+        <Switch label="관계자에게 온 알림만" checked={staffOnly} onChange={(event) => setStaffOnly(event.target.checked)} />
+      </FilterBar>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={reload} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.notificationId} />
+      <Card flush aria-busy={loading}>
+        <RosterTable
+          hasError={Boolean(error)}
+          onRetry={reload}
+          columns={columns}
+          loading={loading}
+          rows={items}
+          getRowKey={(row) => row.notificationId}
+          groupBy={(row) => dayKey(row.sentAt)}
+          renderGroupLabel={(key) => <b>{dayHeading(key)}</b>}
+          rowTone={(row) => (STAFF_ROLES.has(row.recipientRole) && !row.acked ? "warn" : undefined)}
+        />
+        <StyledNotificationFooter>
+          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}최근 발송이 위</span>
+          <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+        </StyledNotificationFooter>
       </Card>
-
-      <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
     </StyledNotificationLayout>
   );
 };

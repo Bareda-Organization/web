@@ -18,3 +18,26 @@ export const StyledNotificationFilters = styled.div`
 export const StyledStaffRecipientMark = styled.span`
   margin-left: 8px;
 `;
+
+export const StyledRecipientCell = styled.span`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+
+  small {
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+  }
+`;
+
+export const StyledNotificationFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: 0 20px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;

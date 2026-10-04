@@ -36,6 +36,10 @@ export type NotificationListItemResponseTypes = {
   type: NotificationType;
   body: string;
   acked: boolean;
+  // Ruling 813 — `group=true` 로 받은 묶음 항목에만. 같은 사건이 적재한 행들을 한 줄로 묶어 수신자 수 · 확인 수 · 앞 3명을 싣는다.
+  recipientCount?: number;
+  ackedCount?: number;
+  recipients?: { recipientName: string; recipientRole: string }[];
 };
 
 export type NotificationListResponseTypes = {
@@ -51,4 +55,7 @@ export type NotificationListQueryTypes = {
   type?: NotificationType;
   date?: string;
   acked?: boolean;
+  // Ruling 813 — 관계자에게 온 알림만(`staff`) · 같은 알림 묶어 보기. 쪽 나누기도 묶음 단위다.
+  recipientRole?: string;
+  group?: boolean;
 };
