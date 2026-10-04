@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { getManagers } from "../api";
 import { ManagerList } from "./ManagerList";
 
@@ -60,7 +61,7 @@ describe("ManagerList — 기사 미배치 띠 · 오늘 배치 열", () => {
 
   it("배치 없는 기사는 띠에 이름이 나오고 행은 '배치 없음', 배치된 기사는 오늘 호차가 나온다", async () => {
     mockGetManagers.mockResolvedValue(
-      page([manager("1", "배치기사", { workHours: wholeWeek, assignments: [{ ...TODAY_RUN, serviceDate: new Date().toISOString().slice(0, 10) }] }), manager("2", "문태호", { workHours: wholeWeek })]),
+      page([manager("1", "배치기사", { workHours: wholeWeek, assignments: [{ ...TODAY_RUN, serviceDate: todayInSeoul() }] }), manager("2", "문태호", { workHours: wholeWeek })]),
     );
     render(<ManagerList unassignedRuns={[{ busNo: "3호차", direction: "from_academy", departTime: "2026-10-03T14:53:00+09:00" }]} />);
 
