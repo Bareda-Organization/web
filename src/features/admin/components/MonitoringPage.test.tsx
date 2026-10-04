@@ -142,6 +142,51 @@ describe("MonitoringPage — 처음 고르는 학원", () => {
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalled());
     expect(mockGetRunsLive.mock.calls[0][0]).toBe("2");
   });
+
+  // Ruling 838 — 처음 고르는 학원은 레일(문제 있는 곳 먼저)의 맨 위다. 문제가 없을 때만 위의 "첫 활성 학원" 으로 떨어진다.
+  describe("문제 있는 학원이 있으면", () => {
+    const academy = (id: string, name: string) => ({ id, code: `C${id}`, name, region: "서울", staffCount: 1, userCount: 1, status: "active" as const });
+
+    it("첫 활성 학원이 아니라 레일 맨 위(문제 있는 학원)의 회차를 조회한다", async () => {
+      mockGetAcademies.mockResolvedValue([academy("2", "가나다 학원"), academy("5", "하늘수학")]);
+      mockGetRunAttention.mockResolvedValue({ items: [{ academyId: "5", delayedRuns: 1, confirmFailedRuns: 0 }] });
+      mockGetRunsLive.mockResolvedValue({ runs: [] });
+      render(<MonitoringPage />);
+
+      await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalled());
+      expect(mockGetRunsLive.mock.calls.map((call) => call[0])).toEqual(["5"]);
+    });
+
+    it("비상 · 확정 실패 · 지연 순으로 센 점수가 가장 큰 학원이 맨 위다 — 레일과 같은 정렬", async () => {
+      mockGetAcademies.mockResolvedValue([academy("2", "가나다 학원"), academy("5", "하늘수학"), academy("7", "새봄영어")]);
+      mockGetRunAttention.mockResolvedValue({
+        items: [
+          { academyId: "2", delayedRuns: 3, confirmFailedRuns: 0 },
+          { academyId: "5", delayedRuns: 0, confirmFailedRuns: 1 },
+        ],
+      });
+      mockGetEmergencies.mockResolvedValue({
+        items: [{ academy: { id: "7" }, staffAcked: false, canceledAt: null }],
+        unackedCount: 1,
+      } as never);
+      mockGetRunsLive.mockResolvedValue({ runs: [] });
+      render(<MonitoringPage />);
+
+      await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalled());
+      expect(mockGetRunsLive.mock.calls.map((call) => call[0])).toEqual(["7"]);
+    });
+
+    it("요약 조회가 실패해도 화면은 열린다 — 문제를 알 수 없으면 첫 활성 학원", async () => {
+      mockGetAcademies.mockResolvedValue([academy("2", "가나다 학원"), academy("5", "하늘수학")]);
+      mockGetRunAttention.mockRejectedValue(new ApiError(500, "UNKNOWN", "요약 오류"));
+      mockGetEmergencies.mockRejectedValue(new ApiError(500, "UNKNOWN", "요약 오류"));
+      mockGetRunsLive.mockResolvedValue({ runs: [] });
+      render(<MonitoringPage />);
+
+      await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalled());
+      expect(mockGetRunsLive.mock.calls[0][0]).toBe("2");
+    });
+  });
 });
 
 describe("MonitoringPage — 실시간 회차 조회 실패", () => {

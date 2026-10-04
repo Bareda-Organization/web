@@ -29,7 +29,7 @@ import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunAttentionTo
 import { emergencyTypeLabel } from "../lib/emergencyType";
 import { countOpenEmergenciesByAcademy } from "../lib/openEmergencyCounts";
 import { RunRosterDialog } from "./RunRosterDialog";
-import { clockOfMs, needsAttention, summarizeToday, timetableAxis } from "../lib/monitoringView";
+import { clockOfMs, needsAttention, pickInitialAcademyId, summarizeToday, timetableAxis } from "../lib/monitoringView";
 import { AcademyRail, RunDetailPanel, StatusCell, TimetableCell, TodayStrip, directionText } from "./MonitoringParts";
 
 import {
@@ -91,6 +91,7 @@ export const MonitoringPage = () => {
   const [attentionByAcademy, setAttentionByAcademy] = useState<Record<string, RunAttentionItemTypes>>({});
   // §6.15 최상위 `today[]`(Ruling 805) — 전 학원 오늘 회차 요약. 서버가 아직 안 주면 null(레일 · 지표는 고른 학원 회차로 대신 센다).
   const [attentionToday, setAttentionToday] = useState<RunAttentionTodayItemTypes[] | null>(null);
+  const [firstSummariesDone, setFirstSummariesDone] = useState(false);
   // "지금" — 시간표의 세로선과 "출발 시각 N분 경과" 를 위해 30초마다 갱신한다.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -179,12 +180,8 @@ export const MonitoringPage = () => {
         // 학원 선택 목록은 첫 쪽(20건)이 아니라 전부 — 21번째 이후 학원의 회차도 관제·강제 확정을 할 수 있어야 한다.
         const items = await getAllAcademies();
         if (!cancelled) {
+          // 처음 열 학원은 문제 요약(비상 · 확정 실패 · 지연)이 온 뒤에 정한다(Ruling 838 — 아래 `pickInitialAcademyId`).
           setAcademies(items);
-          // 목록은 최근 등록 순이라 첫 항목이 셔틀 없는 비활성 학원일 수 있다 — 첫 활성 학원을 고른다
-          const initial = items.find((academy) => academy.status === "active") ?? items[0];
-          if (initial) {
-            setAcademyId(initial.id);
-          }
         }
       } catch (cause) {
         if (!cancelled) {
@@ -417,12 +414,6 @@ export const MonitoringPage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      await loadEmergencySummary();
-    })();
-  }, [loadEmergencySummary]);
-
   usePolling(loadEmergencySummary, EMERGENCY_SUMMARY_INTERVAL_MS);
 
   // 학원별 오늘 지연·확정 실패는 `GET /admin/runs/attention` 한 번으로 받는다(Ruling 543 — 기존 API 로는 학원마다 §6.8 을
@@ -439,11 +430,17 @@ export const MonitoringPage = () => {
     }
   }, []);
 
+  // 두 요약의 첫 조회 — 실패해도 끝난 것으로 본다(요약이 비어 보일 뿐이다). 처음 열 학원을 정하는 데 쓴다.
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      await loadAttentionSummary();
+      await Promise.all([loadEmergencySummary(), loadAttentionSummary()]);
+      if (!cancelled) setFirstSummariesDone(true);
     })();
-  }, [loadAttentionSummary]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loadEmergencySummary, loadAttentionSummary]);
 
   usePolling(loadAttentionSummary, EMERGENCY_SUMMARY_INTERVAL_MS);
 
@@ -480,6 +477,12 @@ export const MonitoringPage = () => {
       }),
     [attentionToday, academies, academyId, runs, attentionByAcademy],
   );
+  // Ruling 838 — 처음 여는 학원은 레일 맨 위(문제 있는 학원 먼저), 문제가 없으면 첫 운영 중 학원. 학원 목록과 두 요약이 모두 온 뒤 한 번만 정한다.
+  if (academyId === null && firstSummariesDone && academies.length > 0) {
+    setAcademyId(pickInitialAcademyId(academies, todayRows, openEmergencyCounts));
+  }
+  // 처음 열 학원을 정하기 전에는 "회차가 없습니다" 가 깜빡이지 않게 회차 칸을 불러오는 중으로 둔다.
+  const loadingFirstAcademy = academyId === null && academies.length > 0;
   const summary = useMemo(() => summarizeToday(todayRows, openEmergencyCounts), [todayRows, openEmergencyCounts]);
   const academy = academies.find((item) => item.id === academyId);
   const sortedRuns = useMemo(() => [...runs].sort((a, b) => new Date(a.departTime).getTime() - new Date(b.departTime).getTime()), [runs]);
@@ -607,10 +610,10 @@ export const MonitoringPage = () => {
         <RunDetailPanel run={selectedRun} academyName={academy?.name} nowMs={nowMs} onRoster={setRosterTarget} />
       </StyledMonitoringGrid>
 
-      <Card padding={0} aria-busy={loadingRuns}>
+      <Card padding={0} aria-busy={loadingRuns || loadingFirstAcademy}>
         {!loadingAcademies && !error && academies.length === 0 ? (
           <EmptyState icon="building" title="등록된 학원이 없습니다" />
-        ) : !error && runs.length === 0 && !loadingRuns ? (
+        ) : !error && runs.length === 0 && !loadingRuns && !loadingFirstAcademy ? (
           <EmptyState icon="bus" title="지금 운행 중인 회차가 없습니다" />
         ) : (
           <>
@@ -623,7 +626,7 @@ export const MonitoringPage = () => {
             <RosterTable
               {...{ style: { background: "transparent", boxShadow: "none", borderRadius: 0 } }}
               columns={columns}
-              loading={loadingRuns}
+              loading={loadingRuns || loadingFirstAcademy}
               rows={sortedRuns}
               getRowKey={(row) => row.runId}
               selectedKey={selectedRunId}

@@ -1,6 +1,6 @@
 // 전체 관제(§6.8 · §6.15) 화면의 순수 계산 — 시간표 막대 · 상태 메모 · 지표 요약. 화면은 이 결과만 그린다.
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import type { RunAttentionTodayItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import type { AcademySummaryResponseTypes, RunAttentionTodayItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { untilText } from "./relativeTime";
 
 const MINUTE_MS = 60_000;
@@ -123,4 +123,31 @@ export const summarizeToday = (today: RunAttentionTodayItemTypes[], openEmergenc
       emergencies: join(emergencyEntries),
     },
   };
+};
+
+// ── 학원 레일 정렬 · 처음 고르는 학원 ─────────────────────────────────────
+const attentionScore = (academyId: string, today: RunAttentionTodayItemTypes[], openEmergencyCounts: Record<string, number>): number => {
+  const row = today.find((item) => item.academyId === academyId);
+  return (openEmergencyCounts[academyId] ?? 0) * 100 + (row?.confirmFailedRuns ?? 0) * 10 + (row?.delayedRuns ?? 0);
+};
+
+/** "문제 있는 곳 먼저" — 미확인 비상 · 확정 실패 · 지연 순으로 앞에 오고, 같으면 학원 이름순. 레일과 처음 고르는 학원이 같은 정렬을 쓴다. */
+export const sortAcademiesByAttention = (
+  academies: AcademySummaryResponseTypes[],
+  today: RunAttentionTodayItemTypes[],
+  openEmergencyCounts: Record<string, number>,
+): AcademySummaryResponseTypes[] =>
+  [...academies].sort(
+    (a, b) => attentionScore(b.id, today, openEmergencyCounts) - attentionScore(a.id, today, openEmergencyCounts) || a.name.localeCompare(b.name, "ko"),
+  );
+
+/** 전체 관제가 처음 여는 학원(Ruling 838) — 정렬된 맨 위가 문제 있는 학원이면 그곳, 문제 있는 학원이 없으면 첫 운영 중 학원(없으면 첫 학원). */
+export const pickInitialAcademyId = (
+  academies: AcademySummaryResponseTypes[],
+  today: RunAttentionTodayItemTypes[],
+  openEmergencyCounts: Record<string, number>,
+): string | null => {
+  const top = sortAcademiesByAttention(academies, today, openEmergencyCounts)[0];
+  if (top && attentionScore(top.id, today, openEmergencyCounts) > 0) return top.id;
+  return (academies.find((academy) => academy.status === "active") ?? academies[0])?.id ?? null;
 };

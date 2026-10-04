@@ -3,7 +3,7 @@ import { Button, Card, EmptyState, RunStatusChip, StatStrip, StatusChip, Timelin
 import type { StatStripItem, TimelineEntry } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
 import type { AcademySummaryResponseTypes, RunAttentionTodayItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
-import { barGeometry, needsAttention, nowPercent, runStatusNote } from "../lib/monitoringView";
+import { barGeometry, needsAttention, nowPercent, runStatusNote, sortAcademiesByAttention } from "../lib/monitoringView";
 import type { Axis, TodaySummary } from "../lib/monitoringView";
 import { academyDotColor, untilText } from "../lib/relativeTime";
 import {
@@ -81,9 +81,7 @@ export const AcademyRail = ({
   onSelect: (academyId: string) => void;
 }) => {
   const rowOf = (academyId: string) => today.find((item) => item.academyId === academyId);
-  const score = (academyId: string) => (openEmergencyCounts[academyId] ?? 0) * 100 + (rowOf(academyId)?.confirmFailedRuns ?? 0) * 10 + (rowOf(academyId)?.delayedRuns ?? 0);
-  // "문제 있는 곳 먼저" — 비상 · 확정 실패 · 지연 순으로 앞에 오고, 같으면 학원 이름순.
-  const sorted = [...academies].sort((a, b) => score(b.id) - score(a.id) || a.name.localeCompare(b.name, "ko"));
+  const sorted = sortAcademiesByAttention(academies, today, openEmergencyCounts);
 
   return (
     <StyledRailCard aria-labelledby="monitoring-rail-title">
