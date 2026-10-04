@@ -19,10 +19,29 @@ export type ManagerItemResponseTypes = {
   workHours: WorkHours | null;
   // 연결된 계정 — 가입 연결 전이면 null. 관리자 경유 비밀번호 초기화(§5.22 · Ruling 329)의 대상.
   accountId: string | null;
+  // Ruling 817 — 목록 응답에만. 서버가 아직 안 주면 0 · 빈 목록.
+  /** 배치 중인 회차 수 — 0 이 아니면 삭제 · 역할 변경이 409 로 막힌다 */
+  assignedRunCount: number;
+  /** 오늘 · 내일 미취소 회차의 배치(날짜 · 출발 순) */
+  assignments: ManagerAssignmentTypes[];
 };
+
+export type ManagerAssignmentTypes = {
+  runId: string;
+  serviceDate: string;
+  busNo: string;
+  direction: "to_academy" | "from_academy";
+  departTime: string;
+  status: "idle" | "confirmed" | "moving" | "finished";
+};
+
+/** 재직 매니저의 오늘 배치 유무별 수 — 쿼리 · 쪽과 무관(Ruling 817) */
+export type ManagerCountsTypes = { assignedToday: number; unassignedToday: number };
 
 export type ManagerListResponseTypes = {
   items: ManagerItemResponseTypes[];
+  /** 서버가 안 주면 null */
+  counts: ManagerCountsTypes | null;
   page: number;
   size: number;
   totalCount: number;

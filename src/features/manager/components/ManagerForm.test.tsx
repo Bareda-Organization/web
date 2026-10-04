@@ -22,6 +22,8 @@ const existingManager: ManagerItemResponseTypes = {
   role: "driver",
   workHours: null,
   accountId: null,
+  assignedRunCount: 0,
+  assignments: [],
 };
 
 describe("ManagerForm — 등록 실패 갈래", () => {
@@ -166,3 +168,35 @@ describe("ManagerForm — 저장한 매니저 id 전달", () => {
   });
 });
 
+
+// R48 매니저 상세 옆 패널 — 배치 중이면 서버가 409 로 막기 전에 화면이 먼저 잠그고 이유를 말한다(§5.13 Ruling 817 · G2).
+describe("ManagerForm — 배치 중 잠금", () => {
+  afterEach(() => vi.clearAllMocks());
+  const assigned: ManagerItemResponseTypes = {
+    ...existingManager,
+    assignedRunCount: 4,
+    assignments: [{ runId: "1", serviceDate: "2026-10-03", busNo: "1호차", direction: "to_academy", departTime: "2026-10-03T11:08:00+09:00", status: "finished" }],
+  };
+
+  it("배치된 회차가 있으면 삭제 단추와 역할 선택이 잠기고 사유에 회차 수가 나온다", () => {
+    render(<ManagerForm manager={assigned} onClose={vi.fn()} onDone={vi.fn()} onDelete={vi.fn()} today="2026-10-03" />);
+
+    expect(screen.getByRole("button", { name: "삭제" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "역할" })).toBeDisabled();
+    expect(screen.getByText("배치된 회차가 있어 바꿀 수 없습니다 — 배치를 먼저 해제")).toBeInTheDocument();
+    expect(screen.getByText("배치 4회를 먼저 해제해야 삭제할 수 있습니다")).toBeInTheDocument();
+    // 배치 현황 — 오늘 · 내일 칸에 그 회차가 보인다.
+    expect(screen.getByText("1호차 등원 11:08")).toBeInTheDocument();
+  });
+
+  it("배치가 없으면 삭제 단추가 켜져 있고 누르면 삭제 확인으로 넘긴다", () => {
+    const onDelete = vi.fn();
+    render(<ManagerForm manager={existingManager} onClose={vi.fn()} onDone={vi.fn()} onDelete={onDelete} today="2026-10-03" />);
+
+    const del = screen.getByRole("button", { name: "삭제" });
+    expect(del).toBeEnabled();
+    expect(screen.getByRole("combobox", { name: "역할" })).toBeEnabled();
+    fireEvent.click(del);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+});

@@ -14,10 +14,21 @@ type RawManager = {
   role: "driver" | "escort";
   work_hours: WorkHours | null;
   account_id: string | null;
+  // Ruling 817 — 목록 응답에만(아직 안 주는 서버를 견디려고 선택 필드).
+  assigned_run_count?: number;
+  assignments?: {
+    run_id: string | number;
+    service_date: string;
+    bus_no: string;
+    direction: "to_academy" | "from_academy";
+    depart_time: string;
+    status: "idle" | "confirmed" | "moving" | "finished";
+  }[];
 };
 
 type RawManagerListResponse = {
   items: RawManager[];
+  counts?: { assigned_today: number; unassigned_today: number };
   page: number;
   size: number;
   total_count: number;
@@ -31,16 +42,28 @@ const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
   role: raw.role,
   workHours: raw.work_hours,
   accountId: raw.account_id,
+  assignedRunCount: raw.assigned_run_count ?? 0,
+  assignments: (raw.assignments ?? []).map((a) => ({
+    runId: asIdString(a.run_id),
+    serviceDate: a.service_date,
+    busNo: a.bus_no,
+    direction: a.direction,
+    departTime: a.depart_time,
+    status: a.status,
+  })),
 });
 
-// GET /staff/managers?q= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
-export const getManagers = async (page: number, size = 20, q?: string): Promise<ManagerListResponseTypes> => {
+export type ManagerListFilters = { role?: "driver" | "escort"; assignedToday?: boolean };
+
+// GET /staff/managers?q=&role=&assigned_today= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
+export const getManagers = async (page: number, size = 20, q?: string, filters: ManagerListFilters = {}): Promise<ManagerListResponseTypes> => {
   const raw = await apiFetch<RawManagerListResponse>("/staff/managers", {
     method: "GET",
-    query: { page, size, q: q || undefined },
+    query: { page, size, q: q || undefined, role: filters.role, assigned_today: filters.assignedToday },
   });
   return {
     items: raw.items.map(toManager),
+    counts: raw.counts ? { assignedToday: raw.counts.assigned_today, unassignedToday: raw.counts.unassigned_today } : null,
     page: raw.page,
     size: raw.size,
     totalCount: raw.total_count,

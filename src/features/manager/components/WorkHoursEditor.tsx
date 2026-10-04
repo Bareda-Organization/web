@@ -2,7 +2,7 @@
 
 import { AlertBanner, Checkbox, Input } from "@/shared/ui";
 import type { WorkHours } from "../types";
-import { StyledWorkHoursHead, StyledWorkHoursRow, StyledWorkHoursTitle, StyledWorkHoursWrap } from "./WorkHoursEditor.styled";
+import { StyledWorkHoursDash, StyledWorkHoursFoot, StyledWorkHoursHead, StyledWorkHoursNote, StyledWorkHoursRow, StyledWorkHoursTitle, StyledWorkHoursTitleRow, StyledWorkHoursWrap } from "./WorkHoursEditor.styled";
 
 const DAYS: Array<{ key: keyof WorkHours; label: string }> = [
   { key: "mon", label: "월" },
@@ -17,6 +17,8 @@ const DAYS: Array<{ key: keyof WorkHours; label: string }> = [
 type WorkHoursEditorProps = {
   value: WorkHours;
   onChange: (next: WorkHours) => void;
+  /** 제목 오른쪽 한 줄 — 이 값이 어디에 쓰이는지 */
+  note?: string;
 };
 
 // 시작이 끝보다 늦거나 같은 구간이 하나라도 있는지 — "HH:mm" 문자열이라 사전순 비교가 시각 순서와 같다.
@@ -27,7 +29,7 @@ export const hasInvalidWorkHours = (value: WorkHours): boolean =>
 // 하나만 다룬다 — 사양이 배열을 허용하지만 관계자 등록 화면에서 요일당 여러 구간을
 // 나눠 넣는 실제 흐름이 없어(하루 두 근무는 드묾) 첫 구간만 편집하고 나머지는 보존한다.
 // 요일을 끄면 그 요일의 구간이 전부 지워진다.
-export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
+export const WorkHoursEditor = ({ value, onChange, note }: WorkHoursEditorProps) => {
   const setDay = (day: keyof WorkHours, enabled: boolean, start = "09:00", end = "18:00") => {
     const next = { ...value };
     if (enabled) {
@@ -40,10 +42,14 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
 
   return (
     <StyledWorkHoursWrap>
-      <StyledWorkHoursTitle>근무 시간</StyledWorkHoursTitle>
+      <StyledWorkHoursTitleRow>
+        <StyledWorkHoursTitle>근무 시간</StyledWorkHoursTitle>
+        {note ? <StyledWorkHoursNote>{note}</StyledWorkHoursNote> : null}
+      </StyledWorkHoursTitleRow>
       <StyledWorkHoursHead aria-hidden="true">
         <span>요일</span>
         <span>출근</span>
+        <span />
         <span>퇴근</span>
       </StyledWorkHoursHead>
       {hasInvalidWorkHours(value) ? <AlertBanner tone="missed" title="근무 시작이 끝보다 빨라야 합니다" /> : null}
@@ -64,6 +70,7 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
               value={range?.start ?? ""}
               onChange={(event) => setDay(key, true, event.target.value, range?.end ?? "18:00")}
             />
+            <StyledWorkHoursDash aria-hidden="true">–</StyledWorkHoursDash>
             <Input
               type="time"
               aria-label={`${label}요일 퇴근 시각`}
@@ -74,6 +81,7 @@ export const WorkHoursEditor = ({ value, onChange }: WorkHoursEditorProps) => {
           </StyledWorkHoursRow>
         );
       })}
+      <StyledWorkHoursFoot>근무 시간 밖의 운행이나 같은 시각의 중복 배치는 회차 배치 때 경고로 알려 줍니다.</StyledWorkHoursFoot>
     </StyledWorkHoursWrap>
   );
 };
