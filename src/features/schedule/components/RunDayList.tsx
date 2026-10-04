@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
+import { timetableRange } from "@/shared/lib/timetable/timetable";
 import { AlertBanner, Badge, Button, Card, Input, RosterTable, RunStatusChip, StatusChip } from "@/shared/ui";
+import { TimetableBar } from "@/shared/ui/display";
 import type { RosterColumn } from "@/shared/types";
 import { getRuns } from "../api";
 import type { RunItemResponseTypes, RunStatus, ScheduleDirection } from "../types";
@@ -37,6 +39,12 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
   const adding = addingProp ?? ownAdding;
   const setAdding = onAddingChange ?? setOwnAdding;
   const [today] = useState(() => todayInSeoul());
+  // "지금" — 시간표 세로선용. 30초마다 갱신한다(오늘 현황·전체 관제와 같은 주기).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const load = useCallback(async (date: string) => {
     setLoading(true);
@@ -70,6 +78,10 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
 
   const temporary = items.filter((run) => run.scheduleId === null).length;
   const canceled = items.filter((run) => run.canceledAt).length;
+  // 시간표 막대(Ruling 836) — 하루 회차가 같은 가로축을 쓴다. 세로선(지금)은 오늘을 볼 때만 그린다 — 다른 날짜에서는 가로축 끝에 붙어 오해를 부른다.
+  const range = timetableRange(items, nowMs);
+  const isToday = serviceDate === today;
+  const clock = (ms: number) => formatClockTime(new Date(ms).toISOString());
 
   const columns: RosterColumn<RunItemResponseTypes>[] = [
     { key: "departTime", label: "출발", render: (row) => <StyledRunTime>{formatClockTime(row.departTime)}</StyledRunTime> },
@@ -98,6 +110,11 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
             {row.consecutiveFailures > 0 ? <StatusChip tone="bad" marker={false}>확정 {row.consecutiveFailures}회 연속 실패</StatusChip> : null}
           </>
         ),
+    },
+    {
+      key: "timetable",
+      label: `시간표 ${clock(range.startMs)} — ${clock(range.endMs)}${isToday ? ` · 세로선 = 지금 ${clock(nowMs)}` : ""}`,
+      render: (row) => <TimetableBar run={row} range={range} tone={row.canceledAt ? "canceled" : row.status} nowMs={isToday ? nowMs : null} />,
     },
     {
       key: "confirmAt",

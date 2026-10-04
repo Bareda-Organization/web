@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon, RosterTable, RunStatusChip, Switch } from "@/shared/ui";
+import { TimetableBar } from "@/shared/ui/display";
 import type { RosterColumn } from "@/shared/types";
 import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
+import { timetableRange } from "@/shared/lib/timetable/timetable";
 import type { DashboardRunResponseTypes } from "../types";
-import { barGeometry, positionPct, runAttention, timetableRange } from "../lib/runBoard";
+import { runAttention } from "../lib/runBoard";
 import { RouteAckMark } from "./RouteAckMark";
 import {
   StyledBoardCard,
@@ -14,11 +16,8 @@ import {
   StyledBoardCardTools,
   StyledChangeNote,
   StyledDepartCell,
-  StyledNowLine,
   StyledStaffCell,
   StyledStatusCell,
-  StyledTimeBar,
-  StyledTimeTrack,
 } from "./DashboardPage.styled";
 
 type Props = {
@@ -48,7 +47,6 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs, activeOnly, 
   // 확정(출발 30분 전부터)·운행 중이 "곧 출발·운행 중" 이다. 대기(idle)는 아직 확정 전이라 뺀다.
   const tableRuns = activeOnly ? runs.filter((run) => run.runStatus === "confirmed" || run.runStatus === "moving") : runs;
   const range = timetableRange(runs, nowMs);
-  const nowPct = positionPct(nowMs, range);
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
     {
@@ -86,15 +84,7 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs, activeOnly, 
     {
       key: "timetable",
       label: `시간표 ${formatClockTime(new Date(range.startMs).toISOString())} — ${formatClockTime(new Date(range.endMs).toISOString())}`,
-      render: (row) => {
-        const { leftPct, widthPct } = barGeometry(row, range);
-        return (
-          <StyledTimeTrack aria-hidden="true">
-            <StyledTimeBar $status={row.runStatus} style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
-            <StyledNowLine style={{ left: `${nowPct}%` }} />
-          </StyledTimeTrack>
-        );
-      },
+      render: (row) => <TimetableBar run={row} range={range} tone={row.runStatus} nowMs={nowMs} />,
     },
     {
       key: "boardedCount",

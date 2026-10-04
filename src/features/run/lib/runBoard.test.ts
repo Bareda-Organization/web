@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DashboardRunResponseTypes } from "../types";
-import { barGeometry, runAttention, splitRiders, timetableRange } from "./runBoard";
+import { runAttention, splitRiders } from "./runBoard";
 
 const run = (patch: Partial<DashboardRunResponseTypes> = {}): DashboardRunResponseTypes => ({
   runId: "1",
@@ -41,36 +41,6 @@ describe("splitRiders — 회차 학생 4분류(Ruling 810)", () => {
 
   it("합이 전체를 넘어도 대기는 음수가 되지 않는다", () => {
     expect(splitRiders(run({ totalCount: 5, boardedCount: 4, noShowCount: 2, absentCount: 1 })).waiting).toBe(0);
-  });
-});
-
-describe("timetableRange · barGeometry — 시간표 막대", () => {
-  const runs = [
-    run({ runId: "a", departTime: "2026-10-03T11:08:00+09:00", startedAt: "2026-10-03T11:09:00+09:00", finishedAt: "2026-10-03T11:47:00+09:00", runStatus: "finished" }),
-    run({ runId: "b", departTime: "2026-10-03T14:53:00+09:00", estArrivalTime: "2026-10-03T15:30:00+09:00" }),
-  ];
-
-  it("가장 이른 출발의 정시부터 가장 늦은 도착의 다음 정시까지를 범위로 잡는다", () => {
-    const range = timetableRange(runs);
-    expect(new Date(range.startMs).toISOString()).toBe("2026-10-03T02:00:00.000Z"); // 11:00 KST
-    expect(new Date(range.endMs).toISOString()).toBe("2026-10-03T07:00:00.000Z"); // 16:00 KST
-  });
-
-  it("도착 예정이 null 이면 기본 길이만큼 막대를 그린다(Ruling 827)", () => {
-    const range = timetableRange(runs);
-    const noEta = run({ departTime: "2026-10-03T13:00:00+09:00" });
-    const geometry = barGeometry(noEta, range);
-    // 13:00 → 11:00 시작 + 120분 / 300분 = 40%
-    expect(geometry.leftPct).toBeCloseTo(40, 5);
-    expect(geometry.widthPct).toBeGreaterThan(0);
-  });
-
-  it("실제 출발·도착이 있으면 예정이 아니라 실제 구간을 그린다", () => {
-    const range = timetableRange(runs);
-    const geometry = barGeometry(runs[0], range);
-    // 11:09 → 11:47 : (9 / 300) · (38 / 300)
-    expect(geometry.leftPct).toBeCloseTo(3, 5);
-    expect(geometry.widthPct).toBeCloseTo((38 / 300) * 100, 5);
   });
 });
 

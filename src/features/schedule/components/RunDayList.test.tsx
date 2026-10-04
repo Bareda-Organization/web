@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunDayList } from "./RunDayList";
 import { getRuns } from "../api";
@@ -86,5 +86,54 @@ describe("RunDayList — F02-09 취소 버튼과 시각 표기", () => {
 
     expect(await screen.findByText("08:00")).toBeInTheDocument();
     expect(screen.getByText("07:30")).toBeInTheDocument();
+  });
+});
+
+// Ruling 836 · 시안 `schedule--runs` — 회차마다 시간표 막대(출발 → 도착 예정)와 오늘이면 현재 시각 세로선.
+describe("RunDayList — 시간표 막대 열", () => {
+  afterEach(() => vi.useRealTimers());
+
+  // 한국 12:35 에 연다 — 두 회차(11:08 · 14:53, 각 40분)의 시간표는 11:00 ~ 16:00(300분)이다.
+  const openAtNoon = async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-03T03:35:00Z"));
+    mockGetRuns.mockResolvedValue({
+      items: [
+        { ...baseRun, id: "1", serviceDate: "2026-10-03", departTime: "2026-10-03T11:08:00+09:00", estDurationMin: 40, status: "finished" },
+        { ...baseRun, id: "2", serviceDate: "2026-10-03", departTime: "2026-10-03T14:53:00+09:00", estDurationMin: 40, status: "idle" },
+      ],
+    });
+    render(<RunDayList />);
+    await screen.findAllByTestId("timetable-bar");
+  };
+
+  const percentOf = (element: HTMLElement, side: "left" | "width") => parseFloat(element.style[side]);
+
+  it("막대가 회차의 출발 · 소요 위치에 그려지고 열 머리에 시간표 범위와 지금이 적힌다", async () => {
+    await openAtNoon();
+
+    const [first, second] = screen.getAllByTestId("timetable-bar");
+    expect(percentOf(first, "left")).toBeCloseTo((8 / 300) * 100, 3);
+    expect(percentOf(first, "width")).toBeCloseTo((40 / 300) * 100, 3);
+    expect(percentOf(second, "left")).toBeCloseTo((233 / 300) * 100, 3);
+    expect(screen.getByRole("columnheader", { name: "시간표 11:00 — 16:00 · 세로선 = 지금 12:35" })).toBeInTheDocument();
+  });
+
+  it("오늘이면 모든 행에 현재 시각(12:35) 세로선이 같은 자리에 있다", async () => {
+    await openAtNoon();
+
+    const lines = screen.getAllByTestId("timetable-now");
+    expect(lines).toHaveLength(2);
+    lines.forEach((line) => expect(percentOf(line, "left")).toBeCloseTo((95 / 300) * 100, 3));
+  });
+
+  it("오늘이 아닌 날짜를 보면 세로선 없이 막대만 그린다", async () => {
+    await openAtNoon();
+
+    fireEvent.click(screen.getByRole("button", { name: "다음날" }));
+
+    await screen.findByRole("columnheader", { name: "시간표 11:00 — 16:00" });
+    expect(screen.queryByTestId("timetable-now")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("timetable-bar")).toHaveLength(2);
   });
 });

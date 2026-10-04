@@ -179,48 +179,7 @@ export const StyledFootnote = styled.p`
   color: var(--text-secondary);
 `;
 
-// 시간표 칸 — 지금 선 + 회차 막대.
-export const StyledTimeTrack = styled.span`
-  position: relative;
-  display: block;
-  min-width: 150px;
-  height: 18px;
-
-  &::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 2px;
-    margin-top: -1px;
-    background: var(--border-subtle);
-  }
-`;
-
-export const StyledTimeBar = styled.span<{ $status: "idle" | "confirmed" | "moving" | "finished" }>`
-  position: absolute;
-  top: 3px;
-  height: 12px;
-  border-radius: 3px;
-  background: ${({ $status }) =>
-    $status === "finished"
-      ? "var(--c-end)"
-      : $status === "moving"
-        ? "var(--c-move)"
-        : $status === "confirmed"
-          ? "var(--c-conf)"
-          : "var(--green-300)"};
-`;
-
-export const StyledNowLine = styled.span`
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--text-primary);
-`;
-
+// 상태 칩 + 그 아래 한 줄 사유.
 export const StyledStatusCell = styled.span`
   display: flex;
   flex-direction: column;
