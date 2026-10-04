@@ -13,9 +13,43 @@ export type StudentListItemResponseTypes = {
   className: string | null;
   guardianPhone: string | null;
   guardianCount: number;
+  // Ruling 815 — 서버가 아직 안 주면 grade null · 혼자 하차 false · 학생 앱 미연결 · 주소 none.
+  grade: string | null;
+  canGoAlone: boolean;
+  accountLinked: boolean;
+  weeklyAddressStatus: WeeklyAddressStatus;
 };
 
+// §5.11 — none 등록 0건 · partial 등록한 요일 중 한 방향만 있는 요일이 있음 · complete 등록한 요일마다 두 방향이 다 있음.
+export type WeeklyAddressStatus = "none" | "partial" | "complete";
+
+// Ruling 815 — 쿼리와 쪽에 무관한 학원 전체 값. 서버가 아직 안 주면 null.
+export type StudentListSummaryTypes = {
+  total: number;
+  classCount: number;
+  guardianUnlinked: number;
+  addressMissing: number;
+  canGoAlone: number;
+};
+
+// 목록 필터 — guardian_unlinked 보호자 미연결 · address_missing 주소 미등록.
+export type StudentListFilter = "guardian_unlinked" | "address_missing";
+
+export type StudentListQueryTypes = { q?: string; className?: string; filter?: StudentListFilter };
+
+// GET /staff/students/{id}/withdrawal-preview (Ruling 815) — 그 학생이 탑승자인 오늘 · 내일 미취소 · 미종료 회차.
+export type WithdrawalPreviewRunTypes = {
+  runId: string;
+  busNo: string;
+  direction: "to_academy" | "from_academy";
+  departTime: string;
+  status: string;
+  stopName: string | null;
+};
+export type WithdrawalPreviewResponseTypes = { todayRuns: WithdrawalPreviewRunTypes[]; tomorrowRuns: WithdrawalPreviewRunTypes[] };
+
 export type StudentListResponseTypes = {
+  summary?: StudentListSummaryTypes | null;
   items: StudentListItemResponseTypes[];
   page: number;
   size: number;

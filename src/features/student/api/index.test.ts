@@ -45,6 +45,11 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
         className: "초등부",
         guardianPhone: "010-1111-2222",
         guardianCount: 2,
+        // Ruling 815 신규 필드 — 서버가 안 주면 기본값으로 견딘다.
+        grade: null,
+        canGoAlone: false,
+        accountLinked: false,
+        weeklyAddressStatus: "none",
       },
     ]);
   });

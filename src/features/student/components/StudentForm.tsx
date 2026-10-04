@@ -9,7 +9,7 @@ import {
   AlertBanner,
   Button,
   Checkbox,
-  Dialog,
+  Drawer,
   Input,
   PhotoUploadField,
   Select,
@@ -33,6 +33,8 @@ type StudentFormProps = {
   onClose: () => void;
   /** 저장한 학생의 id — 목록이 그 행을 잠깐 강조한다 */
   onDone: (savedStudentId?: string) => void;
+  /** 수정 패널 아래 왼쪽의 [퇴원 처리] — 목록 행마다 두면 행 클릭(수정)과 같은 줄에서 오조작하기 쉬워 패널 안으로 옮겼다(U-07). 등록에는 없다 */
+  onWithdraw?: () => void;
 };
 
 // §5.11 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
@@ -52,6 +54,7 @@ export const StudentForm = ({
   studentId,
   onClose,
   onDone,
+  onWithdraw,
 }: StudentFormProps) => {
   const [loading, setLoading] = useState(!!studentId);
   const [name, setName] = useState("");
@@ -209,12 +212,18 @@ export const StudentForm = ({
 
   return (
     <>
-      <Dialog
+      {/* 옆 패널 — 목록을 그대로 두고 오른쪽에서 수정한다. 퇴원은 1단계 파괴 동작이라 빨강 선, 아래 왼쪽 끝(U-07). */}
+      <Drawer
         title={studentId ? "학생 정보 수정" : "학생 등록"}
-        width={480}
+        width={560}
         onClose={requestClose}
         footer={
           <>
+            {studentId && onWithdraw ? (
+              <Button variant="dangerQuiet" icon="trash-2" onClick={onWithdraw} disabled={submitting} style={{ marginRight: "auto" }}>
+                퇴원 처리
+              </Button>
+            ) : null}
             <Button variant="ghost" onClick={requestClose} disabled={submitting}>
               취소
             </Button>
@@ -340,7 +349,7 @@ export const StudentForm = ({
             {error ? <AlertBanner tone="missed" title={error} /> : null}
           </>
         )}
-      </Dialog>
+      </Drawer>
       {resetTarget ? (
         <AccountPasswordResetDialog
           accountId={resetTarget.accountId}

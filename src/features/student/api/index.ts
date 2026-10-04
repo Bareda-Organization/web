@@ -3,8 +3,12 @@ import type {
   StudentDetailResponseTypes,
   StudentGender,
   StudentListItemResponseTypes,
+  StudentListQueryTypes,
   StudentListResponseTypes,
   StudentUpsertRequestTypes,
+  WeeklyAddressStatus,
+  WithdrawalPreviewResponseTypes,
+  WithdrawalPreviewRunTypes,
   StudentWeeklyAddressTypes,
 } from "../types";
 
@@ -14,9 +18,15 @@ type RawStudentListItem = {
   class_name: string | null;
   guardian_phone: string | null;
   guardian_count: number;
+  // Ruling 815 — 아직 안 주는 서버를 견디려고 선택 필드로 둔다.
+  grade?: string | null;
+  can_go_alone?: boolean;
+  account_linked?: boolean;
+  weekly_address_status?: WeeklyAddressStatus;
 };
 
 type RawStudentListResponse = {
+  summary?: { total: number; class_count: number; guardian_unlinked: number; address_missing: number; can_go_alone: number } | null;
   items: RawStudentListItem[];
   page: number;
   size: number;
@@ -30,15 +40,34 @@ const toListItem = (raw: RawStudentListItem): StudentListItemResponseTypes => ({
   className: raw.class_name,
   guardianPhone: raw.guardian_phone,
   guardianCount: raw.guardian_count,
+  grade: raw.grade ?? null,
+  canGoAlone: raw.can_go_alone ?? false,
+  accountLinked: raw.account_linked ?? false,
+  weeklyAddressStatus: raw.weekly_address_status ?? "none",
 });
 
 // GET /staff/students?q= (§5.11, STU-01) — §1.8 페이징. 강제 추가 자동완성과 목록 조회가 같은 엔드포인트를 쓴다.
-export const getStudents = async (page: number, size = 20, q?: string): Promise<StudentListResponseTypes> => {
+// Ruling 815 — `class_name` · `filter` 쿼리와 응답 최상위 `summary`(학원 전체 지표, 쿼리·쪽과 무관).
+export const getStudents = async (
+  page: number,
+  size = 20,
+  q?: string,
+  filters: Omit<StudentListQueryTypes, "q"> = {},
+): Promise<StudentListResponseTypes> => {
   const raw = await apiFetch<RawStudentListResponse>("/staff/students", {
     method: "GET",
-    query: { page, size, q: q || undefined },
+    query: { page, size, q: q || undefined, class_name: filters.className || undefined, filter: filters.filter },
   });
   return {
+    summary: raw.summary
+      ? {
+          total: raw.summary.total,
+          classCount: raw.summary.class_count,
+          guardianUnlinked: raw.summary.guardian_unlinked,
+          addressMissing: raw.summary.address_missing,
+          canGoAlone: raw.summary.can_go_alone,
+        }
+      : null,
     items: raw.items.map(toListItem),
     page: raw.page,
     size: raw.size,
@@ -151,3 +180,29 @@ export const getStudentWeeklyAddresses = async (studentId: string): Promise<Stud
   }));
 };
 
+
+type RawPreviewRun = {
+  run_id: string | number;
+  bus_no: string;
+  direction: WithdrawalPreviewRunTypes["direction"];
+  depart_time: string;
+  status: string;
+  stop_name: string | null;
+};
+
+const toPreviewRun = (raw: RawPreviewRun): WithdrawalPreviewRunTypes => ({
+  runId: String(raw.run_id),
+  busNo: raw.bus_no,
+  direction: raw.direction,
+  departTime: raw.depart_time,
+  status: raw.status,
+  stopName: raw.stop_name,
+});
+
+// GET /staff/students/{id}/withdrawal-preview(Ruling 815) — 퇴원하면 오늘 명단은 유지되고 내일부터 빠지는 회차. 아무것도 바꾸지 않는다.
+export const getWithdrawalPreview = async (studentId: string): Promise<WithdrawalPreviewResponseTypes> => {
+  const raw = await apiFetch<{ today_runs: RawPreviewRun[]; tomorrow_runs: RawPreviewRun[] }>(`/staff/students/${studentId}/withdrawal-preview`, {
+    method: "GET",
+  });
+  return { todayRuns: (raw.today_runs ?? []).map(toPreviewRun), tomorrowRuns: (raw.tomorrow_runs ?? []).map(toPreviewRun) };
+};

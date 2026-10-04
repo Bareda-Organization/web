@@ -37,6 +37,10 @@ describe("StudentList — 보호자 연결 열", () => {
           className: null,
           guardianPhone: null,
           guardianCount: 0,
+          grade: null,
+          canGoAlone: false,
+          accountLinked: false,
+          weeklyAddressStatus: "none" as const,
         },
         {
           studentId: "2",
@@ -44,6 +48,10 @@ describe("StudentList — 보호자 연결 열", () => {
           className: null,
           guardianPhone: "010-1000-0001",
           guardianCount: 2,
+          grade: null,
+          canGoAlone: false,
+          accountLinked: false,
+          weeklyAddressStatus: "none" as const,
         },
       ],
       page: 0,
@@ -54,8 +62,9 @@ describe("StudentList — 보호자 연결 열", () => {
 
     render(<StudentList />);
 
-    await waitFor(() => expect(screen.getByText("미연결")).toBeInTheDocument());
-    expect(screen.getByText("연결 2명")).toBeInTheDocument();
+    // 보호자 연락처 칸: 미연결 행은 "보호자 미연결", 연결 행은 "2명 연결"(학생 앱 칸의 "미연결" 칩과 구별된다).
+    await waitFor(() => expect(screen.getAllByText("보호자 미연결").length).toBeGreaterThan(0));
+    expect(screen.getByText("2명 연결")).toBeInTheDocument();
   });
 });
 
@@ -66,7 +75,7 @@ describe("StudentList — F02-04 늦게 온 옛 응답", () => {
   });
 
   const listOf = (name: string) => ({
-    items: [{ studentId: "1", name, className: null, guardianPhone: null, guardianCount: 0 }],
+    items: [{ studentId: "1", name, className: null, guardianPhone: null, guardianCount: 0, grade: null, canGoAlone: false, accountLinked: false, weeklyAddressStatus: "none" as const }],
     page: 0,
     size: 20,
     totalCount: 1,
@@ -93,7 +102,7 @@ describe("StudentList — F02-04 늦게 온 옛 응답", () => {
     render(<StudentList />);
     await screen.findByText("가나다");
     fireEvent.click(screen.getByRole("button", { name: /다음/ }));
-    await waitFor(() => expect(mockGetStudents).toHaveBeenLastCalledWith(1, 20, undefined));
+    await waitFor(() => expect(mockGetStudents).toHaveBeenLastCalledWith(1, 20, undefined, { className: undefined, filter: undefined }));
     mockGetStudents.mockClear();
 
     fireEvent.change(screen.getByPlaceholderText("이름으로 검색"), { target: { value: "검색" } });
@@ -125,7 +134,7 @@ describe("StudentList — 검색 결과 없음", () => {
   it("검색어를 넣어 0건이면 그 검색어와 함께 검색 결과가 없다고 알린다", async () => {
     mockGetStudents.mockResolvedValue({ ...emptyPage, totalCount: 35 });
     render(<StudentList />);
-    await screen.findByText("총 35명");
+    await screen.findAllByText(/35명/);
     mockGetStudents.mockResolvedValue(emptyPage);
 
     fireEvent.change(screen.getByPlaceholderText("이름으로 검색"), { target: { value: "없는이름" } });
@@ -147,7 +156,7 @@ describe("StudentList — 다시 시도", () => {
 
     mockGetStudents.mockResolvedValue({
       ...emptyPage,
-      items: [{ studentId: "1", name: "복구학생", className: null, guardianPhone: null, guardianCount: 0 }],
+      items: [{ studentId: "1", name: "복구학생", className: null, guardianPhone: null, guardianCount: 0, grade: null, canGoAlone: false, accountLinked: false, weeklyAddressStatus: "none" as const }],
       totalCount: 1,
     });
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
@@ -167,8 +176,8 @@ describe("StudentList — 빈 상태 행동과 저장 행 강조", () => {
     mockGetStudents.mockResolvedValue({
       ...emptyPage,
       items: [
-        { studentId: "8", name: "기존학생", className: null, guardianPhone: null, guardianCount: 0 },
-        { studentId: "9", name: "새학생", className: null, guardianPhone: null, guardianCount: 0 },
+        { studentId: "8", name: "기존학생", className: null, guardianPhone: null, guardianCount: 0, grade: null, canGoAlone: false, accountLinked: false, weeklyAddressStatus: "none" as const },
+        { studentId: "9", name: "새학생", className: null, guardianPhone: null, guardianCount: 0, grade: null, canGoAlone: false, accountLinked: false, weeklyAddressStatus: "none" as const },
       ],
       totalCount: 2,
     });
@@ -184,7 +193,7 @@ describe("StudentList — 빈 상태 행동과 저장 행 강조", () => {
   it("검색 결과가 없을 때는 학생 등록 버튼을 내지 않는다", async () => {
     mockGetStudents.mockResolvedValue({ ...emptyPage, totalCount: 35 });
     render(<StudentList />);
-    await screen.findByText("총 35명");
+    await screen.findAllByText(/35명/);
     mockGetStudents.mockResolvedValue(emptyPage);
 
     fireEvent.change(screen.getByPlaceholderText("이름으로 검색"), { target: { value: "없는이름" } });
@@ -192,5 +201,61 @@ describe("StudentList — 빈 상태 행동과 저장 행 강조", () => {
     const emptyRow = (await screen.findByText("'없는이름' 검색 결과가 없습니다")).closest("tr")!;
 
     expect(within(emptyRow).queryByRole("button", { name: "학생 등록" })).not.toBeInTheDocument();
+  });
+});
+
+// Ruling 815 — 상태 탭 · 반 필터가 서버 쿼리(filter · class_name)로 가고, 지표 칸은 응답의 summary(학원 전체 값)를 그린다.
+describe("StudentList — 상태 탭 · 반 필터 · 지표(Ruling 815)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const item = (studentId: string, className: string) => ({
+    studentId,
+    name: `학생${studentId}`,
+    className,
+    guardianPhone: null,
+    guardianCount: 0,
+    grade: null,
+    canGoAlone: false,
+    accountLinked: false,
+    weeklyAddressStatus: "none" as const,
+  });
+  const page = {
+    summary: { total: 116, classCount: 6, guardianUnlinked: 4, addressMissing: 9, canGoAlone: 31 },
+    items: [item("1", "초등 기본반"), item("2", "중등 선행반")],
+    page: 0,
+    size: 20,
+    totalCount: 116,
+    hasNext: true,
+  };
+
+  it("지표 칸이 summary 의 학원 전체 값을 그린다", async () => {
+    mockGetStudents.mockResolvedValue(page);
+    render(<StudentList />);
+
+    await screen.findByText("학생1");
+    // 지표 칸의 큰 숫자(탭의 건수 알약은 aria-hidden 이라 따로 본다).
+    expect(screen.getAllByText("116").length).toBeGreaterThan(0);
+    expect(screen.getByText("31")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "보호자 미연결 4건" })).toBeInTheDocument();
+  });
+
+  it("보호자 미연결 탭을 누르면 filter=guardian_unlinked 로 0쪽부터 요청한다", async () => {
+    mockGetStudents.mockResolvedValue(page);
+    render(<StudentList />);
+    await screen.findByText("학생1");
+
+    fireEvent.click(screen.getByRole("tab", { name: /보호자 미연결/ }));
+
+    await waitFor(() => expect(mockGetStudents).toHaveBeenLastCalledWith(0, 20, undefined, { className: undefined, filter: "guardian_unlinked" }));
+  });
+
+  it("반을 고르면 class_name 으로 요청한다", async () => {
+    mockGetStudents.mockResolvedValue(page);
+    render(<StudentList />);
+    await screen.findByText("학생1");
+
+    fireEvent.change(screen.getByLabelText("반 필터"), { target: { value: "중등 선행반" } });
+
+    await waitFor(() => expect(mockGetStudents).toHaveBeenLastCalledWith(0, 20, undefined, { className: "중등 선행반", filter: undefined }));
   });
 });
