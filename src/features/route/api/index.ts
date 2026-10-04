@@ -26,6 +26,7 @@ type RawRouteStop = {
   is_destination?: boolean;
   is_waypoint?: boolean;
   change?: "added" | "skipped" | null;
+  rider_count?: number;
 };
 
 type RawRouteSummary = {
@@ -60,6 +61,7 @@ const toStop = (raw: RawRouteStop): RouteStop => ({
   isDestination: raw.is_destination ?? false,
   isWaypoint: raw.is_waypoint ?? false,
   change: raw.change ?? null,
+  riderCount: raw.rider_count,
 });
 
 const toSummary = (raw: RawRouteSummary): RouteSummaryTypes => ({
@@ -145,7 +147,7 @@ export const optimizeRoute = async (id: string, fixedStopIds: string[] = []): Pr
   return toDetail(raw);
 };
 
-type RawRoutePath = { road_path: RawGeoPoint[]; fallback_used: boolean; stops: RawRouteStop[] };
+type RawRoutePath = { road_path: RawGeoPoint[]; fallback_used: boolean; stops: RawRouteStop[]; distance_m?: number | null; duration_s?: number | null; computed_at?: string | null };
 
 // GET /staff/routes/{id}/path(§5.9 신설, R27-B) — 편성 화면 지도가 그릴 도로 경로.
 // stops 는 getRouteDetail 과 같은 RawRouteStop 모양이라 toStop 을 그대로 재사용한다.
@@ -155,6 +157,9 @@ export const getRoutePath = async (id: string): Promise<RoutePathResponseTypes> 
     roadPath: raw.road_path.map((point) => ({ lat: point.lat, lng: point.lng })),
     fallbackUsed: raw.fallback_used,
     stops: raw.stops.map(toStop),
+    distanceM: raw.distance_m ?? null,
+    durationS: raw.duration_s ?? null,
+    computedAt: raw.computed_at ?? null,
   };
 };
 

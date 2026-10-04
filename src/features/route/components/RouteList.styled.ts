@@ -146,3 +146,23 @@ export const StyledGridLegend = styled.div`
     font-style: normal;
   }
 `;
+
+// 삭제 확인의 영향 표 — 항목 이름 + 설명.
+export const StyledDeleteKv = styled.dl`
+  margin: 12px 0;
+  font-size: var(--fs-sm);
+
+  & > div {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  dt {
+    color: var(--text-secondary);
+  }
+  dd {
+    margin: 0;
+  }
+`;

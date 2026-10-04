@@ -23,13 +23,14 @@ import {
   StyledStopSeq,
   StyledStopActions,
   StyledStopMain,
+  StyledStopRiders,
   StyledMapColumn,
 } from "./RouteStopsPanel.styled";
 
 type Point = { lat: number; lng: number };
 
 /** 목록의 한 줄 — `stopId` 가 없으면 저장할 때 새로 만든다. `key` 는 화면 안에서만 쓰는 이름표다. */
-type EditableStop = Point & { key: string; stopId?: string; name: string; address?: string };
+type EditableStop = Point & { key: string; stopId?: string; name: string; address?: string; riderCount?: number };
 
 type StopFormState = {
   mode: "add" | "edit";
@@ -51,7 +52,7 @@ type RouteStopsPanelProps = {
 };
 
 const fromServer = (stops: RouteStop[]): EditableStop[] =>
-  stops.map((stop) => ({ key: `stop-${stop.stopId}`, stopId: stop.stopId, name: stop.name, lat: stop.lat, lng: stop.lng }));
+  stops.map((stop) => ({ key: `stop-${stop.stopId}`, stopId: stop.stopId, name: stop.name, lat: stop.lat, lng: stop.lng, riderCount: stop.riderCount }));
 
 // 무엇이 바뀌었는지 — 줄마다 표시하고 저장 버튼 옆에 몇 건인지 알린다.
 const isEdited = (stop: EditableStop, saved: EditableStop[]): boolean => {
@@ -331,6 +332,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
                   {endpointLabelOf(index) ? <Badge tone="neutral">{endpointLabelOf(index)}</Badge> : null}
                   {stop.stopId === undefined ? <Badge tone="added">새로 추가</Badge> : null}
                   {isEdited(stop, saved) ? <Badge tone="amber">수정됨</Badge> : null}
+                  {stop.riderCount !== undefined ? <StyledStopRiders>학생 {stop.riderCount}명</StyledStopRiders> : null}
                 </StyledStopMain>
                 <StyledStopActions>
                   <IconButton

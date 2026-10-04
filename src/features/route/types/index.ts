@@ -19,6 +19,8 @@ export type RouteStop = {
   isWaypoint?: boolean;
   // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
   change?: "added" | "skipped" | null;
+  // Ruling 819 — §5.9 상세 응답의 `rider_count`(그 편성의 요일·방향 요일별 주소가 이 정차지로 매칭된 재원 학생 수). 경로(path) 응답에는 없다.
+  riderCount?: number;
 };
 
 // 편성 요약 — 목록·상세가 함께 싣는 필드.
@@ -84,6 +86,10 @@ export type RoutePathResponseTypes = {
   roadPath: LatLng[];
   fallbackUsed: boolean;
   stops: RouteStop[];
+  // Ruling 819 — 도로 경로 총 거리(m) · 예상 소요(초) · 계산 시각. 직선 근사이거나 경로가 비면 거리·소요는 null(근사를 도로 거리로 보이지 않는다).
+  distanceM?: number | null;
+  durationS?: number | null;
+  computedAt?: string | null;
 };
 
 // §5.9 주소 검색(2026-09-22) — **아직 아무것도 만들지 않은** 후보 한 지점.

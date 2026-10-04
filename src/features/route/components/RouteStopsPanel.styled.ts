@@ -139,3 +139,10 @@ export const StyledSaveStatus = styled.span`
   font: var(--fw-medium) var(--fs-micro) / 1.4 var(--font-sans);
   color: var(--text-secondary);
 `;
+
+// 정차지 이름 아래 한 줄 — 그 정차지를 쓰는 재원 학생 수(정차지 삭제 · 이동 전에 영향 인원 확인).
+export const StyledStopRiders = styled.small`
+  flex-basis: 100%;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;
