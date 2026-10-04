@@ -39,7 +39,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
   it("사유를 입력하지 않으면 강제 확정 버튼이 비활성 상태다", () => {
     render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "강제 확정 실행" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "강제 확정" })).toBeDisabled();
   });
 
   it("성공하면 결과 화면으로 전환되고, 사유 입력창(폼)으로 돌아갈 길이 없다", async () => {
@@ -54,7 +54,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     fireEvent.change(screen.getByLabelText("강제 확정 사유"), {
       target: { value: "노선 계산 3회 연속 실패" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정" }));
 
     await waitFor(() => expect(screen.getByText("강제 확정 완료")).toBeInTheDocument());
 
@@ -63,7 +63,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     expect(screen.getByText("확정 시각: 2026-09-12 17:00")).toBeInTheDocument();
     // 결과 화면에는 폼 요소(사유 입력창·실행 버튼)가 존재하지 않고 "닫기"만 있다.
     expect(screen.queryByLabelText("강제 확정 사유")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "강제 확정 실행" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "강제 확정" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정" }));
 
     await waitFor(() =>
       expect(screen.getByText("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.")).toBeInTheDocument(),
@@ -88,7 +88,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정" }));
 
     await waitFor(() =>
       expect(screen.getByText("아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.")).toBeInTheDocument(),
@@ -105,7 +105,7 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 확정 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정" }));
 
     await waitFor(() => expect(screen.getByText("임시 취소된 회차라 강제 확정할 수 없습니다.")).toBeInTheDocument());
     expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();

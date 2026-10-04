@@ -13,6 +13,21 @@ export const agoText = (raw: string, now: Date = new Date()): string => {
   return `${Math.floor(diff / DAY_MS)}일 전`;
 };
 
+const spanText = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}분`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
+};
+
+/** 기준 시각이 지금보다 앞이면 `7분 지남`, 뒤면 `1시간 38분 뒤` — 1분 미만은 `방금 지남` · `곧`. */
+export const untilText = (raw: string, now: Date = new Date()): string => {
+  const diffMinutes = Math.floor(Math.abs(new Date(raw).getTime() - now.getTime()) / MINUTE_MS);
+  const past = new Date(raw).getTime() <= now.getTime();
+  if (diffMinutes < 1) return past ? "방금 지남" : "곧";
+  return `${spanText(diffMinutes)} ${past ? "지남" : "뒤"}`;
+};
+
 const SEOUL_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" });
 const SEOUL_CLOCK = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const SEOUL_MONTH_DAY_LONG = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" });
