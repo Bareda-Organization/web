@@ -21,7 +21,9 @@ COMPOSE="docker compose -f docker-compose.yml -f docker-compose.app.yml"
 export BACKEND_PROFILES=local,fixture
 echo "시드를 새로 깐다 — 컨테이너 재생성"
 $COMPOSE down >/dev/null 2>&1
-$COMPOSE up -d >/dev/null 2>&1
+# --build 필수 — 없으면 예전에 만든 이미지로 뜬다. 2026-10-04 R48 에서 병합 전(10-03) 이미지로
+# 계약 시험이 통과해 서버 변경분이 하나도 검증되지 않았다. 바뀐 것이 없으면 캐시로 금방 끝난다.
+$COMPOSE up -d --build >/dev/null 2>&1
 
 printf "백엔드 기동 대기"
 for _ in $(seq 1 60); do
