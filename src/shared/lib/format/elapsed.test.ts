@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { formatWaited } from "./waitedTime";
+import { formatElapsed } from "./elapsed";
 
-describe("formatWaited — 신청 경과 시간", () => {
+describe("formatElapsed — 신청 경과 시간", () => {
   const now = Date.parse("2026-10-03T12:00:00Z");
   it.each([
     ["2026-10-03T11:59:30Z", "방금"],
@@ -11,6 +11,6 @@ describe("formatWaited — 신청 경과 시간", () => {
     ["2026-10-03T12:05:00Z", "방금"],
     ["not-a-date", ""],
   ])("%s → %s", (requestedAt, expected) => {
-    expect(formatWaited(requestedAt, now)).toBe(expected);
+    expect(formatElapsed(requestedAt, now)).toBe(expected);
   });
 });

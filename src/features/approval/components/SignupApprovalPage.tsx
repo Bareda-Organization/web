@@ -6,7 +6,7 @@ import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTa
 import type { RosterColumn } from "@/shared/types";
 import { getSignupRequests } from "../api";
 import { SIGNUP_ROLE_LABEL } from "../lib/signupRoleLabel";
-import { formatWaited } from "../lib/waitedTime";
+import { formatElapsed } from "@/shared/lib/format/elapsed";
 import type { SignupRequestItemResponseTypes } from "../types";
 import { useApprovalPending } from "./ApprovalPendingProvider";
 import { SignupDecidePanel } from "./SignupDecidePanel";
@@ -112,7 +112,7 @@ export const SignupApprovalPage = () => {
       render: (row) => (
         <>
           {formatDateTime(row.requestedAt)}
-          <StyledWaitedNote>{formatWaited(row.requestedAt, nowMs)}</StyledWaitedNote>
+          <StyledWaitedNote>{formatElapsed(row.requestedAt, nowMs)}</StyledWaitedNote>
         </>
       ),
     },
@@ -181,7 +181,7 @@ export const SignupApprovalPage = () => {
           <SignupDecidePanel
             key={selected.requestId}
             request={selected}
-            waited={formatWaited(selected.requestedAt, nowMs)}
+            waited={formatElapsed(selected.requestedAt, nowMs)}
             onDone={() => {
               setSelectedId(null);
               loadRequests(status, page);

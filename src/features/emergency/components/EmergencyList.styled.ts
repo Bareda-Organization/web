@@ -27,3 +27,36 @@ export const StyledEmergencyPosition = styled.span`
   font-size: var(--fs-body-sm);
   color: var(--text-secondary);
 `;
+
+export const StyledEmergencyBoard = styled.div`
+  display: block;
+`;
+
+export const StyledEmergencyStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+`;
+
+export const StyledEmergencyCardHead = styled.header`
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 16px 20px 12px;
+
+  h2 {
+    margin: 0;
+    font: var(--fw-bold) var(--fs-md) / 1.4 var(--font-sans);
+  }
+  span {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+  }
+`;
+
+export const StyledSubLine = styled.small`
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;

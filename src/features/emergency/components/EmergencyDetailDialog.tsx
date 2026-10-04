@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Dialog, Textarea } from "@/shared/ui";
+import { Button, Drawer, StatusChip, Textarea, Timeline } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
@@ -31,24 +31,20 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
   const deviceNote = deviceTimeNote(emergency.raisedAt, emergency.occurredAt);
 
   return (
-    <Dialog
+    // 옆 패널 — 목록을 그대로 두고 연락처 · 메모 · 확인이 한 화면에 있다(대화상자는 열었다 닫는 두 단계 + 목록을 가렸다). 닫기는 머리의 ×.
+    <Drawer
       title={`${emergency.busNo} 비상 알림 상세`}
       onClose={onClose}
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            닫기
+        canAck ? (
+          <Button variant="primary" icon="circle-check" disabled={acking} onClick={() => onAck(ackMemo.trim() === "" ? undefined : ackMemo.trim())}>
+            {acking ? "처리 중..." : "확인"}
           </Button>
-          {canAck ? (
-            <Button variant="primary" disabled={acking} onClick={() => onAck(ackMemo.trim() === "" ? undefined : ackMemo.trim())}>
-              {acking ? "처리 중..." : "확인"}
-            </Button>
-          ) : null}
-        </>
+        ) : null
       }
     >
       <StyledEmergencyDetailBody>
-        <Badge tone="red">{EMERGENCY_TYPE_LABEL[emergency.type]}</Badge>
+        <StatusChip tone="bad">{EMERGENCY_TYPE_LABEL[emergency.type]}</StatusChip>
         <StyledEmergencyDetailRow>
           <span>발생 시각</span>
           <span>
@@ -107,7 +103,16 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
             onChange={(event) => setAckMemo(event.target.value)}
           />
         ) : null}
+        <Timeline
+          aria-label="처리 순서"
+          items={[
+            { tone: "bad", title: `${formatDateTime(emergency.raisedAt)} 접수`, meta: `${emergency.raisedBy.name ?? "미상"}(${EMERGENCY_ROLE_LABEL[emergency.raisedBy.role]})가 발신${deviceNote ? ` · ${deviceNote}` : ""}` },
+            emergency.acked
+              ? { tone: "ok", title: `${formatDateTime(emergency.ackedAt)} 확인${emergency.ackedBy?.name ? ` · ${emergency.ackedBy.name}` : ""}` }
+              : { tone: "end", title: "학원 확인 대기", meta: '[확인]을 누르면 발신자 앱에 "학원이 확인했습니다"가 표시됩니다' },
+          ]}
+        />
       </StyledEmergencyDetailBody>
-    </Dialog>
+    </Drawer>
   );
 };

@@ -1,5 +1,5 @@
-// 신청한 지 얼마나 됐는가 — "12분 전" · "5시간 전" · "3일 전". 미래 시각(시계 어긋남)은 "방금".
-export const formatWaited = (requestedAt: string, nowMs: number): string => {
+// 시작한 지 얼마나 됐는가(신청 · 접수) — "12분 전" · "5시간 전" · "3일 전". 미래 시각(시계 어긋남)은 "방금".
+export const formatElapsed = (requestedAt: string, nowMs: number): string => {
   const requested = Date.parse(requestedAt);
   if (!Number.isFinite(requested)) return "";
   const minutes = Math.floor((nowMs - requested) / 60_000);

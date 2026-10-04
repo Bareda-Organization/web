@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { EmergencyList } from "./EmergencyList";
@@ -69,7 +69,7 @@ describe("EmergencyList — 200건 상한 안내", () => {
 
     mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
     render(<EmergencyList />);
-    await screen.findByRole("button", { name: "확인" });
+    await screen.findByRole("button", { name: /확인$/ });
     expect(screen.queryByText(/최근 200건까지만/)).not.toBeInTheDocument();
   });
 });
@@ -85,13 +85,13 @@ describe("EmergencyList — 확인(ack) 실패 갈래", () => {
 
     render(<EmergencyList />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "확인" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: /확인$/ })).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole("button", { name: "확인" }));
+    fireEvent.click(screen.getByRole("button", { name: /확인$/ }));
 
     await waitFor(() => expect(screen.getByText("확인 처리에 실패했습니다")).toBeInTheDocument());
-    // 재조회(load)가 일어나지 않았어야 한다 — 최초 1회만 호출된 채로 남는다.
-    expect(mockGet).toHaveBeenCalledTimes(1);
+    // 재조회(load)가 일어나지 않았어야 한다 — 첫 조회(미확인 목록 + 오늘 처리한 건)의 2회만 호출된 채로 남는다.
+    expect(mockGet).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -118,7 +118,7 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
 
     expect(await screen.findByText(/010-3333-4444/)).toBeInTheDocument();
     expect(screen.getAllByText(/010-1111-2222/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/동승자/)).toBeInTheDocument();
+    expect(within(screen.getByRole("dialog")).getByText(/동승자/)).toBeInTheDocument();
   });
 
   it("발신 위치는 좌표 숫자가 아니라 지도 링크로 보인다", async () => {
@@ -159,7 +159,8 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
 
     await vi.advanceTimersByTimeAsync(5000 * 4);
 
-    expect(mockGet).toHaveBeenCalledTimes(2);
+    // 첫 조회 + 오늘 처리한 건 조회(응답 없음) + 첫 갱신 1회 — 응답이 안 온 동안 다음 갱신은 나가지 않는다.
+    expect(mockGet).toHaveBeenCalledTimes(3);
   });
 });
 
