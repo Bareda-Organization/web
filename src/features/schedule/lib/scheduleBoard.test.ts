@@ -30,6 +30,9 @@ describe("previewScheduleChange — 이 수정이 반영되는 회차", () => {
     const preview = previewScheduleChange(sat, { ...sat, departTime: "13:00", active: false }, [todayRun], TODAY);
     expect(preview.today.kind).toBe("unchanged");
     expect(preview.today.runs).toEqual([{ departTime: "2026-10-03T12:41:00+09:00", status: "confirmed" }]);
+    // 같은 스케줄의 다른 날(내일) 회차는 오늘 줄에 섞이지 않는다.
+    const tomorrowRun = { ...todayRun, id: "r2", serviceDate: "2026-10-04" } as unknown as RunItemResponseTypes;
+    expect(previewScheduleChange(sat, sat, [todayRun, tomorrowRun], TODAY).today.runs).toHaveLength(1);
   });
 
   it("토요일 스케줄이라 내일(일) 회차에는 영향이 없고, 다음 토요일에 새 값으로 회차가 만들어진다", () => {

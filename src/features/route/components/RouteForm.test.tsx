@@ -222,4 +222,21 @@ describe("RouteForm — 시작 값 · 이미 편성된 요일", () => {
     await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2));
     expect(mockCreate.mock.calls.map(([request]) => request.weekday)).toEqual(["tue", "thu"]);
   });
+
+  it("시작 요일이 이미 편성된 요일이면 선택에서 빠져 저장할 수 없고, 요일을 하나 더 고르면 그 요일만 만든다", async () => {
+    mockGetBuses.mockResolvedValue(oneBus);
+    mockCreate.mockResolvedValue({ id: "7" } as Awaited<ReturnType<typeof createRoute>>);
+    render(
+      <RouteForm onClose={vi.fn()} onDone={vi.fn()} onBatchDone={vi.fn()} initial={{ busId: "1", weekday: "wed", direction: "to_academy" }} existing={[{ busId: "1", weekday: "wed", direction: "to_academy" }]} />,
+    );
+    const save = await screen.findByRole("button", { name: "저장" });
+
+    expect(screen.getByLabelText("수")).not.toBeChecked();
+    expect(save).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("금"));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockCreate.mock.calls[0][0].weekday).toBe("fri");
+  });
 });
