@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EmergencyAlertsPage } from "./EmergencyAlertsPage";
 import { getEmergencies } from "../api";
@@ -10,6 +10,11 @@ import { ApiError } from "@/shared/lib/http";
 // 높다.
 vi.mock("../api", () => ({
   getEmergencies: vi.fn(),
+}));
+vi.mock("@/features/map", () => ({ MapSurface: () => <div data-testid="map" /> }));
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+  useRealtimeConnection: () => ({ connectionState: "connected", reconnect: vi.fn() }),
 }));
 
 const mockGetEmergencies = vi.mocked(getEmergencies);
@@ -66,7 +71,7 @@ describe("EmergencyAlertsPage — 단말 기록 시각 병기", () => {
 
     expect(await screen.findByText("단말 기록 08:03(참고)")).toBeInTheDocument();
     expect(screen.getAllByText(/단말 기록/)).toHaveLength(1);
-    expect(screen.getByText("2026-09-30 08:10")).toBeInTheDocument();
+    expect(screen.getByText("08:10 발신")).toBeInTheDocument();
   });
 });
 
@@ -104,7 +109,81 @@ describe("EmergencyAlertsPage — 200건 상한 안내", () => {
 
     mockGetEmergencies.mockResolvedValue({ items: [item("1")], unackedCount: 1 });
     render(<EmergencyAlertsPage />);
-    await screen.findByText("바래다학원");
+    await screen.findAllByText("바래다학원");
     expect(screen.queryByText(/최근 200건까지만/)).not.toBeInTheDocument();
+  });
+});
+
+// R48 시안 `emergency-alerts` — 상태 탭 건수 · 미확인 띠 · 오른쪽 상시 칸 · 미확인 0 이면 초록 안내 띠.
+describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const emergency = (id: string, patch: Record<string, unknown> = {}) => ({
+    emergencyId: id,
+    academy: { id: "1", name: `학원${id}`, contact: "032-000-0137" },
+    type: "vehicle_fault" as const,
+    memo: "엔진 경고등 점등",
+    raisedBy: { name: "한상철", role: "driver", phone: "010-0000-2012" },
+    runId: "1",
+    busNo: "2호차",
+    direction: "to_academy" as const,
+    position: { lat: 37.4871, lng: 126.7783, recordedAt: null },
+    riderCount: 9,
+    contacts: [],
+    raisedAt: "2026-10-03T12:38:12+09:00",
+    staffAcked: false,
+    ackedAt: null,
+    canceledAt: null,
+    ackedBy: null,
+    elapsedSinceRaised: 840,
+    ...patch,
+  });
+
+  const byStatus = (open: unknown[], acked: unknown[], canceled: unknown[]) =>
+    mockGetEmergencies.mockImplementation(async (status?: string) => {
+      const items = status === "open" ? open : status === "acked" ? acked : canceled;
+      return { items, unackedCount: open.length } as never;
+    });
+
+  it("세 상태의 건수를 탭에 붙이고, 미확인이 있으면 몇 분째 응답이 없는지 띠로 알린다", async () => {
+    byStatus([emergency("1")], [emergency("2", { staffAcked: true }), emergency("3", { staffAcked: true })], [emergency("4", { canceledAt: "2026-10-03T12:00:00+09:00" })]);
+    render(<EmergencyAlertsPage />);
+
+    expect(await screen.findByRole("tab", { name: "미확인 1건" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "확인됨 2건" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "취소됨 1건" })).toBeInTheDocument();
+    expect(screen.getByText("미확인 비상 1건 — 학원 관계자가 14분째 응답하지 않았습니다")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "학원에 전화" })).toHaveAttribute("href", "tel:032-000-0137");
+    expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toHaveAttribute("href", "/monitoring");
+  });
+
+  it("미확인이 0 이면 띠가 초록 안내로 바뀐다", async () => {
+    byStatus([], [emergency("2", { staffAcked: true })], []);
+    render(<EmergencyAlertsPage />);
+
+    expect(await screen.findByText("미확인 비상이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText(/응답하지 않았습니다/)).not.toBeInTheDocument();
+    expect(screen.getByText("해당 상태의 비상 알림이 없습니다")).toBeInTheDocument();
+  });
+
+  it("행의 상세를 누르면 오른쪽 칸이 그 비상으로 바뀐다", async () => {
+    byStatus([emergency("1"), emergency("2", { busNo: "5호차" })], [], []);
+    render(<EmergencyAlertsPage />);
+
+    const panel = await screen.findByRole("region", { name: "비상 상세" });
+    expect(within(panel).getByText(/2호차 · 등원 · 차량 고장/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "학원2 5호차 상세" }));
+
+    expect(within(screen.getByRole("region", { name: "비상 상세" })).getByText(/5호차 · 등원 · 차량 고장/)).toBeInTheDocument();
+  });
+
+  it("확인됨 탭은 확인 소요(acked_at − raised_at)를 보인다", async () => {
+    byStatus([], [emergency("2", { staffAcked: true, ackedAt: "2026-10-03T12:40:12+09:00", ackedBy: { name: "이수민", memo: null } })], []);
+    render(<EmergencyAlertsPage />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: /확인됨/ }));
+
+    expect(await screen.findByText("응답 2분")).toBeInTheDocument();
   });
 });
