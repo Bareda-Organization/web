@@ -4,47 +4,39 @@ import { useCallback, useEffect, useState } from "react";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, Input, RosterTable } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, Input, RosterTable, RunStatusChip, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getRuns } from "../api";
 import type { RunItemResponseTypes, RunStatus, ScheduleDirection } from "../types";
+import { addDays } from "../lib/scheduleBoard";
 import { RunAddForm } from "./RunAddForm";
 import { RunCancelDialog } from "./RunCancelDialog";
-import { StyledScheduleFilters, StyledScheduleSection } from "./ScheduleList.styled";
+import { StyledCancelText, StyledDateNav, StyledRunNote, StyledRunSub, StyledRunTime, StyledScheduleSection } from "./ScheduleList.styled";
 
 const DIRECTION_LABEL: Record<ScheduleDirection, string> = { to_academy: "등원", from_academy: "하원" };
-
-// RunStatus 는 회차의 생애주기(idle→confirmed→moving→finished)라 shared/ui 의
-// StatusPill(boarded·moving·missed·idle, 탑승 상태 축)과 값 집합이 안 맞는다(§2 확신
-// 없는 지점 — StatusPill.tsx 실측 확인 후 재사용을 포기하고 Badge 로 대체). ScheduleList
-// 의 active·report 의 handled 와 같은 방식.
-const STATUS_LABEL: Record<RunStatus, string> = {
-  idle: "운행 전",
-  confirmed: "확정",
-  moving: "이동 중",
-  finished: "종료",
-};
 
 // §5.10 DELETE — `idle`·`confirmed` 만 취소된다(운행이 시작된 회차는 409 RUN_ALREADY_STARTED).
 const CANCELABLE_STATUS: RunStatus[] = ["idle", "confirmed"];
 
-const STATUS_TONE: Record<RunStatus, "neutral" | "brand" | "amber" | "added"> = {
-  idle: "neutral",
-  confirmed: "brand",
-  moving: "amber",
-  finished: "added",
+type RunDayListProps = {
+  /** 헤더의 [임시 회차 추가] 가 여는 추가 창 — 화면(탭 + 헤더)이 쥔다. 안 주면 이 목록이 스스로 쥔다 */
+  adding?: boolean;
+  onAddingChange?: (next: boolean) => void;
 };
 
 // §5.10 GET /staff/runs?service_date=(SCH-02) — 특정일 회차 목록. 정규 스케줄 배치
 // 결과 확인 + 임시 회차 추가·취소(SCH-03) 를 한 화면에서 다룬다. 페이징 없음(실측
 // 확인, types/index.ts 주석) — 맨 배열을 그대로 전부 그린다.
-export const RunDayList = () => {
+export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListProps = {}) => {
   const [serviceDate, setServiceDate] = useState(todayInSeoul());
   const [items, setItems] = useState<RunItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [ownAdding, setOwnAdding] = useState(false);
+  const [canceling, setCanceling] = useState<RunItemResponseTypes | undefined>(undefined);
+  const adding = addingProp ?? ownAdding;
+  const setAdding = onAddingChange ?? setOwnAdding;
+  const [today] = useState(() => todayInSeoul());
 
   const load = useCallback(async (date: string) => {
     setLoading(true);
@@ -72,61 +64,84 @@ export const RunDayList = () => {
   };
 
   const handleCanceled = () => {
-    setCancelingId(null);
+    setCanceling(undefined);
     load(serviceDate);
   };
 
+  const temporary = items.filter((run) => run.scheduleId === null).length;
+  const canceled = items.filter((run) => run.canceledAt).length;
+
   const columns: RosterColumn<RunItemResponseTypes>[] = [
-    { key: "busNo", label: "차량" },
-    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
-    { key: "departTime", label: "출발 시각", render: (row) => formatClockTime(row.departTime) },
+    { key: "departTime", label: "출발", render: (row) => <StyledRunTime>{formatClockTime(row.departTime)}</StyledRunTime> },
     {
-      key: "confirmAt",
-      label: "확정 시각",
-      render: (row) => formatClockTime(row.confirmAt),
-    },
-    { key: "route", label: "출발지 · 도착지", render: (row) => `${row.originName} → ${row.destinationName}` },
-    {
-      key: "assignments",
-      label: "배정",
-      render: (row) =>
-        row.assignments.length > 0
-          ? row.assignments.map((assignment) => `${assignment.name}(${assignment.role === "driver" ? "기사" : "동승자"})`).join(", ")
-          : "-",
-    },
-    {
-      key: "origin",
-      label: "구분",
-      render: (row) => (row.scheduleId === null ? <Badge tone="amber">임시 회차</Badge> : null),
+      key: "busNo",
+      label: "호차 · 방향",
+      render: (row) => (
+        <>
+          {row.busNo} · {DIRECTION_LABEL[row.direction]}
+          <StyledRunSub>{row.originName} → {row.destinationName}</StyledRunSub>
+        </>
+      ),
     },
     {
       key: "status",
       label: "상태",
       render: (row) =>
-        row.canceledAt ? <Badge tone="removed">취소됨</Badge> : <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>,
+        row.canceledAt ? (
+          <StatusChip tone="off" marker={false}>
+            취소됨
+          </StatusChip>
+        ) : (
+          <>
+            <RunStatusChip status={row.status} />
+            {/* W4 — 확정이 계속 실패하는 회차를 목록에서 바로 알아본다(`API_SPEC §5.10` `consecutive_failures`, BR-047). 0(성공)이면 표시하지 않는다. */}
+            {row.consecutiveFailures > 0 ? <StatusChip tone="bad" marker={false}>확정 {row.consecutiveFailures}회 연속 실패</StatusChip> : null}
+          </>
+        ),
     },
     {
-      // W4 — 확정이 계속 실패하는 회차를 목록에서 바로 알아본다(`API_SPEC §5.10`
-      // `consecutive_failures`, BR-047). 0(성공)이면 표시하지 않는다.
-      key: "consecutiveFailures",
-      label: "",
-      render: (row) => (row.consecutiveFailures > 0 ? <Badge tone="red">확정 {row.consecutiveFailures}회 연속 실패</Badge> : null),
+      key: "confirmAt",
+      label: "확정 시각",
+      render: (row) => (
+        <>
+          {formatClockTime(row.confirmAt)}
+          <StyledRunSub>{row.status === "idle" ? "확정 예정" : "확정됨"}</StyledRunSub>
+        </>
+      ),
+    },
+    { key: "origin", label: "구분", render: (row) => (row.scheduleId === null ? <Badge tone="amber">임시 회차</Badge> : "정규") },
+    {
+      key: "assignments",
+      label: "배정 인력",
+      render: (row) => {
+        const driver = row.assignments.find((assignment) => assignment.role === "driver");
+        const escort = row.assignments.find((assignment) => assignment.role === "escort");
+        return (
+          <>
+            {driver ? `기사 ${driver.name}` : <StatusChip tone="bad">기사 미배치</StatusChip>}
+            <StyledRunSub>{escort ? `동승 ${escort.name}` : "동승 미배치"}</StyledRunSub>
+          </>
+        );
+      },
     },
     {
       key: "cancel",
       label: "",
       align: "right",
       render: (row) =>
-        row.canceledAt || !CANCELABLE_STATUS.includes(row.status) ? null : (
+        row.canceledAt ? null : !CANCELABLE_STATUS.includes(row.status) ? (
+          <StyledCancelText>운행 시작됨</StyledCancelText>
+        ) : (
           <Button
-            variant="ghost"
+            variant="ghostDanger"
             size="sm"
+            aria-label={`${formatClockTime(row.departTime)} ${row.busNo} ${DIRECTION_LABEL[row.direction]} 회차 취소`}
             onClick={(event) => {
               event.stopPropagation();
-              setCancelingId(row.id);
+              setCanceling(row);
             }}
           >
-            취소
+            회차 취소
           </Button>
         ),
     },
@@ -134,23 +149,27 @@ export const RunDayList = () => {
 
   return (
     <StyledScheduleSection>
-      <StyledScheduleFilters>
+      <StyledDateNav>
         <Input label="날짜" type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
-        <Button variant="primary" icon="plus" onClick={() => setAdding(true)}>
-          임시 회차 추가
+        <Button variant="ghost" size="sm" iconOnly icon="chevron-left" aria-label="전날" onClick={() => setServiceDate(addDays(serviceDate, -1))} />
+        <Button variant="ghost" size="sm" iconOnly icon="chevron-right" aria-label="다음날" onClick={() => setServiceDate(addDays(serviceDate, 1))} />
+        <Button variant="ghost" size="sm" disabled={serviceDate === today} onClick={() => setServiceDate(today)}>
+          오늘
         </Button>
-      </StyledScheduleFilters>
+        <span data-total>
+          회차 {items.length} · 임시 추가 {temporary} · 취소 {canceled}
+        </span>
+      </StyledDateNav>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <Card padding={0} aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(serviceDate)} columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} />
+      <Card flush aria-busy={loading}>
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(serviceDate)} emptyMessage="이 날짜의 회차가 없습니다" columns={columns} loading={loading} rows={items} getRowKey={(row) => row.id} />
+        <StyledRunNote>확정 시각은 출발 30분 전입니다. 휴원 · 특강은 임시 추가 · 취소로 처리하고 정규 스케줄은 바꾸지 않습니다. 이미 운행이 시작된 회차는 취소할 수 없습니다.</StyledRunNote>
       </Card>
 
       {adding ? <RunAddForm serviceDate={serviceDate} onClose={() => setAdding(false)} onDone={handleAdded} /> : null}
-      {cancelingId !== null ? (
-        <RunCancelDialog runId={cancelingId} onCancel={() => setCancelingId(null)} onCanceled={handleCanceled} />
-      ) : null}
+      {canceling ? <RunCancelDialog runId={canceling.id} run={canceling} onCancel={() => setCanceling(undefined)} onCanceled={handleCanceled} /> : null}
     </StyledScheduleSection>
   );
 };

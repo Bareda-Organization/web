@@ -4,6 +4,7 @@ import { getRuns, getSchedules } from "../api";
 import { ScheduleScreen } from "./ScheduleScreen";
 
 vi.mock("../api", () => ({ getSchedules: vi.fn(), getRuns: vi.fn(), cancelRun: vi.fn() }));
+vi.mock("@/features/bus", () => ({ getBuses: vi.fn().mockResolvedValue({ items: [], page: 0, size: 100, totalCount: 0, hasNext: false }) }));
 vi.mock("./ScheduleForm", () => ({ ScheduleForm: () => null }));
 
 const emptyPage = { items: [], page: 0, size: 20, totalCount: 0, hasNext: false };
@@ -20,7 +21,8 @@ describe("ScheduleScreen — 화면 제목", () => {
     await screen.findByText("등록된 스케줄이 없습니다");
 
     expect(screen.getAllByRole("heading", { name: /운행 스케줄/ })).toHaveLength(1);
-    expect(screen.getByText("총 0건")).toBeInTheDocument();
+    // 건수는 지표 칸이 말한다(시안: 정규 스케줄 N건).
+    expect(screen.getByText("정규 스케줄", { selector: "div" }).parentElement).toHaveTextContent("0건");
     expect(screen.getAllByRole("button", { name: "스케줄 등록" }).length).toBeGreaterThan(0);
   });
 
@@ -28,7 +30,7 @@ describe("ScheduleScreen — 화면 제목", () => {
     render(<ScheduleScreen />);
     await screen.findByText("등록된 스케줄이 없습니다");
 
-    fireEvent.click(screen.getByRole("tab", { name: "일일 회차" }));
+    fireEvent.click(screen.getByRole("tab", { name: /일일 회차/ }));
 
     expect(screen.getAllByRole("heading", { name: /운행 스케줄/ })).toHaveLength(1);
   });

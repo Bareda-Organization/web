@@ -75,7 +75,9 @@ describe("RunDayList — F02-09 취소 버튼과 시각 표기", () => {
     render(<RunDayList />);
 
     await screen.findByText("A → 학원");
-    expect(screen.getAllByRole("button", { name: "취소" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /회차 취소$/ })).toHaveLength(2);
+    // 이미 시작된 회차는 버튼 대신 이유를 말한다.
+    expect(screen.getAllByText("운행 시작됨")).toHaveLength(2);
   });
 
   it("출발·확정 시각을 공용 형식(시:분)으로 보여 준다", async () => {

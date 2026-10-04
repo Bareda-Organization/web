@@ -20,6 +20,8 @@ export type ScheduleItemResponseTypes = {
   destinationName: string;
   estDurationMin: number | null;
   active: boolean;
+  // Ruling 818 — 같은 차량·요일·방향 편성(§5.9)의 정차지 수. 편성이 없으면 null, 빈 편성이면 0. 서버가 아직 안 주면 없다.
+  routeStopCount?: number | null;
 };
 
 export type ScheduleListResponseTypes = {

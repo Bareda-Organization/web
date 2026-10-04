@@ -24,6 +24,7 @@ type RawSchedule = {
   destination_name: string;
   est_duration_min: number | null;
   active: boolean;
+  route_stop_count?: number | null;
 };
 
 type RawScheduleListResponse = {
@@ -68,6 +69,7 @@ const toSchedule = (raw: RawSchedule): ScheduleItemResponseTypes => ({
   destinationName: raw.destination_name,
   estDurationMin: raw.est_duration_min,
   active: raw.active,
+  routeStopCount: raw.route_stop_count,
 });
 
 const toAssignment = (raw: RawRunAssignment): RunAssignmentEntryResponseTypes => ({

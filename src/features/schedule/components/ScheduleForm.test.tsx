@@ -240,3 +240,26 @@ describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 });
+
+// R48 — 수정 옆 패널의 "이 수정이 반영되는 회차" 미리보기(§5.10 Ruling 366 · 화면 계산 Ruling 827). 오늘 회차는 불변, 내일은 요일이 맞을 때만 반영.
+describe("ScheduleForm — 수정 미리보기", () => {
+  afterEach(() => vi.clearAllMocks());
+  const base = { id: "9", busId: "1", busNo: "1호차", weekday: "sat" as const, direction: "to_academy" as const, departTime: "12:41", originName: "중동 마을", destinationName: "학원", estDurationMin: 30, active: true };
+  const todayRun = { id: "r1", busId: "1", busNo: "1호차", scheduleId: "9", serviceDate: "2026-10-03", direction: "to_academy" as const, departTime: "2026-10-03T12:41:00+09:00", confirmAt: "2026-10-03T12:11:00+09:00", status: "confirmed" as const, originName: "", destinationName: "", estDurationMin: 30, canceledAt: null, consecutiveFailures: 0, assignments: [] };
+
+  it("토요일 스케줄은 오늘 회차가 바뀌지 않고 내일(일) 회차에는 영향이 없다고 말하며, 요일을 일요일로 바꾸면 내일 회차가 만들어진다고 바뀐다", async () => {
+    mockGetBuses.mockResolvedValue({ items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }], page: 0, size: 100, totalCount: 1, hasNext: false });
+    render(<ScheduleForm schedule={base} runs={[todayRun]} today="2026-10-03" onClose={vi.fn()} onDone={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} />);
+
+    const preview = await screen.findByLabelText("이 수정이 반영되는 회차");
+    expect(preview).toHaveTextContent("오늘 회차 1개(12:41");
+    expect(preview).toHaveTextContent("바뀌지 않습니다");
+    expect(preview).toHaveTextContent("이 스케줄은 토요일이라 내일 회차에는 영향이 없습니다");
+    expect(preview).toHaveTextContent("전날(10월 9일) 00:05 에 새 값으로 회차가 만들어집니다");
+
+    fireEvent.change(screen.getByDisplayValue("토"), { target: { value: "sun" } });
+    expect(preview).toHaveTextContent("내일 회차가 새로 만들어집니다");
+    expect(screen.getByRole("button", { name: "삭제" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다른 요일에 복사" })).toBeInTheDocument();
+  });
+});
