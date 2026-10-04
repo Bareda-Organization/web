@@ -162,7 +162,8 @@ describe("RouteForm — B1 #7 요일 여러 개 한 번에", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
 
     for (const label of ["화", "수", "목", "금"]) fireEvent.click(screen.getByLabelText(label));
-    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    // 여러 요일을 고르면 단추가 건수를 말한다(시안 "5건 저장").
+    fireEvent.click(screen.getByRole("button", { name: "5건 저장" }));
 
     await waitFor(() => expect(onBatchDone).toHaveBeenCalled());
     expect(mockCreate.mock.calls.map(([request]) => request.weekday)).toEqual(["mon", "tue", "wed", "thu", "fri"]);
@@ -179,7 +180,7 @@ describe("RouteForm — B1 #7 요일 여러 개 한 번에", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
 
     for (const label of ["화", "수"]) fireEvent.click(screen.getByLabelText(label));
-    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "3건 저장" }));
 
     expect(await screen.findByText(/화요일 — 같은 차량·요일·방향의 편성이 이미 있습니다/)).toBeInTheDocument();
     expect(onBatchDone).not.toHaveBeenCalled();
@@ -188,5 +189,37 @@ describe("RouteForm — B1 #7 요일 여러 개 한 번에", () => {
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
     expect(mockCreate.mock.calls[0][0].weekday).toBe("tue");
+  });
+});
+
+// R48 — 요일표의 빈 칸에서 열면 그 칸으로 시작하고, 같은 차량 · 방향에서 이미 편성된 요일은 고를 수 없다.
+describe("RouteForm — 시작 값 · 이미 편성된 요일", () => {
+  afterEach(() => vi.clearAllMocks());
+  const oneBus = {
+    items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
+    page: 0, size: 100, totalCount: 1, hasNext: false,
+  };
+
+  it("이미 편성된 요일은 비활성이고 저장에서 빠진다", async () => {
+    mockGetBuses.mockResolvedValue(oneBus);
+    mockCreate.mockResolvedValue({ id: "7" } as Awaited<ReturnType<typeof createRoute>>);
+    render(
+      <RouteForm
+        onClose={vi.fn()}
+        onDone={vi.fn()}
+        onBatchDone={vi.fn()}
+        initial={{ busId: "1", weekday: "tue", direction: "to_academy" }}
+        existing={[{ busId: "1", weekday: "wed", direction: "to_academy" }]}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled());
+
+    expect(screen.getByLabelText("수")).toBeDisabled();
+    expect(screen.getByLabelText("화")).toBeChecked();
+    fireEvent.click(screen.getByLabelText("목"));
+    fireEvent.click(screen.getByRole("button", { name: "2건 저장" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2));
+    expect(mockCreate.mock.calls.map(([request]) => request.weekday)).toEqual(["tue", "thu"]);
   });
 });
