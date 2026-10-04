@@ -4,7 +4,8 @@ import styled from "@emotion/styled";
 
 type LinkButtonVariant = "primary" | "secondary";
 
-const StyledLinkButton = styled(Link)<{ $variant: LinkButtonVariant; $size: "sm" | "md" }>`
+// `$` 로 시작하는 모양 인자는 링크(<a>)로 넘기지 않는다 — Next 의 Link 는 모르는 속성을 그대로 DOM 에 내려 "Invalid attribute name: `$variant`" 오류가 난다.
+const StyledLinkButton = styled(Link, { shouldForwardProp: (prop) => !String(prop).startsWith("$") })<{ $variant: LinkButtonVariant; $size: "sm" | "md" }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
