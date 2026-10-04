@@ -15,6 +15,10 @@ type RawBus = {
   capacity: number;
   student_capacity: number;
   operable: boolean;
+  // Ruling 816 — 목록 응답에만(아직 안 주는 서버를 견디려고 선택 필드).
+  route_count?: number;
+  schedule_count?: number;
+  today_runs?: { run_id: string | number; direction: "to_academy" | "from_academy"; depart_time: string; status: "idle" | "confirmed" | "moving" | "finished" }[];
 };
 
 // PATCH 전용 — 목록·등록 응답에는 없다(§5.12 본문).
@@ -45,6 +49,9 @@ const toBus = (raw: RawBus): BusItemResponseTypes => ({
   capacity: raw.capacity,
   studentCapacity: raw.student_capacity,
   operable: raw.operable,
+  routeCount: raw.route_count ?? 0,
+  scheduleCount: raw.schedule_count ?? 0,
+  todayRuns: (raw.today_runs ?? []).map((run) => ({ runId: asIdString(run.run_id), direction: run.direction, departTime: run.depart_time, status: run.status })),
 });
 
 // GET /staff/buses (§5.12, BUS-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.

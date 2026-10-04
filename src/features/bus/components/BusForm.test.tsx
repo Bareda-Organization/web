@@ -22,6 +22,9 @@ const existingBus: BusItemResponseTypes = {
   capacity: 10,
   studentCapacity: 8,
   operable: true,
+  routeCount: 0,
+  scheduleCount: 0,
+  todayRuns: [],
 };
 
 describe("BusForm — 등록 실패 갈래", () => {
@@ -93,6 +96,22 @@ describe("BusForm — 등록 실패 갈래", () => {
 
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("정원 입력칸 아래에 탑승 가능 인원 계산식이 저장 전 값과 함께 나오고, 경고는 건수가 붙은 한 상자로 묶인다", async () => {
+    mockUpdate.mockResolvedValue({
+      ...existingBus,
+      warnings: [{ code: "CAPACITY_BELOW_ASSIGNED", runId: "3", serviceDate: "2026-09-30", departTime: "2026-09-30T08:00:00+09:00", direction: "to_academy", assignedCount: 12, studentCapacity: 8 }],
+    });
+
+    render(<BusForm bus={existingBus} onClose={vi.fn()} onDone={vi.fn()} />);
+    expect(screen.getByText("탑승 가능 인원 8 = 정원 10 − 기사 1 − 동승자 1 (저장 전 8명)")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "20" } });
+    expect(screen.getByText("탑승 가능 인원 18 = 정원 20 − 기사 1 − 동승자 1 (저장 전 8명)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByText("수정은 저장됐습니다 — 확인할 경고 1건")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
   });
 
   it("경고 문구는 내부 번호만 던지지 않고 무엇이 넘쳤는지 말한다", async () => {

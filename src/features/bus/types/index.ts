@@ -12,6 +12,18 @@ export type BusItemResponseTypes = {
   /** 응답 전용 — 배차 시 자동 계산 = capacity − 배치된 기사 − 배치된 동승자 */
   studentCapacity: number;
   operable: boolean;
+  // Ruling 816 — 목록 응답에만. 서버가 아직 안 주면 0 · 빈 목록(등록·수정 응답에는 늘 없다).
+  routeCount: number;
+  scheduleCount: number;
+  todayRuns: BusTodayRunTypes[];
+};
+
+// 오늘 미취소 회차 — 출발 순.
+export type BusTodayRunTypes = {
+  runId: string;
+  direction: "to_academy" | "from_academy";
+  departTime: string;
+  status: "idle" | "confirmed" | "moving" | "finished";
 };
 
 // W5 — PATCH 응답 전용 경고(§5.12 `warnings[]`, BR-116). 정원을 줄여 그 차량의

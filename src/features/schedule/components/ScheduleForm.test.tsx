@@ -28,7 +28,7 @@ describe("ScheduleForm — 등록 실패 갈래", () => {
 
   it("409 DUPLICATE_SCHEDULE 로 거부되면 onDone 을 호출하지 않고 전용 안내 문구를 보여준다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0,
       size: 100,
       totalCount: 1,
@@ -63,7 +63,7 @@ describe("ScheduleForm — 등록 실패 갈래", () => {
 
 describe("ScheduleForm — F02-08 수정 반영 안내", () => {
   const busPage = {
-    items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+    items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
     page: 0,
     size: 100,
     totalCount: 1,
@@ -132,7 +132,7 @@ describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
   it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {
     mockGetBuses.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
     mockGetBuses.mockResolvedValueOnce({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0,
       size: 100,
       totalCount: 1,
@@ -149,7 +149,7 @@ describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
 
   it("차량이 100대를 넘으면 일부만 보인다고 알린다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0,
       size: 100,
       totalCount: 130,
@@ -167,7 +167,7 @@ describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
 
   it("소요시간을 비우고 저장하면 estDurationMin 을 null 로 보내 서버 값을 지운다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0, size: 100, totalCount: 1, hasNext: false,
     });
     mockUpdate.mockResolvedValue({} as never);
@@ -197,7 +197,7 @@ describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
 
   const fillAndSubmit = async (container: HTMLElement, weekdayLabels: string[]) => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0, size: 100, totalCount: 1, hasNext: false,
     });
     await waitFor(() => expect(screen.getAllByRole("textbox")).toHaveLength(2));
@@ -212,7 +212,7 @@ describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
 
   it("월~금을 고르고 저장하면 요일마다 1건씩 5건을 만든다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0, size: 100, totalCount: 1, hasNext: false,
     });
     mockCreate.mockResolvedValue({} as Awaited<ReturnType<typeof createSchedule>>);

@@ -6,6 +6,7 @@ import { AlertBanner, Button, Dialog, Input, Switch } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { createBus, updateBus } from "../api";
 import type { BusItemResponseTypes } from "../types";
+import { StyledWarningList, StyledWarningNote } from "./BusList.styled";
 
 const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
 
@@ -29,6 +30,10 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   const [warnings, setWarnings] = useState<string[]>([]);
 
   const canSubmit = busNo.trim().length > 0 && plateNo.trim().length > 0 && Number(capacity) > 0;
+  // 입력하지 않는 값이라 입력칸 아래에 계산식만 보인다 — 학생 탑승 가능 = 정원 − 기사 1 − 동승자 1(A-11).
+  const nextStudentSeats = Number(capacity) - 2;
+  const capacityHint =
+    Number(capacity) > 0 ? `탑승 가능 인원 ${nextStudentSeats} = 정원 ${capacity} − 기사 1 − 동승자 1${bus ? ` (저장 전 ${bus.studentCapacity}명)` : ""}` : "정원에서 기사 1명 · 동승자 1명을 뺀 값이 학생 탑승 가능 인원입니다";
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -66,6 +71,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   return (
     <Dialog
       title={bus ? "차량 정보 수정" : "차량 등록"}
+      showClose
       // 경고가 떠 있다는 것은 수정이 이미 저장됐다는 뜻이다 — 어떻게 닫아도 목록이 새 값을 다시 받아야 한다.
       onClose={warnings.length > 0 ? () => onDone(bus?.id) : onClose}
       footer={
@@ -92,6 +98,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
         required
         type="number"
         min={1}
+        hint={capacityHint}
         value={capacity}
         onChange={(event) => setCapacity(event.target.value)}
       />
@@ -102,10 +109,14 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
       />
       {warnings.length > 0 ? (
         <>
-          <AlertBanner tone="moving" title="수정은 반영됐지만 확인할 경고가 있습니다" />
-          {warnings.map((message, index) => (
-            <AlertBanner key={index} tone="moving" title={message} />
-          ))}
+          <AlertBanner tone="moving" title={`수정은 저장됐습니다 — 확인할 경고 ${warnings.length}건`}>
+            <StyledWarningList>
+              {warnings.map((message, index) => (
+                <li key={index}>{message}</li>
+              ))}
+            </StyledWarningList>
+          </AlertBanner>
+          <StyledWarningNote>경고는 저장을 막지 않습니다. 넘치는 회차는 운행 상세에서 학생을 다른 호차로 옮겨 정리합니다.</StyledWarningNote>
         </>
       ) : null}
       {error ? <AlertBanner tone="missed" title={error} /> : null}

@@ -15,7 +15,7 @@ describe("RunAddForm — F02-13 차량 목록 조회 실패", () => {
   it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {
     mockGetBuses.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
     mockGetBuses.mockResolvedValueOnce({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0,
       size: 100,
       totalCount: 1,
@@ -32,7 +32,7 @@ describe("RunAddForm — F02-13 차량 목록 조회 실패", () => {
 
   it("차량이 100대를 넘으면 일부만 보인다고 알린다", async () => {
     mockGetBuses.mockResolvedValue({
-      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true }],
+      items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
       page: 0,
       size: 100,
       totalCount: 130,

@@ -20,7 +20,13 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
           success: true,
           data: {
             items: [
-              { id: 1, bus_no: "1호차", plate_no: "12가3456", capacity: 20, student_capacity: 15, operable: true },
+              {
+                id: 1, bus_no: "1호차", plate_no: "12가3456", capacity: 20, student_capacity: 15, operable: true,
+                route_count: 14, schedule_count: 13,
+                today_runs: [{ run_id: 501, direction: "from_academy", depart_time: "2026-10-03T13:13:00+09:00", status: "idle" }],
+              },
+              // 아직 새 필드를 안 주는 서버 — 0 · 빈 목록으로 견딘다.
+              { id: 2, bus_no: "2호차", plate_no: "12가3457", capacity: 20, student_capacity: 15, operable: true },
             ],
             page: 0,
             size: 20,
@@ -34,7 +40,12 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
     const result = await getBuses(0, 20);
 
     expect(result.items).toEqual([
-      { id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 15, operable: true },
+      {
+        id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 15, operable: true,
+        routeCount: 14, scheduleCount: 13,
+        todayRuns: [{ runId: "501", direction: "from_academy", departTime: "2026-10-03T13:13:00+09:00", status: "idle" }],
+      },
+      { id: "2", busNo: "2호차", plateNo: "12가3457", capacity: 20, studentCapacity: 15, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] },
     ]);
     expect(result.totalCount).toBe(1);
     expect(result.hasNext).toBe(false);
@@ -61,6 +72,10 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
       capacity: 25,
       studentCapacity: 20,
       operable: false,
+      // 등록 응답에는 목록 전용 필드가 없다.
+      routeCount: 0,
+      scheduleCount: 0,
+      todayRuns: [],
     });
   });
 
