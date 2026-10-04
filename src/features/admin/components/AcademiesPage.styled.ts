@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 export const StyledAcademiesLayout = styled.div`
   display: flex;
   flex-direction: column;
-  padding: var(--s5);
+  padding: 0 var(--s5) var(--s5);
 `;
 
 export const StyledAcademyName = styled.div`

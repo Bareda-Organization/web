@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 export const StyledMemberApprovalsLayout = styled.div`
   display: flex;
   flex-direction: column;
-  padding: var(--s5);
+  padding: 0 var(--s5) var(--s5);
 `;
 
 // 왼쪽 목록(+ 승인 규칙) · 오른쪽 처리 칸 — 시안 폭 비율 658 : 454

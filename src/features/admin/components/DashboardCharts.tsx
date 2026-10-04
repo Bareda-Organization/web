@@ -19,7 +19,7 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 const W = 431;
 const H = 118;
 const LEFT = 30;
-const RIGHT = 405;
+const RIGHT = 375;
 const TOP = 24;
 const BASE = 98;
 

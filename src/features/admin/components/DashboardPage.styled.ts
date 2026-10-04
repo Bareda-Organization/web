@@ -6,7 +6,7 @@ import { css } from "@emotion/react";
 export const StyledDashboardPage = styled.div`
   display: flex;
   flex-direction: column;
-  padding: var(--s5);
+  padding: 0 var(--s5) var(--s5);
 `;
 
 export const StyledStamp = styled.div`

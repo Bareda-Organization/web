@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { ApiError } from "@/shared/lib/http";
 import {
   adminLiveDestination,
@@ -11,7 +11,7 @@ import {
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, Select, StatusPill } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
@@ -25,23 +25,25 @@ import {
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
 import { getAcademyRunsLive, getAllAcademies, getEmergencies, getRunAttention } from "../api";
-import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunAttentionTodayItemTypes, RunLiveItemResponseTypes } from "../types";
 import { emergencyTypeLabel } from "../lib/emergencyType";
 import { countOpenEmergenciesByAcademy } from "../lib/openEmergencyCounts";
 import { RunRosterDialog } from "./RunRosterDialog";
+import { clockOfMs, needsAttention, summarizeToday, timetableAxis } from "../lib/monitoringView";
+import { AcademyRail, RunDetailPanel, StatusCell, TimetableCell, TodayStrip, directionText } from "./MonitoringParts";
+
 import {
-  StyledFilterRow,
-  StyledMapTopRow,
+  StyledMonitoringGrid,
   StyledMapPane,
   StyledFallbackNotice,
+  StyledMapLegend,
   StyledMapOverlayNotice,
-  StyledBusListPane,
-  StyledBusListEmpty,
-  StyledBusListItem,
-  StyledBusListItemHeader,
   StyledMapSurface,
   StyledMonitoringLayout,
+  StyledRunButton,
+  StyledTableHeading,
 } from "./MonitoringPage.styled";
+import { StyledMonitoringStamp, StyledMonitoringStampDot } from "./MonitoringPage.stamp";
 
 // §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
 // 실시간 연결이 끊겼을 때(재연결 중·권한 거부)의 안전망 간격이다.
@@ -53,41 +55,9 @@ const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
 
-// "지연 1건 · 확정 실패 2건" — 0 인 쪽은 적지 않는다(Ruling 543).
-const attentionLabel = (item: RunAttentionItemTypes): string =>
-  [
-    item.delayedRuns > 0 ? `지연 ${item.delayedRuns}건` : null,
-    item.confirmFailedRuns > 0 ? `확정 실패 ${item.confirmFailedRuns}건` : null,
-  ]
-    .filter((part): part is string => part !== null)
-    .join(" · ");
-
 // 위치 수신 전(모든 회차가 `position: null`)에도 지도가 빈 화면이 아니라 서울 시청
 // 좌표를 보여주도록 한다 — 네이버 지도 SDK 의 `MapOptions.center` 기본값과 같은 지점이다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
-
-const RUN_STATUS_LABEL: Record<RunStatus, string> = {
-  idle: "대기",
-  confirmed: "확정",
-  moving: "이동 중",
-  finished: "종료",
-};
-
-// R20-C 목표 2 — 확정·대기가 같은 색이었다(둘 다 "idle" 톤, 사용자 지적). `StatusPill`
-// 의 색 4종(그린·앰버·레드·스톤, C-09)은 고정이라 새로 만들 수 없어 남은 한 톤인
-// "missed"(레드)를 확정에 배정한다 — 라벨은 `RUN_STATUS_LABEL`("확정")로 덮어써
-// "미탑승"으로 읽히지 않는다.
-const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
-  idle: "idle",
-  confirmed: "missed",
-  moving: "moving",
-  finished: "boarded",
-};
-
-const DIRECTION_LABEL: Record<RunLiveItemResponseTypes["direction"], string> = {
-  to_academy: "등원",
-  from_academy: "하원",
-};
 
 // §6.8~§6.9 전체 관제 — 학원별 실시간 회차(O-05·O-06). 메인 관리자는 학원 경계를 넘는
 // 유일한 역할이라(BRIEF-a1.md §2) 학원 선택 드롭다운이 이 화면의 진입점이다 — 관계자
@@ -119,6 +89,14 @@ export const MonitoringPage = () => {
   const [openEmergencyCounts, setOpenEmergencyCounts] = useState<Record<string, number>>({});
   // R46-FUFEAT ④ — 학원 id → 그 학원의 오늘 지연·확정 실패 집계(§6.15). 문제가 없는 학원은 키가 없다.
   const [attentionByAcademy, setAttentionByAcademy] = useState<Record<string, RunAttentionItemTypes>>({});
+  // §6.15 최상위 `today[]`(Ruling 805) — 전 학원 오늘 회차 요약. 서버가 아직 안 주면 null(레일 · 지표는 고른 학원 회차로 대신 센다).
+  const [attentionToday, setAttentionToday] = useState<RunAttentionTodayItemTypes[] | null>(null);
+  // "지금" — 시간표의 세로선과 "출발 시각 N분 경과" 를 위해 30초마다 갱신한다.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
   const [mapError, setMapError] = useState<string | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른 회차 하나의 노선.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -453,6 +431,7 @@ export const MonitoringPage = () => {
     try {
       const data = await getRunAttention();
       setAttentionByAcademy(Object.fromEntries(data.items.map((item) => [item.academyId, item])));
+      setAttentionToday(data.today ?? null);
       return true;
     } catch (cause) {
       console.warn("학원별 지연·확정 실패 요약을 불러오지 못했다", cause);
@@ -468,9 +447,6 @@ export const MonitoringPage = () => {
 
   usePolling(loadAttentionSummary, EMERGENCY_SUMMARY_INTERVAL_MS);
 
-  const academiesWithEmergency = academies.filter((academy) => (openEmergencyCounts[academy.id] ?? 0) > 0);
-  const academiesWithAttention = academies.filter((academy) => attentionByAcademy[academy.id] !== undefined);
-
   const handleSelectAcademy = (nextAcademyId: string) => {
     // 이미 보고 있는 학원이면 그대로 둔다 — 학원 id 가 안 바뀌면 회차 재조회 효과가 안 돌아, 비우기만 하면 다음 갱신까지 화면이 빈다.
     if (nextAcademyId === academyId) return;
@@ -481,32 +457,68 @@ export const MonitoringPage = () => {
     setAcademyId(nextAcademyId);
   };
 
+  // 전 학원 오늘 요약 — 서버가 `today[]` 를 주면 그대로, 아직 안 주면 고른 학원의 회차와 학원별 지연·확정 실패로 맞춘다(다른 학원 회차 수는 알 수 없어 0).
+  const todayRows: RunAttentionTodayItemTypes[] = useMemo(
+    () =>
+      attentionToday ??
+      academies.map((academy) => {
+        const mine = academy.id === academyId ? runs : [];
+        return {
+          academyId: academy.id,
+          academyName: academy.name,
+          academyStatus: academy.status,
+          runCount: mine.length,
+          byStatus: {
+            idle: mine.filter((run) => run.runStatus === "idle").length,
+            confirmed: mine.filter((run) => run.runStatus === "confirmed").length,
+            moving: mine.filter((run) => run.runStatus === "moving").length,
+            finished: mine.filter((run) => run.runStatus === "finished").length,
+          },
+          delayedRuns: attentionByAcademy[academy.id]?.delayedRuns ?? 0,
+          confirmFailedRuns: attentionByAcademy[academy.id]?.confirmFailedRuns ?? 0,
+        };
+      }),
+    [attentionToday, academies, academyId, runs, attentionByAcademy],
+  );
+  const summary = useMemo(() => summarizeToday(todayRows, openEmergencyCounts), [todayRows, openEmergencyCounts]);
+  const academy = academies.find((item) => item.id === academyId);
+  const sortedRuns = useMemo(() => [...runs].sort((a, b) => new Date(a.departTime).getTime() - new Date(b.departTime).getTime()), [runs]);
+  const axis = useMemo(() => timetableAxis(sortedRuns), [sortedRuns]);
+  const selectedRun = runs.find((run) => run.runId === selectedRunId) ?? null;
+  const connected = connectionState === "connected";
+  const movingCount = runs.filter((run) => run.runStatus === "moving").length;
+
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
-    { key: "busNo", label: "버스" },
-    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     {
-      key: "runStatus",
-      label: "상태",
+      key: "run",
+      label: "회차",
       render: (row) => (
-        <StatusPill status={RUN_STATUS_TO_PILL[row.runStatus]}>{RUN_STATUS_LABEL[row.runStatus]}</StatusPill>
+        <StyledRunButton type="button" $active={row.runId === selectedRunId} aria-pressed={row.runId === selectedRunId} onClick={() => handleSelectBus(row.runId)}>
+          <b>{formatClockTime(row.departTime)}</b>
+          <small>{`${row.busNo} · ${directionText(row.direction)}`}</small>
+        </StyledRunButton>
       ),
     },
-    // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다(R16, Ruling 315) — 빈 칸 대신
-    // "미배치" 를 보여 준다. 관제 화면에서 배치 누락은 관리자가 봐야 하는 정보다.
-    { key: "driver", label: "기사", render: (row) => row.driver?.name ?? "미배치" },
-    { key: "escort", label: "동승 매니저", render: (row) => row.escort?.name ?? "미배치" },
+    { key: "runStatus", label: "상태", render: (row) => <StatusCell run={row} nowMs={nowMs} /> },
+    { key: "timetable", label: "시간표", render: (row) => <TimetableCell run={row} axis={axis} nowMs={nowMs} /> },
+    // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다(R16, Ruling 315) — 빈 칸 대신 "미배치" 를 보여 준다. 관제 화면에서 배치 누락은 관리자가 봐야 하는 정보다.
     {
-      key: "lastSeenAt",
-      label: "위치",
-      render: (row) =>
-        row.position ? `수신 ${formatDateTime(row.position.receivedAt)}` : row.lastSeenAt ? formatDateTime(row.lastSeenAt) : "위치 확인 대기",
+      key: "people",
+      label: "기사 · 동승",
+      render: (row) => (row.driver || row.escort ? `${row.driver?.name ?? "미배치"} · ${row.escort?.name ?? "미배치"}` : "미배치"),
+    },
+    {
+      key: "arrival",
+      label: "도착 예정",
+      render: (row) => (row.runStatus === "finished" && row.finishedAt ? `종료 ${formatClockTime(row.finishedAt)}` : row.destinationEta ? formatClockTime(row.destinationEta) : "–"),
     },
     {
       key: "action",
       label: "",
+      align: "right",
       render: (row) => (
-        <Button variant="secondary" onClick={() => setRosterTarget(row)}>
-          명단 보기
+        <Button variant="secondary" size="sm" aria-label={`${row.busNo} ${directionText(row.direction)} 명단 보기`} onClick={() => setRosterTarget(row)}>
+          명단
         </Button>
       ),
     },
@@ -514,7 +526,16 @@ export const MonitoringPage = () => {
 
   return (
     <StyledMonitoringLayout>
-      <PageHeader title="전체 관제" description="학원별 실시간 회차 현황을 확인합니다" />
+      <PageHeader
+        title="전체 관제"
+        description="학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · 위치는 실시간, 회차 목록은 30초마다 갱신"
+        actions={
+          <StyledMonitoringStamp>
+            <StyledMonitoringStampDot $live={connected} aria-hidden="true" />
+            {clockOfMs(nowMs)} 기준 · {connected ? "실시간 연결됨" : "실시간 연결 끊김"}
+          </StyledMonitoringStamp>
+        }
+      />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
@@ -541,49 +562,14 @@ export const MonitoringPage = () => {
 
       {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
 
+      <TodayStrip summary={summary} />
 
-      {academiesWithEmergency.length > 0 ? (
-        <AlertBanner
-          tone="missed"
-          title="미확인 비상이 있는 학원"
-          action={academiesWithEmergency.map((academy) => (
-            <Button key={academy.id} size="sm" variant="danger" onClick={() => handleSelectAcademy(academy.id)}>
-              {`${academy.name} 비상 ${openEmergencyCounts[academy.id]}건`}
-            </Button>
-          ))}
-        />
-      ) : null}
-
-      {academiesWithAttention.length > 0 ? (
-        <AlertBanner
-          tone="moving"
-          title="지연·확정 실패가 있는 학원"
-          action={academiesWithAttention.map((academy) => (
-            <Button key={academy.id} size="sm" variant="secondary" onClick={() => handleSelectAcademy(academy.id)}>
-              {`${academy.name} ${attentionLabel(attentionByAcademy[academy.id])}`}
-            </Button>
-          ))}
-        />
-      ) : null}
-
-      <StyledFilterRow>
-        <Select
-          label="학원"
-          value={academyId ?? ""}
-          onChange={(event) => handleSelectAcademy(event.target.value)}
-          options={academies.map((academy) => ({
-            value: String(academy.id),
-            label: `${academy.name} (${academy.region})${openEmergencyCounts[academy.id] ? ` · 비상 ${openEmergencyCounts[academy.id]}건` : ""}${attentionByAcademy[academy.id] ? ` · ${attentionLabel(attentionByAcademy[academy.id])}` : ""}`,
-          }))}
-          disabled={loadingAcademies || academies.length === 0}
-        />
-      </StyledFilterRow>
-
-      {/* R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
+      {/* R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 옆에 선택 회차 칸을 둔다.
           이 화면의 목록은 §6.8 정의상 그 학원의 오늘 회차 전부(idle·confirmed·moving·finished 4종)다
-          (Ruling 315 — 2026-09-19 개정. 임시 취소된 회차는 뺀다, Ruling 375). 처음 정한 "moving 만"(Ruling 313)은
-          이 개정으로 대체됐다. 아래 상세 표(EmptyState/RosterTable)는 그대로 둔다. */}
-      <StyledMapTopRow>
+          (Ruling 315 — 2026-09-19 개정. 임시 취소된 회차는 뺀다, Ruling 375). R48 시안: 왼쪽 학원 레일 · 가운데 지도 · 오른쪽 선택 회차. */}
+      <StyledMonitoringGrid>
+        <AcademyRail academies={academies} today={todayRows} openEmergencyCounts={openEmergencyCounts} selectedId={academyId} onSelect={handleSelectAcademy} />
+
         <StyledMapPane>
           <StyledMapSurface>
             <MapSurface
@@ -595,11 +581,12 @@ export const MonitoringPage = () => {
                 setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
               }
             />
-            {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔
-                지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
-                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts).
-                Ruling 321 — 예정 경로도 같은 자리에서 "확정된 경로"로 오인하지
-                않도록 알린다. 근사·예정이 겹칠 수 있어 문구를 같이 붙인다. */}
+            <StyledMapLegend>
+              {movingCount > 0 ? <StatusChip tone="move">{`운행 중 ${movingCount}대`}</StatusChip> : null}
+              <span>점선 = 예정 노선 · 확정 시 달라질 수 있음</span>
+            </StyledMapLegend>
+            {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔 지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
+                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts). Ruling 321 — 예정 경로도 같은 자리에서 "확정된 경로"로 오인하지 않도록 알린다. */}
             {routeFallback || routePlanned ? (
               <StyledMapOverlayNotice>
                 {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null]
@@ -609,37 +596,15 @@ export const MonitoringPage = () => {
             ) : null}
           </StyledMapSurface>
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
-          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도
-              없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
+          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도 없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {routeNoPlannedRoute ? (
             <StyledFallbackNotice>이 회차의 고정 노선이 없습니다 — 고정 노선 편성에서 등록하세요</StyledFallbackNotice>
           ) : null}
         </StyledMapPane>
 
-        <StyledBusListPane>
-          {runs.length === 0 ? (
-            <StyledBusListEmpty>표시할 버스가 없습니다</StyledBusListEmpty>
-          ) : (
-            runs.map((run) => (
-              <StyledBusListItem
-                key={run.runId}
-                type="button"
-                $active={run.runId === selectedRunId}
-                aria-pressed={run.runId === selectedRunId}
-                onClick={() => handleSelectBus(run.runId)}
-              >
-                <StyledBusListItemHeader>
-                  <span>
-                    {run.busNo} · {DIRECTION_LABEL[run.direction]}
-                  </span>
-                  <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
-                </StyledBusListItemHeader>
-              </StyledBusListItem>
-            ))
-          )}
-        </StyledBusListPane>
-      </StyledMapTopRow>
+        <RunDetailPanel run={selectedRun} academyName={academy?.name} nowMs={nowMs} onRoster={setRosterTarget} />
+      </StyledMonitoringGrid>
 
       <Card padding={0} aria-busy={loadingRuns}>
         {!loadingAcademies && !error && academies.length === 0 ? (
@@ -647,12 +612,27 @@ export const MonitoringPage = () => {
         ) : !error && runs.length === 0 && !loadingRuns ? (
           <EmptyState icon="bus" title="지금 운행 중인 회차가 없습니다" />
         ) : (
-          <RosterTable columns={columns} loading={loadingRuns} rows={runs} getRowKey={(row) => row.runId} />
+          <>
+            <StyledTableHeading>
+              {academy ? `${academy.name} ` : ""}회차 {runs.length}
+              <small>
+                출발 순 · 막대 {clockOfMs(axis.startMs)}~{clockOfMs(axis.endMs)} · 세로선 = 지금
+              </small>
+            </StyledTableHeading>
+            <RosterTable
+              columns={columns}
+              loading={loadingRuns}
+              rows={sortedRuns}
+              getRowKey={(row) => row.runId}
+              selectedKey={selectedRunId}
+              rowTone={(row) => (needsAttention(row, nowMs) ? "warn" : undefined)}
+            />
+          </>
         )}
       </Card>
 
       {rosterTarget ? (
-        <RunRosterDialog runId={rosterTarget.runId} busNo={rosterTarget.busNo} onClose={() => setRosterTarget(null)} />
+        <RunRosterDialog runId={rosterTarget.runId} busNo={rosterTarget.busNo} direction={directionText(rosterTarget.direction)} onClose={() => setRosterTarget(null)} />
       ) : null}
     </StyledMonitoringLayout>
   );

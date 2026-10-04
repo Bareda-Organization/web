@@ -4,7 +4,7 @@ export const StyledAuditLogLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px;
+  padding: 0 var(--s5) var(--s5);
 `;
 
 export const StyledFilterRow = styled.div`
