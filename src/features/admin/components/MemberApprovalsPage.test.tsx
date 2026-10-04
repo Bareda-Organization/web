@@ -71,8 +71,9 @@ describe("MemberApprovalsPage — 정원이 찬 학원 표시", () => {
     });
     render(<MemberApprovalsPage />);
 
-    const fullRow = (await screen.findByText("꽉찬학원 (서울)")).closest("tr") as HTMLElement;
-    const emptyRow = screen.getByText("빈학원 (서울)").closest("tr") as HTMLElement;
+    const table = within(await screen.findByRole("table"));
+    const fullRow = table.getByText("꽉찬학원").closest("tr") as HTMLElement;
+    const emptyRow = table.getByText("빈학원").closest("tr") as HTMLElement;
     expect(within(fullRow).getByText("정원 참")).toBeInTheDocument();
     expect(within(emptyRow).queryByText("정원 참")).not.toBeInTheDocument();
   });
@@ -87,7 +88,7 @@ describe("MemberApprovalsPage — 처리 직후 사이드바 배지 갱신", () 
   const openDecideDialog = async () => {
     mockGetRequests.mockResolvedValue({ items: [row("1", "빈학원", 0)], page: 0, size: 20, totalCount: 1, hasNext: false });
     render(<MemberApprovalsPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    await screen.findByRole("region", { name: "신청자1 처리" });
   };
 
   it("승인하면 배지를 다시 센다", async () => {
@@ -104,9 +105,35 @@ describe("MemberApprovalsPage — 처리 직후 사이드바 배지 갱신", () 
     await openDecideDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "거절" }));
-    fireEvent.change(screen.getByLabelText("거절 사유"), { target: { value: "서류 미비" } });
-    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+    fireEvent.change(screen.getByLabelText(/거절 사유/), { target: { value: "서류 미비" } });
+    fireEvent.click(screen.getByRole("button", { name: "가입 거절" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+});
+
+// R48 시안 `member-approvals` — 목록 + 오른쪽 처리 칸. 처음에는 첫 요청이 선택돼 있고, 행의 [처리] 로 다른 요청을 고른다.
+describe("MemberApprovalsPage — 오른쪽 처리 칸", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("첫 요청이 처음부터 선택돼 있고, 다른 행의 처리 단추를 누르면 처리 칸이 그 요청으로 바뀐다", async () => {
+    mockGetRequests.mockResolvedValue({ items: [row("1", "꽉찬학원", 1), row("2", "빈학원", 0)], page: 0, size: 20, totalCount: 2, hasNext: false });
+    render(<MemberApprovalsPage />);
+
+    const panel = await screen.findByRole("region", { name: "신청자1 처리" });
+    expect(within(panel).getByRole("button", { name: "승인" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "신청자2 가입 요청 처리" }));
+
+    const next = screen.getByRole("region", { name: "신청자2 처리" });
+    expect(within(next).getByRole("button", { name: "승인" })).toBeEnabled();
+  });
+
+  it("요청이 없으면 빈 상태와 계정 관리 보기 링크를 보인다", async () => {
+    mockGetRequests.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false });
+    render(<MemberApprovalsPage />);
+
+    expect(await screen.findByText("처리할 가입 요청이 없습니다")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "계정 관리 보기" })).toHaveAttribute("href", "/member-accounts");
   });
 });

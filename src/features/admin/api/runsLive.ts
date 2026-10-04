@@ -41,6 +41,9 @@ type RawRunLiveItem = {
   // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`). 강제 확정
   // 대상(§6.14)을 알아보는 재료 — `ForceConfirmPage` 가 이 값으로 문구를 낸다.
   consecutive_failures: number;
+  // R48 Ruling 805 — 서버가 아직 안 주면 없다.
+  delay_minutes?: number | null;
+  finished_at?: string | null;
 };
 
 type RawAcademyRunsLiveResponse = { runs: RawRunLiveItem[] };
@@ -80,6 +83,8 @@ const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
   driver: toContact(raw.driver),
   escort: toContact(raw.escort),
   consecutiveFailures: raw.consecutive_failures,
+  delayMinutes: raw.delay_minutes ?? null,
+  finishedAt: raw.finished_at ?? null,
 });
 
 // GET /admin/academies/{id}/runs/live (§6.8, O-05 · O-06). 학원 경계를 넘나드는 화면이라

@@ -20,9 +20,13 @@ type RawAcademySummary = {
   staff_count: number;
   user_count: number;
   status: AcademyStatus;
+  // R48 Ruling 806 — 서버가 아직 안 주면 없다.
+  has_address?: boolean;
+  pending_signup_count?: number;
 };
 
 type RawAcademiesResponse = {
+  summary?: { total: number; active: number; inactive: number; user_count: number } | null;
   items: RawAcademySummary[];
   page: number;
   size: number;
@@ -38,6 +42,8 @@ const toSummary = (raw: RawAcademySummary): AcademySummaryResponseTypes => ({
   staffCount: raw.staff_count,
   userCount: raw.user_count,
   status: raw.status,
+  hasAddress: raw.has_address,
+  pendingSignupCount: raw.pending_signup_count,
 });
 
 // GET /admin/academies (§6.1, ACAD-01, O-01). §1.8 페이징 — 안 넘기면 서버는 첫 20건만 준다.
@@ -51,6 +57,7 @@ export const getAcademies = async (
     query: { q: q || undefined, status, page: paging.page, size: paging.size },
   });
   return {
+    summary: raw.summary ? { total: raw.summary.total, active: raw.summary.active, inactive: raw.summary.inactive, userCount: raw.summary.user_count } : null,
     items: raw.items.map(toSummary),
     page: raw.page,
     size: raw.size,
@@ -74,20 +81,21 @@ export const getAllAcademies = async (): Promise<AcademySummaryResponseTypes[]> 
   return all;
 };
 
-type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string };
+type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string; last_login_at?: string | null };
 
 type RawAcademyDetail = RawAcademySummary & {
   address: string | null;
   contact: string | null;
   memo: string | null;
   staff_accounts: RawStaffAccountRef[];
-  stats: { moving_bus_count: number };
+  stats: { moving_bus_count: number; moving_bus_nos?: string[] };
 };
 
 const toStaffAccountRef = (raw: RawStaffAccountRef): AcademyStaffAccountRefResponseTypes => ({
   accountId: asIdString(raw.account_id),
   name: raw.name,
   loginId: raw.login_id,
+  lastLoginAt: raw.last_login_at ?? null,
 });
 
 // GET /admin/academies/{id} (§6.3, ACAD-03, O-01).
@@ -99,7 +107,7 @@ export const getAcademy = async (id: string): Promise<AcademyDetailResponseTypes
     contact: raw.contact,
     memo: raw.memo,
     staffAccounts: raw.staff_accounts.map(toStaffAccountRef),
-    stats: { movingBusCount: raw.stats.moving_bus_count },
+    stats: { movingBusCount: raw.stats.moving_bus_count, movingBusNos: raw.stats.moving_bus_nos ?? [] },
   };
 };
 

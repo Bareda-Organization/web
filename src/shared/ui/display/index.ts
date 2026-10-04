@@ -4,3 +4,4 @@ export { DefinitionList } from "./DefinitionList";
 export type { DefinitionItem } from "./DefinitionList";
 export { TargetBar } from "./TargetBar";
 export type { TargetBarProps } from "./TargetBar";
+export { LinkButton } from "./LinkButton";

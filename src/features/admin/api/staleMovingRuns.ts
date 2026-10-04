@@ -7,6 +7,8 @@ type RawStaleMovingRunListResponse = {
     run_id: string | number;
     academy_id: string | number;
     academy_name: string;
+    // §6.16 academy_contact(Ruling 808) — 미등록이면 null, 서버가 아직 안 주면 없다.
+    academy_contact?: string | null;
     service_date: string;
     direction: "to_academy" | "from_academy";
     bus_no: string;
@@ -30,6 +32,7 @@ export const getStaleMovingRuns = async (): Promise<StaleMovingRunListResponseTy
       runId: asIdString(item.run_id),
       academyId: asIdString(item.academy_id),
       academyName: item.academy_name,
+      academyContact: item.academy_contact ?? null,
       serviceDate: item.service_date,
       direction: item.direction,
       busNo: item.bus_no,

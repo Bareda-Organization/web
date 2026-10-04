@@ -15,11 +15,15 @@ type RawStaffAccountItem = {
   login_id: string;
   phone: string;
   academy_name: string;
+  // §6.6(Ruling 807) — 서버가 아직 안 주면 없다.
+  academy_id?: string | number;
+  academy_pending_signup_count?: number;
   last_login_at: string | null;
   status: StaffAccountStatus;
 };
 
 type RawStaffAccountsResponse = {
+  counts?: { active: number; inactive: number } | null;
   items: RawStaffAccountItem[];
   page: number;
   size: number;
@@ -33,17 +37,23 @@ const toStaffAccountItem = (raw: RawStaffAccountItem): StaffAccountItemResponseT
   loginId: raw.login_id,
   phone: raw.phone,
   academyName: raw.academy_name,
+  academyId: raw.academy_id === undefined ? undefined : asIdString(raw.academy_id),
+  academyPendingSignupCount: raw.academy_pending_signup_count,
   lastLoginAt: raw.last_login_at,
   status: raw.status,
 });
 
+/** §6.6 쿼리(Ruling 807) — 학원 · 이름/아이디 검색 · 재직 상태. 안 주면 전부. */
+export type StaffAccountFilter = { academyId?: string; q?: string; status?: StaffAccountStatus };
+
 // GET /admin/staff-accounts (§6.6, O-02).
-export const getStaffAccounts = async (paging: PagingRequest = {}): Promise<StaffAccountsResponseTypes> => {
+export const getStaffAccounts = async (paging: PagingRequest = {}, filter: StaffAccountFilter = {}): Promise<StaffAccountsResponseTypes> => {
   const raw = await apiFetch<RawStaffAccountsResponse>("/admin/staff-accounts", {
     method: "GET",
-    query: { page: paging.page, size: paging.size },
+    query: { academy_id: filter.academyId || undefined, q: filter.q || undefined, status: filter.status, page: paging.page, size: paging.size },
   });
   return {
+    counts: raw.counts ?? null,
     items: raw.items.map(toStaffAccountItem),
     page: raw.page,
     size: raw.size,

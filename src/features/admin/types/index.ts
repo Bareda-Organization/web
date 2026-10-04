@@ -14,9 +14,16 @@ export type AcademySummaryResponseTypes = {
   staffCount: number;
   userCount: number;
   status: AcademyStatus;
+  // R48 Ruling 806 — 서버가 아직 안 주면(백엔드 병합 전) 없다. 없을 때는 칩·표시를 내지 않는다.
+  hasAddress?: boolean;
+  pendingSignupCount?: number;
 };
 
+// §6.1 응답 최상위 `summary` — 필터·쪽과 무관한 전체 값(Ruling 806). 서버가 안 주면 null.
+export type AcademiesSummaryTypes = { total: number; active: number; inactive: number; userCount: number };
+
 export type AcademiesResponseTypes = {
+  summary?: AcademiesSummaryTypes | null;
   items: AcademySummaryResponseTypes[];
   page: number;
   size: number;
@@ -28,6 +35,8 @@ export type AcademyStaffAccountRefResponseTypes = {
   accountId: string;
   name: string;
   loginId: string;
+  // §6.3 `staff_accounts[].last_login_at`(Ruling 806) — 로그인한 적이 없거나 서버가 안 주면 null.
+  lastLoginAt?: string | null;
 };
 
 export type AcademyDetailResponseTypes = AcademySummaryResponseTypes & {
@@ -35,7 +44,8 @@ export type AcademyDetailResponseTypes = AcademySummaryResponseTypes & {
   contact: string | null;
   memo: string | null;
   staffAccounts: AcademyStaffAccountRefResponseTypes[];
-  stats: { movingBusCount: number };
+  // moving_bus_nos(Ruling 806) — 운행 중 차량의 호차 이름. 서버가 안 주면 빈 배열.
+  stats: { movingBusCount: number; movingBusNos?: string[] };
 };
 
 // §6.2 POST /admin/academies. code 는 서버 생성값이라 요청에 없다. address 는 필수(Ruling 450).
@@ -80,6 +90,8 @@ export type StaffSignupRequestItemResponseTypes = {
   academy: StaffSignupAcademyRefResponseTypes;
   requestedAt: string;
   academyStaffCount: number;
+  // §6.4 `current_staff`(Ruling 807) — 그 학원의 재직 관계자. 없으면(또는 서버가 안 주면) null.
+  currentStaff?: { name: string; loginId: string; lastLoginAt: string | null } | null;
 };
 
 export type StaffSignupRequestsResponseTypes = {
@@ -111,11 +123,16 @@ export type StaffAccountItemResponseTypes = {
   loginId: string;
   phone: string;
   academyName: string;
+  // §6.6(Ruling 807) — 서버가 아직 안 주면 없다.
+  academyId?: string;
+  academyPendingSignupCount?: number;
   lastLoginAt: string | null;
   status: StaffAccountStatus;
 };
 
 export type StaffAccountsResponseTypes = {
+  // 탭 건수용 — `status` 만 뺀 같은 조건의 건수(Ruling 807). 서버가 안 주면 null.
+  counts?: { active: number; inactive: number } | null;
   items: StaffAccountItemResponseTypes[];
   page: number;
   size: number;
@@ -181,6 +198,9 @@ export type RunLiveItemResponseTypes = {
   escort: LiveContactResponseTypes | null;
   // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`).
   consecutiveFailures: number;
+  // R48 Ruling 805 — `moving` 이 아니면 null · `finished` 가 아니면 finished_at 이 null. 서버가 안 주면 없다.
+  delayMinutes?: number | null;
+  finishedAt?: string | null;
 };
 
 export type AcademyRunsLiveResponseTypes = {
@@ -300,7 +320,19 @@ export type EmergencyItemResponseTypes = {
 // §6.15 — 학원 1곳의 오늘 지연·확정 실패 회차 수. 둘 중 하나는 반드시 0 보다 크다.
 export type RunAttentionItemTypes = { academyId: string; delayedRuns: number; confirmFailedRuns: number };
 
-export type RunAttentionResponseTypes = { items: RunAttentionItemTypes[] };
+// §6.15 최상위 `today[]`(Ruling 805) — 전 학원 오늘 회차 요약. 문제 없는 학원도 싣는다(전체 관제의 학원 레일 · 지표 칸용).
+export type RunAttentionTodayItemTypes = {
+  academyId: string;
+  academyName: string;
+  academyStatus: AcademyStatus;
+  runCount: number;
+  byStatus: Record<RunStatus, number>;
+  delayedRuns: number;
+  confirmFailedRuns: number;
+};
+
+// today 는 서버가 아직 안 주면 null — 학원 레일은 이때 학원 목록으로 대신 그린다.
+export type RunAttentionResponseTypes = { items: RunAttentionItemTypes[]; today?: RunAttentionTodayItemTypes[] | null };
 
 export type EmergenciesResponseTypes = {
   items: EmergencyItemResponseTypes[];
@@ -312,6 +344,10 @@ export type AuditAction = "read" | "update" | "delete";
 
 export type AuditLogItemResponseTypes = {
   actor: string;
+  // R48 Ruling 809 — 행위자 계정의 현재 이름(계정이 없으면 null) · 감사 행 detail.action(없으면 null) · 접속 IP. 서버가 안 주면 없다.
+  actorName?: string | null;
+  detailAction?: string | null;
+  ip?: string | null;
   action: AuditAction;
   targetType: string;
   targetId: string;
@@ -390,6 +426,8 @@ export type StaleMovingRunItemResponseTypes = {
   runId: string;
   academyId: string;
   academyName: string;
+  // §6.16 `academy_contact`(Ruling 808) — 미등록이면 null. 서버가 안 주면 없다.
+  academyContact?: string | null;
   serviceDate: string;
   direction: "to_academy" | "from_academy";
   busNo: string;
