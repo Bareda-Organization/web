@@ -54,6 +54,13 @@ export const RouteList = () => {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [creating, setCreating] = useState<CreateSeed | undefined>(undefined);
   const [today] = useState(() => todayWeekday());
+  // 차량 관리의 [편성 N] · [스케줄 N] 링크가 `?bus=<차량 id>` 로 들어온다 — 그 차량으로 필터를 시작한다.
+  useEffect(() => {
+    (async () => {
+      const bus = new URLSearchParams(window.location.search).get("bus");
+      if (bus) setBusId(bus);
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,6 +155,9 @@ export const RouteList = () => {
 
   const busOptions = [{ value: "", label: "전체" }, ...gridBuses.map((bus) => ({ value: bus.id, label: bus.busNo }))];
 
+  // 조회가 실패했으면 모르는 건수를 0 으로 보이지 않도록 지표 · 필터를 그리지 않는다.
+  const failed = Boolean(error) && routes.length === 0;
+
   return (
     <StyledRouteLayout>
       <PageHeader
@@ -160,36 +170,40 @@ export const RouteList = () => {
         }
       />
 
-      <StatStrip items={summaryItems} />
+      {failed ? null : (
+        <>
+          <StatStrip items={summaryItems} />
 
-      <FilterBar summary={`차량 ${rows.length}대 · 편성 ${rows.length * (direction ? 1 : 2)}행 × 7요일`}>
-        <FilterGroup label="차량">
-          <SegmentedControl aria-label="차량 필터" options={busOptions} value={busId} onChange={setBusId} />
-        </FilterGroup>
-        <FilterGroup label="방향">
-          <SegmentedControl
-            aria-label="방향 필터"
-            options={[
-              { value: "", label: "전체" },
-              { value: "to_academy", label: "등원" },
-              { value: "from_academy", label: "하원" },
-            ]}
-            value={direction}
-            onChange={(value) => setDirection(value as "" | RunDirection)}
-          />
-        </FilterGroup>
-        <FilterGroup label="보기">
-          <SegmentedControl
-            aria-label="보기 전환"
-            options={[
-              { value: "grid", label: "요일표" },
-              { value: "list", label: "목록" },
-            ]}
-            value={view}
-            onChange={(value) => setView(value as "grid" | "list")}
-          />
-        </FilterGroup>
-      </FilterBar>
+          <FilterBar summary={`차량 ${rows.length}대 · 편성 ${rows.length * (direction ? 1 : 2)}행 × 7요일`}>
+            <FilterGroup label="차량">
+              <SegmentedControl aria-label="차량 필터" options={busOptions} value={busId} onChange={setBusId} />
+            </FilterGroup>
+            <FilterGroup label="방향">
+              <SegmentedControl
+                aria-label="방향 필터"
+                options={[
+                  { value: "", label: "전체" },
+                  { value: "to_academy", label: "등원" },
+                  { value: "from_academy", label: "하원" },
+                ]}
+                value={direction}
+                onChange={(value) => setDirection(value as "" | RunDirection)}
+              />
+            </FilterGroup>
+            <FilterGroup label="보기">
+              <SegmentedControl
+                aria-label="보기 전환"
+                options={[
+                  { value: "grid", label: "요일표" },
+                  { value: "list", label: "목록" },
+                ]}
+                value={view}
+                onChange={(value) => setView(value as "grid" | "list")}
+              />
+            </FilterGroup>
+          </FilterBar>
+        </>
+      )}
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {truncated ? <AlertBanner tone="info" title={`편성이 ${ALL_SIZE}건을 넘어 앞의 ${ALL_SIZE}건만 보입니다 — 차량 필터로 좁혀 확인하세요`} /> : null}

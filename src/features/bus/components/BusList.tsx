@@ -206,6 +206,9 @@ export const BusList = ({ unassignedRuns = null }: BusListProps) => {
     },
   ];
 
+  // 조회가 실패했으면 모르는 건수를 0 으로 보이지 않도록 지표 · 필터를 그리지 않는다.
+  const failed = Boolean(error) && items.length === 0;
+
   return (
     <StyledBusLayout>
       <PageHeader
@@ -218,22 +221,26 @@ export const BusList = ({ unassignedRuns = null }: BusListProps) => {
         }
       />
 
-      <StatStrip items={summaryItems} />
+      {failed ? null : (
+        <>
+          <StatStrip items={summaryItems} />
 
-      <FilterBar summary={`총 ${shown.length}대`}>
-        <FilterGroup label="상태">
-          <SegmentedControl
-            aria-label="상태 필터"
-            options={[
-              { value: "", label: "전체" },
-              { value: "operable", label: "운행 가능" },
-              { value: "inoperable", label: "운행 불가" },
-            ]}
-            value={status}
-            onChange={(value) => setStatus(value as BusStatusFilter)}
-          />
-        </FilterGroup>
-      </FilterBar>
+          <FilterBar summary={`총 ${shown.length}대`}>
+            <FilterGroup label="상태">
+              <SegmentedControl
+                aria-label="상태 필터"
+                options={[
+                  { value: "", label: "전체" },
+                  { value: "operable", label: "운행 가능" },
+                  { value: "inoperable", label: "운행 불가" },
+                ]}
+                value={status}
+                onChange={(value) => setStatus(value as BusStatusFilter)}
+              />
+            </FilterGroup>
+          </FilterBar>
+        </>
+      )}
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}

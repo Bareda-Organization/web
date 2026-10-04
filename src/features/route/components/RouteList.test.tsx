@@ -100,3 +100,15 @@ describe("RouteList — 목록 보기 · 정차지 수 열", () => {
     expect(within(empty).getByText("0곳")).toBeInTheDocument();
   });
 });
+
+// 차량 관리의 [편성 N] 링크는 `?bus=<id>` 로 들어온다 — 그 차량 줄만 남는다.
+describe("RouteList — ?bus= 로 시작하는 차량 필터", () => {
+  it("주소의 bus 값이 차량 필터가 된다", async () => {
+    window.history.replaceState({}, "", "/route?bus=4");
+    render(<RouteList />);
+
+    expect(await screen.findByText("이 차량에는 편성이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" })).not.toBeInTheDocument();
+    window.history.replaceState({}, "", "/");
+  });
+});

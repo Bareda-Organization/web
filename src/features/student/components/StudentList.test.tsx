@@ -123,9 +123,12 @@ describe("StudentList — 조회 실패", () => {
     render(<StudentList />);
 
     expect(await screen.findByText("서버 오류")).toBeInTheDocument();
-    expect(screen.getByText("목록을 불러오지 못했습니다")).toBeInTheDocument();
+    // 처음부터 못 읽으면 지표 · 탭 · 필터 없이 오류 화면 하나(시안 student--error) — [다시 시도] 가 있다.
+    expect(screen.getByText("학생 목록을 불러오지 못했습니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeInTheDocument();
     expect(screen.queryByText("표시할 내용이 없습니다")).not.toBeInTheDocument();
     expect(screen.queryByText(/총 0건/)).not.toBeInTheDocument();
+    expect(screen.queryByText("재원 학생")).not.toBeInTheDocument();
   });
 });
 

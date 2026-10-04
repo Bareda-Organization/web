@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Card, FilterBar, FilterGroup, PageHeader, Pagination, RosterTable, SearchField, Select, StatStrip, StatusChip, Tabs } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, FilterBar, FilterGroup, PageHeader, Pagination, RosterTable, SearchField, Select, Skeleton, SkeletonGroup, StatStrip, StatusChip, Tabs } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
@@ -154,6 +154,9 @@ export const StudentList = () => {
   ];
 
   const editingRow = items.find((row) => row.studentId === editingId);
+  // 처음 읽는 중이거나(지표 · 목록이 아직 없다) 처음부터 못 읽었을 때 — 시안의 뼈대 · 오류 화면. 한 번 읽은 뒤의 다시 읽기는 목록을 그대로 둔다.
+  const firstLoad = loading && items.length === 0 && summary === null && !error;
+  const firstFail = Boolean(error) && items.length === 0 && summary === null;
   const summaryItems: StatStripItem[] = [
     { label: "재원 학생", value: summary?.total ?? totalCount, unit: "명", detail: summary ? `반 ${summary.classCount}개` : "재원 중인 학생" },
     {
@@ -178,11 +181,15 @@ export const StudentList = () => {
       <PageHeader
         title="학생 관리"
         description={
-          error
-            ? undefined
-            : q
-              ? `'${q}' 검색 결과 ${totalCount}명`
-              : `재원 학생 ${summary?.total ?? totalCount}명 — 보호자 연결과 요일별 승하차 주소가 비어 있는 학생부터 확인합니다`
+          firstFail
+            ? "학생 목록을 가져오지 못했습니다"
+            : firstLoad
+              ? "학생 목록을 불러오는 중입니다…"
+              : error
+                ? undefined
+                : q
+                  ? `'${q}' 검색 결과 ${totalCount}명`
+                  : `재원 학생 ${summary?.total ?? totalCount}명 — 보호자 연결과 요일별 승하차 주소가 비어 있는 학생부터 확인합니다`
         }
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
@@ -191,50 +198,74 @@ export const StudentList = () => {
         }
       />
 
-      <StatStrip items={summaryItems} />
+      {firstFail ? (
+        <Card>
+          <EmptyState
+            icon="cloud-off"
+            tone="bad"
+            title="학생 목록을 불러오지 못했습니다"
+            action={
+              <Button icon="refresh-cw" onClick={() => load(page, q, filter, className)}>
+                다시 시도
+              </Button>
+            }
+          >
+            <span role="alert">{error}</span> 서버에 연결하지 못했습니다. 입력하던 내용은 없으니 안심하고 다시 시도해 주세요.
+          </EmptyState>
+        </Card>
+      ) : (
+        <>
+          {firstLoad ? (
+            <SkeletonGroup aria-label="학생 목록을 불러오는 중">
+              <Skeleton variant="chart" />
+            </SkeletonGroup>
+          ) : null}
+          {firstLoad ? null : <StatStrip items={summaryItems} />}
 
-      <Tabs
-        aria-label="학생 상태"
-        items={[
-          { value: "", label: "재원", count: summary?.total },
-          { value: "guardian_unlinked", label: "보호자 미연결", count: summary?.guardianUnlinked },
-          { value: "address_missing", label: "주소 미등록", count: summary?.addressMissing },
-        ]}
-        value={filter}
-        onChange={(value) => handleConditionChange({ filter: value as "" | StudentListFilter })}
-      />
-
-      <FilterBar summary={`${totalCount}명 중 ${items.length}명 표시 · 이름순`}>
-        <SearchField placeholder="이름으로 검색" onSubmit={handleSearch} />
-        <FilterGroup label="반">
-          <Select
-            aria-label="반 필터"
-            value={className}
-            options={[{ value: "", label: "전체" }, ...classNames.map((name) => ({ value: name, label: name }))]}
-            onChange={(event) => handleConditionChange({ className: event.target.value })}
+          <Tabs
+            aria-label="학생 상태"
+            items={[
+              { value: "", label: "재원", count: summary?.total },
+              { value: "guardian_unlinked", label: "보호자 미연결", count: summary?.guardianUnlinked },
+              { value: "address_missing", label: "주소 미등록", count: summary?.addressMissing },
+            ]}
+            value={filter}
+            onChange={(value) => handleConditionChange({ filter: value as "" | StudentListFilter })}
           />
-        </FilterGroup>
-      </FilterBar>
 
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
-      {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
+          <FilterBar summary={`${totalCount}명 중 ${items.length}명 표시 · 이름순`}>
+            <SearchField placeholder="이름으로 검색" onSubmit={handleSearch} />
+            <FilterGroup label="반">
+              <Select
+                aria-label="반 필터"
+                value={className}
+                options={[{ value: "", label: "전체" }, ...classNames.map((name) => ({ value: name, label: name }))]}
+                onChange={(event) => handleConditionChange({ className: event.target.value })}
+              />
+            </FilterGroup>
+          </FilterBar>
 
-      <Card flush aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, filter, className)}
-          emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : filter || className ? "조건에 맞는 학생이 없습니다" : "등록된 학생이 없습니다"}
-          emptyAction={q || filter || className ? undefined : { label: "학생 등록", onClick: () => setCreating(true) }}
-          highlightedKey={highlightedKey}
-          selectedKey={editingId ?? null}
-          columns={columns}
-          loading={loading}
-          rows={items}
-          getRowKey={(row) => row.studentId}
-          onRowClick={(row) => setEditingId(row.studentId)}
-        />
-        <StyledStudentFooter>
-          <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
-        </StyledStudentFooter>
-      </Card>
+          {error ? <AlertBanner tone="missed" title={error} /> : null}
+          {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
+
+          <Card flush aria-busy={loading}>
+            <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, filter, className)}
+              emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : filter || className ? "조건에 맞는 학생이 없습니다" : "등록된 학생이 없습니다"}
+              emptyAction={q || filter || className ? undefined : { label: "학생 등록", onClick: () => setCreating(true) }}
+              highlightedKey={highlightedKey}
+              selectedKey={editingId ?? null}
+              columns={columns}
+              loading={loading}
+              rows={items}
+              getRowKey={(row) => row.studentId}
+              onRowClick={(row) => setEditingId(row.studentId)}
+            />
+            <StyledStudentFooter>
+              <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
+            </StyledStudentFooter>
+          </Card>
+        </>
+      )}
 
       {editingId ? (
         <StudentForm studentId={editingId} onClose={() => setEditingId(undefined)} onDone={handleDone} onWithdraw={editingRow ? () => { setEditingId(undefined); setWithdrawing(editingRow); } : undefined} />

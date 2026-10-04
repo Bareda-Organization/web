@@ -270,6 +270,9 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
   const firstOpen = unassignedRuns?.[0];
   const candidates = firstOpen ? openDriverCandidates(firstOpen, all, today) : [];
 
+  // 조회가 실패했으면 모르는 건수를 0 으로 보이지 않도록 지표 · 필터를 그리지 않는다.
+  const failed = Boolean(error) && items.length === 0;
+
   return (
     <StyledManagerLayout>
       <PageHeader
@@ -303,34 +306,38 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
         </AlertBanner>
       ) : null}
 
-      <StatStrip items={summaryItems} />
+      {failed ? null : (
+        <>
+          <StatStrip items={summaryItems} />
 
-      <Tabs
-        aria-label="역할"
-        items={[
-          { value: "", label: "전체", count: summary.total },
-          { value: "driver", label: "기사", count: summary.drivers },
-          { value: "escort", label: "동승자", count: summary.escorts },
-        ]}
-        value={role}
-        onChange={(value) => handleConditionChange({ role: value as "" | ManagerRole })}
-      />
-
-      <FilterBar summary={`총 ${totalCount}명 · 이름순`}>
-        <SearchField placeholder="이름으로 검색" onSubmit={(value) => handleConditionChange({ q: value })} />
-        <FilterGroup label="오늘 배치">
-          <SegmentedControl
-            aria-label="오늘 배치 필터"
-            options={[
-              { value: "", label: "전체" },
-              { value: "true", label: "배치 있음" },
-              { value: "false", label: "배치 없음" },
+          <Tabs
+            aria-label="역할"
+            items={[
+              { value: "", label: "전체", count: summary.total },
+              { value: "driver", label: "기사", count: summary.drivers },
+              { value: "escort", label: "동승자", count: summary.escorts },
             ]}
-            value={assigned}
-            onChange={(value) => handleConditionChange({ assigned: value as AssignedFilter })}
+            value={role}
+            onChange={(value) => handleConditionChange({ role: value as "" | ManagerRole })}
           />
-        </FilterGroup>
-      </FilterBar>
+
+          <FilterBar summary={`총 ${totalCount}명 · 이름순`}>
+            <SearchField placeholder="이름으로 검색" onSubmit={(value) => handleConditionChange({ q: value })} />
+            <FilterGroup label="오늘 배치">
+              <SegmentedControl
+                aria-label="오늘 배치 필터"
+                options={[
+                  { value: "", label: "전체" },
+                  { value: "true", label: "배치 있음" },
+                  { value: "false", label: "배치 없음" },
+                ]}
+                value={assigned}
+                onChange={(value) => handleConditionChange({ assigned: value as AssignedFilter })}
+              />
+            </FilterGroup>
+          </FilterBar>
+        </>
+      )}
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
