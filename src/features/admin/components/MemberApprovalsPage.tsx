@@ -133,7 +133,7 @@ export const MemberApprovalsPage = () => {
             </Card>
             <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
             <StyledRulesCard aria-labelledby="approval-rules-title">
-              <h2 id="approval-rules-title">승인 규칙</h2>
+              <h3 id="approval-rules-title">승인 규칙</h3>
               <ul>
                 <li>
                   학원당 관계자는 <b>1명</b> — 재직 관계자가 있으면 승인할 수 없습니다

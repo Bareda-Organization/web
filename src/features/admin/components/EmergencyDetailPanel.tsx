@@ -49,9 +49,9 @@ export const EmergencyDetailPanel = ({ emergency }: { emergency: EmergencyItemRe
     <Card padding={0} role="region" aria-label="비상 상세">
       <StyledPanelBody>
         <StyledPanelTitle>
-          <h2>
+          <h3>
             {emergency.busNo} · {directionText(emergency.direction)} · {emergencyTypeLabel(emergency.type)}
-          </h2>
+          </h3>
           {canceled ? <StatusChip tone="end">취소됨</StatusChip> : emergency.staffAcked ? <StatusChip tone="conf">확인됨</StatusChip> : <StatusChip tone="bad">미확인</StatusChip>}
         </StyledPanelTitle>
 

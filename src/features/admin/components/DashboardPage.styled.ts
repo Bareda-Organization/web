@@ -65,7 +65,7 @@ export const StyledCardBody = styled.section`
   padding: var(--s4) var(--s4) var(--s5);
 `;
 
-export const StyledCardHeading = styled.h2`
+export const StyledCardHeading = styled.h3`
   display: flex;
   align-items: baseline;
   gap: 10px;

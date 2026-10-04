@@ -251,7 +251,7 @@ export const EmergencyAlertsPage = () => {
             </Card>
             {tab === "open" ? (
               <StyledStepsCard aria-labelledby="emergency-steps-title">
-                <h2 id="emergency-steps-title">이 화면에서 하는 일</h2>
+                <h3 id="emergency-steps-title">이 화면에서 하는 일</h3>
                 <ol>
                   <li>학원 관계자가 확인했는지 · 몇 분째 응답이 없는지 본다</li>
                   <li>학원 · 기사 · 동승 매니저에게 직접 연락한다</li>

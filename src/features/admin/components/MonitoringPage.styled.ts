@@ -163,7 +163,7 @@ export const StyledRailCard = styled.section`
   box-shadow: var(--shadow-card);
   align-self: start;
 
-  h2 {
+  h3 {
     margin: 0 0 var(--s3);
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
 
@@ -254,7 +254,7 @@ export const StyledDetailCard = styled.section`
   max-height: ${MAP_SURFACE_HEIGHT};
   overflow-y: auto;
 
-  h2 {
+  h3 {
     margin: 0;
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
   }
@@ -297,7 +297,7 @@ export const StyledStopsHeading = styled.p`
   color: var(--text-secondary);
 `;
 
-export const StyledTableHeading = styled.h2`
+export const StyledTableHeading = styled.h3`
   display: flex;
   align-items: baseline;
   gap: 10px;

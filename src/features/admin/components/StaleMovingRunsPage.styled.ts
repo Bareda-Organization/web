@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-export const StyledCardHeading = styled.h2`
+export const StyledCardHeading = styled.h3`
   margin: 0;
   padding: var(--s4) var(--s4) var(--s2);
   font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);

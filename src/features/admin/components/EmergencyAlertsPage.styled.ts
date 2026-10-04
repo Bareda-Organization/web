@@ -105,7 +105,7 @@ export const StyledStepsCard = styled.section`
   border-radius: var(--radius-card);
   background: var(--surface-sunken);
 
-  h2 {
+  h3 {
     margin: 0 0 var(--s3);
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
   }
@@ -143,7 +143,7 @@ export const StyledPanelTitle = styled.div`
   justify-content: space-between;
   gap: var(--s3);
 
-  h2 {
+  h3 {
     margin: 0;
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
   }

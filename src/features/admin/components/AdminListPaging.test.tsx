@@ -17,6 +17,14 @@ import {
   getStaffSignupRequests,
 } from "../api";
 
+// R48 — 비상 알림 오른쪽 상시 칸의 작은 지도는 jsdom 에서 외부 스크립트를 불러오려다 오류를 내므로 목으로 바꾼다(지도 자체는 NaverMapSurface.test 가 맡는다).
+vi.mock("@/features/map", () => ({ MapSurface: () => null }));
+// 비상 알림 화면이 실시간 연결 상태를 읽는다(R48 머리말 "실시간 연결됨") — 시험에서 실제 WebSocket 을 열지 않게 연결 상태 훅만 목으로 바꾼다.
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+  useRealtimeConnection: () => ({ connectionState: "connected", reconnect: vi.fn() }),
+}));
+
 // F03-04 — 서버는 첫 쪽 20건만 준다. 목록 화면은 total_count 로 머리글을 쓰고 [다음] 으로 다음 쪽을 읽어야 한다.
 // F03-06 — 폴링·재조회 한 번의 실패가 이미 보이던 목록을 지우고 "없습니다" 를 그리면 안 된다.
 vi.mock("../api", () => ({
@@ -42,10 +50,10 @@ describe("메인 관리자 목록 — 총 개수와 다음 쪽", () => {
   afterEach(() => vi.clearAllMocks());
 
   it.each([
-    ["학원", vi.mocked(getAcademies), () => <AcademiesPage />, academy, "총 45개 학원", "학원21"],
-    ["가입 요청", vi.mocked(getStaffSignupRequests), () => <MemberApprovalsPage />, staffRequest, "처리 대기 45건", "요청자21"],
-    ["관계자 계정", vi.mocked(getStaffAccounts), () => <MemberAccountsPage />, staffAccount, "전체 45개 계정", "계정21"],
-    ["차단 계정", vi.mocked(getBlockedAccounts), () => <BlockedAccountsPage />, blocked, "현재 차단된 계정 45건", "차단21"],
+    ["학원", vi.mocked(getAcademies), () => <AcademiesPage />, academy, "총 45개 학원 · 최근 등록 순", "학원21"],
+    ["가입 요청", vi.mocked(getStaffSignupRequests), () => <MemberApprovalsPage />, staffRequest, "가입 요청 45건", "요청자21"],
+    ["관계자 계정", vi.mocked(getStaffAccounts), () => <MemberAccountsPage />, staffAccount, "총 45개 계정", "계정21"],
+    ["차단 계정", vi.mocked(getBlockedAccounts), () => <BlockedAccountsPage />, blocked, /차단된 계정 45건/, "차단21"],
   ] as const)("%s — 머리글은 서버의 total_count 를 쓰고 [다음] 이 다음 쪽(page=1)을 읽는다", async (_name, api, renderPage, make, header, secondPageItem) => {
     const mock = api as unknown as ReturnType<typeof vi.fn>;
     mock.mockImplementation(async (...args: unknown[]) => {
@@ -57,7 +65,8 @@ describe("메인 관리자 목록 — 총 개수와 다음 쪽", () => {
     expect(await screen.findByText(header)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
 
-    expect(await screen.findByText(secondPageItem)).toBeInTheDocument();
+    // 가입 승인은 첫 요청이 오른쪽 처리 칸에도 나온다(R48) — 같은 이름이 둘이어도 새 쪽의 항목이 보이면 된다.
+    expect((await screen.findAllByText(secondPageItem)).length).toBeGreaterThan(0);
   });
 });
 
@@ -95,24 +104,29 @@ describe("메인 관리자 목록 — 재조회 실패에도 직전 목록 유�
         position: null, riderCount: 3, contacts: [], raisedAt: "2026-09-30T05:00:00Z", staffAcked: false,
         ackedAt: null, canceledAt: null, ackedBy: null, elapsedSinceRaised: 60,
       };
-      vi.mocked(getEmergencies)
-        .mockResolvedValueOnce({ items: [item], unackedCount: 1 } as never)
-        .mockRejectedValueOnce(new ApiError(503, "UNKNOWN", "점검 중"));
+      // R48 — 한 번 읽을 때 상태 3개(미확인 · 확인됨 · 취소됨)를 요청한다. 첫 읽기는 성공, 다음 갱신은 전부 실패시킨다.
+      let failing = false;
+      vi.mocked(getEmergencies).mockImplementation(async (status?: string) => {
+        if (failing) throw new ApiError(503, "UNKNOWN", "점검 중");
+        return { items: status === "open" ? [item] : [], unackedCount: 1 } as never;
+      });
       render(<EmergencyAlertsPage />);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      expect(screen.getByText("5호차")).toBeInTheDocument();
+      expect(screen.getAllByText(/5호차/).length).toBeGreaterThan(0);
       // F03-11 — 발신 후 경과 시간(elapsed_since_raised 60초)과 역할 한글 표기
       expect(screen.getByText("1분")).toBeInTheDocument();
-      expect(screen.getByText("김기사 (기사)")).toBeInTheDocument();
+      expect(screen.getAllByText("김기사").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("기사").length).toBeGreaterThan(0);
 
+      failing = true;
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
 
       expect(screen.getByText("점검 중")).toBeInTheDocument();
-      expect(screen.getByText("5호차")).toBeInTheDocument();
+      expect(screen.getAllByText(/5호차/).length).toBeGreaterThan(0);
       expect(screen.queryByText("해당 상태의 비상 알림이 없습니다")).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -134,7 +148,7 @@ describe("감사·접속 이력 — 다음 쪽과 실패 시 목록 유지", () 
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })), { timeout: 3000 });
 
-    fireEvent.change(screen.getByLabelText("동작"), { target: { value: "update" } });
+    fireEvent.click(screen.getByRole("tab", { name: "수정" }));
     fireEvent.click(screen.getByRole("button", { name: "조회" }));
     await waitFor(() => expect(getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 0, action: "update" })), {
       timeout: 3000,

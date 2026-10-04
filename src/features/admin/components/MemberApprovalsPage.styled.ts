@@ -23,7 +23,7 @@ export const StyledApprovalLeft = styled.div`
   gap: var(--s4);
 `;
 
-export const StyledListHeading = styled.h2`
+export const StyledListHeading = styled.h3`
   margin: 0;
   padding: var(--s4) var(--s4) var(--s2);
   font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
@@ -75,7 +75,7 @@ export const StyledRulesCard = styled.section`
   border-radius: var(--radius-card);
   background: var(--surface-sunken);
 
-  h2 {
+  h3 {
     margin: 0 0 var(--s3);
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
   }
@@ -102,7 +102,7 @@ export const StyledPanelHeader = styled.div`
   gap: var(--s3);
   margin-bottom: var(--s3);
 
-  h2 {
+  h3 {
     margin: 0;
     font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
   }

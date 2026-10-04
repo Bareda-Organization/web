@@ -69,7 +69,7 @@ export const MemberApprovalDecidePanel = ({ request, onDone }: MemberApprovalDec
     <Card padding={0} role="region" aria-label={`${request.name} 처리`}>
       <StyledPanelBody>
         <StyledPanelHeader>
-          <h2>{request.name}</h2>
+          <h3>{request.name}</h3>
           {isQuotaFull ? <StatusChip tone="bad">승인 불가 · 정원 참</StatusChip> : <StatusChip tone="ok">승인 가능</StatusChip>}
         </StyledPanelHeader>
 

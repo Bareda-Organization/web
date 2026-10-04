@@ -87,9 +87,9 @@ export const AcademyRail = ({
 
   return (
     <StyledRailCard aria-labelledby="monitoring-rail-title">
-      <h2 id="monitoring-rail-title">
+      <h3 id="monitoring-rail-title">
         학원 {academies.length}곳<small>문제 있는 곳 먼저</small>
-      </h2>
+      </h3>
       <StyledRailList>
         {sorted.map((academy) => {
           const row = rowOf(academy.id);
@@ -165,9 +165,9 @@ export const RunDetailPanel = ({ run, academyName, nowMs, onRoster }: { run: Run
   const stops = stopEntries(run, nowMs);
   return (
     <StyledDetailCard aria-label="선택한 회차">
-      <h2>
+      <h3>
         {run.busNo} · {directionText(run.direction)}
-      </h2>
+      </h3>
       <StyledDetailChips>
         <RunStatusChip status={run.runStatus} />
         {(run.delayMinutes ?? 0) > 0 ? <StatusChip tone="warn" marker={false}>{`${run.delayMinutes}분 지연`}</StatusChip> : null}
