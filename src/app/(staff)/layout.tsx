@@ -11,12 +11,13 @@ import { ApprovalPendingProvider, useApprovalPending } from "@/features/approval
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
 import { useAttentionSignals } from "@/shared/hooks";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
-import { formatHeaderDate } from "@/shared/lib/format/dateTime";
+import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { RealtimeConnectionStrip } from "@/shared/ui/realtime";
-import { Button, SideNav } from "@/shared/ui";
+import type { SideNavGroup } from "@/shared/types";
+import { Button, SideNav, ToastProvider } from "@/shared/ui";
 import {
   StyledStaffShell,
   StyledStaffMain,
@@ -26,21 +27,50 @@ import {
   StyledStaffHeaderSide,
 } from "./layout.styled";
 
-const NAV_ITEMS = [
-  { value: "dashboard", label: "운행 관리", icon: "layout-dashboard" },
-  { value: "today-run", label: "금일 운행 상세", icon: "bus" },
-  { value: "signup-approval", label: "가입 승인", icon: "user-check" },
-  { value: "change-approval", label: "구간 변경 승인", icon: "route" },
-  { value: "student", label: "학생 관리", icon: "users" },
-  { value: "bus", label: "차량 관리", icon: "bus-front" },
-  { value: "manager", label: "매니저 관리", icon: "user-cog" },
-  { value: "route", label: "고정 노선 편성", icon: "map" },
-  { value: "schedule", label: "운행 스케줄", icon: "calendar-clock" },
-  { value: "notification", label: "알림 로그", icon: "bell" },
-  { value: "academy-settings", label: "학원 설정", icon: "settings" },
-  { value: "emergency", label: "비상 알림", icon: "siren" },
-  { value: "report", label: "운행 리포트", icon: "file-text" },
-] as const;
+// 사이드 메뉴 — 시안(`staff/dashboard`)의 묶음 · 순서 그대로. 화면을 추가·삭제하면 이 목록을 고친다.
+// 묶음 제목이 없는 첫 묶음은 제목 줄 없이 맨 위에 놓인다.
+const NAV_GROUPS: SideNavGroup[] = [
+  { items: [{ value: "dashboard", label: "오늘 현황", icon: "layout-dashboard" }] },
+  {
+    title: "오늘 운행",
+    items: [
+      { value: "today-run", label: "운행 상세", icon: "bus" },
+      { value: "emergency", label: "비상 알림", icon: "triangle-alert" },
+    ],
+  },
+  {
+    title: "처리 대기",
+    items: [
+      { value: "signup-approval", label: "가입 승인", icon: "user-check" },
+      { value: "change-approval", label: "구간 변경 승인", icon: "route" },
+    ],
+  },
+  {
+    title: "기초 데이터",
+    items: [
+      { value: "student", label: "학생 관리", icon: "users" },
+      { value: "bus", label: "차량 관리", icon: "bus-front" },
+      { value: "manager", label: "매니저 관리", icon: "user-cog" },
+    ],
+  },
+  {
+    title: "운행 계획",
+    items: [
+      { value: "route", label: "고정 노선 편성", icon: "map" },
+      { value: "schedule", label: "운행 스케줄", icon: "calendar-clock" },
+    ],
+  },
+  {
+    title: "기록 · 설정",
+    items: [
+      { value: "report", label: "운행 리포트", icon: "file-text" },
+      { value: "notification", label: "알림 로그", icon: "bell" },
+      { value: "academy-settings", label: "학원 설정", icon: "sliders-horizontal" },
+    ],
+  },
+];
+
+const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 const resolveActiveValue = (pathname: string): string => {
   const found = NAV_ITEMS.find((item) => pathname.startsWith(`/${item.value}`));
@@ -71,11 +101,9 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
     <StyledStaffShell>
       <SkipLink />
       <SideNav
-        items={NAV_ITEMS.map((item) => ({
-          value: item.value,
-          label: item.label,
-          icon: item.icon,
-          badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
+        groups={NAV_GROUPS.map((group) => ({
+          ...group,
+          items: group.items.map((item) => ({ ...item, badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined })),
         }))}
         value={resolveActiveValue(pathname)}
         getHref={(value) => `/${value}`}
@@ -92,7 +120,9 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
                 뒤로
               </Button>
             ) : null}
-            <StyledStaffHeaderDate>{formatHeaderDate()}</StyledStaffHeaderDate>
+            <StyledStaffHeaderDate>
+              <HeaderClock />
+            </StyledStaffHeaderDate>
           </StyledStaffHeaderSide>
           <StyledStaffHeaderSide>
             <StyledStaffHeaderAcademy>{session?.academy?.name ?? ""}</StyledStaffHeaderAcademy>
@@ -116,7 +146,9 @@ const StaffProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <EmergencyAlertProvider>
       <ApprovalPendingProvider academyId={session?.academy?.id ?? ""}>
-        <StaffShell>{children}</StaffShell>
+        <ToastProvider>
+          <StaffShell>{children}</StaffShell>
+        </ToastProvider>
       </ApprovalPendingProvider>
     </EmergencyAlertProvider>
   );

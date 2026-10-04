@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createStableRouter } from "@/shared/testing/stableRouter";
 import AdminLayout from "./layout";
@@ -18,7 +18,7 @@ vi.mock("@/features/auth", () => ({
   LogoutButton: () => null,
   PasswordChangeButton: () => null,
   TestDataResetButton: () => null,
-  useAuthSession: () => ({ session: { academy: null } }),
+  useAuthSession: () => ({ session: { accountId: "1", academy: null } }),
 }));
 vi.mock("@/features/emergency", () => ({
   EmergencyAlertProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -119,5 +119,65 @@ describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
     const connection = screen.getByText("연결 띠");
     expect(connection.compareDocumentPosition(screen.getByText("본문")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     mockPathname = "/academies";
+  });
+});
+
+// R48 G3 — 메인 관리자 사이드 메뉴는 시안(admin/dashboard)과 같은 묶음 · 순서다.
+// 기대값은 지시서의 메뉴 표에서 그대로 옮겼다(배지는 위 mock 의 건수: 가입 승인 11 · 차단 1 · 비상 1).
+describe("(admin) 레이아웃 — 사이드 메뉴 묶음", () => {
+  const renderLayout = () =>
+    render(
+      <AdminLayout>
+        <p>본문</p>
+      </AdminLayout>,
+    );
+
+  it("제목 없는 첫 묶음(대시보드) 뒤에 4개 묶음이 시안 순서로 이어진다", () => {
+    renderLayout();
+
+    const nav = screen.getByRole("navigation", { name: "주 메뉴" });
+    const groups = within(nav).getAllByRole("group");
+    expect(groups.map((group) => group.getAttribute("aria-labelledby") && document.getElementById(group.getAttribute("aria-labelledby") as string)?.textContent)).toEqual([
+      "처리 대기",
+      "운행 관제",
+      "학원 · 계정",
+      "기록",
+    ]);
+    expect(within(nav).getAllByRole("link")[0]).toHaveAttribute("href", "/dashboard");
+    expect(within(nav).getAllByRole("link")[0]).toHaveAccessibleName("대시보드");
+  });
+
+  it("묶음마다 항목 이름 · 배지 · 주소가 시안 순서와 같다", () => {
+    renderLayout();
+
+    const itemsOf = (groupName: string) =>
+      within(screen.getByRole("group", { name: groupName }))
+        .getAllByRole("link")
+        .map((link) => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")]);
+
+    expect(itemsOf("처리 대기")).toEqual([
+      ["관계자 가입 승인 11건", "/member-approvals"],
+      ["차단 해제 1건", "/blocked-accounts"],
+    ]);
+    expect(itemsOf("운행 관제")).toEqual([
+      ["전체 관제", "/monitoring"],
+      ["비상 알림 1건", "/emergency-alerts"],
+      ["끝나지 않은 회차", "/stale-runs"],
+      ["회차 강제 확정", "/force-confirm"],
+    ]);
+    expect(itemsOf("학원 · 계정")).toEqual([
+      ["학원 관리", "/academies"],
+      ["계정 관리", "/member-accounts"],
+    ]);
+    expect(itemsOf("기록")).toEqual([["감사 · 접속 이력", "/audit-log"]]);
+  });
+
+  it("머리줄에 날짜·시각, 역할, '브라우저 알림 꺼짐 · 켜기'가 있다", () => {
+    renderLayout();
+
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText(/^\d+월 \d+일 \([일월화수목금토]\) \d{2}:\d{2}$/)).toBeInTheDocument();
+    expect(within(header).getByText("메인 관리자")).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "브라우저 알림 꺼짐 · 켜기" })).toBeInTheDocument();
   });
 });

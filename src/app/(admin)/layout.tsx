@@ -13,12 +13,13 @@ import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount }
 import type { EmergencyAlertSource } from "@/features/emergency";
 import { useAttentionSignals } from "@/shared/hooks";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
-import { formatHeaderDate } from "@/shared/lib/format/dateTime";
+import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { adminLiveDestination } from "@/shared/lib/ws";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
-import { Button, SideNav } from "@/shared/ui";
+import type { SideNavGroup } from "@/shared/types";
+import { Button, SideNav, ToastProvider } from "@/shared/ui";
 import { RealtimeConnectionStrip } from "@/shared/ui/realtime";
 import {
   StyledAdminShell,
@@ -29,19 +30,39 @@ import {
   StyledAdminHeaderSide,
 } from "./layout.styled";
 
-// 사이드바 메뉴 — 화면을 추가·삭제하면 이 목록을 고친다. 접근 판정은 목록이 아니라 이 그룹의
+// 사이드바 메뉴 — 시안(`admin/dashboard`)의 묶음 · 순서 그대로. 화면을 추가·삭제하면 이 목록을 고친다. 접근 판정은 목록이 아니라 이 그룹의
 // AuthGateGuard(requiredRole)가 맡으므로 새 화면 폴더는 자동으로 system_admin 만 연다.
-const NAV_ITEMS = [
-  { value: "academies", label: "학원 관리", icon: "building-2" },
-  { value: "member-approvals", label: "가입 승인", icon: "user-check" },
-  { value: "member-accounts", label: "계정 관리", icon: "users" },
-  { value: "monitoring", label: "전체 관제", icon: "radar" },
-  { value: "blocked-accounts", label: "차단 해제", icon: "shield-off" },
-  { value: "emergency-alerts", label: "비상 알림", icon: "siren" },
-  { value: "force-confirm", label: "회차 강제 확정", icon: "gavel" },
-  { value: "stale-runs", label: "끝나지 않은 회차", icon: "hourglass" },
-  { value: "audit-log", label: "감사 · 접속 이력", icon: "history" },
-] as const;
+// 맨 위 `대시보드`(/dashboard)는 화면이 아직 없다 — 다음 갈래(R48 관리자 화면)가 만든다. 그때 resolveActiveValue 의 기본값과
+// 로그인 뒤 기본 이동(decideAuthRedirect)을 함께 바꾼다(Ruling 800).
+const NAV_GROUPS: SideNavGroup[] = [
+  { items: [{ value: "dashboard", label: "대시보드", icon: "layout-dashboard" }] },
+  {
+    title: "처리 대기",
+    items: [
+      { value: "member-approvals", label: "관계자 가입 승인", icon: "user-check" },
+      { value: "blocked-accounts", label: "차단 해제", icon: "lock" },
+    ],
+  },
+  {
+    title: "운행 관제",
+    items: [
+      { value: "monitoring", label: "전체 관제", icon: "radar" },
+      { value: "emergency-alerts", label: "비상 알림", icon: "triangle-alert" },
+      { value: "stale-runs", label: "끝나지 않은 회차", icon: "hourglass" },
+      { value: "force-confirm", label: "회차 강제 확정", icon: "circle-check" },
+    ],
+  },
+  {
+    title: "학원 · 계정",
+    items: [
+      { value: "academies", label: "학원 관리", icon: "building-2" },
+      { value: "member-accounts", label: "계정 관리", icon: "users" },
+    ],
+  },
+  { title: "기록", items: [{ value: "audit-log", label: "감사 · 접속 이력", icon: "history" }] },
+];
+
+const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 const resolveActiveValue = (pathname: string): string => {
   const found = NAV_ITEMS.find((item) => pathname.startsWith(`/${item.value}`));
@@ -70,11 +91,9 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
     <StyledAdminShell>
       <SkipLink />
       <SideNav
-        items={NAV_ITEMS.map((item) => ({
-          value: item.value,
-          label: item.label,
-          icon: item.icon,
-          badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined,
+        groups={NAV_GROUPS.map((group) => ({
+          ...group,
+          items: group.items.map((item) => ({ ...item, badge: badgeCounts[item.value] > 0 ? badgeCounts[item.value] : undefined })),
         }))}
         value={resolveActiveValue(pathname)}
         getHref={(value) => `/${value}`}
@@ -91,7 +110,9 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
                 뒤로
               </Button>
             ) : null}
-            <StyledAdminHeaderDate>{formatHeaderDate()}</StyledAdminHeaderDate>
+            <StyledAdminHeaderDate>
+              <HeaderClock />
+            </StyledAdminHeaderDate>
           </StyledAdminHeaderSide>
           <StyledAdminHeaderSide>
             <StyledAdminHeaderScope>{session?.accountId ? "메인 관리자" : ""}</StyledAdminHeaderScope>
@@ -128,7 +149,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <AuthGateGuard requiredRole="system_admin">
       <EmergencyAlertProvider source={ADMIN_EMERGENCY_SOURCE}>
         <AdminPendingProvider>
-          <AdminShell>{children}</AdminShell>
+          <ToastProvider>
+            <AdminShell>{children}</AdminShell>
+          </ToastProvider>
         </AdminPendingProvider>
       </EmergencyAlertProvider>
     </AuthGateGuard>

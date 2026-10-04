@@ -8,7 +8,7 @@ export const StyledPageHeader = styled.div`
 export const StyledPageHeaderRow = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: 20px;
+  gap: var(--s4);
   flex-wrap: wrap;
 `;
 
@@ -18,15 +18,17 @@ export const StyledPageHeaderBody = styled.div`
 `;
 
 export const StyledPageHeaderTitle = styled.h2`
-  font: var(--fw-bold) 30px / 1.25 var(--font-serif);
+  font: var(--fw-bold) var(--fs-page) / 1.25 var(--font-serif);
+  text-wrap: balance;
   letter-spacing: -0.02em;
 `;
 
 export const StyledPageHeaderDescription = styled.div`
   margin-top: 6px;
-  font: var(--fw-light) var(--fs-caption) / 1.6 var(--font-sans);
-  letter-spacing: var(--ls-caption);
+  font: var(--fw-regular) var(--fs-md) / 1.6 var(--font-sans);
   color: var(--text-secondary);
+  max-width: 78ch;
+  text-wrap: pretty;
 `;
 
 export const StyledPageHeaderActions = styled.div`

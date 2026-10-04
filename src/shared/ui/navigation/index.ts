@@ -9,3 +9,9 @@ export type { PageHeaderProps } from "./PageHeader";
 
 export { Pagination } from "./Pagination";
 export type { PaginationProps } from "./Pagination";
+
+export { Tabs } from "./Tabs";
+export type { TabItem, TabsProps } from "./Tabs";
+
+export { FilterBar, FilterGroup } from "./FilterBar";
+export type { FilterBarProps } from "./FilterBar";

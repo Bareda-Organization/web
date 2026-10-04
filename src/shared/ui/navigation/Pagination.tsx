@@ -33,22 +33,24 @@ export const Pagination = ({ page, size, totalCount, hasNext, onPageChange, hasE
         <Button
           variant="ghost"
           size="sm"
+          iconOnly
           icon="chevron-left"
+          aria-label="이전"
           disabled={page <= 0}
           onClick={() => onPageChange(page - 1)}
-        >
-          이전
-        </Button>
-        <StyledPaginationPage>{page + 1} 페이지</StyledPaginationPage>
+        />
+        <StyledPaginationPage aria-current="page" aria-label={`${page + 1} 페이지`}>
+          {page + 1}
+        </StyledPaginationPage>
         <Button
           variant="ghost"
           size="sm"
-          iconEnd="chevron-right"
+          iconOnly
+          icon="chevron-right"
+          aria-label="다음"
           disabled={!hasNext}
           onClick={() => onPageChange(page + 1)}
-        >
-          다음
-        </Button>
+        />
       </StyledPaginationControls>
     </StyledPagination>
   );

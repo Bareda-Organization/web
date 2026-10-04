@@ -4,7 +4,7 @@ import { StyledDot, StyledStatusPill } from "./StatusPill.styled";
 export type StatusPillStatus = "boarded" | "moving" | "missed" | "idle";
 
 export type StatusPillProps = React.HTMLAttributes<HTMLSpanElement> & {
-  /** boarded=승차 완료·정상 운행 · moving=이동 중·지연 · missed=미탑승·긴급 · idle=운행 전·종료 */
+  /** boarded=승차 완료·정상 운행 · moving=이동 중·지연 · missed=미승차·긴급 · idle=운행 전·종료 */
   status?: StatusPillStatus;
   /** 아이콘 대신 점 하나 (밀집 리스트용) */
   dot?: boolean;
@@ -15,7 +15,7 @@ export type StatusPillProps = React.HTMLAttributes<HTMLSpanElement> & {
 const statusMeta: Record<StatusPillStatus, { icon: string; label: string }> = {
   boarded: { icon: "circle-check", label: "승차 완료" },
   moving: { icon: "bus", label: "이동 중" },
-  missed: { icon: "circle-alert", label: "미탑승" },
+  missed: { icon: "circle-alert", label: "미승차" },
   idle: { icon: "clock", label: "운행 전" },
 };
 

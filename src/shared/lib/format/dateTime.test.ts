@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDateTime, formatHeaderDate, todayInSeoul } from "./dateTime";
+import { formatDateTime, formatHeaderDate, formatHeaderDateTime, todayInSeoul } from "./dateTime";
 
 // R32-W9 — 목록 11곳 이상이 서버가 준 ISO 원문(`2026-09-12T08:00:00Z`)을 그대로 보여 줬다.
 describe("formatDateTime", () => {
@@ -52,5 +52,16 @@ describe("formatHeaderDate", () => {
   it("UTC 로는 전날인 한국 시간 새벽에도 서울 날짜·요일을 낸다", () => {
     expect(formatHeaderDate(new Date("2026-09-30T16:00:00Z"))).toBe("10월 1일 (목)"); // 서울 2026-10-01 목요일 01:00
     expect(formatHeaderDate(new Date("2026-09-30T14:59:00Z"))).toBe("9월 30일 (수)"); // 서울 2026-09-30 수요일 23:59
+  });
+});
+
+// R48 — 머리줄이 날짜 옆에 시각까지 보인다("10월 3일 (토) 12:45"). 시각도 PC 시계·시간대와 무관하게 서울 기준이다.
+describe("formatHeaderDateTime", () => {
+  it("서울 날짜·요일 뒤에 24시간제 시:분을 붙인다", () => {
+    expect(formatHeaderDateTime(new Date("2026-10-03T03:45:00Z"))).toBe("10월 3일 (토) 12:45");
+  });
+
+  it("UTC 로는 전날인 한국 시간 새벽 0시대도 날짜와 시각이 같은 서울 시점에서 나온다", () => {
+    expect(formatHeaderDateTime(new Date("2026-09-30T15:05:00Z"))).toBe("10월 1일 (목) 00:05"); // 서울 2026-10-01 00:05
   });
 });

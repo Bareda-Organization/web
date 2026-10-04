@@ -15,6 +15,7 @@ import {
   StyledRosterGroupCount,
   StyledRosterEmptyAction,
 } from "./RosterTable.styled";
+import type { RosterRowTone } from "./RosterTable.styled";
 
 export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLDivElement> & {
   columns?: RosterColumn<T>[];
@@ -32,6 +33,10 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
   emptyAction?: { label: string; onClick: () => void };
   /** 이 키(`getRowKey` 값)를 가진 행을 잠깐 강조한다 — 방금 저장한 행을 찾게 한다 */
   highlightedKey?: string | number | null;
+  /** 이 키를 가진 행이 선택 상태다 — 연한 면 + 위아래 둘레선(옆 패널로 상세를 열어 둔 행 등). 왼쪽 막대는 쓰지 않는다 */
+  selectedKey?: string | number | null;
+  /** 행의 긴급도 — warn 은 앰버 면 + ▲, bad 는 빨강 면 + ◆. 색만으로 말하지 않게 첫 칸 앞에 모양이 붙는다 */
+  rowTone?: (row: T) => RosterRowTone | undefined;
   /**
    * 행 고유 키 추출자. 원본은 `key={r.id || i}` 로 id 가 없으면 인덱스를 썼는데,
    * rows 가 제네릭이라 컴포넌트 스스로 내용 기반 키를 보장할 수 없다 — 호출자가
@@ -66,6 +71,8 @@ export const RosterTable = <T,>({
   onRetry,
   emptyAction,
   highlightedKey = null,
+  selectedKey = null,
+  rowTone,
   getRowKey = defaultRowKey,
   groupBy,
   ...rest
@@ -98,6 +105,9 @@ export const RosterTable = <T,>({
       $clickable={Boolean(onRowClick)}
       $highlighted={highlightedKey !== null && getRowKey(row, index) === highlightedKey}
       data-highlighted={highlightedKey !== null && getRowKey(row, index) === highlightedKey ? "true" : undefined}
+      $selected={selectedKey !== null && getRowKey(row, index) === selectedKey}
+      aria-current={selectedKey !== null && getRowKey(row, index) === selectedKey ? "true" : undefined}
+      $tone={rowTone?.(row)}
       onClick={() => onRowClick?.(row)}
       // 클릭으로 여는 행은 키보드로도 열린다 — 행 안의 버튼에서 누른 키는 그 버튼 몫이라 넘기지 않는다.
       tabIndex={onRowClick ? 0 : undefined}

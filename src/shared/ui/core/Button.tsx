@@ -1,13 +1,17 @@
 import { Icon } from "./Icon";
 import { StyledButton } from "./Button.styled";
 
-export type ButtonVariant = "primary" | "secondary" | "soft" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "soft" | "ghost" | "danger" | "dangerQuiet" | "ghostDanger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  /** primary=주요 행동(그린/다크에선 앰버) · secondary=보조 · soft=미스트 배경 · ghost=텍스트만 · danger=미탑승·삭제 */
+  /**
+   * primary=주요 행동(딥그린, 한 화면에 하나) · secondary=보조 · soft=미스트 배경 · ghost=텍스트만 ·
+   * danger=빨강 면(확인 대화상자의 실행 버튼만) · dangerQuiet=빨강 선(목록·상세의 1단계 파괴 동작) ·
+   * ghostDanger=빨강 글자(표 행마다 반복되는 위험 동작)
+   */
   variant?: ButtonVariant;
-  /** sm 36 · md 44 · lg 52 (앱 주요 버튼은 lg) */
+  /** sm 28 · md 36 · lg 44 */
   size?: ButtonSize;
   /** 앞쪽 Lucide 아이콘 이름 */
   icon?: string;
@@ -15,10 +19,12 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   iconEnd?: string;
   /** 가로 100% */
   block?: boolean;
+  /** 글자 없이 아이콘만(정사각형). 접근 이름은 `aria-label` 로 직접 준다 */
+  iconOnly?: boolean;
 };
 
 /**
- * 바래다 기본 버튼. 한 화면에 primary는 하나만, danger는 미탑승 처리·삭제 확정에만 씁니다.
+ * 바래다 기본 버튼. 한 화면에 primary는 하나만, 빨강 면(danger)은 되돌릴 수 없는 동작의 확인 대화상자 실행 버튼에만 씁니다.
  */
 export const Button = ({
   variant = "primary",
@@ -26,12 +32,13 @@ export const Button = ({
   icon,
   iconEnd,
   block,
+  iconOnly,
   disabled,
   children,
   type = "button",
   ...rest
 }: ButtonProps) => {
-  const iconSize = size === "sm" ? 16 : 18;
+  const iconSize = size === "lg" ? 18 : 16;
   return (
     <StyledButton
       type={type}
@@ -39,6 +46,7 @@ export const Button = ({
       $variant={variant}
       $size={size}
       $block={!!block}
+      $iconOnly={!!iconOnly}
       {...rest}
     >
       {icon ? <Icon name={icon} size={iconSize} /> : null}

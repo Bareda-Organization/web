@@ -26,7 +26,7 @@ export const Select = ({ label, hint, options = [], wrapStyle, ...rest }: Select
         })}
       </StyledSelect>
       <StyledChevron>
-        <Icon name="chevron-down" size={18} />
+        <Icon name="chevron-down" size={16} />
       </StyledChevron>
     </StyledFieldWrap>
     {hint ? <StyledHint>{hint}</StyledHint> : null}

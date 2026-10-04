@@ -28,7 +28,8 @@ const toneStyle: Record<CardTone, ReturnType<typeof css>> = {
 
 type StyledCardProps = {
   $tone: CardTone;
-  $padding: number;
+  $padding?: number;
+  $flush: boolean;
   $accent?: CardAccent;
   $clickable: boolean;
 };
@@ -37,7 +38,8 @@ type StyledCardProps = {
 // (readme.md "모서리·테두리·카드" 절). accent 값은 --status-<accent> 토큰 이름과 그대로 맞물린다.
 export const StyledCard = styled.div<StyledCardProps>`
   border-radius: var(--radius-card);
-  padding: ${({ $padding }) => $padding}px;
+  padding: ${({ $padding, $flush }) => ($flush ? "1px 0" : $padding === undefined ? "20px 16px" : `${$padding}px`)};
+  ${({ $flush }) => ($flush ? css`overflow: hidden;` : null)}
   transition: var(--transition-control);
   ${({ $tone }) => toneStyle[$tone]}
   ${({ $clickable }) => ($clickable ? css`cursor: pointer;` : null)}

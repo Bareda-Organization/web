@@ -4,14 +4,15 @@ export const StyledStatCard = styled.div`
   background: var(--surface-card);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  padding: 18px;
+  padding: 20px var(--s4);
 `;
 
 export const StyledStatCardLabel = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  font: var(--fw-medium) var(--fs-micro) / 1 var(--font-sans);
+  font: var(--fw-bold) var(--fs-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.02em;
   color: var(--text-secondary);
 `;
 
@@ -23,18 +24,18 @@ export const StyledStatCardValueRow = styled.div`
 `;
 
 export const StyledStatCardValue = styled.span<{ $color: string }>`
-  font: var(--fw-bold) 30px / 1 var(--font-sans);
+  font: var(--fw-bold) var(--fs-num) / 1.1 var(--font-sans);
   font-variant-numeric: tabular-nums;
   color: ${(props) => props.$color};
 `;
 
 export const StyledStatCardUnit = styled.span`
-  font: var(--fw-medium) var(--fs-body-sm) / 1 var(--font-sans);
+  font: var(--fw-regular) var(--fs-sm) / 1 var(--font-sans);
   color: var(--text-secondary);
 `;
 
 export const StyledStatCardSub = styled.div`
   margin-top: 6px;
-  font: var(--fw-light) var(--fs-micro) / 1.4 var(--font-sans);
-  color: var(--text-tertiary);
+  font: var(--fw-regular) var(--fs-xs) / 1.45 var(--font-sans);
+  color: var(--text-secondary);
 `;

@@ -29,6 +29,14 @@ describe("AttentionAlertToggle", () => {
     expect(requestPermission).not.toHaveBeenCalled();
   });
 
+  // R48 U-10 — 상태 글자인지 버튼인지 알 수 없었다. 꺼진 상태가 다음 행동(켜기)과 함께 보이고, 왜 켜는지 title 로 알린다.
+  it("꺼져 있으면 '꺼짐 · 켜기' 로 다음 행동을 함께 보이고 title 로 이유를 알린다", () => {
+    render(<AttentionAlertToggle />);
+
+    const button = screen.getByRole("button", { name: "브라우저 알림 꺼짐 · 켜기" });
+    expect(button).toHaveAttribute("title", "켜 두면 다른 탭을 보고 있을 때도 새 알림을 알려 줍니다");
+  });
+
   it("눌러서 켤 때만 브라우저 알림 권한을 요청하고, 다시 누르면 꺼진다", async () => {
     render(<AttentionAlertToggle />);
 

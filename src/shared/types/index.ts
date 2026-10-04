@@ -21,12 +21,19 @@ export type SideNavItem = {
   badge?: number;
 };
 
+/** SideNav 메뉴 묶음 — title 이 없으면 제목 없이 맨 위에 놓이는 묶음(예: 대시보드 한 항목) */
+export type SideNavGroup = {
+  title?: string;
+  items: SideNavItem[];
+};
+
 /** RosterTable 컬럼 정의 — 행 타입 T 는 소비하는 화면이 정한다 */
 export type RosterColumn<T = Record<string, unknown>> = {
   key: string;
   label: string;
   align?: "left" | "center" | "right";
   width?: number | string;
+  /** 칸 내용. 행 안에서 반복되는 버튼(상세 · 관리 · 전화 · 처리)에는 대상 이름을 붙인 접근 이름을 준다 — `aria-label="구로운 상세"` */
   render?: (row: T) => ReactNode;
 };
 

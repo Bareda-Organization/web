@@ -12,7 +12,7 @@ import {
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
-  /** 보조 설명 (300 / 13px) */
+  /** 보조 설명 (12px) */
   hint?: string;
   /** 에러 문구. 차분하게 쓰고 다음 행동을 함께 안내합니다 */
   error?: string;
@@ -36,10 +36,10 @@ export const Input = ({ label, hint, error, icon, suffix, required, wrapStyle, .
     <StyledFieldWrap>
       {icon ? (
         <StyledLeadingIcon>
-          <Icon name={icon} size={18} />
+          <Icon name={icon} size={16} />
         </StyledLeadingIcon>
       ) : null}
-      <StyledInput $hasIcon={!!icon} $hasSuffix={!!suffix} $error={!!error} {...rest} />
+      <StyledInput $hasIcon={!!icon} $hasSuffix={!!suffix} $error={!!error} aria-invalid={error ? true : undefined} {...rest} />
       {suffix ? <StyledSuffix>{suffix}</StyledSuffix> : null}
     </StyledFieldWrap>
     {error || hint ? <StyledHelperText $error={!!error}>{error || hint}</StyledHelperText> : null}

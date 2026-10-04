@@ -15,3 +15,6 @@ export type { StatusPillProps, StatusPillStatus } from "./StatusPill";
 
 export { Badge } from "./Badge";
 export type { BadgeProps, BadgeTone } from "./Badge";
+
+export { StatusChip, RunStatusChip, BoardingStatusChip } from "./StatusChip";
+export type { StatusChipProps, StatusChipTone, RunStatusValue, BoardingStatusValue } from "./StatusChip";

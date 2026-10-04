@@ -1,18 +1,21 @@
 import styled from "@emotion/styled";
 
+// 입력 · 선택 · 여러 줄이 같은 규칙을 쓴다(시안 kit 9절) — 테두리는 진한 보조색(대비 확보), 호버는 검정, 초점은 초록 2px 고리,
+// 오류는 빨강 테두리 + 안쪽 1px 한 겹(색에만 의존하지 않게 오류 문구가 아래에 붙는다), 꺼짐은 점선 + 읽히는 글자.
 export const StyledWrap = styled.label`
-  display: block;
+  display: grid;
+  gap: var(--s2);
+  align-content: start;
 `;
 
 export const StyledLabel = styled.span`
-  display: block;
-  margin-bottom: 6px;
-  font: var(--fw-medium) var(--fs-label-sm) / 1.2 var(--font-sans);
-  color: var(--text-secondary);
+  font: var(--fw-medium) var(--fs-sm) / 1.4 var(--font-sans);
+  color: var(--text-primary);
 `;
 
 export const StyledRequiredMark = styled.span`
-  color: var(--status-missed);
+  margin-left: 2px;
+  color: var(--t-bad);
 `;
 
 export const StyledFieldWrap = styled.span`
@@ -22,10 +25,10 @@ export const StyledFieldWrap = styled.span`
 
 export const StyledLeadingIcon = styled.span`
   position: absolute;
-  left: 13px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   pointer-events: none;
 `;
 
@@ -35,33 +38,53 @@ type StyledInputProps = {
   $error: boolean;
 };
 
-// 원본은 focus 를 onFocus/onBlur state 로 감시했다 — input 은 네이티브 :focus 의사 클래스를
-// 쓸 수 있으므로 그대로 옮긴다 (Button.styled.ts 와 같은 판단).
 export const StyledInput = styled.input<StyledInputProps>`
   width: 100%;
-  height: 48px;
-  padding: 0 ${({ $hasSuffix }) => ($hasSuffix ? "56px" : "14px")} 0 ${({ $hasIcon }) => ($hasIcon ? "42px" : "14px")};
+  height: 36px;
+  padding: 0 ${({ $hasSuffix }) => ($hasSuffix ? "44px" : "12px")} 0 ${({ $hasIcon }) => ($hasIcon ? "32px" : "12px")};
   background: var(--surface-card);
   color: var(--text-primary);
-  border: 1px solid ${({ $error }) => ($error ? "var(--status-missed)" : "var(--border-default)")};
+  border: 1px solid ${({ $error }) => ($error ? "var(--c-bad)" : "var(--text-secondary)")};
+  box-shadow: ${({ $error }) => ($error ? "inset 0 0 0 1px var(--c-bad)" : "none")};
   border-radius: var(--radius-control);
-  font: var(--fw-regular) var(--fs-body) / 1 var(--font-sans);
-  outline: none;
-  transition: var(--transition-control);
+  font: var(--fw-regular) var(--fs-md) / 1.4 var(--font-sans);
+  transition:
+    border-color var(--dur-ui) var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out);
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      border-color: ${({ $error }) => ($error ? "var(--c-bad)" : "var(--text-primary)")};
+    }
+  }
 
   &:focus {
-    border-color: ${({ $error }) => ($error ? "var(--status-missed)" : "var(--focus-ring)")};
-    box-shadow: var(--focus-shadow);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 0;
+    border-color: var(--focus-ring);
+  }
+
+  &:disabled {
+    background: var(--surface-fill);
+    color: var(--text-secondary);
+    border-style: dashed;
+    border-color: var(--border-default);
+    box-shadow: none;
+    cursor: not-allowed;
   }
 `;
 
 export const StyledSuffix = styled.span`
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font: var(--fw-light) var(--fs-caption) / 1 var(--font-sans);
-  color: var(--text-tertiary);
+  font: var(--fw-regular) var(--fs-sm) / 1 var(--font-sans);
+  color: var(--text-secondary);
 `;
 
 type StyledHelperTextProps = {
@@ -69,9 +92,7 @@ type StyledHelperTextProps = {
 };
 
 export const StyledHelperText = styled.span<StyledHelperTextProps>`
-  display: block;
-  margin-top: 6px;
-  font: var(--fw-light) var(--fs-micro) / 1.5 var(--font-sans);
-  letter-spacing: var(--ls-micro);
-  color: ${({ $error }) => ($error ? "var(--status-missed)" : "var(--text-secondary)")};
+  font: ${({ $error }) => ($error ? "var(--fw-medium)" : "var(--fw-regular)")} var(--fs-xs) / 1.5 var(--font-sans);
+  color: ${({ $error }) => ($error ? "var(--t-bad)" : "var(--text-secondary)")};
+  text-wrap: pretty;
 `;

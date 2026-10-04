@@ -41,3 +41,8 @@ const SEOUL_HEADER_DATE = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seo
 
 // 관계자·메인 관리자 머리줄의 날짜 — `10월 1일 (목)`. 브라우저(PC) 시계·시간대와 무관하게 서울 기준이다.
 export const formatHeaderDate = (now: Date = new Date()): string => SEOUL_HEADER_DATE.format(now);
+
+const SEOUL_HEADER_CLOCK = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+// 머리줄 날짜 + 시각 — `10월 3일 (토) 12:45`. 시각도 서울 기준 24시간제다.
+export const formatHeaderDateTime = (now: Date = new Date()): string => `${formatHeaderDate(now)} ${SEOUL_HEADER_CLOCK.format(now)}`;
