@@ -30,7 +30,7 @@ const run = (overrides: Partial<StaleMovingRunItemResponseTypes>): StaleMovingRu
 
 const open강제종료 = async (busNo: string) => {
   const row = (await screen.findByText(busNo)).closest("tr") as HTMLElement;
-  fireEvent.click(within(row).getByRole("button", { name: "강제 종료" }));
+  fireEvent.click(within(row).getByRole("button", { name: /강제 종료$/ }));
 };
 
 describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => {
@@ -43,8 +43,8 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
 
     render(<StaleMovingRunsPage />);
 
-    expect(await screen.findByText("바래다학원")).toBeInTheDocument();
-    expect(screen.getByText("2026-09-28")).toBeInTheDocument();
+    expect((await screen.findAllByText("바래다학원")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/9월 28일 \(/).length).toBeGreaterThan(0);
     expect(screen.getByText("하원")).toBeInTheDocument();
     expect(screen.getByText("2명 미하차")).toBeInTheDocument();
     expect(screen.getByText("종료 보류")).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
     await open강제종료("701호");
 
     expect(screen.getByText(/아직 탑승 중인 3명은 하차 처리 없이 그대로 남고/)).toBeInTheDocument();
-    const execute = screen.getByRole("button", { name: "강제 종료 실행" });
+    const execute = screen.getByRole("button", { name: "강제 종료" });
     expect(execute).toBeDisabled();
     fireEvent.change(screen.getByLabelText("강제 종료 사유"), { target: { value: "   " } });
     expect(execute).toBeDisabled();
@@ -102,7 +102,7 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
 
     await open강제종료("701호");
     fireEvent.change(screen.getByLabelText("강제 종료 사유"), { target: { value: "학원 확인 완료" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 종료 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 종료" }));
 
     await waitFor(() => expect(screen.queryByText("701호")).not.toBeInTheDocument());
     expect(mockForceFinish).toHaveBeenCalledWith("42", "학원 확인 완료");
@@ -117,7 +117,7 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
 
     await open강제종료("701호");
     fireEvent.change(screen.getByLabelText("강제 종료 사유"), { target: { value: "학원 확인 완료" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 종료 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 종료" }));
 
     expect(await screen.findByText("서버 내부 오류입니다")).toBeInTheDocument();
     expect(mockGetRuns).toHaveBeenCalledTimes(1);
@@ -131,8 +131,51 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
 
     await open강제종료("701호");
     fireEvent.change(screen.getByLabelText("강제 종료 사유"), { target: { value: "학원 확인 완료" } });
-    fireEvent.click(screen.getByRole("button", { name: "강제 종료 실행" }));
+    fireEvent.click(screen.getByRole("button", { name: "강제 종료" }));
 
     expect(await screen.findByText("이미 끝났거나 이동 중이 아닌 회차입니다 — 닫고 목록을 다시 확인하세요.")).toBeInTheDocument();
+  });
+});
+
+// R48 시안 `stale-runs` — 지표 3칸 · 학원에 먼저 전화(Ruling 808 academy_contact)한 뒤 강제 종료하는 순서.
+describe("StaleMovingRunsPage — 지표와 학원 전화(Ruling 808)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("지표 3칸은 건수 · 하차 처리 안 된 탑승자 합계 · 가장 오래된 회차를 센다", async () => {
+    mockGetRuns.mockResolvedValue({
+      items: [run({ runId: "1", boardedCount: 2, serviceDate: "2020-01-01" }), run({ runId: "2", busNo: "702호", boardedCount: 0, serviceDate: "2020-01-02" })],
+    });
+    render(<StaleMovingRunsPage />);
+
+    await screen.findByText("701호");
+    const stat = (label: string) => (screen.getByText(label).parentElement as HTMLElement).textContent;
+    expect(screen.getByText("끝나지 않은 회차 2건")).toBeInTheDocument();
+    expect(stat("하차 처리 안 된 탑승자")).toContain("2");
+    expect(stat("가장 오래된 회차")).toContain("일째");
+  });
+
+  it("학원 연락처가 있으면 전화 링크를 강제 종료 앞에 두고, 없으면 전화 단추를 내지 않는다", async () => {
+    mockGetRuns.mockResolvedValue({
+      items: [run({ runId: "1", academyContact: "032-000-0172" }), run({ runId: "2", busNo: "702호", academyContact: null })],
+    });
+    render(<StaleMovingRunsPage />);
+
+    expect(await screen.findByRole("link", { name: "바래다학원 701호 학원에 전화" })).toHaveAttribute("href", "tel:032-000-0172");
+    expect(screen.queryByRole("link", { name: "바래다학원 702호 학원에 전화" })).not.toBeInTheDocument();
+  });
+
+  it("처리 순서 안내 띠를 목록 위에 둔다", async () => {
+    mockGetRuns.mockResolvedValue({ items: [run({})] });
+    render(<StaleMovingRunsPage />);
+
+    expect(await screen.findByText(/처리 순서/)).toBeInTheDocument();
+  });
+
+  it("강제 종료 사유는 200자까지만 받는다(Ruling 790)", async () => {
+    mockGetRuns.mockResolvedValue({ items: [run({})] });
+    render(<StaleMovingRunsPage />);
+    await open강제종료("701호");
+
+    expect(screen.getByLabelText("강제 종료 사유")).toHaveAttribute("maxlength", "200");
   });
 });
