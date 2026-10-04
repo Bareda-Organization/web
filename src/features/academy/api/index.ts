@@ -3,10 +3,31 @@ import type { AcademySettingsResponseTypes, UpdateAcademySettingsRequestTypes } 
 
 type RawAcademySettings = {
   no_show_wait_minutes: number;
+  // Ruling 820 — GET 에만. 아직 안 주는 서버를 견디려고 선택 필드로 둔다.
+  academy?: { name: string; code?: string | null; region?: string | null; status?: string | null } | null;
+  policy?: {
+    confirm_lead_minutes: number;
+    start_window_minutes: number;
+    change_quota_per_run: number;
+    delay_unit_minutes: number;
+    proximity_alert_meters: number;
+    notification_retention_days: number;
+  } | null;
 };
 
 const toSettings = (raw: RawAcademySettings): AcademySettingsResponseTypes => ({
   noShowWaitMinutes: raw.no_show_wait_minutes,
+  academy: raw.academy ? { name: raw.academy.name, code: raw.academy.code ?? null, region: raw.academy.region ?? null, status: raw.academy.status ?? null } : null,
+  policy: raw.policy
+    ? {
+        confirmLeadMinutes: raw.policy.confirm_lead_minutes,
+        startWindowMinutes: raw.policy.start_window_minutes,
+        changeQuotaPerRun: raw.policy.change_quota_per_run,
+        delayUnitMinutes: raw.policy.delay_unit_minutes,
+        proximityAlertMeters: raw.policy.proximity_alert_meters,
+        notificationRetentionDays: raw.policy.notification_retention_days,
+      }
+    : null,
 });
 
 // GET /staff/academy-settings (§5.21, A-17).

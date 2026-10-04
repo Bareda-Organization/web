@@ -21,7 +21,7 @@ describe("academy api — snake_case ↔ camelCase 변환", () => {
 
     const result = await getAcademySettings();
 
-    expect(result).toEqual({ noShowWaitMinutes: 3 });
+    expect(result).toEqual({ noShowWaitMinutes: 3, academy: null, policy: null });
   });
 
   it("updateAcademySettings 는 요청 본문을 snake_case 로 보내고 응답을 camelCase 로 되돌린다", async () => {
@@ -35,6 +35,6 @@ describe("academy api — snake_case ↔ camelCase 변환", () => {
     const [, init] = fetchMock.mock.calls[0];
     const sentBody = JSON.parse(init.body as string);
     expect(sentBody).toEqual({ no_show_wait_minutes: 10 });
-    expect(result).toEqual({ noShowWaitMinutes: 10 });
+    expect(result).toEqual({ noShowWaitMinutes: 10, academy: null, policy: null });
   });
 });

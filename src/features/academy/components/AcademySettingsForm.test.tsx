@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmLeave, setLeaveWarning } from "@/shared/lib/navigation/leaveGuard";
+import { ToastProvider } from "@/shared/ui";
 import { AcademySettingsForm } from "./AcademySettingsForm";
 import { getAcademySettings, updateAcademySettings } from "../api";
 
@@ -22,7 +23,7 @@ describe("AcademySettingsForm — 저장 실패 갈래", () => {
   });
 
   it("저장이 500 으로 거부되면 화면이 조용히 넘어가지 않고 오류 문구를 보여준다", async () => {
-    mockGet.mockResolvedValue({ noShowWaitMinutes: 3 });
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     mockUpdate.mockRejectedValue(new Error("네트워크 요청이 실패했습니다"));
 
     render(<AcademySettingsForm />);
@@ -44,7 +45,7 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
   });
 
   it("값을 고치지 않았으면 묻지 않고 떠난다", async () => {
-    mockGet.mockResolvedValue({ noShowWaitMinutes: 3 });
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     const confirm = vi.spyOn(window, "confirm");
     render(<AcademySettingsForm />);
     await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
@@ -54,7 +55,7 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
   });
 
   it("저장하지 않은 값이 있으면 떠날 때 묻고, 취소하면 떠나지 않는다", async () => {
-    mockGet.mockResolvedValue({ noShowWaitMinutes: 3 });
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<AcademySettingsForm />);
     await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
@@ -66,17 +67,73 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
   });
 
   it("저장하고 나면 다시 묻지 않는다", async () => {
-    mockGet.mockResolvedValue({ noShowWaitMinutes: 3 });
-    mockUpdate.mockResolvedValue({ noShowWaitMinutes: 10 });
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
+    mockUpdate.mockResolvedValue({ noShowWaitMinutes: 10, academy: null, policy: null });
     const confirm = vi.spyOn(window, "confirm");
-    render(<AcademySettingsForm />);
+    // 저장 결과는 처리 결과 알림(토스트)으로 알린다 — 알림 주인 안에서 그린다.
+    render(
+      <ToastProvider>
+        <AcademySettingsForm />
+      </ToastProvider>,
+    );
     await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
 
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await screen.findByText("저장됐습니다");
+    await screen.findByText("학원 설정을 저장했습니다");
 
     expect(confirmLeave()).toBe(true);
     expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+// Ruling 820 · 827 — 정책 값은 응답에서 오고(화면에 숫자를 박지 않는다), 범위 밖 입력은 서버에 보내기 전에 화면이 막는다.
+describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const policy = {
+    confirmLeadMinutes: 45,
+    startWindowMinutes: 12,
+    changeQuotaPerRun: 2,
+    delayUnitMinutes: 7,
+    proximityAlertMeters: 250,
+    notificationRetentionDays: 21,
+  };
+
+  it("전 학원 공통 정책과 학원 정보를 응답 값 그대로 읽기 전용으로 그린다", async () => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: { name: "하늘수학학원", code: "HNL-01", region: "부천", status: "active" }, policy });
+    render(<AcademySettingsForm />);
+
+    const list = await screen.findByLabelText("전 학원 공통 정책");
+    // 사양 기본값(30·±10·1·5·300·14)이 아니라 서버가 준 값이 그려져야 한다 — 값을 박아 두지 않았다는 증거.
+    expect(list).toHaveTextContent("출발 45분 전");
+    expect(list).toHaveTextContent("출발 ±12분");
+    expect(list).toHaveTextContent("회차당 2회");
+    expect(list).toHaveTextContent("7분");
+    expect(list).toHaveTextContent("250m");
+    expect(list).toHaveTextContent("21일");
+    expect(screen.getByLabelText("학원 정보")).toHaveTextContent("하늘수학학원");
+  });
+
+  it("1~30 밖의 값(45)을 넣으면 오류 문구를 보이고 저장 단추가 꺼져 서버를 부르지 않는다", async () => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
+    render(<AcademySettingsForm />);
+    await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
+
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "45" } });
+
+    expect(screen.getByText(/1~30분 안에서 정수로 입력해 주세요/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("자주 쓰는 값을 누르면 입력칸이 그 값이 된다", async () => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
+    render(<AcademySettingsForm />);
+    await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
+
+    fireEvent.click(screen.getByRole("button", { name: "10분" }));
+
+    expect(screen.getByRole("spinbutton")).toHaveValue(10);
   });
 });
