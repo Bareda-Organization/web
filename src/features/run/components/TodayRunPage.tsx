@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { usePolling } from "@/shared/hooks";
-import { AlertBanner, Badge, Button, Card, PageHeader, RosterTable, StatusPill } from "@/shared/ui";
-import type { RosterColumn } from "@/shared/types";
+import { AlertBanner, Button, Card, EmptyState, PageHeader, StatusPill } from "@/shared/ui";
+import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import {
   MapSurface,
   anchorForSelection,
@@ -17,40 +17,31 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
-import type {
-  DashboardRunResponseTypes,
-  RosterItemResponseTypes,
-  RosterStatus,
-  RunLiveItemResponseTypes,
-  RunStatus,
-} from "../types";
+import type { DashboardRunResponseTypes, RosterItemResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { rosterForStop, type RosterStatusFilter } from "../lib/rosterBoard";
+import { useNow } from "../lib/useNow";
 import { ForcedAddDialog } from "./ForcedAddDialog";
 import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
-import { RouteAckMark } from "./RouteAckMark";
+import { RunInfoCard } from "./RunInfoCard";
+import { RunRosterCard } from "./RunRosterCard";
+import { RunStrip } from "./RunStrip";
 import { StudentTransferDialog } from "./StudentTransferDialog";
+import { TodayRunAlerts } from "./TodayRunAlerts";
 import { TransferCancelDialog } from "./TransferCancelDialog";
 import {
-  StyledTodayRunLayout,
-  StyledMapTopRow,
-  StyledMapPane,
-  StyledFallbackNotice,
-  StyledMapOverlayNotice,
-  StyledBusListPane,
-  StyledBusListItem,
-  StyledBusListItemHeader,
-  StyledContentGrid,
-  StyledSidePanel,
-  StyledMapSurface,
-  StyledCrewRow,
   StyledCrewLabel,
-  StyledStopRosterRow,
-  StyledStopRosterName,
+  StyledFallbackNotice,
+  StyledMapCard,
+  StyledMapChips,
+  StyledMapInfoRow,
+  StyledMapSurface,
   StyledStopRosterClass,
   StyledStopRosterEmpty,
   StyledStopRosterHeader,
-  StyledRosterScroll,
+  StyledStopRosterName,
+  StyledStopRosterRow,
+  StyledTodayRunLayout,
 } from "./TodayRunPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 
@@ -64,53 +55,15 @@ const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 
 // DashboardPage.tsx 와 같은 7초 — 종료되지 않은 회차는 화면을 열어 둔 동안 이 주기로 다시 불러온다(F01-03).
 const LIVE_POLL_INTERVAL_MS = 7000;
 
-// §5.4 응답의 `absent` 는 매니저 앱과 반대로 계속 빨간색(missed)으로 유지해야 한다
-// (API_SPEC §5.4) — 공용 StudentRow 의 RIDE_META 는 absent 를 idle 로 다뤄서 여기선
-// 안 쓰고 화면 전용 매핑을 둔다(판단 근거, 보고서 §1).
-const STATUS_LABEL: Record<RosterStatus, string> = {
-  waiting: "대기",
-  boarded: "탑승 완료",
-  alighted: "하차 완료",
-  absent: "미등원",
-  no_show: "미승차",
-};
-
-const STATUS_PILL: Record<RosterStatus, "boarded" | "moving" | "missed" | "idle"> = {
+// 명단 상태 칩(탑승 완료 · 미승차 · 미등원 …)은 `BoardingStatusChip` 이 고정 매핑으로 그린다 — 미등원은 회색(Ruling 811).
+const STATUS_LABEL: Record<string, string> = { waiting: "대기", boarded: "탑승 완료", alighted: "하차 완료", absent: "미등원", no_show: "미승차" };
+const STATUS_PILL: Record<string, "boarded" | "moving" | "missed" | "idle"> = {
   waiting: "idle",
   boarded: "boarded",
   alighted: "boarded",
-  absent: "missed",
+  absent: "idle",
   no_show: "missed",
 };
-
-// 예정 명단에서 승하차지가 아직 정해지지 않은 학생(`stopName` null, §5.4)의 표기 — 표 칸과 묶음 머리줄이 같다.
-const UNASSIGNED_STOP = "승하차지 미지정";
-
-const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = {
-  to_academy: "등원",
-  from_academy: "하원",
-};
-
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3 — DashboardPage.tsx 와 같은 표기(대기·확정·운행 중·운행 종료).
-// finished 도 이 화면의 우측 버스 목록에서 걸러내지 않는다.
-const RUN_STATUS_LABEL: Record<RunStatus, string> = {
-  idle: "대기",
-  confirmed: "확정",
-  moving: "운행 중",
-  finished: "운행 종료",
-};
-
-// R20-C 목표 2 — 확정·대기가 같은 색이었다(둘 다 "idle" 톤, 사용자 지적). `StatusPill`
-// 의 색 4종(그린·앰버·레드·스톤, C-09)은 고정이라 새로 만들 수 없어 남은 한 톤인
-// "missed"(레드)를 확정에 배정한다 — 라벨은 `RUN_STATUS_LABEL`("확정")로 덮어써
-// "미탑승"으로 읽히지 않는다.
-const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
-  idle: "idle",
-  confirmed: "missed",
-  moving: "moving",
-  finished: "boarded",
-};
-
 // §5.4 GET /staff/runs/{runId}/roster(A-06) · §5.7 POST .../forced-add(A-07) ·
 // §5.8 POST /staff/students/{id}/transfer(A-07, R34-W1) · §5.14 PATCH .../assignment(A-06) —
 // 금일 운행 상세(UF-M-03·UF-M-04).
@@ -131,6 +84,10 @@ export const TodayRunPage = () => {
   // A-07 — [이동 취소]를 누른 이동 대기 학생(§5.8.1). null 이면 확인 대화상자가 닫혀 있다.
   const [cancelTarget, setCancelTarget] = useState<(RosterItemResponseTypes & { transferId: string }) | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  // 명단 상태 칩의 선택 — 미승차 띠의 [명단 보기] 가 `no_show` 로 바꾼다.
+  const [statusFilter, setStatusFilter] = useState<RosterStatusFilter>("all");
+  // §5.4 · §5.19 의 403 ACADEMY_SCOPE_VIOLATION — 다른 학원 회차는 열 수 없다(타 학원 링크를 받았거나 주소를 직접 입력).
+  const [forbidden, setForbidden] = useState(false);
   const [liveRun, setLiveRun] = useState<RunLiveItemResponseTypes | null>(null);
   // R15-T2 — 우측 버스 목록에서 고른(=지금 화면에 뜬) 회차의 노선.
   const [routePolylines, setRoutePolylines] = useState<MapPolyline[]>([]);
@@ -190,19 +147,13 @@ export const TodayRunPage = () => {
         : [],
     [liveRun],
   );
-  // R24 — 지도에서 고른 승하차지의 이름. 명단(§5.4)은 승하차지를 **이름 문자열**로만
-  // 싣기 때문에(id 가 부재) 이 이름이 둘을 잇는 유일한 열쇠다. 둘 다 `stop.name` 한 컬럼에서
-  // 나오므로 같은 정차지면 반드시 일치한다.
-  // ⚠ 한 노선에 같은 이름의 승하차지가 둘 있으면 두 곳의 학생이 함께 나온다. 그때 가르려면
-  // 명단 응답에 `stop_id` 를 더해야 한다(API 계약 변경) — 지금은 그런 자료가 부재해 두지 않는다.
+  // R24 — 지도에서 고른 승하차지의 이름 · 학생. 명단(§5.4)은 `stop_id` 를 싣기 시작해(Ruling 811) 노선(§5.19)과 id 로 잇는다 —
+  // 같은 이름의 승하차지가 둘이어도 고른 자리의 학생만 나온다. `stop_id` 가 없는 행(옛 서버 · 확정 전 예정 명단)만 이름으로 맞춘다.
   const selectedStopName = useMemo(
     () => routeStops.find((stop) => stop.stopId === selectedStopId)?.name ?? null,
     [routeStops, selectedStopId],
   );
-  const stopRoster = useMemo(
-    () => (selectedStopName == null ? [] : roster.filter((item) => item.stopName === selectedStopName)),
-    [roster, selectedStopName],
-  );
+  const stopRoster = useMemo(() => rosterForStop(roster, routeStops, selectedStopId), [roster, routeStops, selectedStopId]);
   // 고른 승하차지에 흰 테두리를 둘러 "이 자리를 보고 있다"를 지도에서도 알린다.
   const highlightedStopMarkers = useMemo(
     () =>
@@ -267,6 +218,11 @@ export const TodayRunPage = () => {
       return true;
     } catch (cause) {
       if (mine !== rosterSeq.current) return false;
+      if (cause instanceof ApiError && cause.code === "ACADEMY_SCOPE_VIOLATION") {
+        setForbidden(true);
+        setRoster([]);
+        return false;
+      }
       setError(cause instanceof ApiError ? cause.message : "명단을 불러오지 못했습니다");
       // 주기 갱신이 한 번 실패했다고 보이던 명단을 지우지 않는다.
       if (!silent) setRoster([]);
@@ -374,110 +330,63 @@ export const TodayRunPage = () => {
     selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
   );
 
-  const columns: RosterColumn<RosterItemResponseTypes>[] = [
-    { key: "name", label: "이름" },
-    { key: "className", label: "반", render: (row) => row.className ?? "-" },
-    { key: "stopName", label: "승하차지", render: (row) => row.stopName ?? UNASSIGNED_STOP },
-    { key: "guardianPhone", label: "보호자 연락처", render: (row) => row.guardianPhone ?? "-" },
-    {
-      // R21-B 목표 2·3·4 — DashboardPage.tsx 와 같은 표기(예정/실제 구분, 시:분:초).
-      // 이 표는 학생 단위 행이지만 회차 단위 값이라 모든 행에 같은 값이 반복된다 —
-      // `selectedRun`(회차 하나만 선택된 이 화면의 전제, 위 주석)을 그대로 참조한다.
-      key: "departTime",
-      label: "출발",
-      render: () =>
-        selectedRun ? (
-          <>
-            예정 {formatClockTimeWithSeconds(selectedRun.departTime)}
-            {selectedRun.startedAt ? (
+  // 카운트다운(미승차 3분)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
+  const nowMs = useNow(selectedRun && selectedRun.noShowCases.length > 0 ? 1000 : 30_000);
+  const addedCount = roster.filter((item) => item.change === "added").length;
+  const transferCount = roster.filter((item) => item.transferId != null).length;
+
+  const description = `${formatHeaderDate()} · ${
+    canTransfer ? "확정 전 회차는 학생을 다른 버스로 옮기거나 강제로 추가할 수 있습니다" : "회차를 고르면 위치 · 인원 · 명단을 한 화면에서 봅니다"
+  }`;
+
+  if (forbidden) {
+    return (
+      <StyledTodayRunLayout>
+        <PageHeader title="운행 상세" description="이 회차는 열 수 없습니다" />
+        <Card>
+          <EmptyState
+            icon="lock"
+            tone="warn"
+            title="이 학원의 회차가 아니라서 열 수 없습니다"
+            action={
               <>
-                <br />
-                실제 {formatClockTimeWithSeconds(selectedRun.startedAt)}
+                <Button onClick={() => router.push("/today-run")}>오늘 운행 목록으로</Button>
+                <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+                  오늘 현황
+                </Button>
               </>
-            ) : null}
-          </>
-        ) : (
-          "-"
-        ),
-    },
-    {
-      // R21-B2 목표 1·2 — DashboardPage.tsx 와 같은 표기(예정/실제, est_arrival_time 없으면 "-").
-      key: "finishedAt",
-      label: "도착",
-      render: () => (
-        <>
-          예정 {selectedRun?.estArrivalTime ? formatClockTimeWithSeconds(selectedRun.estArrivalTime) : "-"}
-          {selectedRun?.finishedAt ? (
-            <>
-              <br />
-              실제 {formatClockTimeWithSeconds(selectedRun.finishedAt)}
-            </>
-          ) : null}
-        </>
-      ),
-    },
-    {
-      key: "change",
-      label: "변경",
-      render: (row) =>
-        row.change ? (
-          <Badge tone={row.change === "added" ? "added" : "removed"}>
-            {row.change === "added" ? "추가" : "제외"}
-          </Badge>
-        ) : (
-          "-"
-        ),
-    },
-    {
-      key: "status",
-      label: "탑승 현황",
-      render: (row) => <StatusPill status={STATUS_PILL[row.status]}>{STATUS_LABEL[row.status]}</StatusPill>,
-    },
-    {
-      key: "transfer",
-      label: "조정",
-      // 이동 대기 행(transferId)은 다시 옮기면 서버가 TRANSFER_ALREADY_STAGED 로 거절한다(§5.8) —
-      // [다른 버스로] 대신 [이동 취소] 만 둔다. 취소한 뒤 다시 옮길 수 있다.
-      render: (row) => {
-        const { transferId } = row;
-        if (transferId != null) {
-          return (
-            <Button variant="ghost" size="sm" onClick={() => setCancelTarget({ ...row, transferId })}>
-              이동 취소
-            </Button>
-          );
-        }
-        return canTransfer && row.change !== "removed" ? (
-          <Button variant="ghost" size="sm" onClick={() => setTransferTarget(row)}>
-            다른 버스로
-          </Button>
-        ) : null;
-      },
-    },
-  ];
+            }
+          >
+            주소를 직접 입력했거나 다른 학원에서 받은 링크일 수 있습니다. 이 학원의 회차만 볼 수 있습니다.
+            <br />
+            <small>접근이 거부됐습니다 · 403 ACADEMY_SCOPE_VIOLATION</small>
+          </EmptyState>
+        </Card>
+      </StyledTodayRunLayout>
+    );
+  }
 
   return (
     <StyledTodayRunLayout>
       <PageHeader
-        title="금일 운행 상세"
-        description="회차별 탑승 명단과 배치 현황을 확인합니다"
+        title="운행 상세"
+        description={description}
         actions={
           selectedRun ? (
             <>
-              <Button variant="secondary" onClick={() => setAssignmentOpen(true)}>
+              <Button variant="secondary" icon="user-cog" onClick={() => setAssignmentOpen(true)}>
                 매니저 배치 변경
               </Button>
               {/* §5.7 — 강제 추가는 ①구간(확정 전) 전용이다. 확정된 회차는 끝까지 입력한 뒤에야 403 을 받게 되므로 미리 막는다. */}
               <Button
-                variant="primary"
+                variant={canTransfer ? "primary" : "secondary"}
+                icon="plus"
                 disabled={!canTransfer}
                 title={canTransfer ? undefined : "확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)"}
                 onClick={() => setForcedAddOpen(true)}
               >
                 강제 승하차지 추가
               </Button>
-              {/* 비활성 버튼의 사유가 title 툴팁뿐이면 키보드·터치로는 읽을 수 없다(B1 #25) — 글자로도 보인다. */}
-              {canTransfer ? null : <StyledCrewLabel>확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)</StyledCrewLabel>}
             </>
           ) : null
         }
@@ -485,121 +394,75 @@ export const TodayRunPage = () => {
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
-      <StyledMapTopRow>
-        <StyledMapPane>
+      <RunStrip runs={runs} selectedRunId={selectedRunId} nowMs={nowMs} onSelect={(runId) => router.replace(`/today-run?runId=${runId}`)} />
+
+      {selectedRun ? (
+        <TodayRunAlerts
+          run={selectedRun}
+          roster={roster}
+          nowMs={nowMs}
+          onShowNoShow={() => setStatusFilter("no_show")}
+          onOpenAssignment={() => setAssignmentOpen(true)}
+        />
+      ) : null}
+
+      <StyledMapInfoRow>
+        <StyledMapCard aria-label={selectedRun?.runStatus === "idle" ? "예정 경로" : "실시간 위치"}>
+          <header>
+            <h2>{selectedRun?.runStatus === "idle" ? "예정 경로" : "실시간 위치"}</h2>
+            <p>
+              {selectedRun?.runStatus === "idle"
+                ? "확정 전이라 버스 위치가 없습니다"
+                : liveRun?.position
+                  ? `마지막 수신 ${formatDateTime(liveRun.position.recordedAt)}`
+                  : ""}
+            </p>
+          </header>
           <StyledMapSurface>
             <MapSurface
               camera={mapCamera}
               markers={mapMarkersWithStops}
               onMarkerClick={handleSelectMarker}
               polylines={routePolylines}
-              onAuthFailed={(exception) =>
-                setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
-              }
+              onAuthFailed={(exception) => setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")}
             />
-            {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔
-                지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
-                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts).
-                Ruling 321 — 예정 경로도 같은 자리에서 "확정된 경로"로 오인하지
-                않도록 알린다. 근사·예정이 겹칠 수 있어 문구를 같이 붙인다. */}
-            {routeFallback || routePlanned ? (
-              <StyledMapOverlayNotice>
-                {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </StyledMapOverlayNotice>
-            ) : null}
+            {/* 현재 → 다음 정차지(§5.18) · 근사·예정 경로 안내를 지도 안 이름표로 올린다(Ruling 309 · 321) — 지도 밖 작은 글자는 "길이 아닌 곳을 지난다" 로 오인됐다. */}
+            <StyledMapChips>
+              {selectedRun?.runStatus !== "idle" ? (
+                <p>
+                  {liveRun?.position
+                    ? `현재 ${liveRun.currentStop ?? "-"} → 다음 ${liveRun.nextStop ?? "-"}`
+                    : liveRun?.lastSeenAt
+                      ? `최근 확인 ${formatDateTime(liveRun.lastSeenAt)}`
+                      : "위치 확인 대기"}
+                </p>
+              ) : null}
+              {routeFallback || routePlanned ? (
+                <p data-kind="notice">
+                  {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null].filter(Boolean).join(" · ")}
+                </p>
+              ) : null}
+            </StyledMapChips>
           </StyledMapSurface>
           {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
           {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
-          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도
-              없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
+          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도 없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
           {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
           {routeNoPlannedRoute ? (
             <StyledFallbackNotice>
               이 회차의 고정 노선이 없습니다 — <Link href="/route">고정 노선 편성에서 등록하세요</Link>
             </StyledFallbackNotice>
           ) : null}
-        </StyledMapPane>
+        </StyledMapCard>
 
-        <StyledBusListPane>
-          {runs.map((run) => (
-            <StyledBusListItem
-              key={run.runId}
-              type="button"
-              $active={run.runId === selectedRunId}
-              aria-pressed={run.runId === selectedRunId}
-              onClick={() => router.replace(`/today-run?runId=${run.runId}`)}
-            >
-              <StyledBusListItemHeader>
-                <span>
-                  {formatClockTime(run.departTime)} {run.busNo} · {DIRECTION_LABEL[run.direction]}
-                </span>
-                <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
-              </StyledBusListItemHeader>
-            </StyledBusListItem>
-          ))}
-        </StyledBusListPane>
-      </StyledMapTopRow>
-
-      <StyledContentGrid>
-        {/* 사용자 지시(2026-09-22) — 승하차지별로 묶어 접고 펼 수 있게, 길면 스크롤로.
-            한 회차에 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지
-            눈으로 좇기 어렵다. 스크롤 상자는 표 머리줄을 고정한다(styled 의 sticky). */}
-        <StyledSidePanel>
-          <Card>
-            <p>현재 위치</p>
-            <StyledCrewRow>
-              <StyledCrewLabel>현재 위치</StyledCrewLabel>
-              <span>
-                {liveRun?.position
-                  ? `현재 ${liveRun.currentStop ?? "-"} → 다음 ${liveRun.nextStop ?? "-"}`
-                  : liveRun?.lastSeenAt
-                    ? `최근 확인 ${formatDateTime(liveRun.lastSeenAt)}`
-                    : "위치 확인 대기"}
-              </span>
-            </StyledCrewRow>
-            <StyledCrewRow>
-              <StyledCrewLabel>기사</StyledCrewLabel>
-              <span>
-                {selectedRun?.driverName ?? "미배치"}{" "}
-                {selectedRun ? (
-                  <RouteAckMark name={selectedRun.driverName} acked={selectedRun.ackDriver} runStatus={selectedRun.runStatus} />
-                ) : null}
-              </span>
-            </StyledCrewRow>
-            <StyledCrewRow>
-              <StyledCrewLabel>동승 매니저</StyledCrewLabel>
-              <span>
-                {selectedRun?.escortName ?? "미배치"}{" "}
-                {selectedRun ? (
-                  <RouteAckMark name={selectedRun.escortName} acked={selectedRun.ackEscort} runStatus={selectedRun.runStatus} />
-                ) : null}
-              </span>
-            </StyledCrewRow>
-            <StyledCrewRow>
-              <StyledCrewLabel>출발 시각</StyledCrewLabel>
-              {/* R21-B — 이전엔 raw ISO 문자열을 그대로 보여줬다(포맷 누락, 보고서 §2). 표
-                  컬럼과 같은 형식으로 맞춘다. */}
-              <span>{selectedRun ? formatClockTimeWithSeconds(selectedRun.departTime) : "-"}</span>
-            </StyledCrewRow>
-            {/* 사용자 지시(2026-09-22) — 출발 시각 아래에 도착 예정도 함께. 값은 표의 "도착"
-                컬럼과 같은 `estArrivalTime` 이라 두 자리가 어긋날 수 없다. */}
-            <StyledCrewRow>
-              <StyledCrewLabel>도착 예정</StyledCrewLabel>
-              <span>
-                {selectedRun?.estArrivalTime ? formatClockTimeWithSeconds(selectedRun.estArrivalTime) : "-"}
-              </span>
-            </StyledCrewRow>
-          </Card>
-
-          {/* R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 여기에 나온다
-              (사용자 지시 — "현재 위치" 하단). 아무 곳도 안 골랐으면 카드 자체를 안 그린다:
-              빈 카드가 늘 자리를 차지하면 옆 패널이 그만큼 짧아진다. */}
+        <div>
+          {selectedRun ? <RunInfoCard run={selectedRun} nowMs={nowMs} addedCount={addedCount} transferCount={transferCount} /> : null}
+          {/* R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 여기에 나온다(사용자 지시).
+              아무 곳도 안 골랐으면 카드 자체를 안 그린다. */}
           {selectedStopName != null ? (
             <Card>
               <StyledStopRosterHeader>
-                <p>{selectedStopName}</p>
+                <h3>{selectedStopName}</h3>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedStopId(null)}>
                   전체 보기
                 </Button>
@@ -619,20 +482,23 @@ export const TodayRunPage = () => {
               )}
             </Card>
           ) : null}
-        </StyledSidePanel>
+        </div>
+      </StyledMapInfoRow>
 
-        <Card padding={0} aria-busy={isLoading}>
-          <StyledRosterScroll>
-            <RosterTable
-              columns={columns}
-              loading={isLoading}
-              rows={roster}
-              getRowKey={(row) => row.studentId}
-              groupBy={(row) => row.stopName ?? UNASSIGNED_STOP}
-            />
-          </StyledRosterScroll>
-        </Card>
-      </StyledContentGrid>
+      <RunRosterCard
+        roster={roster}
+        routeStops={routeStops}
+        currentStop={liveRun?.currentStop ?? null}
+        nextStop={liveRun?.nextStop ?? null}
+        isIdle={selectedRun?.runStatus === "idle"}
+        canTransfer={canTransfer}
+        loading={isLoading}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        onTransfer={setTransferTarget}
+        onCancelTransfer={setCancelTarget}
+      />
+      {!canTransfer && selectedRun ? <StyledCrewLabel>확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)</StyledCrewLabel> : null}
 
       {selectedRunId != null ? (
         <ForcedAddDialog

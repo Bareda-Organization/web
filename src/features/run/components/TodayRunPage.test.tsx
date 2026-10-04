@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
@@ -185,7 +185,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);
 
-      fireEvent.click(await screen.findByRole("button", { name: "다른 버스로" }));
+      fireEvent.click(await screen.findByRole("button", { name: /다른 버스로/ }));
 
       const select = screen.getByLabelText("도착 회차");
       const options = within(select).getAllByRole("option").map((option) => option.textContent);
@@ -201,7 +201,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       render(<TodayRunPage />);
 
       await screen.findByText("김학생");
-      expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /다른 버스로/ })).not.toBeInTheDocument();
     });
 
     // F01-07 — 강제 추가는 ①구간(확정 전) 전용이다(§5.7). 확정된 회차에서 끝까지 입력하고서야 403 을 받게 하지 않는다.
@@ -230,7 +230,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       render(<TodayRunPage />);
 
       await screen.findByText("김학생");
-      expect(screen.queryByRole("button", { name: "다른 버스로" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /다른 버스로/ })).not.toBeInTheDocument();
     });
 
     // R36-FE FE1 — 이동 대기(§5.8 staged)로 들어온 행에만 [이동 취소](§5.8.1, Ruling 369).
@@ -251,8 +251,8 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         render(<TodayRunPage />);
 
         await screen.findByText("이대기");
-        expect(screen.getAllByRole("button", { name: "이동 취소" })).toHaveLength(1);
-        expect(screen.getAllByRole("button", { name: "다른 버스로" })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: /이동 취소/ })).toHaveLength(1);
+        expect(screen.getAllByRole("button", { name: /다른 버스로/ })).toHaveLength(1);
       });
 
       it("확인 단계에서 돌아가면 요청을 보내지 않는다", async () => {
@@ -261,7 +261,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         mockGetRunRoster.mockResolvedValue([stagedRow]);
         render(<TodayRunPage />);
 
-        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        fireEvent.click(await screen.findByRole("button", { name: /이동 취소/ }));
         expect(screen.getByText(/이대기 학생/, { selector: "p" })).toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
 
@@ -279,7 +279,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         mockGetRunRoster.mockResolvedValue([stagedRow]);
         render(<TodayRunPage />);
 
-        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        fireEvent.click(await screen.findByRole("button", { name: /이동 취소/ }));
 
         expect(screen.getByText(/원래 버스 명단으로 돌아갑니다/)).toBeInTheDocument();
         expect(screen.queryByText(/원래 버스\(/)).not.toBeInTheDocument();
@@ -293,7 +293,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         mockDeleteTransfer.mockResolvedValue(undefined);
         render(<TodayRunPage />);
 
-        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        fireEvent.click(await screen.findByRole("button", { name: /이동 취소/ }));
         const rosterCallsBefore = mockGetRunRoster.mock.calls.length;
         fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
 
@@ -313,7 +313,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
         mockDeleteTransfer.mockRejectedValue(new ApiError(status, code as never, "서버 원문"));
         render(<TodayRunPage />);
 
-        fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+        fireEvent.click(await screen.findByRole("button", { name: /이동 취소/ }));
         fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
 
         expect(await screen.findByText(message)).toBeInTheDocument();
@@ -384,8 +384,9 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     render(<TodayRunPage />);
 
     await screen.findByText("김학생");
-    const label = screen.getByText("도착 예정");
-    expect(label.parentElement?.textContent).toContain("08:35:00");
+    // 도착 칸은 회차 정보 카드에 시:분으로 — 초까지의 값은 표 대신 서버 응답 그대로의 예정 시각이다.
+    const label = within(screen.getByLabelText("회차 정보")).getByText("도착");
+    expect(label.parentElement?.textContent).toContain("08:35");
   });
 });
 
@@ -542,14 +543,14 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetRunsLive.mockResolvedValue({ runs: [] });
     render(<TodayRunPage />);
 
-    expect(await screen.findByText("08:10 2호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("08:10 3호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("08:10 4호차 · 등원")).toBeInTheDocument();
-    expect(screen.getByText("08:10 5호차 · 등원")).toBeInTheDocument();
-    expect(screen.getAllByText("대기").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("button", { name: "08:10 2호차 등원" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "08:10 3호차 등원" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "08:10 4호차 등원" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "08:10 5호차 등원" })).toBeInTheDocument();
+    expect(screen.getAllByText("운행 전").length).toBeGreaterThan(0);
     expect(screen.getAllByText("확정").length).toBeGreaterThan(0);
     expect(screen.getAllByText("운행 중").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("운행 종료").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("종료").length).toBeGreaterThan(0);
   });
 
   it("버스 목록 항목을 클릭하면 그 회차로 이동한다", async () => {
@@ -558,7 +559,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     mockGetRunsLive.mockResolvedValue({ runs: [] });
     render(<TodayRunPage />);
 
-    fireEvent.click(await screen.findByText("08:10 5호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "08:10 5호차 등원" }));
 
     expect(mockReplace).toHaveBeenCalledWith("/today-run?runId=10");
   });
@@ -674,7 +675,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     // 명단 패널의 "대기"(RosterStatus waiting)과 겹치지 않도록 목록 카드(버튼)로 좁힌다.
     const idleCard = await screen.findByRole("button", { name: /2호차/ });
     const confirmedCard = await screen.findByRole("button", { name: /3호차/ });
-    const idlePill = within(idleCard).getByText("대기");
+    const idlePill = within(idleCard).getByText("운행 전");
     const confirmedPill = within(confirmedCard).getByText("확정");
     expect(idlePill.className).not.toBe(confirmedPill.className);
   });
@@ -712,9 +713,9 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(
   };
 
   // ⚠ 승하차지 이름은 **본 명단 표에도** 같은 글자로 있다(`stopName` 열). 글자만으로 찾으면
-  // 표의 칸이 함께 잡혀 "옆 패널에 떴는가" 를 판정하지 못한다 — 카드 제목(`<p>`)만 집는다.
+  // 표의 칸이 함께 잡혀 "옆 패널에 떴는가" 를 판정하지 못한다 — 카드 제목(`<h3>`)만 집는다.
   const 옆패널_카드 = (stopName: string): HTMLElement | null => {
-    const heading = screen.queryAllByText(stopName).find((element) => element.tagName === "P");
+    const heading = screen.queryAllByText(stopName).find((element) => element.tagName === "H3");
     return heading ? (heading.parentElement!.parentElement as HTMLElement) : null;
   };
 
@@ -815,7 +816,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     mockRunIdParam = "8"; // 관계자가 8호차를 골라 주소가 바뀐 상태
     mockReplace.mockClear();
     rerender(<TodayRunPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "이동 취소" }));
+    fireEvent.click(await screen.findByRole("button", { name: /이동 취소/ }));
     const dashboardCallsBefore = mockGetDashboard.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "이동 취소하기" }));
 
@@ -907,7 +908,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
   });
 
   // F01-14 — 보호자 미연결 학생은 연락처가 null(§5.4)이다. 다른 null 열(반)처럼 "-" 로 보여 실패로 읽히지 않게 한다.
-  it("보호자 연락처가 없는 학생은 빈 칸이 아니라 - 로 보인다", async () => {
+  it("보호자 연락처가 없는 학생은 빈 칸이 아니라 보호자 미연결로 보인다", async () => {
     mockRunIdParam = "7";
     mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle")));
     mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], guardianPhone: null }]);
@@ -916,6 +917,102 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     const row = (await screen.findByText("김학생")).closest("tr")!;
     const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
     const phoneCell = within(row).getAllByRole("cell")[headers.indexOf("보호자 연락처")];
-    expect(phoneCell).toHaveTextContent("-");
+    expect(phoneCell).toHaveTextContent("보호자 미연결");
+  });
+});
+
+// Ruling 811 — 명단이 stop_id 를 싣는다. 같은 이름의 승하차지가 둘이면 이름 맞추기는 두 곳의 학생이 섞인다 — id 로 잇는다.
+describe("TodayRunPage — 명단과 노선을 id 로 잇는다(Ruling 811)", () => {
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  it("같은 이름의 승하차지가 둘일 때 지도에서 고른 자리의 학생만 나온다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoute.mockResolvedValue({
+      roadPath: [{ lat: 37.5, lng: 127.0 }],
+      fallbackUsed: false,
+      stops: [
+        { stopId: "11", seq: 1, name: "정문", lat: 37.5, lng: 127.0 },
+        { stopId: "22", seq: 2, name: "정문", lat: 37.6, lng: 127.1 },
+      ],
+      confirmed: true,
+    });
+    const at = (studentId: string, name: string, stopId: string): RosterItemResponseTypes => ({
+      studentId,
+      name,
+      className: "1반",
+      stopName: "정문",
+      stopId,
+      stopSeq: Number(stopId) / 11,
+      transferId: null,
+      guardianPhone: null,
+      change: null,
+      status: "waiting",
+      note: null,
+    });
+    mockGetRunRoster.mockResolvedValue([at("1", "앞정문학생", "11"), at("2", "뒷정문학생", "22")]);
+    render(<TodayRunPage />);
+    await screen.findByText("앞정문학생");
+
+    act(() => {
+      mockMapSurface.mock.calls.at(-1)![0].onMarkerClick!("stop-22");
+    });
+
+    const heading = await screen.findByRole("heading", { name: "정문", level: 3 });
+    const card = heading.parentElement!.parentElement as HTMLElement;
+    expect(within(card).getByText("뒷정문학생")).toBeInTheDocument();
+    expect(within(card).queryByText("앞정문학생")).not.toBeInTheDocument();
+  });
+});
+
+describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 회차", () => {
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  const noShowRun = {
+    ...baseDashboard.runs[0],
+    driverPhone: "010-0000-2002",
+    escortPhone: "010-0000-2006",
+    noShowCount: 1,
+    noShowCases: [{ studentName: "이아안", stopName: "선경아파트 정문", expiresAt: "2999-01-01T00:00:00Z", callAttempts: 1, lastContactResult: "no_answer" as const }],
+  };
+  const noShowRoster: RosterItemResponseTypes[] = [
+    { ...baseRoster[0], studentId: "5", name: "이아안", status: "no_show", guardianPhone: "010-0000-1183" },
+  ];
+
+  it("미승차 띠에 그 학생의 보호자 전화 링크(tel:)와 시도 횟수가 있다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
+    mockGetRunRoster.mockResolvedValue(noShowRoster);
+    render(<TodayRunPage />);
+
+    const band = await screen.findByRole("alert");
+    expect(within(band).getByText(/보호자 전화 시도 1회\(무응답\)/)).toBeInTheDocument();
+    // 명단이 오기 전에는 번호를 모르므로 단추가 꺼져 있다가 명단이 오면 링크가 된다.
+    expect(await within(band).findByRole("link", { name: "이아안 보호자 전화" })).toHaveAttribute("href", "tel:010-0000-1183");
+  });
+
+  it("회차 정보 카드에 기사·동승 매니저의 전화가 tel: 링크로 있다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    const card = await screen.findByLabelText("회차 정보");
+    expect(within(card).getByRole("link", { name: "010-0000-2002" })).toHaveAttribute("href", "tel:010-0000-2002");
+    expect(within(card).getByRole("link", { name: "010-0000-2006" })).toHaveAttribute("href", "tel:010-0000-2006");
+  });
+
+  it("다른 학원 회차는 403 ACADEMY_SCOPE_VIOLATION 이 오면 열 수 없다는 화면과 가는 길을 보여 준다", async () => {
+    mockRunIdParam = "999";
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockRejectedValue(new ApiError(403, "ACADEMY_SCOPE_VIOLATION", "접근이 거부됐습니다"));
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText("이 학원의 회차가 아니라서 열 수 없습니다")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "오늘 운행 목록으로" })).toBeInTheDocument();
+    expect(screen.getByText(/403 ACADEMY_SCOPE_VIOLATION/)).toBeInTheDocument();
   });
 });

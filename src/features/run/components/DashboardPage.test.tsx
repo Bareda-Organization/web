@@ -244,7 +244,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
       runs: [{ ...baseDashboard.runs[0], startedAt, finishedAt }],
     });
     mockGetRunsLive.mockResolvedValue(emptyLive);
-    const { container } = render(<DashboardPage />);
+    render(<DashboardPage />);
 
     await screen.findByText("1호차 · 등원");
     // 표 칸은 시:분만 보이고(시안), 초까지의 예정·실제 값은 칸의 설명(title)에 남는다(R21-B 지시).

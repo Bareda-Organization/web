@@ -53,6 +53,11 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
    * 순서가 이미 뜻을 갖고 있기 때문이다(명단은 정차 차례대로 온다).
    */
   groupBy?: (row: T) => string;
+  /**
+   * 묶음 머리줄에 보일 내용을 바꾼다 — 안 주면 `묶음 이름 + N명`. 묶음 이름(`groupBy` 값)은 묶음을 가르는 열쇠라 사람이 읽는 글자와 다를 수 있다
+   * (같은 이름의 승하차지 둘을 id 로 가를 때). 접고 펼치는 단추는 이 내용 전체가 된다.
+   */
+  renderGroupLabel?: (key: string, rows: T[]) => ReactNode;
 };
 
 const defaultRowKey = <T,>(row: T, index: number): string | number => {
@@ -75,6 +80,7 @@ export const RosterTable = <T,>({
   rowTone,
   getRowKey = defaultRowKey,
   groupBy,
+  renderGroupLabel,
   ...rest
 }: RosterTableProps<T>) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -149,8 +155,14 @@ export const RosterTable = <T,>({
                       <StyledRosterGroupCell colSpan={columns.length || 1}>
                         <StyledRosterGroupButton type="button" aria-expanded={open} onClick={() => toggle(group.label)}>
                           {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
-                          <span>{group.label}</span>
-                          <StyledRosterGroupCount>{group.rows.length}명</StyledRosterGroupCount>
+                          {renderGroupLabel ? (
+                            renderGroupLabel(group.label, group.rows)
+                          ) : (
+                            <>
+                              <span>{group.label}</span>
+                              <StyledRosterGroupCount>{group.rows.length}명</StyledRosterGroupCount>
+                            </>
+                          )}
                         </StyledRosterGroupButton>
                       </StyledRosterGroupCell>
                     </StyledRosterGroupRow>

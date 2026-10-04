@@ -7,6 +7,8 @@ type RawRosterItem = {
   name: string;
   class_name: string | null;
   stop_name: string | null; // 예정 명단의 승하차지 미지정 학생(§5.4)
+  stop_id?: string | number | null; // Ruling 811 — 노선(§5.19)과 id 로 잇는다. 확정 전 예정 명단 · 옛 서버는 null/부재
+  stop_seq?: number | null;
   transfer_id?: string | number | null; // 이동 대기 행에만(§5.4, Ruling 369)
   guardian_phone: string | null; // 보호자 미연결 학생은 null(§5.4 ○, BR-082)
   change: RosterChange;
@@ -19,6 +21,8 @@ const toRosterItem = (raw: RawRosterItem): RosterItemResponseTypes => ({
   name: raw.name,
   className: raw.class_name,
   stopName: raw.stop_name,
+  stopId: raw.stop_id == null ? null : asIdString(raw.stop_id),
+  stopSeq: raw.stop_seq ?? null,
   transferId: raw.transfer_id == null ? null : asIdString(raw.transfer_id),
   guardianPhone: raw.guardian_phone,
   change: raw.change,

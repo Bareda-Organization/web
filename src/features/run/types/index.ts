@@ -103,6 +103,10 @@ export type RosterItemResponseTypes = {
   className: string | null;
   // 예정 명단에서 승하차지가 아직 정해지지 않은 학생은 null(§5.4).
   stopName: string | null;
+  // Ruling 811 — 그 승하차지의 정차 항목 id · 순번. 노선(§5.19 stops[].stopId)과 이름이 아니라 id 로 잇는다
+  // (같은 이름의 승하차지가 둘이면 이름 맞추기가 틀린다). 확정 전 예정 명단 · 옛 서버는 null.
+  stopId?: string | null;
+  stopSeq?: number | null;
   // 이동 대기(§5.8 staged)로 이 회차에 들어온 행에만 — 이 값으로 §5.8.1 취소(Ruling 369).
   transferId: string | null;
   guardianPhone: string | null;
