@@ -6,6 +6,7 @@ import { AcademiesPage } from "./admin/components/AcademiesPage";
 import { BlockedAccountsPage } from "./admin/components/BlockedAccountsPage";
 import { MemberAccountsPage } from "./admin/components/MemberAccountsPage";
 import { MemberApprovalsPage } from "./admin/components/MemberApprovalsPage";
+import { StaleMovingRunsPage } from "./admin/components/StaleMovingRunsPage";
 import { ChangeApprovalList } from "./approval/components/ChangeApprovalList";
 import { SignupApprovalPage } from "./approval/components/SignupApprovalPage";
 import { BusList } from "./bus/components/BusList";
@@ -31,7 +32,7 @@ const { failingApi } = vi.hoisted(() => ({
 }));
 
 const mockRouter = createStableRouter();
-vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter, useSearchParams: () => new URLSearchParams() }));
 vi.mock("./admin/api", failingApi);
 vi.mock("./approval/api", failingApi);
 vi.mock("./bus/api", failingApi);
@@ -44,7 +45,7 @@ vi.mock("./schedule/api", failingApi);
 vi.mock("./student/api", failingApi);
 
 // [이름, 화면, 조회 전에 머리줄이 보여 주던 문구]
-const lists: [string, () => ReactElement, string][] = [
+const lists: [string, () => ReactElement, string | RegExp][] = [
   ["차량", () => <BusList />, "총 0대"],
   ["운행 스케줄", () => <ScheduleList />, "총 0건"],
   ["노선 편성", () => <RouteList />, "총 0건"],
@@ -55,10 +56,11 @@ const lists: [string, () => ReactElement, string][] = [
   ["비상 알림 수신", () => <EmergencyList />, "미확인 0건"],
   ["가입 승인", () => <SignupApprovalPage />, "처리 대기 0건"],
   ["구간 변경 승인", () => <ChangeApprovalList />, "처리 대기 0건"],
-  ["학원(메인 관리자)", () => <AcademiesPage />, "총 0개 학원"],
-  ["관계자 가입 승인(메인 관리자)", () => <MemberApprovalsPage />, "처리 대기 0건"],
-  ["관계자 계정(메인 관리자)", () => <MemberAccountsPage />, "전체 0개 계정"],
-  ["차단 계정(메인 관리자)", () => <BlockedAccountsPage />, "현재 차단된 계정 0건"],
+  ["학원(메인 관리자)", () => <AcademiesPage />, /0개 학원|학원 0곳/],
+  ["관계자 가입 승인(메인 관리자)", () => <MemberApprovalsPage />, /처리 대기 0건|가입 요청 0건/],
+  ["관계자 계정(메인 관리자)", () => <MemberAccountsPage />, /0개 계정/],
+  ["차단 계정(메인 관리자)", () => <BlockedAccountsPage />, /차단된 계정 0건/],
+  ["끝나지 않은 회차(메인 관리자)", () => <StaleMovingRunsPage />, /끝나지 않은 회차 0건/],
 ];
 
 describe("목록 조회 실패 — 머리줄에 건수를 보이지 않는다", () => {

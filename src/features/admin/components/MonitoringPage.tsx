@@ -615,7 +615,7 @@ export const MonitoringPage = () => {
         ) : (
           <>
             <StyledTableHeading>
-              {academy ? `${academy.name} ` : ""}회차 {runs.length}
+              {academy ? `${academy.name} ` : ""}회차{error && runs.length === 0 ? "" : ` ${runs.length}`}
               <small>
                 출발 순 · 막대 {clockOfMs(axis.startMs)}~{clockOfMs(axis.endMs)} · 세로선 = 지금
               </small>

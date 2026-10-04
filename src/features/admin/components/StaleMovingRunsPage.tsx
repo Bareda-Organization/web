@@ -179,7 +179,7 @@ export const StaleMovingRunsPage = () => {
         </Card>
       ) : (
         <Card padding={0} aria-busy={loading}>
-          <StyledCardHeading>끝나지 않은 회차 {runs.length}건</StyledCardHeading>
+          <StyledCardHeading>{error ? "끝나지 않은 회차" : `끝나지 않은 회차 ${runs.length}건`}</StyledCardHeading>
           <RosterTable
             hasError={Boolean(error)}
             onRetry={load}

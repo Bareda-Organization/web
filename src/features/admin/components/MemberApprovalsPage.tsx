@@ -119,7 +119,7 @@ export const MemberApprovalsPage = () => {
         <StyledApprovalGrid>
           <StyledApprovalLeft>
             <Card padding={0} aria-busy={loading}>
-              <StyledListHeading>가입 요청 {totalCount}건</StyledListHeading>
+              <StyledListHeading>{error ? "가입 요청" : `가입 요청 ${totalCount}건`}</StyledListHeading>
               <RosterTable
                 hasError={Boolean(error)}
                 onRetry={reload}
