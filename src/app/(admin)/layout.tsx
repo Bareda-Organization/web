@@ -32,10 +32,9 @@ import {
 
 // 사이드바 메뉴 — 시안(`admin/dashboard`)의 묶음 · 순서 그대로. 화면을 추가·삭제하면 이 목록을 고친다. 접근 판정은 목록이 아니라 이 그룹의
 // AuthGateGuard(requiredRole)가 맡으므로 새 화면 폴더는 자동으로 system_admin 만 연다.
-// 맨 위 `대시보드`(/dashboard)는 화면이 아직 없다 — 다음 갈래(R48 관리자 화면)가 만든다. 그때 resolveActiveValue 의 기본값과
-// 로그인 뒤 기본 이동(decideAuthRedirect)을 함께 바꾼다(Ruling 800).
+// 맨 위 `대시보드` 는 /overview 다 — /dashboard 는 관계자 "오늘 현황" 주소라 같은 주소를 쓰면 두 라우트 그룹이 충돌한다(Ruling 800).
 const NAV_GROUPS: SideNavGroup[] = [
-  { items: [{ value: "dashboard", label: "대시보드", icon: "layout-dashboard" }] },
+  { items: [{ value: "overview", label: "대시보드", icon: "layout-dashboard" }] },
   {
     title: "처리 대기",
     items: [
@@ -66,7 +65,7 @@ const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 const resolveActiveValue = (pathname: string): string => {
   const found = NAV_ITEMS.find((item) => pathname.startsWith(`/${item.value}`));
-  return found?.value ?? "academies";
+  return found?.value ?? "overview";
 };
 
 // 메인 관리자는 학원 경계를 넘는 유일한 역할이라 session.academy 가 null 이다 — SideNav 의

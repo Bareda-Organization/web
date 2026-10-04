@@ -39,9 +39,12 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(session, "/dashboard")).toBeNull();
   });
 
-  it("active + system_admin 은 /academies 로 보낸다", () => {
+  // R48 Ruling 800 — 메인 관리자 첫 화면은 대시보드(/overview)다. 관계자의 /dashboard 와 같은 주소를 쓰면 두 라우트 그룹이 충돌한다.
+  it("active + system_admin 은 로그인·가입·대기 화면에서 /overview 로 보낸다", () => {
     const session = baseSession("active", "system_admin");
-    expect(decideAuthRedirect(session, "/login")).toBe("/academies");
+    expect(decideAuthRedirect(session, "/login")).toBe("/overview");
+    expect(decideAuthRedirect(session, "/signup-status")).toBe("/overview");
+    expect(decideAuthRedirect(session, "/overview")).toBeNull();
     expect(decideAuthRedirect(session, "/academies")).toBeNull();
   });
 
@@ -49,7 +52,7 @@ describe("decideAuthRedirect", () => {
   // (staff) 레이아웃은 staff 를 요구한다고 알리고, 이 함수는 세션 역할이 그와 다르면 자기 홈으로 보낸다.
   it("active 인데 그룹이 요구하는 역할과 다르면 자기 홈으로 되돌린다", () => {
     expect(decideAuthRedirect(baseSession("active", "staff"), "/academies", "system_admin")).toBe("/dashboard");
-    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/dashboard", "staff")).toBe("/academies");
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/dashboard", "staff")).toBe("/overview");
     expect(decideAuthRedirect(baseSession("active", "staff"), "/dashboard", "staff")).toBeNull();
     expect(decideAuthRedirect(baseSession("active", "system_admin"), "/academies", "system_admin")).toBeNull();
   });
@@ -58,7 +61,7 @@ describe("decideAuthRedirect", () => {
   // 경로 목록에 등록하지 않은 새 화면 폴더도 그 그룹 안에 있으면 자동으로 막혀야 한다(기본은 거부).
   it("경로 목록에 없는 새 화면도 그룹 역할이 다르면 닫힌다", () => {
     expect(decideAuthRedirect(baseSession("active", "staff"), "/brand-new-admin-screen", "system_admin")).toBe("/dashboard");
-    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/brand-new-staff-screen/sub", "staff")).toBe("/academies");
+    expect(decideAuthRedirect(baseSession("active", "system_admin"), "/brand-new-staff-screen/sub", "staff")).toBe("/overview");
   });
 
   it("역할을 알 수 없는 세션은 어느 그룹에서도 열리지 않고 닫힌다 (기본값은 거부)", () => {

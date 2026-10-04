@@ -143,8 +143,21 @@ describe("(admin) 레이아웃 — 사이드 메뉴 묶음", () => {
       "학원 · 계정",
       "기록",
     ]);
-    expect(within(nav).getAllByRole("link")[0]).toHaveAttribute("href", "/dashboard");
+    // R48 Ruling 800 — 관계자 "오늘 현황"이 /dashboard 라서 메인 관리자 대시보드는 /overview 다.
+    expect(within(nav).getAllByRole("link")[0]).toHaveAttribute("href", "/overview");
     expect(within(nav).getAllByRole("link")[0]).toHaveAccessibleName("대시보드");
+  });
+
+  it("대시보드 항목은 /overview 에서 켜지고, 메뉴에 없는 주소의 기본 켜짐도 대시보드다", () => {
+    mockPathname = "/overview";
+    const { unmount } = renderLayout();
+    expect(screen.getByRole("link", { name: "대시보드" })).toHaveAttribute("aria-current", "page");
+    unmount();
+
+    mockPathname = "/somewhere-new";
+    renderLayout();
+    expect(screen.getByRole("link", { name: "대시보드" })).toHaveAttribute("aria-current", "page");
+    mockPathname = "/academies";
   });
 
   it("묶음마다 항목 이름 · 배지 · 주소가 시안 순서와 같다", () => {

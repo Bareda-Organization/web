@@ -1,5 +1,9 @@
 import type { AuthSession } from "../types";
 
+// 메인 관리자 첫 화면 — 대시보드다(R48 Ruling 800). 주소가 /dashboard 가 아닌 이유: (admin)·(staff) 라우트 그룹은 주소 공간을 공유하고
+// /dashboard 는 이미 관계자 "오늘 현황"이라, 같은 주소를 쓰면 두 그룹이 충돌한다.
+export const ADMIN_HOME = "/overview";
+
 // 계정 상태·역할로 화면 진입이 갈리는 판정을 한곳에 모은다 — BRIEF-web §3
 // "판정은 한 곳에서 한다. 화면은 그 결과만 받는다"를 만족하려는 자리다.
 // (auth)·(staff)·(admin) 세 레이아웃이 전부 이 함수 하나만 부른다.
@@ -29,7 +33,7 @@ export const decideAuthRedirect = (
 
   // status === "active" 부터는 로그인·가입·대기 화면에 남아 있을 이유가 없다.
   if (isPublicAuthPath || isSignupStatusPath) {
-    return session.role === "system_admin" ? "/academies" : "/dashboard";
+    return session.role === "system_admin" ? ADMIN_HOME : "/dashboard";
   }
 
   // 관계자 웹은 학원 관계자(staff)·메인 관리자(system_admin) 만 쓴다
@@ -37,7 +41,7 @@ export const decideAuthRedirect = (
   // 공유하지 않으므로 역할이 그 그룹과 안 맞으면 자기 홈으로 되돌린다.
   if (groupRole && session.role !== groupRole) {
     if (session.role === "staff") return "/dashboard";
-    if (session.role === "system_admin") return "/academies";
+    if (session.role === "system_admin") return ADMIN_HOME;
     return "/login";
   }
 
