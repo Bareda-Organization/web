@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Checkbox, SearchField } from "@/shared/ui";
+import { AlertBanner, OptionList, OptionListItem, SearchField, StatusChip } from "@/shared/ui";
 import type { LinkCandidateTypes } from "../types";
-import { StyledCandidateList } from "./LinkCandidatePicker.styled";
+import { StyledCandidateLabel, StyledCandidateList } from "./LinkCandidatePicker.styled";
 
 type LinkCandidatePickerProps = {
   /** 이름 검색으로 후보를 가져온다 — 검색어가 없으면 처음 몇 명을 보여준다. */
@@ -31,7 +31,7 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
     async (q?: string) => {
       const seq = ++requestSeq.current;
       try {
-        const found = await search(q);
+        const found = (await search(q)) ?? [];
         if (seq !== requestSeq.current) return -1;
         setCandidates(found);
         setError(null);
@@ -70,16 +70,33 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       <StyledCandidateList>
         {candidates.length === 0 && !error ? <p>검색 결과가 없습니다</p> : null}
-        {candidates.map((candidate) => (
-          <Checkbox
-            key={candidate.id}
-            label={candidate.name}
-            sublabel={[candidate.detail, candidate.disabledReason].filter(Boolean).join(" · ") || undefined}
-            checked={selectedIds.includes(candidate.id)}
-            disabled={candidate.disabledReason !== undefined}
-            onChange={(event) => toggle(candidate.id, event.target.checked)}
-          />
-        ))}
+        {candidates.length > 0 ? (
+          <OptionList>
+            {candidates.map((candidate) => {
+              const disabled = candidate.disabledReason !== undefined;
+              const picked = selectedIds.includes(candidate.id);
+              return (
+                <OptionListItem key={candidate.id} picked={picked}>
+                  <StyledCandidateLabel $disabled={disabled}>
+                    <input
+                      type={multiple ? "checkbox" : "radio"}
+                      name="link-candidate"
+                      checked={picked}
+                      disabled={disabled}
+                      onChange={(event) => toggle(candidate.id, event.target.checked)}
+                    />
+                    <span>
+                      <b>{candidate.name}</b>
+                      {candidate.detail ? <small>{candidate.detail}</small> : null}
+                    </span>
+                    {/* 연결할 수 없는 사유를 같은 줄에 보인다 — 눌러 본 뒤 409 ALREADY_LINKED 를 받지 않게 한다. */}
+                    {disabled ? <StatusChip tone="off" marker={false}>{candidate.disabledReason}</StatusChip> : <StatusChip tone="ok" marker={false} quiet>연결 가능</StatusChip>}
+                  </StyledCandidateLabel>
+                </OptionListItem>
+              );
+            })}
+          </OptionList>
+        ) : null}
       </StyledCandidateList>
     </>
   );

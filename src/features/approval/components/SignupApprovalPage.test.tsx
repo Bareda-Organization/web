@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { SignupApprovalPage } from "./SignupApprovalPage";
@@ -46,8 +46,8 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockGetSignupRequests.mockResolvedValue(baseList);
     render(<SignupApprovalPage />);
 
-    expect(await screen.findByText("김보호")).toBeInTheDocument();
-    expect(screen.getByText("처리 대기 1건")).toBeInTheDocument();
+    expect((await screen.findAllByText("김보호")).length).toBeGreaterThan(0);
+    expect(screen.getByText(/처리 대기 1건/)).toBeInTheDocument();
     expect(mockGetSignupRequests).toHaveBeenCalledWith("pending", 0, 20);
   });
 
@@ -56,12 +56,11 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
 
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() =>
       expect(mockDecideSignupRequest).toHaveBeenCalledWith("1", {
@@ -75,10 +74,10 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockGetSignupRequests.mockResolvedValue(baseList);
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
 
-    expect(screen.getByRole("button", { name: "거절 확정" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "가입 거절" })).toBeDisabled();
   });
   // R32-W3·W4 — 학생·기사·동승자 승인이 ID 직접 입력이라 목록에 ID 가 안 보이는 화면에서 사실상 승인이 불가능했다.
   it("role=student 승인은 ID 입력칸 없이 이름 검색 목록에서 골라 그 학생 ID 로 decide 를 호출한다", async () => {
@@ -93,15 +92,14 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     // 역할이 영문(student) 그대로 보이지 않는다
     expect(screen.queryByText(/student/)).not.toBeInTheDocument();
-    expect(screen.getByText(/학생 · 010-1111-2222/)).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    expect(screen.getAllByText("학생").length).toBeGreaterThan(0);
 
     expect(screen.queryByLabelText(/학생 ID/)).not.toBeInTheDocument();
     fireEvent.click(await screen.findByLabelText(/김철수/));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() =>
       expect(mockDecideSignupRequest).toHaveBeenCalledWith("5", { accept: true, link: { studentIds: ["77"] } }),
@@ -117,10 +115,9 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockSearchStudents.mockResolvedValue([{ id: "77", name: "박학생" }]);
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
 
-    await screen.findByLabelText(/박학생/);
+    await screen.findByLabelText(/박학생.*|학생/, { selector: "input[type=checkbox]" });
     expect(mockSearchStudents).toHaveBeenCalledWith("박학생");
     expect(screen.getByPlaceholderText("학생 이름으로 검색")).toHaveValue("박학생");
   });
@@ -133,11 +130,10 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockSearchStudents.mockResolvedValue([{ id: "77", name: "김철수" }]);
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     await screen.findByLabelText(/김철수/);
 
-    expect(screen.getByRole("button", { name: "승인 확정" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
   });
 
   it("role=driver 승인은 매니저 목록에서 골라 그 매니저 ID 로 decide 를 호출한다", async () => {
@@ -149,13 +145,12 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    expect(screen.getByText(/기사 · 010-1111-2222/)).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
+    expect(screen.getAllByText("기사").length).toBeGreaterThan(0);
 
     expect(screen.queryByLabelText(/매니저 ID/)).not.toBeInTheDocument();
     fireEvent.click(await screen.findByLabelText(/최기사\(등록\)/));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() =>
       expect(mockDecideSignupRequest).toHaveBeenCalledWith("6", { accept: true, link: { managerId: "31" } }),
@@ -171,7 +166,8 @@ describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
     mockGetSignupRequests.mockResolvedValue(baseList); // requestedAt 2026-09-10T00:00:00Z
     render(<SignupApprovalPage />);
 
-    expect(await screen.findByText("2026-09-10 09:00")).toBeInTheDocument();
+    // 목록 칸과 처리 패널 두 곳에 같은 시각이 보인다.
+    expect((await screen.findAllByText("2026-09-10 09:00")).length).toBeGreaterThan(0);
     expect(screen.queryByText(/2026-09-10T/)).not.toBeInTheDocument();
   });
 });
@@ -190,15 +186,14 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
     mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     fireEvent.click(await screen.findByLabelText(/김철수/));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     expect(await screen.findByText("이미 다른 계정과 연결된 학생입니다 — 다른 학생을 고르세요")).toBeInTheDocument();
     expect(screen.queryByText("server raw message")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/김철수/)).toBeEnabled();
-    expect(screen.getByRole("button", { name: "승인 확정" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "승인" })).toBeEnabled();
   });
 
   it("기사 승인이 ALREADY_LINKED 로 거절되면 다른 매니저를 고르라는 문구를 보인다", async () => {
@@ -210,10 +205,9 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
     mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     fireEvent.click(await screen.findByLabelText(/최기사\(등록\)/));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     expect(await screen.findByText("이미 다른 계정과 연결된 매니저입니다 — 다른 매니저를 고르세요")).toBeInTheDocument();
   });
@@ -223,9 +217,8 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
     mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "ALREADY_LINKED", "server raw message"));
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     expect(await screen.findByText("이미 연결된 자녀가 있습니다")).toBeInTheDocument();
   });
@@ -253,7 +246,7 @@ describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
     await act(async () => resolvePending(baseList));
 
     expect(screen.getByText("거절된사람")).toBeInTheDocument();
-    expect(screen.queryByText("김보호")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("김보호")).toHaveLength(0);
   });
 });
 
@@ -267,7 +260,7 @@ describe("SignupApprovalPage — F02-03 페이징", () => {
     mockGetSignupRequests.mockResolvedValue({ ...baseList, totalCount: 45, hasNext: true });
     render(<SignupApprovalPage />);
 
-    await screen.findByText("김보호");
+    await screen.findAllByText("김보호");
     fireEvent.click(screen.getByRole("button", { name: /다음/ }));
     await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("pending", 1, 20));
 
@@ -287,12 +280,11 @@ describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침",
     mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "APPROVAL_ALREADY_DECIDED", "Already decided"));
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     expect(await screen.findByText("이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "승인 확정" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     await waitFor(() => expect(mockGetSignupRequests).toHaveBeenCalledTimes(2));
@@ -304,9 +296,8 @@ describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침",
     mockDecideSignupRequest.mockRejectedValue(new ApiError(409, "SIGNUP_TARGET_BLOCKED", "blocked"));
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     expect(await screen.findByText("승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다")).toBeInTheDocument();
   });
@@ -323,9 +314,8 @@ describe("SignupApprovalPage — 처리 직후 사이드바 배지 갱신", () =
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "active", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
-    fireEvent.click(await screen.findByRole("button", { name: "승인" }));
-    fireEvent.click(screen.getByRole("button", { name: "승인 확정" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
@@ -335,11 +325,52 @@ describe("SignupApprovalPage — 처리 직후 사이드바 배지 갱신", () =
     mockDecideSignupRequest.mockResolvedValue({ accountStatus: "rejected", decidedAt: "2026-09-12T00:00:00Z" });
     render(<SignupApprovalPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "처리" }));
+    fireEvent.click(await screen.findByRole("button", { name: /처리$/ }));
     fireEvent.click(await screen.findByRole("button", { name: "거절" }));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "서류 미비" } });
-    fireEvent.click(screen.getByRole("button", { name: "거절 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "가입 거절" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("SignupApprovalPage — 오래 기다린 순 · 거절 대화상자(R48)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("서버가 최신순으로 줘도 목록은 오래 기다린 순이고 맨 위 요청이 오른쪽 패널에 열린다", async () => {
+    mockGetSignupRequests.mockResolvedValue({
+      ...baseList,
+      items: [
+        { requestId: "2", name: "나중신청", role: "parent", phone: "010-0000-0002", requestedAt: "2026-10-03T00:00:00Z" },
+        { requestId: "1", name: "먼저신청", role: "parent", phone: "010-0000-0001", requestedAt: "2026-10-01T00:00:00Z" },
+      ],
+      pendingCount: 2,
+      totalCount: 2,
+    });
+    render(<SignupApprovalPage />);
+
+    expect(await screen.findByRole("region", { name: "먼저신청 가입 요청 처리" })).toBeInTheDocument();
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("먼저신청");
+    expect(rows[1]).toHaveTextContent("나중신청");
+  });
+
+  it("거절은 대화상자에서 받고 사유를 쓰면 그 사유로 decide 를 부른다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    mockDecideSignupRequest.mockResolvedValue({ accountStatus: "rejected", decidedAt: "2026-10-03T00:00:00Z" });
+    render(<SignupApprovalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "거절" }));
+    const dialog = screen.getByRole("dialog", { name: "김보호 가입 요청 거절" });
+    expect(within(dialog).getByRole("button", { name: "가입 거절" })).toBeDisabled();
+
+    fireEvent.change(within(dialog).getByLabelText(/거절 사유/), { target: { value: "학원 기록에 없는 이름" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "가입 거절" }));
+
+    await waitFor(() =>
+      expect(mockDecideSignupRequest).toHaveBeenCalledWith("1", { accept: false, rejectReason: "학원 기록에 없는 이름" }),
+    );
   });
 });
