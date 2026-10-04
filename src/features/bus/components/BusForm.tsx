@@ -6,7 +6,7 @@ import { AlertBanner, Button, Dialog, Input, Switch } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { createBus, updateBus } from "../api";
 import type { BusItemResponseTypes } from "../types";
-import { StyledWarningList, StyledWarningNote } from "./BusList.styled";
+import { StyledFormStack, StyledWarningList, StyledWarningNote } from "./BusList.styled";
 
 const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
 
@@ -91,35 +91,38 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
         )
       }
     >
-      <Input label="호차" required value={busNo} onChange={(event) => setBusNo(event.target.value)} />
-      <Input label="차량번호" required value={plateNo} onChange={(event) => setPlateNo(event.target.value)} />
-      <Input
-        label="승차 정원"
-        required
-        type="number"
-        min={1}
-        hint={capacityHint}
-        value={capacity}
-        onChange={(event) => setCapacity(event.target.value)}
-      />
-      <Switch
-        label="운행 가능"
-        checked={operable}
-        onChange={(event) => setOperable(event.target.checked)}
-      />
-      {warnings.length > 0 ? (
-        <>
-          <AlertBanner tone="moving" title={`수정은 저장됐습니다 — 확인할 경고 ${warnings.length}건`}>
-            <StyledWarningList>
-              {warnings.map((message, index) => (
-                <li key={index}>{message}</li>
-              ))}
-            </StyledWarningList>
-          </AlertBanner>
-          <StyledWarningNote>경고는 저장을 막지 않습니다. 넘치는 회차는 운행 상세에서 학생을 다른 호차로 옮겨 정리합니다.</StyledWarningNote>
-        </>
-      ) : null}
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
+      <StyledFormStack>
+        <Input label="호차" required value={busNo} onChange={(event) => setBusNo(event.target.value)} />
+        <Input label="차량번호" required value={plateNo} onChange={(event) => setPlateNo(event.target.value)} />
+        <Input
+          label="승차 정원"
+          required
+          type="number"
+          min={1}
+          hint={capacityHint}
+          value={capacity}
+          onChange={(event) => setCapacity(event.target.value)}
+        />
+        <Switch
+          label="운행 가능"
+          checked={operable}
+          onChange={(event) => setOperable(event.target.checked)}
+        />
+        {warnings.length > 0 ? (
+          <>
+            <AlertBanner tone="moving" title={`수정은 저장됐습니다 — 확인할 경고 ${warnings.length}건`}>
+              <StyledWarningList>
+                {warnings.map((message, index) => (
+                  <li key={index}>{message}</li>
+                ))}
+              </StyledWarningList>
+            </AlertBanner>
+            <StyledWarningNote>경고는 저장을 막지 않습니다. 넘치는 회차는 운행 상세에서 학생을 다른 호차로 옮겨 정리합니다.</StyledWarningNote>
+          </>
+        ) : null}
+        {error ? <AlertBanner tone="missed" title={error} /> : null}
+    
+      </StyledFormStack>
     </Dialog>
   );
 };

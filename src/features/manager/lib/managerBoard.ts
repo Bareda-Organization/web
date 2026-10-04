@@ -70,6 +70,12 @@ const isWorkingAt = (manager: ManagerItemResponseTypes, departTime: string): boo
   return day !== undefined && (manager.workHours?.[day] ?? []).some((range) => range.start <= time && time <= range.end);
 };
 
+/** 그 날짜의 요일에 근무 시간이 있는가 — 오늘 배치가 없어도 쉬는 날이면 "채워야 할 사람" 이 아니다 */
+export const worksOn = (manager: ManagerItemResponseTypes, serviceDate: string): boolean => {
+  const day = weekdayKeyOf(`${serviceDate}T12:00:00+09:00`);
+  return day !== undefined && (manager.workHours?.[day]?.length ?? 0) > 0;
+};
+
 /** 기사 미배치 회차에 넣을 수 있는 기사 — 오늘 배치가 없고 그 시각이 근무 시간 안인 기사 */
 export const openDriverCandidates = (run: { departTime: string }, all: ManagerItemResponseTypes[], today: string): ManagerItemResponseTypes[] =>
   all.filter((manager) => manager.role === "driver" && assignmentsOn(manager, today).length === 0 && isWorkingAt(manager, run.departTime));

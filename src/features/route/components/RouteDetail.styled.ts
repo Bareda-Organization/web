@@ -5,7 +5,8 @@ export const StyledRouteDetailLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding: 24px;
+  /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
+  padding: 0 24px 24px;
 `;
 
 export const StyledRouteDetailActions = styled.div`

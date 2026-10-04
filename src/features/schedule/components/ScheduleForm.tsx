@@ -11,7 +11,7 @@ import { createSchedule, updateSchedule } from "../api";
 import type { RunItemResponseTypes, ScheduleDirection, ScheduleItemResponseTypes, ScheduleWeekday } from "../types";
 import { confirmTimeOf, formatDateWithWeekday, previewScheduleChange, WEEKDAY_LABEL } from "../lib/scheduleBoard";
 import { describeScheduleFailure } from "./describeScheduleFailure";
-import { StyledFormGrid, StyledPanelFootLeft, StyledPreviewRow, StyledPreviewSection } from "./ScheduleList.styled";
+import { StyledFormGrid, StyledFormStack, StyledPanelFootLeft, StyledPreviewRow, StyledPreviewSection } from "./ScheduleList.styled";
 
 type ScheduleFormProps = {
   /** 있으면 수정, 없으면 등록. */
@@ -179,15 +179,17 @@ export const ScheduleForm = ({ schedule, onClose, onDone, onDelete, onCopy, runs
           </>
         }
       >
-        {busSelect}
-        {weekdayField}
-        {directionSelect}
-        {departInput}
-        {originInput}
-        {destinationInput}
-        {durationInput}
-        {activeSwitch}
-        {errorBanner}
+        <StyledFormStack>
+          {busSelect}
+          {weekdayField}
+          {directionSelect}
+          {departInput}
+          {originInput}
+          {destinationInput}
+          {durationInput}
+          {activeSwitch}
+          {errorBanner}
+        </StyledFormStack>
       </Dialog>
     );
   }

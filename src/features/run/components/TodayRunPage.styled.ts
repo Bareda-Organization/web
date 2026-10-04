@@ -4,7 +4,8 @@ export const StyledTodayRunLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding: 24px;
+  /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
+  padding: 0 24px 24px;
 `;
 
 // 오늘 회차 카드 줄 — 6개가 한 줄에 놓이고 많으면 옆으로 스크롤한다.

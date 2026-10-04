@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ManagerItemResponseTypes } from "../types";
-import { formatWorkHours, openDriverCandidates, summarizeManagers } from "./managerBoard";
+import { formatWorkHours, openDriverCandidates, summarizeManagers, worksOn } from "./managerBoard";
 
 const TODAY = "2026-10-03"; // 토요일
 const m = (id: string, name: string, over: Partial<ManagerItemResponseTypes> = {}): ManagerItemResponseTypes => ({
@@ -55,5 +55,13 @@ describe("openDriverCandidates — 기사 미배치 회차에 넣을 수 있는 
       m("5", "강수정", { role: "escort", workHours: sat("10:00", "22:00") }),
     ];
     expect(openDriverCandidates(run, all, TODAY).map((x) => x.name)).toEqual(["문태호", "서진우"]);
+  });
+});
+
+describe("worksOn — 그 날 근무하는가", () => {
+  it("오늘(토) 근무 시간이 있으면 true, 다른 요일만 있으면 false", () => {
+    expect(worksOn(m("1", "a", { workHours: sat("10:00", "18:00") }), TODAY)).toBe(true);
+    expect(worksOn(m("2", "b", { workHours: { mon: [{ start: "10:00", end: "18:00" }] } }), TODAY)).toBe(false);
+    expect(worksOn(m("3", "c"), TODAY)).toBe(false);
   });
 });

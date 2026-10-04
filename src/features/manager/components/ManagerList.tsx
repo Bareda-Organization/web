@@ -12,10 +12,10 @@ import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { getManagers } from "../api";
 import type { ManagerListFilters } from "../api";
 import type { ManagerCountsTypes, ManagerItemResponseTypes, ManagerRole } from "../types";
-import { assignmentsOn, formatMonthDay, formatWorkHours, openDriverCandidates, summarizeManagers } from "../lib/managerBoard";
+import { assignmentsOn, formatMonthDay, formatWorkHours, openDriverCandidates, summarizeManagers, worksOn } from "../lib/managerBoard";
 import { ManagerDeleteDialog } from "./ManagerDeleteDialog";
 import { ManagerForm } from "./ManagerForm";
-import { StyledActionLink, StyledManagerLayout, StyledNameCell, StyledTodayCell, StyledUnassigned } from "./ManagerList.styled";
+import { StyledActionLink, StyledManagerLayout, StyledMutedCell, StyledNameCell, StyledTodayCell, StyledUnassigned } from "./ManagerList.styled";
 
 const PAGE_SIZE = 20;
 // ponytail: 지표 · 기사 미배치 후보는 매니저 100명까지의 전량 조회로 계산한다 — 한 학원 매니저가 그 위로 늘면 서버 집계 필드로 올린다.
@@ -175,8 +175,10 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
               <span key={line}>{line}</span>
             ))}
           </StyledTodayCell>
-        ) : (
+        ) : worksOn(row, today) ? (
           <StyledUnassigned>배치 없음</StyledUnassigned>
+        ) : (
+          <StyledMutedCell>배치 없음 · 오늘 쉬는 날</StyledMutedCell>
         );
       },
     },
@@ -348,7 +350,8 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
           emptyAction={filtered ? undefined : { label: "매니저 등록", onClick: () => setCreating(true) }}
           highlightedKey={highlightedKey}
           selectedKey={editingId ?? null}
-          rowTone={(row) => (todayLines(row, today).length === 0 && Boolean(row.workHours && Object.keys(row.workHours).length > 0) ? "warn" : undefined)}
+          // 오늘 근무하는데 배치가 없는 사람만 주의 행 — 쉬는 날인 사람은 채울 대상이 아니다.
+          rowTone={(row) => (todayLines(row, today).length === 0 && worksOn(row, today) ? "warn" : undefined)}
           columns={columns}
           loading={loading}
           rows={items}

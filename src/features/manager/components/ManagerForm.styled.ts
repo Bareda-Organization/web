@@ -110,3 +110,10 @@ export const StyledKvList = styled.dl`
     margin: 0;
   }
 `;
+
+// 대화상자 안 입력칸 묶음 — 공용 Dialog 본문은 칸 사이 간격이 없어 시안(칸 사이 16px)처럼 세로로 쌓는다.
+export const StyledFormStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+`;

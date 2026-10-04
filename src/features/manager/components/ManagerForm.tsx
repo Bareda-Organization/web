@@ -14,6 +14,7 @@ import {
   StyledAssignItem,
   StyledAssignRow,
   StyledAssignSection,
+  StyledFormStack,
   StyledPanelFooter,
   StyledPanelFootNote,
   StyledPanelGrid,
@@ -130,10 +131,12 @@ export const ManagerForm = ({ manager, onClose, onDone, onDelete, today = todayI
           </>
         }
       >
-        {nameAndPhone}
-        {roleSelect}
-        {hoursEditor}
-        {errorBanner}
+        <StyledFormStack>
+          {nameAndPhone}
+          {roleSelect}
+          {hoursEditor}
+          {errorBanner}
+        </StyledFormStack>
       </Dialog>
     );
   }

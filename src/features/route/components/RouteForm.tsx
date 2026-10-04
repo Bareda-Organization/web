@@ -9,7 +9,7 @@ import { AlertBanner, Button, Dialog, Input, Select, Switch, WeekdayPicker } fro
 import { createRoute, updateRoute } from "../api";
 import type { RouteSummaryTypes, RunDirection, Weekday } from "../types";
 import { describeRouteFailure, DUPLICATE_ROUTE_MESSAGE } from "./describeRouteFailure";
-import { StyledBatchHint } from "./RouteList.styled";
+import { StyledBatchHint, StyledFormStack } from "./RouteList.styled";
 
 type RouteFormProps = {
   /** 있으면 수정, 없으면 신규 편성. stop_ids 는 이 폼에서 다루지 않는다(RouteStopsPanel 몫). */
@@ -114,45 +114,48 @@ export const RouteForm = ({ route, onClose, onDone, onBatchDone, initial, existi
         </>
       }
     >
-      <Select
-        label="차량"
-        options={busOptions.options}
-        value={busId ?? ""}
-        onChange={(event) => setBusId(event.target.value)}
-      />
-      <BusOptionsNotice error={busOptions.error} hasMore={busOptions.hasMore} onRetry={busOptions.reload} />
-      {route ? (
+      <StyledFormStack>
         <Select
-          label="요일"
-          options={WEEKDAY_OPTIONS}
-          value={weekday}
-          onChange={(event) => setWeekday(event.target.value as Weekday)}
+          label="차량"
+          options={busOptions.options}
+          value={busId ?? ""}
+          onChange={(event) => setBusId(event.target.value)}
         />
-      ) : (
-        <>
-          <WeekdayPicker value={pickedWeekdays} onChange={setWeekdays} outcomes={outcomes} disabledWeekdays={takenWeekdays} />
-          <StyledBatchHint>
-            {takenWeekdays.length > 0 ? `이미 편성된 요일(${takenWeekdays.map((day) => WEEKDAY_LABEL[day]).join(" · ")})은 고를 수 없습니다. ` : ""}
-            {pickedWeekdays.length > 1
-              ? `여러 요일을 고르면 요일마다 1건씩 만듭니다 — ${pickedWeekdays.map((day) => WEEKDAY_LABEL[day]).join(" · ")} ${pickedWeekdays.length}건`
-              : "여러 요일을 고르면 요일마다 1건씩 만듭니다"}
-          </StyledBatchHint>
-        </>
-      )}
-      <Select
-        label="방향"
-        options={DIRECTION_OPTIONS}
-        value={direction}
-        onChange={(event) => setDirection(event.target.value as RunDirection)}
-      />
-      <Input label="편성 이름" maxLength={100} hint="비워 두면 이름 없이 만듭니다 · 최대 100자" value={name} onChange={(event) => setName(event.target.value)} />
-      <Switch checked={active} onChange={(event) => setActive(event.target.checked)} label="활성" />
-      {route ? null : (
-        <AlertBanner tone="info" title="정차지는 만든 뒤에 넣습니다">
-          요일 하나만 만들면 그 편성 상세로, 여러 개 만들면 요일표로 돌아옵니다. 같은 차량·요일·방향이 이미 있으면 그 요일만 표시하고 다시 시도하게 합니다.
-        </AlertBanner>
-      )}
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
+        <BusOptionsNotice error={busOptions.error} hasMore={busOptions.hasMore} onRetry={busOptions.reload} />
+        {route ? (
+          <Select
+            label="요일"
+            options={WEEKDAY_OPTIONS}
+            value={weekday}
+            onChange={(event) => setWeekday(event.target.value as Weekday)}
+          />
+        ) : (
+          <>
+            <WeekdayPicker value={pickedWeekdays} onChange={setWeekdays} outcomes={outcomes} disabledWeekdays={takenWeekdays} />
+            <StyledBatchHint>
+              {takenWeekdays.length > 0 ? `이미 편성된 요일(${takenWeekdays.map((day) => WEEKDAY_LABEL[day]).join(" · ")})은 고를 수 없습니다. ` : ""}
+              {pickedWeekdays.length > 1
+                ? `여러 요일을 고르면 요일마다 1건씩 만듭니다 — ${pickedWeekdays.map((day) => WEEKDAY_LABEL[day]).join(" · ")} ${pickedWeekdays.length}건`
+                : "여러 요일을 고르면 요일마다 1건씩 만듭니다"}
+            </StyledBatchHint>
+          </>
+        )}
+        <Select
+          label="방향"
+          options={DIRECTION_OPTIONS}
+          value={direction}
+          onChange={(event) => setDirection(event.target.value as RunDirection)}
+        />
+        <Input label="편성 이름" maxLength={100} hint="비워 두면 이름 없이 만듭니다 · 최대 100자" value={name} onChange={(event) => setName(event.target.value)} />
+        <Switch checked={active} onChange={(event) => setActive(event.target.checked)} label="활성" />
+        {route ? null : (
+          <AlertBanner tone="info" title="정차지는 만든 뒤에 넣습니다">
+            요일 하나만 만들면 그 편성 상세로, 여러 개 만들면 요일표로 돌아옵니다. 같은 차량·요일·방향이 이미 있으면 그 요일만 표시하고 다시 시도하게 합니다.
+          </AlertBanner>
+        )}
+        {error ? <AlertBanner tone="missed" title={error} /> : null}
+    
+      </StyledFormStack>
     </Dialog>
   );
 };

@@ -4,7 +4,8 @@ export const StyledScheduleLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px;
+  /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
+  padding: 0 24px 24px;
 `;
 
 export const StyledScheduleFilters = styled.div`
@@ -177,7 +178,7 @@ export const StyledWeekGrid = styled.table`
     text-align: center;
   }
   thead th:first-of-type {
-    width: 176px;
+    width: 280px;
     padding-left: 20px;
     text-align: left;
   }
@@ -302,4 +303,11 @@ export const StyledScheduleNote = styled.div`
   b {
     color: var(--text-primary);
   }
+`;
+
+// 대화상자 안 입력칸 묶음 — 공용 Dialog 본문은 칸 사이 간격이 없어 시안(칸 사이 16px)처럼 세로로 쌓는다.
+export const StyledFormStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
 `;

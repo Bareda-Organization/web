@@ -4,7 +4,8 @@ export const StyledRouteLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding: 24px;
+  /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
+  padding: 0 24px 24px;
 `;
 
 export const StyledBatchHint = styled.p`
@@ -165,4 +166,11 @@ export const StyledDeleteKv = styled.dl`
   dd {
     margin: 0;
   }
+`;
+
+// 대화상자 안 입력칸 묶음 — 공용 Dialog 본문은 칸 사이 간격이 없어 시안(칸 사이 16px)처럼 세로로 쌓는다.
+export const StyledFormStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
 `;
