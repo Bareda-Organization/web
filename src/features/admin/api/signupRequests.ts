@@ -25,6 +25,8 @@ type RawSignupRequestItem = {
   academy: RawAcademyRef;
   requested_at: string;
   academy_staff_count: number;
+  // §6.4 current_staff(Ruling 807) — 서버가 아직 안 주면 없다.
+  current_staff?: { name: string; login_id: string; last_login_at: string | null } | null;
 };
 
 type RawSignupRequestsResponse = {
@@ -42,6 +44,7 @@ const toSignupRequestItem = (raw: RawSignupRequestItem): StaffSignupRequestItemR
   academy: toAcademyRef(raw.academy),
   requestedAt: raw.requested_at,
   academyStaffCount: raw.academy_staff_count,
+  currentStaff: raw.current_staff ? { name: raw.current_staff.name, loginId: raw.current_staff.login_id, lastLoginAt: raw.current_staff.last_login_at } : null,
 });
 
 // GET /admin/staff-signup-requests (§6.4, O-02).

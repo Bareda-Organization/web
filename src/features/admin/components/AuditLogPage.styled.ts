@@ -4,7 +4,7 @@ export const StyledAuditLogLayout = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px;
+  padding: 0 var(--s5) var(--s5);
 `;
 
 export const StyledFilterRow = styled.div`
@@ -38,4 +38,42 @@ export const StyledActorSearchBox = styled.div`
   & > form {
     flex: 1;
   }
+`;
+
+// 조회 조건 묶음 — 연한 면 위에 줄을 두 개 쌓는다(기간 · 날짜 / 학원 · 행위자 · 동작 · 조회)
+export const StyledFilterPanel = styled.div`
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+`;
+
+export const StyledFilterHint = styled.span`
+  align-self: center;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;
+
+export const StyledTwoLine = styled.div`
+  display: grid;
+  gap: 2px;
+
+  b {
+    font-weight: var(--fw-bold);
+  }
+
+  small {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+  }
+`;
+
+export const StyledCellDot = styled.i<{ $color: string }>`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: ${({ $color }) => $color};
 `;

@@ -4,6 +4,15 @@ import type { RunAttentionResponseTypes } from "../types";
 
 type RawRunAttentionResponse = {
   items: { academy_id: string | number; delayed_runs: number; confirm_failed_runs: number }[];
+  today?: {
+    academy_id: string | number;
+    academy_name: string;
+    academy_status: "active" | "inactive";
+    run_count: number;
+    by_status: { idle: number; confirmed: number; moving: number; finished: number };
+    delayed_runs: number;
+    confirm_failed_runs: number;
+  }[];
 };
 
 // GET /admin/runs/attention (§6.15, O-05) — 학원별 오늘 지연·확정 실패 회차 수. 문제가 없는 학원은 목록에 없다.
@@ -16,5 +25,16 @@ export const getRunAttention = async (): Promise<RunAttentionResponseTypes> => {
       delayedRuns: item.delayed_runs,
       confirmFailedRuns: item.confirm_failed_runs,
     })),
+    today: raw.today
+      ? raw.today.map((item) => ({
+          academyId: asIdString(item.academy_id),
+          academyName: item.academy_name,
+          academyStatus: item.academy_status,
+          runCount: item.run_count,
+          byStatus: item.by_status,
+          delayedRuns: item.delayed_runs,
+          confirmFailedRuns: item.confirm_failed_runs,
+        }))
+      : null,
   };
 };

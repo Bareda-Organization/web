@@ -14,6 +14,10 @@ import type {
 
 type RawAuditLogItem = {
   actor: string;
+  // R48 Ruling 809 — 서버가 아직 안 주면 없다.
+  actor_name?: string | null;
+  detail_action?: string | null;
+  ip?: string | null;
   action: AuditAction;
   target_type: string;
   target_id: string | number;
@@ -31,6 +35,9 @@ type RawAuditLogsResponse = {
 
 const toAuditLogItem = (raw: RawAuditLogItem): AuditLogItemResponseTypes => ({
   actor: raw.actor,
+  actorName: raw.actor_name ?? null,
+  detailAction: raw.detail_action ?? null,
+  ip: raw.ip ?? null,
   action: raw.action,
   targetType: raw.target_type,
   targetId: asIdString(raw.target_id),

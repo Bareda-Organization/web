@@ -55,9 +55,28 @@ describe("BlockedAccountsPage — 해제 직후 사이드바 배지 갱신", () 
     mockUnblockAccount.mockResolvedValue({ accountStatus: "active", unblockedBy: "1", unblockedAt: "2026-09-12T00:00:00Z" });
     render(<BlockedAccountsPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "차단 해제" }));
+    fireEvent.click(await screen.findByRole("button", { name: "이관계 차단 해제" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "차단 해제" }));
 
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
+  });
+});
+
+// R48 시안 `blocked-accounts` — 상단 안내 띠(Ruling 328) · 빈 상태.
+describe("BlockedAccountsPage — 안내 띠와 빈 상태", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("해제는 로그인 차단만 푼다는 안내 띠를 목록 위에 둔다", async () => {
+    mockGetBlockedAccounts.mockResolvedValue({ items: [account], page: 0, size: 20, totalCount: 1, hasNext: false });
+    render(<BlockedAccountsPage />);
+
+    expect(await screen.findByText("해제는 로그인 차단만 풉니다 — 가입 승인을 대신하지 않습니다")).toBeInTheDocument();
+  });
+
+  it("차단 계정이 0건이면 빈 상태를 보인다", async () => {
+    mockGetBlockedAccounts.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false });
+    render(<BlockedAccountsPage />);
+
+    expect(await screen.findByText("차단된 계정이 없습니다")).toBeInTheDocument();
   });
 });

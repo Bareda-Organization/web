@@ -2,20 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSavedNotice } from "@/shared/hooks";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
+import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { ApiError } from "@/shared/lib/http";
 import type { RosterColumn } from "@/shared/types";
-import { AlertBanner, Badge, Button, Card, EmptyState, PageHeader, RosterTable } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatStrip, StatusChip } from "@/shared/ui";
+import { LinkButton } from "@/shared/ui/display";
 import { getStaleMovingRuns } from "../api";
+import { academyDotColor } from "../lib/relativeTime";
+import { serviceDateLabel } from "../lib/staleRuns";
 import type { StaleMovingRunItemResponseTypes } from "../types";
 import { ForceFinishDialog } from "./ForceFinishDialog";
-import { StyledForceConfirmLayout } from "./ForceConfirmPage.styled";
+import { StyledBandSlot, StyledBusCell, StyledForceConfirmLayout, StyledTwoLine } from "./ForceConfirmPage.styled";
+import { StyledAcademyDot, StyledActionPair, StyledAcademyName, StyledCardHeading } from "./StaleMovingRunsPage.styled";
 
 // §6.16 서버가 한 번에 주는 최대 건수 — 이만큼 오면 더 있을 수 있다(오래된 회차부터 자른다).
 const STALE_MOVING_RUN_LIMIT = 200;
 
 // §6.16·§6.17 끝나지 않은 이동 중 회차(Ruling 724). `StaleMovingRun` 경보가 세는 회차를 메인 관리자가 학원에 확인한 뒤 닫는다.
 // 목록은 서버가 운행일 오름차순으로 준다 — 오래된 회차부터 처리하고, 처리한 행은 다시 불러온 목록에서 사라진다.
+// R48 시안: 지표 3칸 · 처리 순서 안내 · 행마다 [학원에 전화](Ruling 808) → [강제 종료] 순서.
 export const StaleMovingRunsPage = () => {
   const [runs, setRuns] = useState<StaleMovingRunItemResponseTypes[]>([]);
   const [target, setTarget] = useState<StaleMovingRunItemResponseTypes | null>(null);
@@ -41,59 +46,152 @@ export const StaleMovingRunsPage = () => {
     })();
   }, [load]);
 
-  // 좁은 폭(1024px)에서 짧은 칸이 글자 단위로 줄바꿈되지 않게 방향·버스·버튼 칸에 폭을 준다. 종료 보류 표시는 탑승 중 칸에 함께 둔다.
+  const boardedTotal = runs.reduce((sum, run) => sum + run.boardedCount, 0);
+  const mostBoarded = [...runs].sort((a, b) => b.boardedCount - a.boardedCount)[0];
+  const oldest = runs[0]; // 서버가 운행일 오름차순으로 준다(§6.16)
+  const oldestLabel = oldest ? serviceDateLabel(oldest.serviceDate) : null;
+
   const columns: RosterColumn<StaleMovingRunItemResponseTypes>[] = [
-    { key: "academyName", label: "학원" },
-    { key: "serviceDate", label: "운행일", width: "112px" },
-    { key: "direction", label: "방향", width: "64px", render: (row) => (row.direction === "to_academy" ? "등원" : "하원") },
-    { key: "busNo", label: "버스", width: "80px" },
-    { key: "startedAt", label: "운행 시작", render: (row) => formatDateTime(row.startedAt) },
+    {
+      key: "academyName",
+      label: "학원",
+      render: (row) => (
+        <StyledAcademyName>
+          <StyledAcademyDot $color={academyDotColor(row.academyName)} aria-hidden="true" />
+          <b>{row.academyName}</b>
+          <small>{row.academyContact ?? "연락처 미등록"}</small>
+        </StyledAcademyName>
+      ),
+    },
+    {
+      key: "serviceDate",
+      label: "운행일",
+      render: (row) => {
+        const label = serviceDateLabel(row.serviceDate);
+        return (
+          <StyledTwoLine>
+            <span>{label.date}</span>
+            <small>{label.days}일째</small>
+          </StyledTwoLine>
+        );
+      },
+    },
+    {
+      key: "busNo",
+      label: "호차 · 방향",
+      render: (row) => (
+        <StyledBusCell>
+          <b>{row.busNo}</b>
+          <small>{row.direction === "to_academy" ? "등원" : "하원"}</small>
+        </StyledBusCell>
+      ),
+    },
+    { key: "startedAt", label: "운행 시작", render: (row) => (row.startedAt ? formatClockTime(row.startedAt) : "-") },
     {
       key: "boardedCount",
       label: "탑승 중",
-      width: "120px",
       render: (row) => (
         <>
-          {row.boardedCount > 0 ? <Badge tone="red">{row.boardedCount}명 미하차</Badge> : "없음"}
-          {row.finishPending ? <Badge tone="amber">종료 보류</Badge> : null}
+          {row.boardedCount > 0 ? <StatusChip tone="bad">{row.boardedCount}명 미하차</StatusChip> : <span style={{ color: "var(--text-secondary)" }}>없음</span>}
+          {row.finishPending ? (
+            <>
+              {" "}
+              <StatusChip tone="warn" marker={false}>
+                종료 보류
+              </StatusChip>
+            </>
+          ) : null}
         </>
       ),
     },
     {
       key: "action",
       label: "",
-      width: "144px",
+      align: "right",
       render: (row) => (
-        <Button variant="danger" onClick={() => setTarget(row)}>
-          강제 종료
-        </Button>
+        <StyledActionPair>
+          {row.academyContact ? (
+            <LinkButton href={`tel:${row.academyContact}`} aria-label={`${row.academyName} ${row.busNo} 학원에 전화`}>
+              학원에 전화
+            </LinkButton>
+          ) : null}
+          <Button variant="dangerQuiet" size="sm" aria-label={`${row.academyName} ${row.busNo} 강제 종료`} onClick={() => setTarget(row)}>
+            강제 종료
+          </Button>
+        </StyledActionPair>
       ),
     },
   ];
 
   return (
     <StyledForceConfirmLayout>
-      <PageHeader
-        title="끝나지 않은 회차"
-        description="운행일이 지났는데 이동 중으로 남은 회차입니다. 학원에 확인한 뒤 종료합니다"
-      />
+      <PageHeader style={{ marginBottom: 20 }} title="끝나지 않은 회차" description="운행일이 지났는데 ‘운행 중’으로 남은 회차 — 학원에 먼저 확인한 뒤 종료합니다" />
 
-      {notice ? <AlertBanner tone="boarded" title={notice} /> : null}
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
-      {runs.length >= STALE_MOVING_RUN_LIMIT ? (
-        <AlertBanner
-          tone="info"
-          title={`오래된 회차부터 ${STALE_MOVING_RUN_LIMIT}건만 표시합니다 — 처리하면 다음 회차가 올라옵니다`}
+      {notice ? (
+        <StyledBandSlot>
+          <AlertBanner tone="boarded" title={notice} />
+        </StyledBandSlot>
+      ) : null}
+      {error ? (
+        <StyledBandSlot>
+          <AlertBanner tone="missed" title={error} />
+        </StyledBandSlot>
+      ) : null}
+
+      {!error && !loading ? (
+        <StatStrip
+          items={[
+            { label: "끝나지 않은 회차", value: runs.length, unit: "건", tone: runs.length > 0 ? "warn" : "neutral", detail: "운행일이 이틀 이상 지난 ‘운행 중’" },
+            {
+              label: "하차 처리 안 된 탑승자",
+              value: boardedTotal,
+              unit: "명",
+              tone: boardedTotal > 0 ? "bad" : "neutral",
+              detail: mostBoarded && mostBoarded.boardedCount > 0 ? `${mostBoarded.academyName} ${mostBoarded.busNo} ${mostBoarded.direction === "to_academy" ? "등원" : "하원"}` : "남은 탑승자 없음",
+            },
+            {
+              label: "가장 오래된 회차",
+              value: oldestLabel ? oldestLabel.days : "—",
+              unit: oldestLabel ? "일째" : undefined,
+              detail: oldest && oldestLabel ? `${oldest.academyName} · ${oldestLabel.date}` : "해당 없음",
+            },
+          ]}
         />
       ) : null}
 
-      <Card padding={0} aria-busy={loading}>
-        {!loading && !error && runs.length === 0 ? (
-          <EmptyState icon="circle-check" title="끝나지 않은 회차가 없습니다" />
-        ) : (
-          <RosterTable hasError={Boolean(error)} onRetry={load} columns={columns} loading={loading} rows={runs} getRowKey={(row) => row.runId} />
-        )}
-      </Card>
+      <StyledBandSlot>
+        <AlertBanner tone="info" title="처리 순서 — ① 학원에 전화로 남은 탑승자 확인 → ② 강제 종료">
+          지난 운행이라 하차 시각을 만들 수 없어, 강제 종료는 탑승자 기록을 바꾸지 않고 학부모·관계자 알림도 보내지 않습니다. 회차만 닫습니다.
+        </AlertBanner>
+      </StyledBandSlot>
+
+      {runs.length >= STALE_MOVING_RUN_LIMIT ? (
+        <StyledBandSlot>
+          <AlertBanner tone="info" title={`오래된 회차부터 ${STALE_MOVING_RUN_LIMIT}건만 표시합니다 — 처리하면 다음 회차가 올라옵니다`} />
+        </StyledBandSlot>
+      ) : null}
+
+      {!loading && !error && runs.length === 0 ? (
+        <Card padding={0}>
+          <EmptyState icon="circle-check" title="끝나지 않은 회차가 없습니다">
+            운행일이 이틀 이상 지났는데 ‘운행 중’으로 남은 회차가 생기면 여기에 나타납니다.
+          </EmptyState>
+        </Card>
+      ) : (
+        <Card padding={0} aria-busy={loading}>
+          <StyledCardHeading>{error ? "끝나지 않은 회차" : `끝나지 않은 회차 ${runs.length}건`}</StyledCardHeading>
+          <RosterTable
+            hasError={Boolean(error)}
+            onRetry={load}
+            {...{ style: { background: "transparent", boxShadow: "none", borderRadius: 0 } }}
+            columns={columns}
+            loading={loading}
+            rows={runs}
+            getRowKey={(row) => row.runId}
+            rowTone={(row) => (row.boardedCount > 0 ? "warn" : undefined)}
+          />
+        </Card>
+      )}
 
       {target ? (
         <ForceFinishDialog

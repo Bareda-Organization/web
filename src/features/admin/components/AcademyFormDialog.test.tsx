@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AcademyFormDialog } from "./AcademyFormDialog";
 import { ApiError } from "@/shared/lib/http";
@@ -25,47 +25,53 @@ const DETAIL = {
   stats: { movingBusCount: 0 },
 };
 
-const openInactiveSave = async () => {
+// R48 Ruling 828 D5 — 운영 상태 스위치는 누르면 확인 대화상자가 먼저 뜬다(되돌릴 수 없는 1단계가 아니라 영향이 큰 동작이라서).
+// 확인하면 상태만 바로 저장하고(다른 입력칸의 미저장 수정은 건드리지 않는다) 옆 패널은 그대로 열어 둔다.
+const openInactiveConfirm = async () => {
   mockGet.mockResolvedValue(DETAIL);
   const onDone = vi.fn();
-  render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={onDone} />);
+  const onChanged = vi.fn();
+  render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={onDone} onChanged={onChanged} />);
   await screen.findByDisplayValue("바래다 학원");
-  fireEvent.click(screen.getByRole("tab", { name: "비활성" }));
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
-  return onDone;
+  fireEvent.click(screen.getByRole("checkbox", { name: /운영 중/ }));
+  return { onDone, onChanged };
 };
 
-// R32-W12 — 학원을 비활성으로 저장할 때 확인 없이 바로 저장돼 되돌릴 수 없는 실수가 났다(UF-O-04 는 확인 창을 요구).
-describe("AcademyFormDialog — 비활성 저장 전 확인(R32-W12)", () => {
+// R32-W12 — 학원을 비활성으로 바꿀 때 확인 없이 바로 저장돼 되돌릴 수 없는 실수가 났다(UF-O-04 는 확인 창을 요구).
+describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("활성 → 비활성으로 저장하면 소속 인원과 영향을 알리는 확인 창이 먼저 뜨고 요청은 나가지 않는다", async () => {
-    await openInactiveSave();
+  it("운영 중 → 비활성으로 스위치를 누르면 소속 인원과 영향을 알리는 확인 창이 먼저 뜨고 요청은 나가지 않는다", async () => {
+    await openInactiveConfirm();
 
-    expect(await screen.findByText(/소속 사용자 12명/)).toBeInTheDocument();
-    expect(screen.getByText(/신규 가입/)).toBeInTheDocument();
+    const confirm = await screen.findByRole("dialog", { name: "바래다 학원 비활성화" });
+    expect(within(confirm).getByText("12명 · 관계자 1명")).toBeInTheDocument();
+    expect(within(confirm).getByText(/신규 가입/)).toBeInTheDocument();
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("확인 창에서 취소하면 저장 요청이 나가지 않는다", async () => {
-    await openInactiveSave();
-    await screen.findByText(/소속 사용자 12명/);
+  it("확인 창에서 취소하면 요청이 나가지 않고 스위치는 운영 중 그대로다", async () => {
+    await openInactiveConfirm();
+    const confirm = await screen.findByRole("dialog", { name: "바래다 학원 비활성화" });
 
-    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    fireEvent.click(within(confirm).getByRole("button", { name: "취소" }));
 
     expect(mockUpdate).not.toHaveBeenCalled();
-    expect(screen.queryByText(/소속 사용자 12명/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "바래다 학원 비활성화" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /운영 중/ })).toBeChecked();
   });
 
-  it("확인 창에서 확인하면 비활성으로 저장한다", async () => {
+  it("확인 창에서 '학원 비활성화' 를 누르면 상태만 비활성으로 저장하고 옆 패널은 열어 둔다", async () => {
     mockUpdate.mockResolvedValue(undefined as never);
-    const onDone = await openInactiveSave();
-    await screen.findByText(/소속 사용자 12명/);
+    const { onDone, onChanged } = await openInactiveConfirm();
+    const confirm = await screen.findByRole("dialog", { name: "바래다 학원 비활성화" });
 
-    fireEvent.click(screen.getByRole("button", { name: "비활성으로 저장" }));
+    fireEvent.click(within(confirm).getByRole("button", { name: "학원 비활성화" }));
 
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("3", expect.objectContaining({ status: "inactive" })));
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("3", { status: "inactive" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(onDone).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("바래다 학원")).toBeInTheDocument();
   });
 
   it("상태를 바꾸지 않은 수정은 확인 창 없이 바로 저장한다", async () => {
@@ -85,7 +91,7 @@ describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
   afterEach(() => vi.clearAllMocks());
 
   it.each([
-    [422, "ADDRESS_VERIFICATION_FAILED", "주소를 확인하지 못했습니다. 주소를 다시 확인해 주세요"],
+    [422, "ADDRESS_VERIFICATION_FAILED", "주소를 확인하지 못했습니다. 도로명 주소를 다시 확인해 주세요"],
     [503, "ADDRESS_VERIFICATION_UNAVAILABLE", "주소 확인 서비스에 연결하지 못했습니다. 잠시 뒤 다시 저장해 주세요"],
   ])("%s %s 는 서버 원문이 아니라 쉬운 한국어 문구로 알리고 닫지 않는다", async (status, code, message) => {
     mockCreate.mockRejectedValue(new ApiError(status, code, "서버 원문"));
@@ -104,7 +110,7 @@ describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
   it("메모 입력칸은 200자까지만 받는다", () => {
     render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
 
-    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
+    expect(screen.getByLabelText("내부 메모")).toHaveAttribute("maxlength", "200");
   });
 });
 
@@ -175,18 +181,16 @@ describe("AcademyFormDialog — 주소 없는 옛 학원의 상태 변경(Ruling
   it("주소 없이 저장된 학원을 비활성으로 바꾸면 주소를 넣지 않아도 저장되고 요청에 address 키가 없다", async () => {
     mockGet.mockResolvedValue({ ...DETAIL, address: null });
     mockUpdate.mockResolvedValue(undefined as never);
-    const onDone = vi.fn();
-    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={onDone} />);
+    const onChanged = vi.fn();
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} onChanged={onChanged} />);
     await screen.findByDisplayValue("바래다 학원");
 
-    fireEvent.click(screen.getByRole("tab", { name: "비활성" }));
-    expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    fireEvent.click(await screen.findByRole("button", { name: "비활성으로 저장" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /운영 중/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "학원 비활성화" }));
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
     expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("address", expect.anything());
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
   it("상태를 바꾸지 않은 수정은 주소가 없으면 여전히 저장할 수 없다", async () => {

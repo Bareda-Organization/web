@@ -183,7 +183,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
       capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:01Z" }));
     });
 
-    await screen.findByText("수신 2026-09-13 09:00");
+    await screen.findByText("위치 수신 09:00");
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore);
   });
 
@@ -381,8 +381,8 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     });
     render(<MonitoringPage />);
 
-    expect(await screen.findByText("수신 2026-09-30 14:10")).toBeInTheDocument();
-    expect(screen.getByText("2026-09-30 14:11")).toBeInTheDocument();
+    expect(await screen.findByText("위치 수신 14:10")).toBeInTheDocument();
+    expect(screen.getByText("마지막 수신 14:11")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-30T/)).not.toBeInTheDocument();
   });
 
@@ -571,8 +571,8 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
     });
     render(<MonitoringPage />);
 
-    const first = await screen.findByRole("button", { name: /1호차/ });
-    const second = await screen.findByRole("button", { name: /2호차/ });
+    const first = await screen.findByRole("button", { name: /1호차 · 등원/ });
+    const second = await screen.findByRole("button", { name: /2호차 · 등원/ });
     expect(first).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(first);
@@ -592,13 +592,13 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
     });
     render(<MonitoringPage />);
 
-    // 같은 라벨이 우측 목록 카드와 아래 회차 표(RosterTable)에 중복돼 뜬다 — 목록
-    // 카드(버튼)로 좁혀 그 안의 태그만 비교한다.
-    const idleCard = await screen.findByRole("button", { name: /5호차/ });
-    const confirmedCard = await screen.findByRole("button", { name: /6호차/ });
-    const idlePill = within(idleCard).getByText("대기");
-    const confirmedPill = within(confirmedCard).getByText("확정");
-    expect(idlePill.className).not.toBe(confirmedPill.className);
+    // R48 — 상태 칩은 클래스가 아니라 의미 이름(data-tone)으로 가른다. 같은 회차 행 안의 칩끼리 비교한다.
+    const idleRow = (await screen.findByRole("button", { name: /5호차 · 등원/ })).closest("tr") as HTMLElement;
+    const confirmedRow = (await screen.findByRole("button", { name: /6호차 · 등원/ })).closest("tr") as HTMLElement;
+    const idleChip = within(idleRow).getByText("운행 전").closest("[data-tone]");
+    const confirmedChip = within(confirmedRow).getByText("확정").closest("[data-tone]");
+    expect(idleChip?.getAttribute("data-tone")).toBe("wait");
+    expect(confirmedChip?.getAttribute("data-tone")).toBe("conf");
   });
 });
 
@@ -627,13 +627,13 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     // ⚠ 상태 문구("대기"·"종료")는 아래 표에도 나오므로 화면 전체에서 찾으면 중복이다.
     // 목록 항목은 버튼이라 그 이름(버스 번호)으로 좁혀 각 버튼 안의 상태를 읽는다.
     const expected: Array<[string, string]> = [
-      ["1호차", "대기"],
+      ["1호차", "운행 전"],
       ["2호차", "확정"],
-      ["3호차", "이동 중"],
+      ["3호차", "운행 중"],
       ["4호차", "종료"],
     ];
     for (const [busNo, label] of expected) {
-      const item = await screen.findByRole("button", { name: new RegExp(busNo) });
+      const item = (await screen.findByRole("button", { name: new RegExp(`${busNo} · 등원`) })).closest("tr") as HTMLElement;
       expect(item).toHaveTextContent(label);
     }
   });
@@ -644,7 +644,7 @@ describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
     });
     render(<MonitoringPage />);
 
-    const item = await screen.findByRole("button", { name: /9호차/ });
+    const item = (await screen.findByRole("button", { name: /9호차 · 등원/ })).closest("tr") as HTMLElement;
     expect(item).toHaveTextContent("종료");
     expect(screen.queryByText("표시할 버스가 없습니다")).not.toBeInTheDocument();
   });
@@ -902,14 +902,14 @@ describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09
     render(<MonitoringPage />);
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("1"));
 
-    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
-    expect(await screen.findByText("B학원 버스")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /둘째 학원/ }));
+    expect(await screen.findByText(/B학원 버스/)).toBeInTheDocument();
     await act(async () => {
       resolveA({ runs: [{ ...baseLiveRun, runId: "10", busNo: "A학원 버스" }] });
     });
 
-    expect(screen.getByText("B학원 버스")).toBeInTheDocument();
-    expect(screen.queryByText("A학원 버스")).not.toBeInTheDocument();
+    expect(screen.getByText(/B학원 버스/)).toBeInTheDocument();
+    expect(screen.queryByText(/A학원 버스/)).not.toBeInTheDocument();
   });
 
   it("버스 1 의 노선 응답이 버스 2 뒤에 도착해도 지도에는 버스 2 의 경로를 그린다", async () => {
@@ -963,9 +963,9 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
     });
     render(<MonitoringPage />);
 
-    expect(await screen.findByRole("button", { name: "송파학원 비상 2건" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /강동학원 비상/ })).not.toBeInTheDocument(); // 확인된 건은 세지 않는다
-    expect(screen.getByRole("option", { name: "송파학원 (서울) · 비상 2건" })).toBeInTheDocument();
+    // R48 — 요약 띠가 학원 레일의 칩으로 옮겨졌다(문제 있는 곳이 맨 앞).
+    expect(await screen.findByRole("button", { name: /송파학원.*비상 2건/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /강동학원.*비상/ })).not.toBeInTheDocument(); // 확인된 건은 세지 않는다
     expect(mockGetEmergencies).toHaveBeenCalledWith("open");
   });
 
@@ -973,7 +973,7 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
     mockGetEmergencies.mockResolvedValue({ items: [emergency("1", "2", "송파학원")], unackedCount: 1 });
     render(<MonitoringPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "송파학원 비상 1건" }));
+    fireEvent.click(await screen.findByRole("button", { name: /송파학원.*비상 1건/ }));
 
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenLastCalledWith("2"));
   });
@@ -982,8 +982,9 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
     mockGetEmergencies.mockResolvedValue({ items: [], unackedCount: 0 });
     render(<MonitoringPage />);
 
-    await screen.findByRole("option", { name: "강동학원 (서울)" });
+    await screen.findByRole("button", { name: /강동학원/ });
     expect(screen.queryByText(/미확인 비상이 있는 학원/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/비상 \d+건/)).not.toBeInTheDocument();
   });
 });
 
@@ -1011,16 +1012,17 @@ describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT �
     });
     render(<MonitoringPage />);
 
-    expect(await screen.findByRole("button", { name: "송파학원 지연 1건 · 확정 실패 2건" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "강동학원 확정 실패 3건" })).toBeInTheDocument(); // 0 인 쪽은 적지 않는다
-    expect(screen.getByRole("option", { name: "송파학원 (서울) · 지연 1건 · 확정 실패 2건" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /송파학원.*확정 실패 2건.*지연 1/ })).toBeInTheDocument();
+    const gangdong = screen.getByRole("button", { name: /강동학원.*확정 실패 3건/ });
+    expect(gangdong).toBeInTheDocument();
+    expect(gangdong).not.toHaveTextContent("지연"); // 0 인 쪽은 적지 않는다
   });
 
   it("요약의 학원 버튼을 누르면 그 학원의 회차로 바뀐다", async () => {
     mockGetRunAttention.mockResolvedValue({ items: [{ academyId: "2", delayedRuns: 1, confirmFailedRuns: 0 }] });
     render(<MonitoringPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "송파학원 지연 1건" }));
+    fireEvent.click(await screen.findByRole("button", { name: /송파학원.*지연 1/ }));
 
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenLastCalledWith("2"));
   });
@@ -1032,26 +1034,26 @@ describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT �
       runs: [{ ...baseLiveRun, position: { lat: 37.5, lng: 127.1, receivedAt: "2026-10-03T00:00:00Z" } }],
     });
     render(<MonitoringPage />);
-    const summaryButton = await screen.findByRole("button", { name: "강동학원 지연 1건" });
+    const summaryButton = await screen.findByRole("button", { name: /강동학원.*지연 1/ });
     await waitFor(() => expect(mockMapSurface.mock.calls.at(-1)?.[0].markers).toHaveLength(1));
 
     fireEvent.click(summaryButton);
     fireEvent.click(summaryButton);
 
-    expect(within(screen.getByRole("table")).getByText("1호차")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText(/1호차 · 등원/)).toBeInTheDocument();
     expect(mockMapSurface.mock.calls.at(-1)?.[0].markers).toHaveLength(1);
   });
 
   it("문제가 없으면 요약을 그리지 않고, 집계를 못 받아도 관제 화면은 그대로 뜬다", async () => {
     mockGetRunAttention.mockResolvedValue({ items: [] });
     const { unmount } = render(<MonitoringPage />);
-    await screen.findByRole("option", { name: "강동학원 (서울)" });
+    await screen.findByRole("button", { name: /강동학원/ });
     expect(screen.queryByText(/지연·확정 실패가 있는 학원/)).not.toBeInTheDocument();
     unmount();
 
     mockGetRunAttention.mockRejectedValue(new Error("network"));
     render(<MonitoringPage />);
-    expect(await screen.findByRole("option", { name: "강동학원 (서울)" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /강동학원/ })).toBeInTheDocument();
   });
 });
 
@@ -1105,8 +1107,8 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
   };
 
   it.each([
-    ["학원 선택 상자", () => fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } })],
-    ["지연·확정 실패 요약 버튼", async () => fireEvent.click(await screen.findByRole("button", { name: "송파학원 지연 1건" }))],
+    ["학원 레일", () => fireEvent.click(screen.getByRole("button", { name: /송파학원/ }))],
+    ["지연·확정 실패 요약 버튼", async () => fireEvent.click(await screen.findByRole("button", { name: /송파학원.*지연 1/ }))],
   ])("%s 경로로 학원을 바꾸면 옛 노선과 선택이 사라지고 새 학원 버스가 지도에 나온다", async (_path, switchAcademy) => {
     await selectFirstAcademyBus();
 
@@ -1122,7 +1124,7 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
   it("지금 보고 있는 학원의 요약 버튼을 다시 눌러도 고른 버스와 노선은 그대로다", async () => {
     await selectFirstAcademyBus();
 
-    fireEvent.click(await screen.findByRole("button", { name: "강동학원 지연 1건" }));
+    fireEvent.click(await screen.findByRole("button", { name: /강동학원.*지연 1/ }));
 
     expect(lastMapProps().polylines?.length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /강동1호차 · 등원/ })).toHaveAttribute("aria-pressed", "true");
@@ -1155,7 +1157,7 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
     fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
     expect(await screen.findByText(notice)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: /송파학원/ }));
 
     await screen.findByRole("button", { name: /송파1호차 · 등원/ });
     expect(screen.queryByText(notice)).not.toBeInTheDocument();
@@ -1167,7 +1169,7 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
     fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
     expect(await screen.findByText("노선을 불러오지 못했습니다")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: /송파학원/ }));
 
     await screen.findByRole("button", { name: /송파1호차 · 등원/ });
     expect(screen.queryByText("노선을 불러오지 못했습니다")).not.toBeInTheDocument();
@@ -1178,7 +1180,7 @@ describe("MonitoringPage — 버스를 고른 채 학원을 바꾸면 선택과 
     mockGetRunRoute.mockReturnValue(new Promise((resolve) => (resolveRoute = resolve)));
     render(<MonitoringPage />);
     fireEvent.click(await screen.findByRole("button", { name: /강동1호차 · 등원/ }));
-    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: /송파학원/ }));
     await screen.findByRole("button", { name: /송파1호차 · 등원/ });
 
     await act(async () => resolveRoute(route));

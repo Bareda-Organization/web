@@ -70,21 +70,21 @@ describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
     expect(screen.getByText(/비우면 종료일.*30일/)).toBeInTheDocument();
   });
 
-  it("시작일을 비우는 버튼은 '전체 기간' 이 아니라 '최근 30일' 이라 부른다", async () => {
+  it("시작일을 비우는 기간 칩은 '전체 기간' 이 아니라 '30일' 이라 부른다", async () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
-    expect(screen.getByRole("button", { name: "최근 30일 보기" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "전체 기간 보기" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "30일" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "전체 기간" })).not.toBeInTheDocument();
   });
 
-  it("'최근 30일 보기'를 누르면 from 이 비워진 채로 재조회한다", async () => {
+  it("기간 칩 '30일' 을 누르면 from 이 비워진 채로 재조회한다", async () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
     await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole("button", { name: "최근 30일 보기" }));
+    fireEvent.click(screen.getByRole("tab", { name: "30일" }));
     fireEvent.click(screen.getByRole("button", { name: "조회" }));
 
     await waitFor(() =>
@@ -117,7 +117,7 @@ describe("AuditLogPage — 시각 표기(R32-W9)", () => {
     } as never);
     render(<AuditLogPage />);
 
-    expect(await screen.findByText("2026-09-12 17:00")).toBeInTheDocument();
+    expect(await screen.findByText("9/12 17:00")).toBeInTheDocument();
     expect(screen.queryByText(/2026-09-12T/)).not.toBeInTheDocument();
   });
 });
@@ -186,7 +186,7 @@ describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R4
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
-    fireEvent.change(screen.getByLabelText("동작"), { target: { value: "update" } });
+    fireEvent.click(screen.getByRole("tab", { name: "수정" }));
     fireEvent.click(screen.getByRole("button", { name: "조회" }));
 
     await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ action: "update" })));
@@ -200,6 +200,61 @@ describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R4
     fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
 
     await waitFor(() => expect(mockGetLoginHistory).toHaveBeenCalled());
-    expect(screen.queryByLabelText("동작")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "수정" })).not.toBeInTheDocument();
+  });
+});
+
+// R48 Ruling 809 — 감사 로그에 행위자 이름 · 동작 구별(강제 확정 등) · 접속 IP 가 실린다. 개인정보 조회가 아닌 운영 조작은 대상에 한글 문구로 덧붙는다.
+describe("AuditLogPage — 행위자 이름 · 대상 · IP(Ruling 809)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const auditItem = (patch: Record<string, unknown>) => ({
+    actor: "staffA",
+    actorName: "박지현",
+    detailAction: null,
+    ip: "211.234.10.21",
+    action: "read",
+    targetType: "student",
+    targetId: "39",
+    academyName: "하늘수학",
+    occurredAt: "2026-09-12T08:00:00Z",
+    ...patch,
+  });
+
+  it("행위자는 이름 아래 아이디, 대상은 한글 종류와 #id, 강제 확정은 괄호 문구, IP 는 별도 칸이다", async () => {
+    mockGetAuditLogs.mockResolvedValue({
+      ...emptyResponse,
+      items: [auditItem({}), auditItem({ actor: "sysadmin", actorName: "관리자", action: "update", targetType: "run", targetId: "66", detailAction: "run.force_confirm", ip: "121.168.3.17" })],
+      totalCount: 2,
+    } as never);
+    render(<AuditLogPage />);
+
+    expect(await screen.findByText("박지현")).toBeInTheDocument();
+    expect(screen.getByText("staffA")).toBeInTheDocument();
+    expect(screen.getByText("학생 #39")).toBeInTheDocument();
+    expect(screen.getByText("회차 #66 (강제 확정)")).toBeInTheDocument();
+    expect(screen.getByText("211.234.10.21")).toBeInTheDocument();
+    expect(screen.getByText("121.168.3.17")).toBeInTheDocument();
+  });
+
+  it("서버가 새 필드를 안 주면(null) 행위자는 아이디만, IP 는 –", async () => {
+    mockGetAuditLogs.mockResolvedValue({ ...emptyResponse, items: [auditItem({ actorName: null, ip: null })], totalCount: 1 } as never);
+    render(<AuditLogPage />);
+
+    expect(await screen.findByText("staffA")).toBeInTheDocument();
+    expect(screen.queryByText("박지현")).not.toBeInTheDocument();
+    expect(screen.getAllByText("–").length).toBeGreaterThan(0);
+  });
+
+  it("기간 칩 7일 은 6일 전부터를 요청에 싣는다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("tab", { name: "7일" }));
+    fireEvent.click(screen.getByRole("button", { name: "조회" }));
+
+    const sixDaysAgo = new Date(Date.parse(todayInSeoul()) - 6 * 86_400_000).toISOString().slice(0, 10);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ from: sixDaysAgo })));
   });
 });

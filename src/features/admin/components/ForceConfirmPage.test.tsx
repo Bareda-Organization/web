@@ -1,7 +1,7 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ForceConfirmPage } from "./ForceConfirmPage";
-import { getAcademyRunsLive, getAllAcademies } from "../api";
+import { getAcademyRunsLive, getAllAcademies, getRunAttention } from "../api";
 import type { RunLiveItemResponseTypes } from "../types";
 
 // W4 — 확정이 계속 실패하는 회차를 강제 확정 대상 목록에서 바로 알아본다
@@ -10,10 +10,14 @@ import type { RunLiveItemResponseTypes } from "../types";
 vi.mock("../api", () => ({
   getAllAcademies: vi.fn(),
   getAcademyRunsLive: vi.fn(),
+  getRunAttention: vi.fn(),
 }));
 
 const mockGetAcademies = vi.mocked(getAllAcademies);
 const mockGetRunsLive = vi.mocked(getAcademyRunsLive);
+const mockGetAttention = vi.mocked(getRunAttention);
+
+beforeEach(() => mockGetAttention.mockResolvedValue({ items: [] }));
 
 const baseRun: RunLiveItemResponseTypes = {
   runId: "42",
@@ -64,14 +68,14 @@ describe("ForceConfirmPage — 학원 선택 목록은 전체 학원", () => {
 
     render(<ForceConfirmPage />);
 
-    expect(await screen.findByRole("option", { name: "학원25 (서울)" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /학원25/ })).toBeInTheDocument();
   });
 });
 
 // F03-11 — "확정 예정" 열은 출발 예정 시각(est_depart_time)도 출발 시각도 아니라 확정 판정 시각(confirm_at =
 // 출발−30분)이어야 한다(Ruling 393). 세 시각이 서로 다른 값이어야 어느 필드를 읽는지 갈린다.
 describe("ForceConfirmPage — 열 이름", () => {
-  it("'확정 예정' 열이 confirm_at 값을 보여 주고 출발 시각·출발 예정(추정)과 따로 있다", async () => {
+  it("'확정 예정' 열이 confirm_at 값을 보여 주고 출발 시각과 따로 있으며, 출발 예정(추정)은 확정 예정으로 읽히지 않는다", async () => {
     mockGetAcademies.mockResolvedValue([{ id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const }]);
     mockGetRunsLive.mockResolvedValue({
       runs: [{
@@ -84,12 +88,12 @@ describe("ForceConfirmPage — 열 이름", () => {
 
     render(<ForceConfirmPage />);
 
-    expect(await screen.findByText("출발 시각")).toBeInTheDocument();
-    expect(screen.getByText("출발 예정(추정)")).toBeInTheDocument();
+    const row = (await screen.findByText("701호")).closest("tr") as HTMLElement;
+    expect(screen.getByText("출발 시각")).toBeInTheDocument();
     expect(screen.getByText("확정 예정")).toBeInTheDocument();
-    expect(screen.getByText("2026-09-30 07:30")).toBeInTheDocument();
-    expect(screen.getByText("2026-09-30 08:00")).toBeInTheDocument();
-    expect(screen.getByText("2026-09-30 08:05")).toBeInTheDocument();
+    expect(within(row).getByText("07:30")).toBeInTheDocument(); // 확정 예정 = confirm_at
+    expect(within(row).getByText("08:00")).toBeInTheDocument(); // 출발 시각
+    expect(within(row).queryByText("08:05")).not.toBeInTheDocument(); // est_depart_time 은 확정 예정이 아니다(Ruling 393)
   });
 });
 
@@ -107,7 +111,7 @@ describe("ForceConfirmPage — 늦은 응답이 새 학원 선택을 덮지 않�
     render(<ForceConfirmPage />);
     await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("1"));
 
-    fireEvent.change(screen.getByLabelText("학원"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("tab", { name: /나 학원/ }));
     expect(await screen.findByText("B학원 버스")).toBeInTheDocument();
     await act(async () => {
       resolveA({ runs: [{ ...baseRun, runId: "10", busNo: "A학원 버스" }] });
@@ -115,5 +119,63 @@ describe("ForceConfirmPage — 늦은 응답이 새 학원 선택을 덮지 않�
 
     expect(screen.queryByText("A학원 버스")).not.toBeInTheDocument();
     expect(screen.getByText("B학원 버스")).toBeInTheDocument();
+  });
+});
+
+// R48 시안 `force-confirm` — 확정 예정 시각(confirm_at)이 지난 회차만 강제 확정 대상이고, 아직이면 단추가 꺼진 채 "HH:mm 부터 가능"(U-03).
+describe("ForceConfirmPage — 대상과 대기 두 묶음(U-03)", () => {
+  const academy = { id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
+
+  it("confirm_at 이 지난 회차는 강제 확정 단추가 켜지고, 아직인 회차는 '부터 가능' 꺼진 단추다", async () => {
+    mockGetAcademies.mockResolvedValue([academy]);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [
+        { ...baseRun, runId: "1", busNo: "지난호", confirmAt: "2020-01-01T07:30:00+09:00", departTime: "2020-01-01T08:00:00+09:00", consecutiveFailures: 3 },
+        { ...baseRun, runId: "2", busNo: "앞날호", confirmAt: "2099-01-01T14:23:00+09:00", departTime: "2099-01-01T14:53:00+09:00" },
+      ],
+    });
+    render(<ForceConfirmPage />);
+
+    const due = await screen.findByRole("button", { name: "지난호 강제 확정" });
+    expect(due).toBeEnabled();
+    const waiting = screen.getByRole("button", { name: "앞날호 강제 확정 — 14:23 부터 가능" });
+    expect(waiting).toBeDisabled();
+    expect(waiting).toHaveTextContent("14:23 부터 가능");
+    expect(screen.getByText("강제 확정 대상")).toBeInTheDocument();
+    expect(screen.getByText("확정 예정 전 대기 회차")).toBeInTheDocument();
+  });
+
+  it("확정이 연속 실패한 대상이 있으면 상단 띠가 그 회차와 실패 횟수를 알린다", async () => {
+    mockGetAcademies.mockResolvedValue([academy]);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseRun, busNo: "2호차", direction: "from_academy", confirmAt: "2020-01-01T07:30:00+09:00", departTime: "2020-01-01T08:00:00+09:00", consecutiveFailures: 3 }],
+    });
+    render(<ForceConfirmPage />);
+
+    expect(await screen.findByText(/확정이 3회 연속 실패한 회차 1건/)).toBeInTheDocument();
+  });
+
+  it("학원 칩에 확정 실패 회차 수를 붙인다(§6.15)", async () => {
+    mockGetAcademies.mockResolvedValue([academy]);
+    mockGetAttention.mockResolvedValue({ items: [{ academyId: "1", delayedRuns: 0, confirmFailedRuns: 2 }] });
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<ForceConfirmPage />);
+
+    expect(await screen.findByRole("tab", { name: "테스트 학원 · 실패 2" })).toBeInTheDocument();
+  });
+});
+
+describe("ForceConfirmPage — 처음 고르는 학원", () => {
+  it("목록 맨 앞이 비활성 학원이어도 첫 운영 중 학원의 회차부터 읽는다", async () => {
+    const base = { code: "C", region: "서울", staffCount: 1, userCount: 1 };
+    mockGetAcademies.mockResolvedValue([
+      { id: "1", name: "비활성 학원", status: "inactive" as const, ...base },
+      { id: "2", name: "운영 학원", status: "active" as const, ...base },
+    ]);
+    mockGetRunsLive.mockResolvedValue({ runs: [] });
+    render(<ForceConfirmPage />);
+
+    await waitFor(() => expect(mockGetRunsLive).toHaveBeenCalledWith("2"));
+    expect(mockGetRunsLive).not.toHaveBeenCalledWith("1");
   });
 });
