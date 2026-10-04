@@ -60,7 +60,7 @@ export const DashboardPage = () => {
         </StyledBannerSlot>
       ) : null}
 
-      <FilterBar>
+      <FilterBar style={{ marginBottom: 16 }}>
         <FilterGroup label="기간">
           <SegmentedControl options={DAYS_OPTIONS} value={String(days)} onChange={(value) => setDays(Number(value) as DashboardDays)} aria-label="기간" />
         </FilterGroup>

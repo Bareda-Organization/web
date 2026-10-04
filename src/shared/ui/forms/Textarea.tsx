@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { StyledCounter, StyledHint, StyledHintAlone, StyledHintRow, StyledLabel, StyledTextarea, StyledWrap } from "./Textarea.styled";
+import { StyledCounter, StyledHint, StyledHintAlone, StyledHintRow, StyledLabel, StyledLabelRow, StyledRequiredMark, StyledTextarea, StyledWrap } from "./Textarea.styled";
 
 export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: string;
@@ -9,7 +9,7 @@ export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & 
   wrapStyle?: React.CSSProperties;
 };
 
-/** 여러 줄 입력 — 학생 특이사항, 도착 지연 사유에 씁니다. `maxLength` 를 주면 `0 / 200` 글자 수가 아래에 붙는다. */
+/** 여러 줄 입력 — 학생 특이사항, 도착 지연 사유에 씁니다. `maxLength` 를 주면 `0 / 200` 글자 수가 아래에 붙는다. `required` 를 주면 라벨 옆에 `*` 가 붙는다(보조기기는 칸의 필수 속성으로 읽고 `*` 는 건너뛴다). */
 export const Textarea = ({ label, hint, rows = 4, wrapStyle, maxLength, onChange, id, "aria-describedby": describedBy, ...rest }: TextareaProps) => {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -21,7 +21,13 @@ export const Textarea = ({ label, hint, rows = 4, wrapStyle, maxLength, onChange
 
   return (
     <StyledWrap style={wrapStyle}>
-      {label ? <StyledLabel htmlFor={fieldId}>{label}</StyledLabel> : null}
+      {label ? (
+        // `*` 를 라벨 안에 넣으면 라벨 글자가 "사유*" 가 되어 칸을 이름으로 찾는 곳이 깨진다 — 라벨 바깥 같은 줄에 둔다.
+        <StyledLabelRow>
+          <StyledLabel htmlFor={fieldId}>{label}</StyledLabel>
+          {rest.required ? <StyledRequiredMark aria-hidden="true">*</StyledRequiredMark> : null}
+        </StyledLabelRow>
+      ) : null}
       <StyledTextarea
         id={fieldId}
         rows={rows}

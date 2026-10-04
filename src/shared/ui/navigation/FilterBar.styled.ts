@@ -5,7 +5,7 @@ export const StyledFilterBar = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 10px 22px;
-  margin-bottom: var(--s4);
+  /* 아래 간격은 쓰는 화면의 레이아웃(gap · 위아래 여백)이 쥔다 — 여기서도 주면 두 여백이 겹쳐 시안(16px)보다 벌어진다 */
 `;
 
 export const StyledFilterGroup = styled.div`

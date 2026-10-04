@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 export const StyledNotificationLayout = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--s4);
   /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
   padding: 0 24px 24px;
 `;

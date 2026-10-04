@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 export const StyledScheduleLayout = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--s4);
   /* 위쪽은 PageHeader 가 26px 을 이미 준다 — 여기서 또 주면 시안보다 제목이 26px 내려간다 */
   padding: 0 24px 24px;
 `;
@@ -20,7 +20,7 @@ export const StyledScheduleFilters = styled.div`
 export const StyledScheduleSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--s4);
 `;
 
 // 정규 스케줄 구역의 건수 · [스케줄 등록] 줄 — 화면 제목은 ScheduleScreen 이 이미 쥐고 있어 이 구역은 제목 없이 도구 줄만 둔다.

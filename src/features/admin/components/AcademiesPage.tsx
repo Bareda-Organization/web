@@ -227,7 +227,7 @@ export const AcademiesPage = () => {
 
       <Tabs items={tabs} value={statusFilter} onChange={setStatusFilter} aria-label="운영 상태" />
 
-      <FilterBar style={{ marginTop: 16 }} summary={error ? undefined : `총 ${totalCount}개 학원 · 최근 등록 순`}>
+      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 학원 · 최근 등록 순`}>
         <SearchField
           placeholder="학원명 · 코드로 검색"
           value={query}

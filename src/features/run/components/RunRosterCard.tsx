@@ -114,7 +114,7 @@ export const RunRosterCard = ({
         <p>{isIdle ? "정차지 순" : "정차지 순 · 위쪽이 이미 지난 정차지"}</p>
         <SearchField value={query} onChange={(event) => setQuery(event.target.value)} onSubmit={setQuery} placeholder="학생 이름 검색" aria-label="학생 이름 검색" />
       </StyledRosterCardHead>
-      <FilterBar>
+      <FilterBar style={{ marginBottom: 16 }}>
         <FilterGroup label="상태">
           <SegmentedControl aria-label="상태 필터" options={statusOptions} value={statusFilter} onChange={(value) => onStatusFilterChange(value as RosterStatusFilter)} />
         </FilterGroup>

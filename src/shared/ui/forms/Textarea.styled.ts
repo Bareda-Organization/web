@@ -12,6 +12,18 @@ export const StyledLabel = styled.label`
   color: var(--text-primary);
 `;
 
+// 라벨과 필수 표시(`*`)를 한 줄에 둔다 — 입력 칸(`Input`)의 필수 표시와 같은 색.
+export const StyledLabelRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+`;
+
+export const StyledRequiredMark = styled.span`
+  color: var(--t-bad);
+  font: var(--fw-medium) var(--fs-sm) / 1.4 var(--font-sans);
+`;
+
 export const StyledTextarea = styled.textarea`
   width: 100%;
   min-height: 88px;

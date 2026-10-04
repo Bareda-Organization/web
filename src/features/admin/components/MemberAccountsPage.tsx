@@ -144,7 +144,7 @@ export const MemberAccountsPage = () => {
 
       <Tabs items={tabs} value={statusTab} onChange={(value) => setStatusTab(value as StaffAccountStatus)} aria-label="재직 상태" />
 
-      <FilterBar style={{ marginTop: 16 }} summary={error ? undefined : `총 ${totalCount}개 계정`}>
+      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 계정`}>
         <SearchField
           placeholder="이름 · 아이디로 검색"
           value={query}
