@@ -38,6 +38,12 @@ const makeRun = (runId: string, busNo: string): DashboardRunResponseTypes => ({
   ackDriver: false,
   ackEscort: false,
   noShowCases: [],
+  driverPhone: null,
+  escortPhone: null,
+  noShowCount: 0,
+  absentCount: 0,
+  delayMinutes: null,
+  lastDelayNotice: null,
 });
 
 const fromRun = makeRun("7", "2호차");

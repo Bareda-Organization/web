@@ -6,6 +6,15 @@ type RawNoShowCase = {
   student_name: string;
   stop_name: string;
   expires_at: string;
+  call_attempts?: number;
+  last_contact_result?: "answered" | "no_answer" | null;
+};
+
+type RawDelayNotice = {
+  minutes: number;
+  reason?: string | null;
+  sent_at: string;
+  recipient_count?: number;
 };
 
 type RawDashboardRun = {
@@ -26,6 +35,13 @@ type RawDashboardRun = {
   ack_driver: boolean;
   ack_escort: boolean;
   no_show_cases: RawNoShowCase[];
+  // Ruling 810 — 서버가 아직 안 주는 동안은 키가 없을 수 있다.
+  driver_phone?: string | null;
+  escort_phone?: string | null;
+  no_show_count?: number;
+  absent_count?: number;
+  delay_minutes?: number | null;
+  last_delay_notice?: RawDelayNotice | null;
 };
 
 type RawDashboard = {
@@ -43,6 +59,8 @@ const toNoShowCase = (raw: RawNoShowCase): NoShowCaseResponseTypes => ({
   studentName: raw.student_name,
   stopName: raw.stop_name,
   expiresAt: raw.expires_at,
+  callAttempts: raw.call_attempts ?? 0,
+  lastContactResult: raw.last_contact_result ?? null,
 });
 
 const toDashboardRun = (raw: RawDashboardRun): DashboardRunResponseTypes => ({
@@ -63,6 +81,19 @@ const toDashboardRun = (raw: RawDashboardRun): DashboardRunResponseTypes => ({
   ackDriver: raw.ack_driver,
   ackEscort: raw.ack_escort,
   noShowCases: raw.no_show_cases.map(toNoShowCase),
+  driverPhone: raw.driver_phone ?? null,
+  escortPhone: raw.escort_phone ?? null,
+  noShowCount: raw.no_show_count ?? raw.no_show_cases.length,
+  absentCount: raw.absent_count ?? 0,
+  delayMinutes: raw.delay_minutes ?? null,
+  lastDelayNotice: raw.last_delay_notice
+    ? {
+        minutes: raw.last_delay_notice.minutes,
+        reason: raw.last_delay_notice.reason ?? null,
+        sentAt: raw.last_delay_notice.sent_at,
+        recipientCount: raw.last_delay_notice.recipient_count ?? 0,
+      }
+    : null,
 });
 
 // GET /staff/dashboard (§5.3, MON-01~04·06, A-03). `date` 를 안 주면 서버가 오늘 기준으로 답한다.

@@ -12,8 +12,9 @@ import {
   type WebSocketEnvelope,
 } from "@/shared/lib/ws";
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { AlertBanner, Button, Card, PageHeader, RosterTable, StatCard, StatusPill, Switch } from "@/shared/ui";
-import type { RosterColumn } from "@/shared/types";
+import { AlertBanner, Button, EmptyState, PageHeader, SkeletonGroup, Skeleton, StatStrip } from "@/shared/ui";
+import type { StatStripItem } from "@/shared/ui";
+import { formatDateTime, formatHeaderDate } from "@/shared/lib/format/dateTime";
 import {
   MapSurface,
   anchorForSelection,
@@ -25,25 +26,31 @@ import {
   type MapPolyline,
 } from "@/features/map";
 import { getRunRoute } from "@/features/route";
-import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
+import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunsLive } from "../api";
-import type { DashboardRunResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
-import { RouteAckMark } from "./RouteAckMark";
+import type { DashboardRunResponseTypes, RunLiveItemResponseTypes } from "../types";
+import { sumRiders, splitRiders } from "../lib/runBoard";
+import { DashboardActionsCard, type PendingApprovals } from "./DashboardActionsCard";
+import { DashboardRunsCard } from "./DashboardRunsCard";
+import { RiderSplitBar, RiderSplitLegend } from "./RiderSplitBar";
 import {
+  StyledBoardCard,
+  StyledBoardCardBody,
+  StyledBoardCardHead,
+  StyledBoardRow,
   StyledDashboardLayout,
-  StyledStatGrid,
-  StyledMapTopRow,
-  StyledMapPane,
   StyledFallbackNotice,
+  StyledFootnote,
+  StyledLiveLines,
+  StyledLiveStatus,
   StyledMapOverlayNotice,
-  StyledBusListPane,
-  StyledBusListEmpty,
-  StyledBusListItem,
-  StyledBusListItemHeader,
-  StyledBusListItemMeta,
+  StyledMapPane,
   StyledMapSurface,
+  StyledMapTab,
+  StyledMapTabs,
+  StyledRunRiderBlock,
+  StyledSegmentBar,
 } from "./DashboardPage.styled";
-import { formatDateTime } from "@/shared/lib/format/dateTime";
 
 // §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다(판단 근거, 보고서 §1).
 const LIVE_POLL_INTERVAL_MS = 7000;
@@ -54,27 +61,6 @@ const EVENT_REFRESH_DEBOUNCE_MS = 300;
 // 아니게 한다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3 이 못박은 표기 그대로 — idle(대기)·confirmed(확정)·
-// moving(운행 중)·finished(운행 종료). `finished` 도 이 목록에서 걸러내지 않는다
-// (사용자 확정 — "운행종료 버스도 목록에 남긴다").
-const RUN_STATUS_LABEL: Record<RunStatus, string> = {
-  idle: "대기",
-  confirmed: "확정",
-  moving: "운행 중",
-  finished: "운행 종료",
-};
-
-// R20-C 목표 2 — 확정·대기가 같은 색이었다(둘 다 "idle" 톤, 사용자 지적). `StatusPill`
-// 의 색 4종(그린·앰버·레드·스톤, C-09)은 고정이라 새로 만들 수 없어 남은 한 톤인
-// "missed"(레드)를 확정에 배정한다 — 라벨은 `RUN_STATUS_LABEL`("확정")로 덮어써
-// "미탑승"으로 읽히지 않는다.
-const RUN_STATUS_TO_PILL: Record<RunStatus, "boarded" | "moving" | "missed" | "idle"> = {
-  idle: "idle",
-  confirmed: "missed",
-  moving: "moving",
-  finished: "boarded",
-};
-
 const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = {
   to_academy: "등원",
   from_academy: "하원",
@@ -83,8 +69,13 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 // §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-04) — 관계자 웹
 // 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
 // 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
-// `pendingSlot` — 처리 대기·기한 임박 카드 자리. `run` 이 `approval` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
-export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }) => {
+// `pendingSlot` — 시작 체크리스트 같은 위쪽 안내 자리. `approvals` — 처리 대기 건수(승인 대기 제공자의 값).
+// `run` 이 `approval`·`onboarding` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
+const NO_APPROVALS: PendingApprovals = { signupCount: 0, changeCount: 0, nextDeadlineAt: null, isReady: false };
+
+const mockableConnectionLabel = (state: string): string => (state === "connected" ? "실시간 연결" : "주기 갱신 중");
+
+export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendingSlot?: React.ReactNode; approvals?: PendingApprovals }) => {
   const router = useRouter();
   const { session } = useAuthSession();
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getDashboard>>["metrics"] | null>(null);
@@ -92,6 +83,8 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // "지금" — 응답을 받을 때마다 갱신한다(7초 주기). 시간표의 지금 선 · 미승차 남은 분이 이 값을 쓴다.
+  const [nowMs, setNowMs] = useState(() => Date.now());
   // B1 #26 — 기본은 오늘 회차 전부(종료 회차를 남긴다는 사용자 결정). 켜면 확정·운행 중 회차만 표에 남긴다.
   const [activeOnly, setActiveOnly] = useState(false);
   // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
@@ -173,6 +166,7 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
       if (mine !== dashboardSeq.current) return true;
       setMetrics(data.metrics);
       setRuns(data.runs);
+      setNowMs(Date.now());
       setError(null);
       return true;
     } catch (cause) {
@@ -339,7 +333,7 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
     },
     [scheduleRefresh],
   );
-  useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+  const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
   // 연결 끊김 안내는 이 화면이 아니라 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 모든 화면에서 한 번만 띄운다(R46-FIXCONN C-12).
   // `liveRuns` 는 REST 폴링(7초)이 WS 와 무관하게 계속 채우므로 WS 가 끊겨도 "오늘 등록된 회차가 없습니다" 는 여전히 사실이다.
 
@@ -363,218 +357,278 @@ export const DashboardPage = ({ pendingSlot }: { pendingSlot?: React.ReactNode }
     return results.every(Boolean);
   }, LIVE_POLL_INTERVAL_MS);
 
-  const noShowRuns = runs.filter((run) => run.noShowCases.length > 0);
-  // 확정(출발 30분 전부터)·운행 중이 "곧 출발·운행 중" 이다. 대기(idle)는 아직 확정 전이라 뺀다.
-  const tableRuns = activeOnly ? runs.filter((run) => run.runStatus === "confirmed" || run.runStatus === "moving") : runs;
+  const toAcademyRuns = runs.filter((run) => run.direction === "to_academy");
+  const fromAcademyRuns = runs.filter((run) => run.direction === "from_academy");
+  const toAcademyRiders = sumRiders(toAcademyRuns);
+  const lastPositionAt = liveRuns.reduce<string | null>(
+    (latest, run) => (run.position && (latest === null || run.position.recordedAt > latest) ? run.position.recordedAt : latest),
+    null,
+  );
 
-  const columns: RosterColumn<DashboardRunResponseTypes>[] = [
-    { key: "busNo", label: "버스" },
-    { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
+  const runCount = (status: DashboardRunResponseTypes["runStatus"]) => runs.filter((run) => run.runStatus === status).length;
+  const firstNoShow = runs.find((run) => run.noShowCases.length > 0);
+  const firstGap = runs.find((run) => run.runStatus !== "finished" && (run.driverName === null || run.escortName === null));
+  const boardedPercent = toAcademyRiders.total === 0 ? 0 : Math.round((toAcademyRiders.boarded / toAcademyRiders.total) * 100);
+
+  const statItems: StatStripItem[] = [
     {
-      key: "runStatus",
-      label: "상태",
-      render: (row) => (
-        <StatusPill status={RUN_STATUS_TO_PILL[row.runStatus]}>{RUN_STATUS_LABEL[row.runStatus]}</StatusPill>
-      ),
-    },
-    {
-      key: "driverName",
-      label: "기사",
-      render: (row) => (
+      label: "오늘 운행",
+      value: runs.length,
+      unit: "회",
+      detail: (
         <>
-          {row.driverName ?? "미배치"} <RouteAckMark name={row.driverName} acked={row.ackDriver} runStatus={row.runStatus} />
+          운행 중 {runCount("moving")}대 · 종료 {runCount("finished")}
+          <br />
+          확정 {runCount("confirmed")} · 운행 전 {runCount("idle")}
+          <StyledSegmentBar role="img" aria-label={`종료 ${runCount("finished")} · 운행 중 ${runCount("moving")} · 확정 ${runCount("confirmed")} · 운행 전 ${runCount("idle")}`}>
+            {(
+              [
+                ["finished", "var(--c-end)"],
+                ["moving", "var(--c-move)"],
+                ["confirmed", "var(--c-conf)"],
+                ["idle", "var(--green-300)"],
+              ] as const
+            )
+              .filter(([status]) => runCount(status) > 0)
+              .map(([status, color]) => (
+                <span key={status} style={{ flex: runCount(status), background: color }} />
+              ))}
+          </StyledSegmentBar>
         </>
       ),
     },
     {
-      key: "escortName",
-      label: "동승 매니저",
-      render: (row) => (
+      label: "탑승 완료",
+      value: metrics?.boarded ?? "-",
+      unit: "명",
+      detail: (
         <>
-          {row.escortName ?? "미배치"} <RouteAckMark name={row.escortName} acked={row.ackEscort} runStatus={row.runStatus} />
+          등원 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
+          <StyledSegmentBar role="img" aria-label={`등원 대상 ${toAcademyRiders.total}명 중 ${boardedPercent}% 탑승`}>
+            <span style={{ flex: boardedPercent, background: "var(--c-conf)" }} />
+            <span style={{ flex: 100 - boardedPercent, background: "var(--border-subtle)" }} />
+          </StyledSegmentBar>
         </>
       ),
     },
     {
-      // R21-B 목표 1·3·4 — 예정 출발은 항상 있고, 실제 출발은 회차가 실제로 출발한
-      // 뒤에만 채워진다(§5.3 startedAt). 초까지 보여 달라는 지시라 `formatClockTime`
-      // (시:분)이 아니라 `formatClockTimeWithSeconds` 를 쓴다.
-      key: "departTime",
-      label: "출발",
-      render: (row) => (
-        <>
-          예정 {formatClockTimeWithSeconds(row.departTime)}
-          {row.startedAt ? (
-            <>
-              <br />
-              실제 {formatClockTimeWithSeconds(row.startedAt)}
-            </>
-          ) : null}
-        </>
-      ),
+      label: "미승차",
+      value: metrics?.noShow ?? "-",
+      unit: "명",
+      tone: "bad",
+      detail: firstNoShow
+        ? `${firstNoShow.busNo} ${DIRECTION_LABEL[firstNoShow.direction]} · ${firstNoShow.noShowCases[0].stopName} 통과 후 승차하지 않음`
+        : "정차지를 지나고도 타지 않은 학생",
     },
+    { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 미리 끈 학생 명단에서 제외" },
     {
-      // R21-B2 목표 1·2 — 출발 컬럼과 대칭으로 예정/실제를 함께 보여준다. 예정 도착은
-      // §5.3 est_arrival_time(depart_time + est_duration_min) — 회차에 소요 시간
-      // 추정치가 없으면 서버가 null 을 주므로 "-"로 견딘다(그 이유는 여기서 알 수
-      // 없어 값만 비운다, 보고서 §2).
-      key: "finishedAt",
-      label: "도착",
-      render: (row) => (
-        <>
-          예정 {row.estArrivalTime ? formatClockTimeWithSeconds(row.estArrivalTime) : "-"}
-          {row.finishedAt ? (
-            <>
-              <br />
-              실제 {formatClockTimeWithSeconds(row.finishedAt)}
-            </>
-          ) : null}
-        </>
-      ),
-    },
-    { key: "boardedCount", label: "탑승", render: (row) => `${row.boardedCount}/${row.totalCount}` },
-    {
-      key: "changes",
-      label: "변경",
-      render: (row) =>
-        row.addedCount || row.removedCount ? `+${row.addedCount} / -${row.removedCount}` : "-",
+      label: "배치 없는 매니저",
+      value: metrics?.unassignedManagers ?? "-",
+      unit: "명",
+      detail: firstGap ? `${firstGap.busNo} ${DIRECTION_LABEL[firstGap.direction]}은 ${firstGap.driverName === null ? "기사도" : "동승 매니저도"} 미배치` : "오늘 회차에 배치되지 않은 매니저",
     },
   ];
 
+  const handleRetry = () => {
+    setLoading(true);
+    void loadDashboard();
+  };
+
   return (
     <StyledDashboardLayout>
-      <PageHeader title="운행 관리" description="오늘 회차의 운행 현황을 한눈에 확인합니다" />
+      <PageHeader
+        title="오늘 현황"
+        description={`${formatHeaderDate()} · ${session?.academy?.name ?? ""} — 지금 급한 것부터, 오늘 운행 순서대로`}
+        actions={
+          <StyledLiveStatus>
+            {formatClockTime(new Date(nowMs).toISOString())} 기준 · {mockableConnectionLabel(connectionState)}
+          </StyledLiveStatus>
+        }
+      />
 
       {pendingSlot}
 
-      {error ? <AlertBanner tone="missed" title={error} /> : null}
-
-      {approvalRequests.length > 0 ? (
-        <AlertBanner
-          tone="missed"
-          title={
-            approvalRequests.length === 1
-              ? `탑승 승인 요청 — ${approvalRequests[0].label}`
-              : `탑승 승인 요청 ${approvalRequests.length}건 — ${approvalRequests[approvalRequests.length - 1].label} 외`
-          }
-          action={
-            <>
-              <Button size="sm" variant="secondary" onClick={() => router.push("/change-approval")}>
-                승인 화면으로
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setApprovalRequests([])}>
-                닫기
-              </Button>
-            </>
-          }
-        />
-      ) : null}
-
-      {noShowRuns.length > 0 ? (
-        <AlertBanner
-          tone="missed"
-          title={`미탑승 확인 대기 ${noShowRuns.reduce((sum, run) => sum + run.noShowCases.length, 0)}건`}
-          action={noShowRuns.map((run) => (
-            <Button key={run.runId} size="sm" variant="secondary" onClick={() => router.push(`/today-run?runId=${run.runId}`)}>
-              {run.busNo} 확인하러 가기
-            </Button>
-          ))}
-        />
-      ) : null}
-
-      <StyledStatGrid aria-busy={loading}>
-        <StatCard label="운행 중 버스" value={metrics?.movingBuses ?? "-"} unit="대" icon="bus" tone="moving" />
-        <StatCard label="탑승 완료" value={metrics?.boarded ?? "-"} unit="명" icon="check" tone="boarded" />
-        <StatCard label="미탑승" value={metrics?.noShow ?? "-"} unit="명" icon="alert-triangle" tone="missed" />
-        <StatCard label="결석" value={metrics?.absent ?? "-"} unit="명" icon="user-x" />
-        <StatCard label="오늘 배치 없는 매니저" value={metrics?.unassignedManagers ?? "-"} unit="명" icon="user-round-x" />
-      </StyledStatGrid>
-
-      <StyledMapTopRow>
-        <StyledMapPane>
-          <StyledMapSurface>
-            <MapSurface
-              camera={mapCamera}
-              markers={mapMarkersWithStops}
-              onMarkerClick={handleSelectMarker}
-              polylines={routePolylines}
-              onAuthFailed={(exception) =>
-                setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+      {error && runs.length === 0 ? (
+        <StyledBoardCard>
+          <EmptyState
+            icon="cloud-off"
+            tone="bad"
+            title="오늘 현황을 불러오지 못했습니다"
+            action={
+              <>
+                <Button icon="refresh-cw" onClick={handleRetry}>
+                  다시 시도
+                </Button>
+                <Button variant="secondary" onClick={() => router.push("/emergency")}>
+                  비상 알림 보기
+                </Button>
+              </>
+            }
+          >
+            <span role="alert">{error}</span> 잠시 뒤 다시 시도해 주세요. 다시 시도해도 안 되면 학원 운영 담당에게 알려 주세요. 급한 일이 있으면 비상 알림에서 바로 확인할 수 있습니다.
+          </EmptyState>
+        </StyledBoardCard>
+      ) : (
+        <>
+          {approvalRequests.length > 0 ? (
+            <AlertBanner
+              tone="missed"
+              title={
+                approvalRequests.length === 1
+                  ? `탑승 승인 요청 — ${approvalRequests[0].label}`
+                  : `탑승 승인 요청 ${approvalRequests.length}건 — ${approvalRequests[approvalRequests.length - 1].label} 외`
+              }
+              action={
+                <>
+                  <Button size="sm" variant="secondary" onClick={() => router.push("/change-approval")}>
+                    승인 화면으로
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setApprovalRequests([])}>
+                    닫기
+                  </Button>
+                </>
               }
             />
-            {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). 예전엔
-                지도 밖 아래 작은 글자라 못 보고 "길이 아닌 곳을 지난다"로 오인했다
-                (사용자 지적). 선 자체도 대시로 그려진다(routeColor.ts).
-                Ruling 321 — 예정 경로도 같은 자리에서 "확정된 경로"로 오인하지
-                않도록 알린다. 근사·예정이 겹칠 수 있어 문구를 같이 붙인다. */}
-            {routeFallback || routePlanned ? (
-              <StyledMapOverlayNotice>
-                {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </StyledMapOverlayNotice>
-            ) : null}
-          </StyledMapSurface>
-          {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
-          {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
-          {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도
-              없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
-          {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
-          {routeNoPlannedRoute ? (
-            <StyledFallbackNotice>
-              이 회차의 고정 노선이 없습니다 — <Link href="/route">고정 노선 편성에서 등록하세요</Link>
-            </StyledFallbackNotice>
           ) : null}
-        </StyledMapPane>
 
-        <StyledBusListPane>
-          <p>버스 현황</p>
-          {runs.length === 0 ? (
-            <StyledBusListEmpty>오늘 등록된 회차가 없습니다</StyledBusListEmpty>
+          {loading && runs.length === 0 ? (
+            <SkeletonGroup aria-label="오늘 현황을 불러오는 중">
+              <Skeleton variant="chart" />
+            </SkeletonGroup>
           ) : (
-            runs.map((run) => {
-              const live = liveByRunId.get(run.runId);
-              return (
-                <StyledBusListItem
-                  key={run.runId}
-                  type="button"
-                  $active={run.runId === selectedRunId}
-                  aria-pressed={run.runId === selectedRunId}
-                  onClick={() => handleSelectBus(run.runId)}
-                >
-                  <StyledBusListItemHeader>
-                    <span>
-                      {run.busNo} · {DIRECTION_LABEL[run.direction]}
-                    </span>
-                    <StatusPill status={RUN_STATUS_TO_PILL[run.runStatus]}>{RUN_STATUS_LABEL[run.runStatus]}</StatusPill>
-                  </StyledBusListItemHeader>
-                  {run.runStatus === "moving" ? (
-                    <StyledBusListItemMeta>
-                      {live?.position
-                        ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}`
-                        : live?.lastSeenAt
-                          ? `최근 확인 ${formatDateTime(live.lastSeenAt)}`
-                          : "위치 확인 대기"}
-                    </StyledBusListItemMeta>
-                  ) : null}
-                </StyledBusListItem>
-              );
-            })
+            <StatStrip aria-busy={loading} items={statItems} />
           )}
-        </StyledBusListPane>
-      </StyledMapTopRow>
 
-      <Switch label="운행 중·곧 출발만" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} />
-      <Card padding={0}>
-        <RosterTable hasError={Boolean(error)}
-          columns={columns}
-          loading={loading}
-          rows={tableRuns}
-          emptyMessage={activeOnly ? "운행 중이거나 곧 출발하는 회차가 없습니다" : undefined}
-          getRowKey={(row) => row.runId}
-          onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}
-        />
-      </Card>
+          <StyledBoardRow>
+            <DashboardRunsCard
+              runs={runs}
+              loading={loading}
+              hasError={Boolean(error)}
+              nowMs={nowMs}
+              activeOnly={activeOnly}
+              onActiveOnlyChange={setActiveOnly}
+            />
+            <DashboardActionsCard runs={runs} unassignedManagers={metrics?.unassignedManagers ?? 0} approvals={approvals} nowMs={nowMs} />
+          </StyledBoardRow>
+
+          <StyledBoardRow>
+            <StyledBoardCard aria-label="실시간 버스">
+              <StyledBoardCardHead>
+                <h2>실시간 버스</h2>
+                <p>마지막 수신 {lastPositionAt ? formatClockTimeWithSeconds(lastPositionAt) : "-"}</p>
+                <StyledMapTabs style={{ marginLeft: "auto" }}>
+                  <StyledMapTab type="button" $active={selectedRunId === null} aria-pressed={selectedRunId === null} onClick={() => selectedRunId !== null && handleSelectBus(selectedRunId)}>
+                    전체
+                  </StyledMapTab>
+                  {runs.map((run) => (
+                    <StyledMapTab
+                      key={run.runId}
+                      type="button"
+                      $active={run.runId === selectedRunId}
+                      aria-pressed={run.runId === selectedRunId}
+                      onClick={() => handleSelectBus(run.runId)}
+                    >
+                      {run.busNo} {DIRECTION_LABEL[run.direction]}
+                    </StyledMapTab>
+                  ))}
+                </StyledMapTabs>
+              </StyledBoardCardHead>
+              <StyledMapPane>
+                <StyledMapSurface>
+                  <MapSurface
+                    camera={mapCamera}
+                    markers={mapMarkersWithStops}
+                    onMarkerClick={handleSelectMarker}
+                    polylines={routePolylines}
+                    onAuthFailed={(exception) =>
+                      setMapError(exception instanceof Error ? exception.message : "알 수 없는 인증 오류")
+                    }
+                  />
+                  {/* R20-C 목표 5 — 근사 경로 안내를 지도 안으로 올린다(Ruling 309). Ruling 321 — 예정 경로도 "확정된 경로" 로 오인하지 않게 알린다. */}
+                  {routeFallback || routePlanned ? (
+                    <StyledMapOverlayNotice>
+                      {[routePlanned ? "예정 경로 — 확정 시 달라질 수 있음" : null, routeFallback ? "근사 경로" : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </StyledMapOverlayNotice>
+                  ) : null}
+                </StyledMapSurface>
+                {/* 운행 중 회차의 현재 → 다음 정차지(§5.18). 위치를 아직 못 받았으면 최근 확인 시각 · 대기 문구로 말한다. */}
+                {runs.some((run) => run.runStatus === "moving") ? (
+                  <StyledLiveLines aria-label="운행 중인 버스 위치">
+                    {runs
+                      .filter((run) => run.runStatus === "moving")
+                      .map((run) => {
+                        const live = liveByRunId.get(run.runId);
+                        return (
+                          <li key={run.runId}>
+                            <b>
+                              {run.busNo} {DIRECTION_LABEL[run.direction]}
+                            </b>
+                            <span>
+                              {live?.position
+                                ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}`
+                                : live?.lastSeenAt
+                                  ? `최근 확인 ${formatDateTime(live.lastSeenAt)}`
+                                  : "위치 확인 대기"}
+                            </span>
+                          </li>
+                        );
+                      })}
+                  </StyledLiveLines>
+                ) : null}
+                {mapError ? <AlertBanner tone="missed" title="지도를 불러오지 못했습니다">{mapError}</AlertBanner> : null}
+                {routeError ? <AlertBanner tone="missed" title={routeError} /> : null}
+                {/* R20-C 목표 4 — "확정됐는데 경로가 없음"(데이터 결손)과 "예정 경로도 없음"(고정 노선 자체가 없음, 정상)을 다른 문구로 가른다(Ruling 321). */}
+                {routeMissing ? <StyledFallbackNotice>확정됐지만 경로 정보가 아직 없습니다</StyledFallbackNotice> : null}
+                {routeNoPlannedRoute ? (
+                  <StyledFallbackNotice>
+                    이 회차의 고정 노선이 없습니다 — <Link href="/route">고정 노선 편성에서 등록하세요</Link>
+                  </StyledFallbackNotice>
+                ) : null}
+              </StyledMapPane>
+            </StyledBoardCard>
+
+            <StyledBoardCard aria-label="오늘 등원 학생 현황">
+              <StyledBoardCardHead>
+                <h2>오늘 등원 {toAcademyRiders.total}명</h2>
+              </StyledBoardCardHead>
+              <StyledBoardCardBody>
+                <RiderSplitBar split={toAcademyRiders} total={toAcademyRiders.total} />
+                <RiderSplitLegend split={toAcademyRiders} showZero />
+                {toAcademyRuns.map((run) => {
+                  const split = splitRiders(run);
+                  return (
+                    <StyledRunRiderBlock key={run.runId}>
+                      <header>
+                        <strong>
+                          {run.busNo} {DIRECTION_LABEL[run.direction]}
+                        </strong>
+                        <span>
+                          {[
+                            split.boarded > 0 ? `탑승 완료 ${split.boarded}` : null,
+                            split.noShow > 0 ? `미승차 ${split.noShow}` : null,
+                            split.absent > 0 ? `미등원 ${split.absent}` : null,
+                            split.waiting > 0 ? `대기 ${split.waiting}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "대상 없음"}
+                        </span>
+                      </header>
+                      <RiderSplitBar split={split} total={run.totalCount} thin />
+                    </StyledRunRiderBlock>
+                  );
+                })}
+                {fromAcademyRuns.length > 0 ? (
+                  <StyledFootnote>
+                    하원 {fromAcademyRuns.length}회 · 대상 {fromAcademyRuns.reduce((sum, run) => sum + run.totalCount, 0)}명은 학원 출발 뒤부터 집계됩니다
+                  </StyledFootnote>
+                ) : null}
+              </StyledBoardCardBody>
+            </StyledBoardCard>
+          </StyledBoardRow>
+        </>
+      )}
     </StyledDashboardLayout>
   );
 };

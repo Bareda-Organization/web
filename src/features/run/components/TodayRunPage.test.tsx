@@ -86,6 +86,12 @@ const baseDashboard: DashboardResponseTypes = {
       ackDriver: true,
       ackEscort: true,
       noShowCases: [],
+      driverPhone: null,
+      escortPhone: null,
+      noShowCount: 0,
+      absentCount: 0,
+      delayMinutes: null,
+      lastDelayNotice: null,
     },
   ],
 };

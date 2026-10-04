@@ -1,58 +1,332 @@
 import styled from "@emotion/styled";
 
-import { MAP_SURFACE_HEIGHT } from "@/features/map";
-
 export const StyledDashboardLayout = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--s4);
   padding: 24px;
 `;
 
-export const StyledStatGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+// 연결 상태 한 줄 — 머리 오른쪽. 점 + 글자(색만으로 말하지 않는다).
+export const StyledLiveStatus = styled.p`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+
+  &::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c-conf);
+  }
 `;
 
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2 — 지도가 화면 상단에 가득차고, 그 우측에 버스 목록을 둔다.
-// 3fr:1fr 로 나눠 지도가 대부분을 차지하면서도 목록이 항상 옆에 보이게 한다.
-export const StyledMapTopRow = styled.div`
+// 위 두 칸(표 · 처리할 것) / 아래 두 칸(지도 · 학생 현황) 공통 — 왼쪽이 오른쪽의 두 배.
+export const StyledBoardRow = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--s4);
   align-items: stretch;
 
-  /* 1100px 이하에서는 오른쪽 목록이 좁아 회차 이름·상태 칩이 글자 단위로 꺾인다(B1 #13) — 지도 아래로 내려 쌓는다. */
   @media (max-width: 1100px) {
     grid-template-columns: minmax(0, 1fr);
   }
+`;
+
+export const StyledBoardCard = styled.section`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+`;
+
+export const StyledBoardCardHead = styled.header`
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 16px 20px 12px;
+
+  h2 {
+    margin: 0;
+    font: var(--fw-bold) var(--fs-md) / 1.4 var(--font-sans);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+  }
+`;
+
+export const StyledBoardCardTools = styled.div`
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+`;
+
+export const StyledBoardCardBody = styled.div`
+  flex: 1;
+  padding: 0 20px 16px;
+`;
+
+// 오늘 운행 구성 막대(종료 · 운행 중 · 확정 · 운행 전) — 지표 칸 안에 들어간다.
+export const StyledSegmentBar = styled.span`
+  display: flex;
+  gap: 3px;
+  margin-top: 10px;
+
+  & > span {
+    height: 8px;
+    border-radius: 4px;
+  }
+`;
+
+// 학생 4분류 누적 막대 — 탑승 · 미승차 · 미등원(빗금) · 대기.
+export const StyledRiderBar = styled.span<{ $thin?: boolean }>`
+  display: flex;
+  height: ${({ $thin }) => ($thin ? "10px" : "14px")};
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--border-subtle);
+
+  & > span {
+    display: block;
+    height: 100%;
+  }
+
+  & > span[data-kind="boarded"] {
+    background: var(--c-conf);
+  }
+  & > span[data-kind="noShow"] {
+    background: var(--c-bad);
+  }
+  & > span[data-kind="absent"] {
+    background: repeating-linear-gradient(135deg, var(--c-end) 0 2px, var(--surface-card) 2px 4px);
+  }
+`;
+
+export const StyledRiderLegend = styled.ul`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+
+  li::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 5px;
+    background: var(--c-wait);
+    border-radius: 50%;
+  }
+  li[data-kind="boarded"]::before {
+    background: var(--c-conf);
+  }
+  li[data-kind="noShow"]::before {
+    background: var(--c-bad);
+    border-radius: 0;
+    transform: rotate(45deg) scale(0.85);
+  }
+  li[data-kind="absent"]::before {
+    background: var(--c-end);
+    border-radius: 1px;
+  }
+  li[data-kind="waiting"]::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--c-wait);
+  }
+`;
+
+export const StyledRunRiderBlock = styled.div`
+  padding: 14px 0 12px;
+  border-top: 1px solid var(--border-subtle);
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+  }
+
+  header strong {
+    font: var(--fw-bold) var(--fs-sm) / 1.4 var(--font-sans);
+    color: var(--text-primary);
+  }
+`;
+
+export const StyledFootnote = styled.p`
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;
+
+// 시간표 칸 — 지금 선 + 회차 막대.
+export const StyledTimeTrack = styled.span`
+  position: relative;
+  display: block;
+  min-width: 150px;
+  height: 18px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    background: var(--border-subtle);
+  }
+`;
+
+export const StyledTimeBar = styled.span<{ $status: "idle" | "confirmed" | "moving" | "finished" }>`
+  position: absolute;
+  top: 3px;
+  height: 12px;
+  border-radius: 3px;
+  background: ${({ $status }) =>
+    $status === "finished"
+      ? "var(--c-end)"
+      : $status === "moving"
+        ? "var(--c-move)"
+        : $status === "confirmed"
+          ? "var(--c-conf)"
+          : "var(--green-300)"};
+`;
+
+export const StyledNowLine = styled.span`
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--text-primary);
+`;
+
+export const StyledStatusCell = styled.span`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  small {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+  }
+  small[data-tone="warn"] {
+    color: var(--t-move);
+    font-weight: var(--fw-bold);
+  }
+  small[data-tone="bad"] {
+    color: var(--t-bad);
+    font-weight: var(--fw-bold);
+  }
+`;
+
+export const StyledStaffCell = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: nowrap;
+
+  & > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  & > span > b {
+    max-width: 9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: var(--fw-regular);
+  }
+  & > span > small {
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+  }
+`;
+
+export const StyledDepartCell = styled.span`
+  font: var(--fw-bold) var(--fs-md) / 1.4 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+`;
+
+export const StyledChangeNote = styled.small`
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+`;
+
+export const StyledActionList = styled.div`
+  padding: 0 20px 16px;
+`;
+
+export const StyledCountPill = styled.span`
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--row-bad-bg);
+  font: var(--fw-bold) var(--fs-xs) / 1.5 var(--font-sans);
+  color: var(--t-bad);
+`;
+
+export const StyledMapTabs = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+export const StyledMapTab = styled.button<{ $active: boolean }>`
+  padding: 4px 12px;
+  border: 1px solid ${({ $active }) => ($active ? "var(--selected-edge)" : "var(--border-default)")};
+  border-radius: var(--radius-pill);
+  background: ${({ $active }) => ($active ? "var(--selected-bg)" : "var(--surface-card)")};
+  font: ${({ $active }) => ($active ? "var(--fw-bold)" : "var(--fw-regular)")} var(--fs-xs) / 1.5 var(--font-sans);
+  color: ${({ $active }) => ($active ? "var(--t-conf, var(--accent-primary))" : "var(--text-secondary)")};
+  cursor: pointer;
 `;
 
 export const StyledMapPane = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0 20px 16px;
 `;
 
-// F4 — 자리표시(점선 테두리)를 걷어내고 실제 `MapSurface` 를 담는 크기 지정 컨테이너로 바꾼다.
-// R15-T2 — "화면 상단에 가득차게" 요구에 맞춰 160px → 480px 로 키운다.
+// 지도는 위치 확인용이다(판단은 위 표·처리 목록) — 높이 330px.
 export const StyledMapSurface = styled.div`
   position: relative;
-  height: ${MAP_SURFACE_HEIGHT};
+  height: 330px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--border-default);
+  background: var(--surface-fill);
 `;
 
 export const StyledFallbackNotice = styled.p`
-  font-size: var(--fs-body-sm);
+  margin: 0;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 `;
 
-// R20-C 목표 5 — 근사 경로 안내를 지도 위로 올린다. 예전엔 지도 아래 작은 글자라
-// 못 보고 "길이 아닌 곳을 지난다"로 오인했다(사용자 지적) — `StyledMapSurface`
-// 안(`position: relative`)에 겹쳐서 항상 눈에 들어오게 한다.
+// 근사·예정 경로 안내를 지도 위로 올린다(Ruling 309) — 지도 밖 작은 글자는 "길이 아닌 곳을 지난다" 로 오인됐다.
 export const StyledMapOverlayNotice = styled.p`
   position: absolute;
   top: 8px;
@@ -62,53 +336,27 @@ export const StyledMapOverlayNotice = styled.p`
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   background: var(--surface-card);
-  font-size: var(--fs-body-sm);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
   color: var(--text-secondary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-card);
 `;
 
-export const StyledBusListPane = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-default);
-  overflow-y: auto;
-  max-height: ${MAP_SURFACE_HEIGHT};
-`;
-
-export const StyledBusListEmpty = styled.p`
-  color: var(--text-secondary);
-  font-size: var(--fs-body-sm);
-`;
-
-// R20-C 목표 1 — 골라도 지도만 움직이고 카드는 그대로라 무엇을 눌렀는지 몰랐다
-// (사용자 지적). 옅은 배경(--nav-active-bg)만으로는 대비가 약해, 굵은 테두리로
-// 바꾼다. `aria-pressed`(호출부)와 짝을 이뤄 색만으로 구분하지 않는다.
-export const StyledBusListItem = styled.button<{ $active: boolean }>`
+// 운행 중 회차마다 한 줄 — 현재 → 다음 정차지.
+export const StyledLiveLines = styled.ul`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 8px;
-  border-radius: var(--radius-md);
-  border: 2px solid ${(props) => (props.$active ? "var(--accent-primary)" : "transparent")};
-  background: ${(props) => (props.$active ? "var(--accent-primary-soft)" : "transparent")};
-  text-align: left;
-  cursor: pointer;
-`;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
 
-export const StyledBusListItemHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-weight: var(--fw-bold);
-  white-space: nowrap;
-`;
-
-export const StyledBusListItemMeta = styled.span`
-  font-size: var(--fs-body-sm);
-  color: var(--text-secondary);
+  li {
+    display: flex;
+    gap: 10px;
+  }
+  li > span {
+    color: var(--text-secondary);
+  }
 `;

@@ -9,6 +9,17 @@ export type NoShowCaseResponseTypes = {
   studentName: string;
   stopName: string;
   expiresAt: string;
+  // Ruling 810 — 그 케이스에 남은 연락 시도 수와 마지막 결과. 서버가 아직 안 주면 0 · null.
+  callAttempts: number;
+  lastContactResult: "answered" | "no_answer" | null;
+};
+
+// Ruling 810 — 그 회차의 마지막 지연 알림(§4.9). 없으면 null.
+export type LastDelayNoticeResponseTypes = {
+  minutes: number;
+  reason: string | null;
+  sentAt: string;
+  recipientCount: number;
 };
 
 // §5.3 runs[] 행 하나.
@@ -34,6 +45,14 @@ export type DashboardRunResponseTypes = {
   ackDriver: boolean;
   ackEscort: boolean;
   noShowCases: NoShowCaseResponseTypes[];
+  // Ruling 810 — 배치 인력 전화 원문(배치 전 null) · 이 회차의 미승차·미등원 수 · 지연.
+  // 서버가 아직 안 주면 전화 null · 미승차는 진행 중 케이스 수 · 미등원 0 · 지연 null 로 견딘다.
+  driverPhone: string | null;
+  escortPhone: string | null;
+  noShowCount: number;
+  absentCount: number;
+  delayMinutes: number | null;
+  lastDelayNotice: LastDelayNoticeResponseTypes | null;
 };
 
 export type DashboardResponseTypes = {

@@ -1,4 +1,4 @@
-import { Badge } from "@/shared/ui";
+import { StatusChip } from "@/shared/ui";
 import type { RunStatus } from "../types";
 
 type RouteAckMarkProps = {
@@ -13,5 +13,14 @@ type RouteAckMarkProps = {
 // 그래서 확정·운행 중 회차에 배치된 사람에게만 그린다(Ruling 492).
 export const RouteAckMark = ({ name, acked, runStatus }: RouteAckMarkProps) => {
   if (name === null || (runStatus !== "confirmed" && runStatus !== "moving")) return null;
-  return <Badge tone={acked ? "added" : "red"}>{acked ? "확인" : "미확인"}</Badge>;
+  // 확인은 조용한 글자, 미확인만 앰버 칩 — 예외가 먼저 보이게 한다(시안).
+  return acked ? (
+    <StatusChip tone="ok" marker={false} quiet>
+      확인
+    </StatusChip>
+  ) : (
+    <StatusChip tone="warn" marker={false}>
+      미확인
+    </StatusChip>
+  );
 };

@@ -122,6 +122,12 @@ const baseDashboard: DashboardResponseTypes = {
       ackDriver: true,
       ackEscort: false,
       noShowCases: [],
+      driverPhone: null,
+      escortPhone: null,
+      noShowCount: 0,
+      absentCount: 0,
+      delayMinutes: null,
+      lastDelayNotice: null,
     },
   ],
 };
@@ -144,7 +150,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    expect(await screen.findByText("1호차")).toBeInTheDocument();
+    expect(await screen.findByText("1호차 · 등원")).toBeInTheDocument();
     expect(screen.getByText("김기사")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
   });
@@ -161,7 +167,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    await screen.findByText("1호차");
+    await screen.findByText("1호차 · 등원");
     expect(screen.getByText("확인")).toBeInTheDocument();
     expect(screen.getByText("미확인")).toBeInTheDocument();
   });
@@ -174,7 +180,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    await screen.findByText("1호차");
+    await screen.findByText("1호차 · 등원");
     expect(screen.queryByText("미확인")).not.toBeInTheDocument();
     expect(screen.queryByText("확인")).not.toBeInTheDocument();
   });
@@ -201,13 +207,33 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
     fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
 
-    expect(within(table).getByText("2호차")).toBeInTheDocument();
-    expect(within(table).getByText("3호차")).toBeInTheDocument();
-    expect(within(table).queryByText("1호차")).not.toBeInTheDocument();
-    expect(within(table).queryByText("4호차")).not.toBeInTheDocument();
+    expect(within(table).getByText("2호차 · 등원")).toBeInTheDocument();
+    expect(within(table).getByText("3호차 · 등원")).toBeInTheDocument();
+    expect(within(table).queryByText("1호차 · 등원")).not.toBeInTheDocument();
+    expect(within(table).queryByText("4호차 · 등원")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
     expect(within(table).getAllByRole("row")).toHaveLength(5);
+  });
+
+  // Ruling 810 — 서버가 회차별 미승차·미등원 수를 주면 4분류(탑승·미승차·미등원·대기=나머지) 막대가 그 수로 그려진다.
+  it("회차 막대와 등원 전체 막대가 탑승·미승차·미등원·대기(나머지) 수를 서버 값으로 그린다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [
+        { ...baseDashboard.runs[0], runId: "1", busNo: "1호차", totalCount: 20, boardedCount: 11, noShowCount: 2, absentCount: 1 },
+        { ...baseDashboard.runs[0], runId: "2", busNo: "2호차", totalCount: 20, boardedCount: 18, noShowCount: 0, absentCount: 2 },
+      ],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    // 회차별: 대기 = 20 − 11 − 2 − 1 = 6
+    expect(screen.getByRole("img", { name: "탑승 완료 11명 · 미승차 2명 · 미등원 1명 · 대기 6명" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "탑승 완료 18명 · 미승차 0명 · 미등원 2명 · 대기 0명" })).toBeInTheDocument();
+    // 등원 전체: 29 · 2 · 3 · 6
+    expect(screen.getByRole("img", { name: "탑승 완료 29명 · 미승차 2명 · 미등원 3명 · 대기 6명" })).toBeInTheDocument();
   });
 
   it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {
@@ -220,23 +246,24 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     const { container } = render(<DashboardPage />);
 
-    await screen.findByText("1호차");
-    // 실행 환경의 로컬 시간대에 좌우되지 않도록(clockTime.test.ts 와 같은 이유) 리터럴
-    // 시:분:초 대신 같은 변환 함수로 기대값을 만든다.
-    expect(container.textContent).toContain(`예정 ${formatClockTimeWithSeconds(baseDashboard.runs[0].departTime)}`);
-    expect(container.textContent).toContain(`실제 ${formatClockTimeWithSeconds(startedAt)}`);
-    expect(container.textContent).toContain(formatClockTimeWithSeconds(finishedAt));
+    await screen.findByText("1호차 · 등원");
+    // 표 칸은 시:분만 보이고(시안), 초까지의 예정·실제 값은 칸의 설명(title)에 남는다(R21-B 지시).
+    // 실행 환경의 로컬 시간대에 좌우되지 않도록 같은 변환 함수로 기대값을 만든다.
+    expect(
+      screen.getByTitle(
+        `예정 출발 ${formatClockTimeWithSeconds(baseDashboard.runs[0].departTime)} · 실제 출발 ${formatClockTimeWithSeconds(startedAt)} · 실제 도착 ${formatClockTimeWithSeconds(finishedAt)}`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("실제 출발·도착 전이면 출발은 예정만, 도착은 빈 값(-)으로 보여준다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard); // startedAt·finishedAt·estArrivalTime 전부 null
     mockGetRunsLive.mockResolvedValue(emptyLive);
-    const { container } = render(<DashboardPage />);
+    render(<DashboardPage />);
 
-    await screen.findByText("1호차");
-    expect(container.textContent).toContain("예정 08:00");
-    expect(container.textContent).not.toContain("실제");
-    expect(container.textContent).toContain("예정 -"); // 도착 컬럼 — est_arrival_time 없음
+    await screen.findByText("1호차 · 등원");
+    // 예정 출발만 있고 실제·도착 값은 설명에 없다.
+    expect(screen.getByTitle("예정 출발 08:00")).toBeInTheDocument();
   });
 
   // R21-B2 목표 1·2 — 예정 도착(est_arrival_time)이 도착 컬럼에 시:분:초로 뜬다.
@@ -247,45 +274,44 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
       runs: [{ ...baseDashboard.runs[0], estArrivalTime }],
     });
     mockGetRunsLive.mockResolvedValue(emptyLive);
-    const { container } = render(<DashboardPage />);
+    render(<DashboardPage />);
 
-    await screen.findByText("1호차");
-    expect(container.textContent).toContain(`예정 ${formatClockTimeWithSeconds(estArrivalTime)}`);
+    await screen.findByText("1호차 · 등원");
+    expect(screen.getByTitle(new RegExp(`예정 도착 ${formatClockTimeWithSeconds(estArrivalTime)}`))).toBeInTheDocument();
   });
 
-  it("미탑승 확인 대기 건이 있으면 배너로 건수를 보여준다", async () => {
+  it("미승차 확인 대기 건이 있으면 지금 처리할 것에 건수와 남은 분을 보여준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
       runs: [
         {
           ...baseDashboard.runs[0],
-          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z" }],
+          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z", callAttempts: 0, lastContactResult: null }],
         },
       ],
     });
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    expect(await screen.findByText("미탑승 확인 대기 1건")).toBeInTheDocument();
+    const row = await screen.findByRole("link", { name: /미승차 1명/ });
+    expect(row).toHaveTextContent(/\d+분 안/);
   });
 
   // R32-W11 — 미탑승 띠가 건수만 알리고 처리하러 갈 길이 없었다.
-  it("미탑승 확인 대기 띠에서 그 회차의 금일 운행 화면으로 갈 수 있다", async () => {
+  it("미승차 처리 항목에서 그 회차의 오늘 운행 화면으로 갈 수 있다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
       runs: [
         {
           ...baseDashboard.runs[0],
-          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z" }],
+          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z", callAttempts: 0, lastContactResult: null }],
         },
       ],
     });
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "1호차 확인하러 가기" }));
-
-    expect(mockPush).toHaveBeenCalledWith("/today-run?runId=1");
+    expect(await screen.findByRole("link", { name: /미승차 1명/ })).toHaveAttribute("href", "/today-run?runId=1");
   });
 
   it("대시보드 조회에 실패하면 오류 배너를 보여준다", async () => {
@@ -343,7 +369,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
 
     // baseLiveRun 은 position 이 null 이라 초기 렌더는 "위치 확인 대기" 다(DashboardPage.tsx
     // 의 `run.position ? ... : ...` 분기) — "1호차" 는 대시보드 표에도 함께 나와 유일하지 않다.
-    await screen.findByText("위치 확인 대기");
+    await screen.findByText("1호차 · 등원");
     const callsBeforeEvent = mockGetRunsLive.mock.calls.length;
 
     act(() => {
@@ -370,7 +396,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
       mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
       render(<DashboardPage />);
       // "1호차" 는 대시보드 표에도 나와 유일하지 않다 — 실시간 카드에만 있는 문구로 기다린다.
-      await screen.findByText("위치 확인 대기");
+      await screen.findByText("1호차 · 등원");
 
       const callsBeforeEvent = mockGetRunsLive.mock.calls.length;
       await act(async () => {
@@ -387,7 +413,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
-    await screen.findByText("1호차");
+    await screen.findByText("1호차 · 등원");
 
     act(() => {
       capturedOnEnvelope?.(
@@ -413,7 +439,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
-    await screen.findByText("1호차");
+    await screen.findByText("1호차 · 등원");
 
     act(() => {
       capturedOnEnvelope?.(
@@ -466,8 +492,8 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<DashboardPage />);
 
-    // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이 실제로 채워졌다는 유일한 표식이다.
-    expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
+    // 표의 호차 칸이 그려졌다는 것이 목록이 실제로 채워졌다는 표식이다.
+    expect(await screen.findByText("1호차 · 등원")).toBeInTheDocument();
     expect(screen.queryByText("오늘 등록된 회차가 없습니다")).not.toBeInTheDocument();
   });
 });
@@ -505,12 +531,11 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(screen.getByText("2호차 · 등원")).toBeInTheDocument();
     expect(screen.getByText("3호차 · 등원")).toBeInTheDocument();
     expect(screen.getByText("4호차 · 등원")).toBeInTheDocument();
-    // 같은 상태 라벨이 우측 목록과 아래 회차 표(RosterTable) 양쪽에 나온다 —
-    // getAllByText 로 "적어도 하나는 있다"만 본다(중복 자체는 문제가 아니다).
-    expect(screen.getAllByText("대기").length).toBeGreaterThan(0);
+    // 상태 칩은 회차 표에 한 번씩 나온다 — 라벨이 지표 칸 설명과 겹칠 수 있어 getAllByText 로 "적어도 하나는 있다"만 본다.
+    expect(screen.getAllByText("운행 전").length).toBeGreaterThan(0);
     expect(screen.getAllByText("확정").length).toBeGreaterThan(0);
     expect(screen.getAllByText("운행 중").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("운행 종료").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("종료").length).toBeGreaterThan(0);
   });
 
   // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
@@ -548,7 +573,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("3호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "3호차 등원" }));
 
     expect(mockGetRunRoute).toHaveBeenCalledWith("3");
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
@@ -563,7 +588,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     });
     render(<DashboardPage />);
 
-    const busItem = await screen.findByText("3호차 · 등원");
+    const busItem = await screen.findByRole("button", { name: "3호차 등원" });
     fireEvent.click(busItem);
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
 
@@ -587,7 +612,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 등원" }));
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
@@ -610,7 +635,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("3호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "3호차 등원" }));
 
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
@@ -625,7 +650,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("3호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "3호차 등원" }));
 
     expect(await screen.findByText("확정됐지만 경로 정보가 아직 없습니다")).toBeInTheDocument();
     expect(screen.queryByText("근사 경로")).not.toBeInTheDocument();
@@ -637,7 +662,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 등원" }));
 
     expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
     expect(screen.queryByText("확정됐지만 경로 정보가 아직 없습니다")).not.toBeInTheDocument();
@@ -653,7 +678,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     });
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 등원" }));
 
     expect(await screen.findByText(/예정 경로 — 확정 시 달라질 수 있음/)).toBeInTheDocument();
   });
@@ -676,12 +701,10 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
   it("확정과 대기는 서로 다른 태그 색(class)을 쓴다", async () => {
     render(<DashboardPage />);
 
-    // 같은 라벨이 우측 목록 카드와 아래 회차 표(RosterTable)에 중복돼 뜬다 — 목록
-    // 카드(버튼)로 좁혀 그 안의 태그만 비교한다.
-    const idleCard = await screen.findByRole("button", { name: /1호차/ });
-    const confirmedCard = await screen.findByRole("button", { name: /2호차/ });
-    const idlePill = within(idleCard).getByText("대기");
-    const confirmedPill = within(confirmedCard).getByText("확정");
+    // 회차 표의 상태 칩 — 같은 글자가 지표 칸 설명에도 있어 표로 좁혀 그 안의 칩만 비교한다.
+    const table = (await screen.findByRole("table")) as HTMLElement;
+    const idlePill = within(table).getByText("운행 전");
+    const confirmedPill = within(table).getByText("확정");
     expect(idlePill.className).not.toBe(confirmedPill.className);
   });
 });
@@ -715,21 +738,21 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     mockGetDashboard.mockResolvedValueOnce({ ...baseDashboard, runs: [runOf("1", { runStatus: "confirmed" })] });
     render(<DashboardPage />);
     expect(await screen.findByText("42")).toBeInTheDocument();
-    expect(screen.queryByText(/미탑승 확인 대기/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /미승차/ })).not.toBeInTheDocument();
 
     mockGetDashboard.mockResolvedValue({
       metrics: { ...baseDashboard.metrics, boarded: 50 },
       runs: [
         runOf("1", {
           runStatus: "moving",
-          noShowCases: [{ studentName: "박학생", stopName: "정문", expiresAt: "2026-09-13T00:10:00Z" }] as never,
+          noShowCases: [{ studentName: "박학생", stopName: "정문", expiresAt: "2026-09-13T00:10:00Z", callAttempts: 0, lastContactResult: null }] as never,
         }),
       ],
     });
     await vi.advanceTimersByTimeAsync(7000);
 
     expect(await screen.findByText("50")).toBeInTheDocument();
-    expect(screen.getByText("미탑승 확인 대기 1건")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /미승차 1명/ })).toBeInTheDocument();
   });
 
   it.each(["rider_changed", "run_started", "run_ended"] as const)("%s 이벤트는 지표·회차 표도 다시 불러온다", async (eventType) => {
@@ -831,8 +854,8 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
         : Promise.resolve({ roadPath: [], fallbackUsed: false, stops: [], confirmed: false }),
     );
     render(<DashboardPage />);
-    fireEvent.click(await screen.findByText("1호차 · 등원"));
-    fireEvent.click(screen.getByText("2호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 등원" }));
+    fireEvent.click(screen.getByRole("button", { name: "2호차 등원" }));
     await screen.findByText(/이 회차의 고정 노선이 없습니다/);
 
     resolveFirst({
@@ -852,7 +875,7 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     mockGetRunRoute.mockRejectedValue(new ApiError(409, "RUN_NOT_CONFIRMED", "확정되지 않은 회차입니다"));
     render(<DashboardPage />);
 
-    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 등원" }));
 
     expect(await screen.findByText(/이 회차의 고정 노선이 없습니다/)).toBeInTheDocument();
     expect(screen.queryByText("확정되지 않은 회차입니다")).not.toBeInTheDocument();
@@ -872,7 +895,7 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     it("[승인 화면으로] 로 승인 목록에 가고, [닫기] 로 배너를 지운다", async () => {
       mockGetDashboard.mockResolvedValue(baseDashboard);
       render(<DashboardPage />);
-      await screen.findByText("1호차");
+      await screen.findByText("1호차 · 등원");
       act(() => capturedOnEnvelope?.(approval(5, "박학생", "정문")));
 
       fireEvent.click(await screen.findByRole("button", { name: "승인 화면으로" }));
@@ -885,7 +908,7 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     it("요청이 여러 건이면 앞 건을 덮지 않고 건수로 합친다", async () => {
       mockGetDashboard.mockResolvedValue(baseDashboard);
       render(<DashboardPage />);
-      await screen.findByText("1호차");
+      await screen.findByText("1호차 · 등원");
 
       act(() => capturedOnEnvelope?.(approval(5, "박학생", "정문")));
       act(() => capturedOnEnvelope?.(approval(6, "김학생", "후문")));
