@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, TUNNEL_HEADERS } from "./config";
 import { ApiError, NetworkError, parseApiError } from "./apiError";
 import { getAccessToken } from "./accessTokenStore";
 import { refreshAccessToken } from "./refreshClient";
@@ -47,6 +47,7 @@ const buildUrl = (path: string, query?: ApiFetchOptions["query"]): string => {
 
 const buildHeaders = (hasBody: boolean): HeadersInit => {
   const headers: Record<string, string> = {
+    ...TUNNEL_HEADERS,
     // §1.2.1 — 이 값이 로그인 응답에서 refresh 를 본문으로 줄지 쿠키로 줄지 가른다.
     "X-Client-Type": "web",
   };

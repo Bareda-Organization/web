@@ -156,3 +156,33 @@ describe("apiFetch — 응답 시간 제한", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+// ngrok 무료 도메인은 브라우저가 보낸 GET 을 경고 페이지로 바꿔 돌려준다 — 그 페이지에는 CORS 허용 헤더가 없어
+// 브라우저가 응답을 버린다(Vercel 웹 + ngrok API 구성, STAGING.md §4.1 · Ruling 841). 우회 헤더가 붙는지 본다.
+describe("apiFetch — ngrok 무료 도메인 경고 페이지 우회", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  const headersSentTo = async (apiHost: string): Promise<Record<string, string>> => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", apiHost);
+    vi.resetModules();
+    const fetchMock = vi.fn().mockResolvedValue(mockJsonResponse(200, { data: {} }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { apiFetch: freshApiFetch } = await import("./httpClient");
+    await freshApiFetch("/admin/academies");
+    return fetchMock.mock.calls[0][1].headers as Record<string, string>;
+  };
+
+  it("API 주소가 ngrok 무료 도메인이면 GET 에 ngrok-skip-browser-warning 을 붙인다", async () => {
+    const headers = await headersSentTo("https://example.ngrok-free.dev");
+    expect(headers["ngrok-skip-browser-warning"]).toBeDefined();
+  });
+
+  it("다른 주소에는 붙이지 않는다", async () => {
+    const headers = await headersSentTo("https://api.example.com");
+    expect(headers["ngrok-skip-browser-warning"]).toBeUndefined();
+  });
+});
