@@ -24,7 +24,7 @@ describe("지도 높이는 한 곳에서만 정한다", () => {
   it("styled 파일이 지도 높이를 숫자로 박지 않는다", () => {
     const offenders = styledFiles().filter((path) => {
       const source = readFileSync(path, "utf8");
-      return /(?:^|\s)(?:min-|max-)?height:\s*(320|480)px/m.test(source);
+      return /(?:^|\s)(?:min-|max-)?height:\s*(320|480|960)px/m.test(source);
     });
 
     expect(offenders).toEqual([]);
@@ -32,9 +32,8 @@ describe("지도 높이는 한 곳에서만 정한다", () => {
 
   // 2026-09-23 사용자 지시 — "화면 절반 이상은 채워줘. 모든 지도에 해당". 고정 픽셀이면 큰 모니터에서
   // 지도가 화면의 1/3 에 그친다. 화면 높이 비율로 정하되, 작은 창에서 노선이 잘리지 않게 480px 아래로는 안 내린다.
-  it("화면 높이의 절반 이상이고, 작은 창에서도 480px 아래로 내려가지 않는다", () => {
-    const viewportShare = Number(/(\d+)vh/.exec(MAP_SURFACE_HEIGHT)?.[1]);
-    expect(viewportShare).toBeGreaterThan(50);
-    expect(MAP_SURFACE_HEIGHT).toMatch(/^max\(480px,\s*\d+vh\)$/);
+  // 2026-10-06 사용자 지시 — "세로 길이는 현재의 2배로". 60vh·480px 를 그대로 두 배 한다.
+  it("세로 길이가 2026-10-06 전(max(480px, 60vh))의 2배다", () => {
+    expect(MAP_SURFACE_HEIGHT).toBe("max(960px, 120vh)");
   });
 });
