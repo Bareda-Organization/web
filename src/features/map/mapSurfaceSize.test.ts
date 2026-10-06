@@ -32,8 +32,19 @@ describe("지도 높이는 한 곳에서만 정한다", () => {
 
   // 2026-09-23 사용자 지시 — "화면 절반 이상은 채워줘. 모든 지도에 해당". 고정 픽셀이면 큰 모니터에서
   // 지도가 화면의 1/3 에 그친다. 화면 높이 비율로 정하되, 작은 창에서 노선이 잘리지 않게 480px 아래로는 안 내린다.
-  // 2026-10-06 사용자 지시 — "세로 길이는 현재의 2배로". 60vh·480px 를 그대로 두 배 한다.
-  it("세로 길이가 2026-10-06 전(max(480px, 60vh))의 2배다", () => {
-    expect(MAP_SURFACE_HEIGHT).toBe("max(960px, 120vh)");
+  // 2026-10-06 — 리디자인 화면(오늘 현황 330px · 운행 상세 430px)이 숫자를 박아 상수 변경이 닿지 않았다.
+  // 위 검사는 320·480 만 찾아 이 둘을 놓쳤다. 지도 칸을 정의한 곳은 전부 상수를 쓰게 한다.
+  it("지도 칸(StyledMapSurface)은 전부 이 상수로 높이를 정한다", () => {
+    const offenders = styledFiles().filter((path) => {
+      const block = /export const StyledMapSurface = styled\.div`([^`]*)`/.exec(readFileSync(path, "utf8"))?.[1];
+      return block !== undefined && !block.includes("${MAP_SURFACE_HEIGHT}");
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  // 2026-10-06 사용자 지시 — "화면의 50프로 정도의 세로 길이로". 작은 창에서 노선이 잘리지 않게 480px 아래로는 안 내린다.
+  it("화면 높이의 50% 이고, 작은 창에서도 480px 아래로 내려가지 않는다", () => {
+    expect(MAP_SURFACE_HEIGHT).toBe("max(480px, 50vh)");
   });
 });

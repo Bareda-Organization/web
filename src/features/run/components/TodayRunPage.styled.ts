@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { MAP_SURFACE_HEIGHT } from "@/features/map";
 
 export const StyledTodayRunLayout = styled.div`
   display: flex;
@@ -111,10 +112,10 @@ export const StyledMapCard = styled.section`
   }
 `;
 
-// 지도는 위치 확인용 — 높이 430px.
+// 지도는 위치 확인용 — 높이는 모든 지도와 같은 `MAP_SURFACE_HEIGHT`(2026-10-06 사용자 지시 · 화면의 50%).
 export const StyledMapSurface = styled.div`
   position: relative;
-  height: 430px;
+  height: ${MAP_SURFACE_HEIGHT};
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface-fill);
