@@ -137,7 +137,8 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     expect(await screen.findByRole("option", { name: "08:10 5호차 · 등원" })).toBeInTheDocument();
     expect(mockGetDashboard).toHaveBeenLastCalledWith("2026-09-12");
     expect(screen.queryByRole("option", { name: "08:10 2호차 · 등원" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("회차")).toHaveValue("");
+    // 다른 날짜의 회차 id(7)가 새 날짜 조회에 실려 나가지 않는다.
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12", runId: undefined })));
   });
 
   it("조건을 바꾸기 전에 보낸 요청의 늦은 응답이 새 조건의 목록을 덮지 않는다", async () => {
