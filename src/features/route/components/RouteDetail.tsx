@@ -14,6 +14,7 @@ import type { RouteDetailResponseTypes, RouteListItemResponseTypes, RoutePathRes
 import { pathFigures, riderFigures } from "../lib/routeStats";
 import { WEEKDAYS } from "../lib/routeGrid";
 import { RouteCopyDialog } from "./RouteCopyDialog";
+import { RouteAssignments } from "./RouteAssignments";
 import { RouteDeleteDialog } from "./RouteDeleteDialog";
 import { StyledBreadcrumb, StyledRouteDetailActions, StyledRouteDetailLayout, StyledRouteDetailTabs, StyledStatLink } from "./RouteDetail.styled";
 import { RouteForm } from "./RouteForm";
@@ -38,6 +39,7 @@ type CreateSeed = { busId?: string; weekday?: Weekday; direction?: RunDirection 
 //
 // R48 — 같은 차량의 다른 요일 · 방향으로 목록에 돌아가지 않고 옮겨 가는 요일 탭, 지표 4칸(승하차지 · 이용 학생 ·
 // 예상 소요 · 연결된 스케줄). 지표 재료(같은 차량의 편성 · 경로 · 스케줄)는 보조 정보라 못 받아도 화면은 그대로 쓴다.
+// R50 — 그 편성의 오늘 · 내일 회차에 배치된 매니저(A-08)를 RouteAssignments 가 보인다.
 export const RouteDetail = ({ routeId }: RouteDetailProps) => {
   const router = useRouter();
   const [route, setRoute] = useState<RouteDetailResponseTypes | null>(null);
@@ -194,6 +196,8 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <StatStrip items={summaryItems} />
+
+      <RouteAssignments busId={route.busId} weekday={route.weekday} direction={route.direction} />
 
       <RouteStopsPanel routeId={routeId} direction={route.direction} />
 

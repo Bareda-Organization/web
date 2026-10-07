@@ -1,10 +1,8 @@
 import type { RosterItemResponseTypes } from "../types";
 
-// 운행 상세 명단 계산 — 상태 칩 건수 · 필터 · 지도에서 고른 승하차지와 명단 잇기 · 지난/현재/다음 정차지.
+// 운행 상세 명단 계산 — 상태 칩 건수 · 상태 필터 · 지도에서 고른 승하차지와 명단 잇기 · 지난/현재/다음 정차지.
 
 export type RosterStatusFilter = "all" | "no_show" | "absent" | "waiting" | "boarded" | "added" | "transfer";
-
-export type RosterFilterInput = { status: RosterStatusFilter; stopKey: string | null; query: string };
 
 // 승하차지 이름이 비어 있는(예정 명단의 승하차지 미지정) 학생을 묶는 자리 이름.
 export const UNASSIGNED_STOP = "승하차지 미지정";
@@ -38,12 +36,8 @@ const matchesStatus = (item: RosterItemResponseTypes, status: RosterStatusFilter
   }
 };
 
-export const filterRoster = (roster: RosterItemResponseTypes[], { status, stopKey, query }: RosterFilterInput): RosterItemResponseTypes[] => {
-  const needle = query.trim();
-  return roster.filter(
-    (item) => matchesStatus(item, status) && (stopKey === null || rosterStopKey(item) === stopKey) && (needle === "" || item.name.includes(needle)),
-  );
-};
+export const filterRoster = (roster: RosterItemResponseTypes[], status: RosterStatusFilter): RosterItemResponseTypes[] =>
+  roster.filter((item) => matchesStatus(item, status));
 
 type StopRef = { stopId: string; name: string };
 

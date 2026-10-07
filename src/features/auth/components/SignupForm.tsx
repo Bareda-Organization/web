@@ -8,7 +8,7 @@ import { searchAcademies, signup } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { AcademySummaryResponseTypes } from "../types";
 import { ACADEMY_SEARCH_ERROR, AcademyResultList } from "./AcademyResultList";
-import { StyledSelectedAcademy } from "./SignupForm.styled";
+import { StyledMissingFields, StyledSelectedAcademy } from "./SignupForm.styled";
 import { StyledBrand, StyledContainer, StyledFooter, StyledForm, StyledLayout, StyledLink, StyledWrapper } from "./LoginForm.styled";
 
 // 관계자 웹의 가입 대상은 학원 관계자(staff) 뿐이다 — `IMPLEMENTATION_PLAN §1` 이 이 제품의
@@ -52,6 +52,15 @@ export const SignupForm = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<SignupFormState>({ kind: "idle" });
+
+  // UF-X-01 — 제출 버튼 아래에 아직 비어 있는 항목 이름을 보인다(공백만 넣은 칸도 빈 것으로 센다).
+  const missingFields = [
+    name.trim() === "" ? "이름" : null,
+    phone.trim() === "" ? "연락처" : null,
+    loginId.trim() === "" ? "아이디" : null,
+    password === "" ? "비밀번호" : null,
+    selectedAcademy === null ? "학원" : null,
+  ].filter((field): field is string => field !== null);
 
   const handleSearchSubmit = async (value: string) => {
     setSearched(true);
@@ -190,6 +199,7 @@ export const SignupForm = () => {
             <Button type="submit" size="lg" block disabled={submitting || !selectedAcademy || state.kind === "signed-up-login-failed"}>
               가입 신청
             </Button>
+            {missingFields.length > 0 ? <StyledMissingFields>아직 채우지 않은 항목 · {missingFields.join(" · ")}</StyledMissingFields> : null}
           </StyledForm>
 
           <StyledFooter>

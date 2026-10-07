@@ -31,7 +31,7 @@ const POLICY_ROWS: { label: string; format: (policy: AcademyPolicyTypes) => stri
   { label: "알림 보관", format: (p) => `${p.notificationRetentionDays}일` },
 ];
 
-// §5.21 GET·PATCH /staff/academy-settings(A-17) — 학원이 바꿀 수 있는 값은 무응답 대기 시간 하나뿐이다.
+// §5.21 GET·PATCH /staff/academy-settings(A-17) — 학원이 바꿀 수 있는 값은 미승차 대기 시간 하나뿐이다.
 // 오른쪽에 전 학원 공통 정책과 학원 정보를 읽기 전용으로 보인다("왜 이것만 바뀌나" 에 값으로 답한다).
 // 범위(1~30)는 화면이 먼저 알리고(저장 비활성), 서버도 422 VALIDATION_FAILED 로 판정한다 — 그 문구는 그대로 노출한다.
 export const AcademySettingsForm = () => {
@@ -75,7 +75,7 @@ export const AcademySettingsForm = () => {
       setValue(String(updated.noShowWaitMinutes));
       setSavedMinutes(updated.noShowWaitMinutes);
       markSaved(String(updated.noShowWaitMinutes));
-      show({ title: "학원 설정을 저장했습니다", detail: `무응답 대기 ${updated.noShowWaitMinutes}분 — 이미 카운트다운 중인 건에도 바로 적용됩니다` });
+      show({ title: "학원 설정을 저장했습니다", detail: `미승차 대기 ${updated.noShowWaitMinutes}분 — 이미 카운트다운 중인 건에도 바로 적용됩니다` });
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "학원 설정 저장에 실패했습니다");
     } finally {
@@ -87,13 +87,13 @@ export const AcademySettingsForm = () => {
 
   return (
     <StyledAcademySettingsLayout>
-      <PageHeader title="학원 설정" description="학원이 바꿀 수 있는 값은 무응답 대기 시간 하나입니다 — 나머지 정책은 모든 학원에 같게 적용됩니다" />
+      <PageHeader title="학원 설정" description="학원이 바꿀 수 있는 값은 미승차 대기 시간 하나입니다 — 나머지 정책은 모든 학원에 같게 적용됩니다" />
       <StyledSettingsBoard>
         <Card padding={20}>
           {error ? <AlertBanner tone="missed" title={error} /> : null}
           <StyledSettingsSection>
             <Input
-              label="무응답 대기 시간"
+              label="미승차 대기 시간"
               type="number"
               min={MIN_MINUTES}
               max={MAX_MINUTES}
@@ -125,7 +125,7 @@ export const AcademySettingsForm = () => {
                 items={[
                   { tone: "end", title: "동승자가 [미승차] 처리", meta: "카운트다운 시작" },
                   { tone: "end", title: `${minutes}분 카운트다운 — 보호자 연락`, meta: "만료되면 무응답으로 확정" },
-                  { tone: "bad", title: "관계자에게 보고", meta: "비상 알림이 아니라 운행 상세의 띠로 알립니다" },
+                  { tone: "bad", title: "관계자에게 보고" },
                   { tone: "ok", title: "출발 확정 · 재시도 활성", meta: "관계자 판단으로 출발합니다" },
                 ]}
               />

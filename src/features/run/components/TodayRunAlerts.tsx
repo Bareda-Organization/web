@@ -21,7 +21,7 @@ const contactSummary = (attempts: number, last: "answered" | "no_answer" | null)
   attempts === 0 ? "보호자 전화 시도 없음" : `보호자 전화 시도 ${attempts}회${last === "no_answer" ? "(무응답)" : last === "answered" ? "(통화됨)" : ""}`;
 
 // 그 회차에서 지금 가장 급한 일을 한 띠로 — 운행 중이면 미승차 에스컬레이션(카운트다운 · 보호자 전화), 확정 전이면 기사 미배치.
-// 조치 대상이 명단 맨 아래에 묻히지 않게 한다(사양 C-02 · EXC-01 의 3분 에스컬레이션을 이 화면이 드러낸다).
+// 조치 대상이 명단 맨 아래에 묻히지 않게 한다(사양 C-02 · EXC-01 의 미승차 에스컬레이션을 이 화면이 드러낸다).
 export const TodayRunAlerts = ({ run, roster, nowMs, onShowNoShow, onOpenAssignment }: Props) => {
   if (run.noShowCases.length > 0) {
     const cases = run.noShowCases;
@@ -55,7 +55,7 @@ export const TodayRunAlerts = ({ run, roster, nowMs, onShowNoShow, onOpenAssignm
         {cases.map((c) => c.studentName).join(" · ")} — 학부모에게 알림 전송 · {contactSummary(attempts, first.lastContactResult)} ·{" "}
         {countdown ? (
           <>
-            3분 카운트다운 <b>{countdown}</b> 남음. 만료되면 관계자 판단으로 출발합니다.
+            카운트다운 <b>{countdown}</b> 남음. 만료되면 관계자 판단으로 출발합니다.
           </>
         ) : (
           "카운트다운이 끝났습니다. 관계자 판단으로 출발합니다."

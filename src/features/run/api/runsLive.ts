@@ -44,7 +44,7 @@ const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
   lastSeenAt: raw.last_seen_at,
 });
 
-// GET /staff/runs/live (§5.18, LOC-01, A-04) — status='moving' 인 회차만 온다.
+// GET /staff/runs/live (§5.18, LOC-01, A-14) — status='moving' 인 회차만 온다.
 // 5~10초 폴링 대상. §5.3 대시보드와 달리 지표·확인상태는 안 주고 위치·진행률만 준다 —
 // lat·lng 는 DashboardPage·TodayRunPage 양쪽에서 버스 마커 좌표로 쓴다. position 이
 // null 이면 lastSeenAt 으로 "최근 확인 N분 전" 텍스트만 보여준다(MON-07 정지 위치 규칙).

@@ -51,3 +51,9 @@ export const StyledStatLink = styled(Link)`
   text-decoration: underline;
   text-underline-offset: 3px;
 `;
+
+export const StyledAssignmentsTitle = styled.h2`
+  margin: 0 0 8px;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+`;

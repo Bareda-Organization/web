@@ -59,6 +59,7 @@ const renderStop = (stop: RouteStopPreviewResponseTypes) => (
 // ②`departTime` 이 아직 응답에 없는 경우(`r20-a` 미병합, api/changeApprovals.ts 주석).
 // "-" 만 찍으면 결함인지 아직 안 채워진 값인지 화면에서 구별이 안 된다.
 const DURATION_MISSING_REASON = "- (예전 확정 노선이라 소요시간 정보가 없습니다)";
+const DISTANCE_MISSING_REASON = "- (거리 정보가 없습니다)";
 const DEPART_TIME_MISSING_REASON = "- (출발 시각 정보가 아직 없습니다)";
 const ARRIVAL_TIME_MISSING_REASON = "- (출발 또는 소요 정보가 없어 계산할 수 없습니다)";
 
@@ -69,6 +70,14 @@ const formatTotalDuration = (minutes: number | null, deltaBase?: number | null):
   const delta = minutes - deltaBase;
   const sign = delta >= 0 ? "+" : "";
   return `${minutes}분 (${sign}${delta}분)`;
+};
+
+// 예상 거리(km, §5.5 est_distance_*) — 소요시간과 같은 꼴로 "변경 후" 열에만 증감을 덧붙인다(A-05 · UF-M-02).
+const formatDistance = (km: number | null, deltaBase?: number | null): string => {
+  if (km === null) return DISTANCE_MISSING_REASON;
+  if (deltaBase === undefined || deltaBase === null) return `${km.toFixed(1)}km`;
+  const delta = km - deltaBase;
+  return `${km.toFixed(1)}km (${delta >= 0 ? "+" : ""}${delta.toFixed(1)}km)`;
 };
 
 // 출발시간 — 재최적화가 출발 시각 자체를 옮기지 않으므로 전/후 두 열에 같은 값이 들어간다
@@ -412,7 +421,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       {detail.routePreview ? (
         <Card>
           {/* `R20-B` 목표 2·3·4(조율자 결정) — 전/후를 나란히 두 열로 나눠 무엇이 달라지는지
-              바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간 3개만 낸다. */}
+              바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간, 거리는 예상 거리(S7)를 낸다. */}
           <p>소요 시간</p>
           <StyledRouteGrid>
             <StyledRouteColumn>
@@ -420,6 +429,10 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
               <StyledInfoRow>
                 <StyledInfoLabel>전체 소요시간</StyledInfoLabel>
                 <span>{formatTotalDuration(detail.estDurationBefore)}</span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>예상 거리</StyledInfoLabel>
+                <span>{formatDistance(detail.estDistanceBefore)}</span>
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>출발시간</StyledInfoLabel>
@@ -437,6 +450,10 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
               <StyledInfoRow>
                 <StyledInfoLabel>전체 소요시간</StyledInfoLabel>
                 <span>{formatTotalDuration(detail.estDurationAfter, detail.estDurationBefore)}</span>
+              </StyledInfoRow>
+              <StyledInfoRow>
+                <StyledInfoLabel>예상 거리</StyledInfoLabel>
+                <span>{formatDistance(detail.estDistanceAfter, detail.estDistanceBefore)}</span>
               </StyledInfoRow>
               <StyledInfoRow>
                 <StyledInfoLabel>출발시간</StyledInfoLabel>

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createStableRouter } from "@/shared/testing/stableRouter";
-import { getSchedules } from "@/features/schedule";
+import { getRuns, getSchedules } from "@/features/schedule";
 import { getRouteDetail, getRoutePath, getRoutes } from "../api";
 import type { RouteDetailResponseTypes } from "../types";
 import { RouteDetail } from "./RouteDetail";
@@ -10,7 +10,7 @@ import { RouteDetail } from "./RouteDetail";
 const mockRouter = createStableRouter();
 vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("../api", () => ({ getRouteDetail: vi.fn(), getRoutes: vi.fn(), getRoutePath: vi.fn() }));
-vi.mock("@/features/schedule", () => ({ getSchedules: vi.fn() }));
+vi.mock("@/features/schedule", () => ({ getSchedules: vi.fn(), getRuns: vi.fn() }));
 
 // 승하차지 패널이 언마운트됐다 다시 마운트되는지만 본다 — 저장 전 편집은 패널 상태에 있다.
 const mounts = vi.fn();
@@ -30,6 +30,7 @@ const mockGetDetail = vi.mocked(getRouteDetail);
 const mockGetRoutes = vi.mocked(getRoutes);
 const mockGetPath = vi.mocked(getRoutePath);
 const mockGetSchedules = vi.mocked(getSchedules);
+const mockGetRuns = vi.mocked(getRuns);
 
 const detail: RouteDetailResponseTypes = {
   id: "1",
@@ -48,6 +49,7 @@ beforeEach(() => {
   mockGetRoutes.mockResolvedValue({ items: [], page: 0, size: 500, totalCount: 0, hasNext: false });
   mockGetPath.mockRejectedValue(new Error("경로 없음"));
   mockGetSchedules.mockResolvedValue({ items: [], page: 0, size: 500, totalCount: 0, hasNext: false });
+  mockGetRuns.mockResolvedValue({ items: [] });
 });
 
 describe("RouteDetail — F02-11 편성 정보 수정 뒤에도 승하차지 편집이 남는다", () => {

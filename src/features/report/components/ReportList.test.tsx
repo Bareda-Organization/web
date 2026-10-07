@@ -12,7 +12,7 @@ vi.mock("../api", () => ({
   handleReport: vi.fn(),
 }));
 
-// 회차 필터 후보(오늘 회차)는 run 기능의 대시보드 조회에서 온다.
+// 회차 필터 후보는 run 기능의 날짜별 대시보드 조회(GET /staff/dashboard?date= · §5.3 runs)에서 온다.
 vi.mock("@/features/run", () => ({
   getDashboard: vi.fn(),
 }));
@@ -121,6 +121,26 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12" }));
   });
 
+  // R50 S16 — 회차 후보가 늘 오늘 회차였다. 고른 날짜의 회차(§5.3 `date`)를 후보로 쓴다.
+  it("날짜를 고르면 회차 후보를 그 날짜의 회차로 다시 읽고, 앞서 고른 회차는 비운다", async () => {
+    mockGet.mockResolvedValue({ items: [], counts: null });
+    mockGetDashboard.mockImplementation(async (date?: string) =>
+      ({ metrics: {}, runs: [{ runId: date ? "9" : "7", busNo: date ? "5호차" : "2호차", direction: "to_academy", departTime: "08:10" }] }) as never,
+    );
+    render(<ReportList />);
+    await screen.findByRole("option", { name: "08:10 2호차 · 등원" });
+    expect(mockGetDashboard).toHaveBeenLastCalledWith(undefined);
+    fireEvent.change(screen.getByLabelText("회차"), { target: { value: "7" } });
+
+    fireEvent.change(screen.getByLabelText("날짜"), { target: { value: "2026-09-12" } });
+
+    expect(await screen.findByRole("option", { name: "08:10 5호차 · 등원" })).toBeInTheDocument();
+    expect(mockGetDashboard).toHaveBeenLastCalledWith("2026-09-12");
+    expect(screen.queryByRole("option", { name: "08:10 2호차 · 등원" })).not.toBeInTheDocument();
+    // 다른 날짜의 회차 id(7)가 새 날짜 조회에 실려 나가지 않는다.
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12", runId: undefined })));
+  });
+
   it("조건을 바꾸기 전에 보낸 요청의 늦은 응답이 새 조건의 목록을 덮지 않는다", async () => {
     let resolveFirst: (value: { items: never[]; counts: null }) => void = () => {};
     mockGet.mockImplementationOnce(
@@ -147,7 +167,7 @@ describe("ReportList — 다시 시도", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("조회에 실패하면 다시 시도 버튼이 있고, 누르면 같은 조건으로 다시 조회해 목록이 나온다", async () => {
-    mockGetDashboard.mockResolvedValue({ runs: [] } as never);
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
     mockGet.mockRejectedValueOnce(new Error("네트워크 요청이 실패했습니다"));
     render(<ReportList />);
     await screen.findByText("운행 리포트를 불러오지 못했습니다");

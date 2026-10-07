@@ -53,13 +53,13 @@ const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
   })),
 });
 
-export type ManagerListFilters = { role?: "driver" | "escort"; assignedToday?: boolean };
+export type ManagerListFilters = { role?: "driver" | "escort"; assignedToday?: boolean; linked?: boolean };
 
-// GET /staff/managers?q=&role=&assigned_today= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
+// GET /staff/managers?q=&role=&linked=&assigned_today= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
 export const getManagers = async (page: number, size = 20, q?: string, filters: ManagerListFilters = {}): Promise<ManagerListResponseTypes> => {
   const raw = await apiFetch<RawManagerListResponse>("/staff/managers", {
     method: "GET",
-    query: { page, size, q: q || undefined, role: filters.role, assigned_today: filters.assignedToday },
+    query: { page, size, q: q || undefined, role: filters.role, linked: filters.linked, assigned_today: filters.assignedToday },
   });
   return {
     items: raw.items.map(toManager),

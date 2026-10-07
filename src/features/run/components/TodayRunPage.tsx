@@ -330,7 +330,7 @@ export const TodayRunPage = () => {
     selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
   );
 
-  // 카운트다운(미승차 3분)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
+  // 카운트다운(미승차 대기 시간)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
   const nowMs = useNow(selectedRun && selectedRun.noShowCases.length > 0 ? 1000 : 30_000);
   const addedCount = roster.filter((item) => item.change === "added").length;
   const transferCount = roster.filter((item) => item.transferId != null).length;
@@ -456,7 +456,7 @@ export const TodayRunPage = () => {
         </StyledMapCard>
 
         <div>
-          {selectedRun ? <RunInfoCard run={selectedRun} nowMs={nowMs} addedCount={addedCount} transferCount={transferCount} /> : null}
+          {selectedRun ? <RunInfoCard run={selectedRun} addedCount={addedCount} transferCount={transferCount} /> : null}
           {/* R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 여기에 나온다(사용자 지시).
               아무 곳도 안 골랐으면 카드 자체를 안 그린다. */}
           {selectedStopName != null ? (

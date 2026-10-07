@@ -54,6 +54,26 @@ describe("ManagerList — 탭 · 필터 쿼리", () => {
   });
 });
 
+// R50 S9 — MGR-01 계정 연결 여부 필터. 역할 탭 · 오늘 배치 필터와 함께 서버 쿼리(`linked`)로 간다.
+describe("ManagerList — 계정 연결 필터(R50)", () => {
+  beforeEach(() => mockGetManagers.mockResolvedValue(page([manager("1", "김기사")])));
+  afterEach(() => vi.clearAllMocks());
+
+  it("앱 가입 전 · 연결됨을 누르면 linked 를 실어 0쪽부터 다시 읽고, 기존 역할 · 배치 조건은 유지한다", async () => {
+    render(<ManagerList />);
+    await screen.findByText("김기사");
+
+    fireEvent.click(screen.getByRole("tab", { name: /^동승자/ }));
+    await waitFor(() => expect(mockGetManagers).toHaveBeenLastCalledWith(0, 20, undefined, expect.objectContaining({ role: "escort" })));
+
+    fireEvent.click(screen.getByRole("tab", { name: "앱 가입 전" }));
+    await waitFor(() => expect(mockGetManagers).toHaveBeenLastCalledWith(0, 20, undefined, { role: "escort", assignedToday: undefined, linked: false }));
+
+    fireEvent.click(screen.getByRole("tab", { name: "연결됨" }));
+    await waitFor(() => expect(mockGetManagers).toHaveBeenLastCalledWith(0, 20, undefined, { role: "escort", assignedToday: undefined, linked: true }));
+  });
+});
+
 // R48 — 기사 미배치 회차 띠: 페이지가 넘긴 회차에, 오늘 배치가 없고 그 시각이 근무 시간 안인 기사를 이름으로 짚는다.
 describe("ManagerList — 기사 미배치 띠 · 오늘 배치 열", () => {
   afterEach(() => vi.clearAllMocks());

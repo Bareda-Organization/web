@@ -185,9 +185,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText("확인")).not.toBeInTheDocument();
   });
 
-  // B1 #26 — 버스가 많은 학원은 종료된 회차까지 표에 쌓인다. 기본은 전부 보이고(종료 회차를 남긴다는 사용자 결정),
-  // "운행 중·곧 출발만" 을 켜면 확정·운행 중 회차만 남는다.
-  it("'운행 중·곧 출발만' 을 켜면 확정·운행 중 회차만 표에 남고, 끄면 전부 돌아온다", async () => {
+  // Ruling 844 — "운행 중·곧 출발만" 스위치는 사양 근거가 없어 지웠다. 표는 언제나 오늘 회차 전부(종료 회차 포함)를 보인다.
+  it("표는 오늘 회차 전부를 보이고 '운행 중·곧 출발만' 스위치는 없다", async () => {
     const run = (runId: string, busNo: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
       ...baseDashboard.runs[0],
       runId,
@@ -203,17 +202,9 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
     const table = (await screen.findByRole("table")) as HTMLElement;
+
     expect(within(table).getAllByRole("row")).toHaveLength(5); // 머리줄 + 4행
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
-
-    expect(within(table).getByText("2호차 · 등원")).toBeInTheDocument();
-    expect(within(table).getByText("3호차 · 등원")).toBeInTheDocument();
-    expect(within(table).queryByText("1호차 · 등원")).not.toBeInTheDocument();
-    expect(within(table).queryByText("4호차 · 등원")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
-    expect(within(table).getAllByRole("row")).toHaveLength(5);
+    expect(screen.queryByRole("checkbox", { name: "운행 중·곧 출발만" })).not.toBeInTheDocument();
   });
 
   // Ruling 810 — 서버가 회차별 미승차·미등원 수를 주면 4분류(탑승·미승차·미등원·대기=나머지) 막대가 그 수로 그려진다.
@@ -234,6 +225,17 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByRole("img", { name: "탑승 완료 18명 · 미승차 0명 · 미등원 2명 · 대기 0명" })).toBeInTheDocument();
     // 등원 전체: 29 · 2 · 3 · 6
     expect(screen.getByRole("img", { name: "탑승 완료 29명 · 미승차 2명 · 미등원 3명 · 대기 6명" })).toBeInTheDocument();
+  });
+
+  // R50 S14 — 관계자 명단은 미등원 행을 남기고 회색으로 보인다(Ruling 811). "명단에서 제외" 라는 보조 문구는 사실과 달랐다.
+  it("미등원 지표의 보조 문구는 명단에서 제외된다고 말하지 않고, 행이 회색으로 남는다고 말한다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    const card = (await screen.findByText("미등원", { selector: "div" })).parentElement!;
+    expect(card).toHaveTextContent("명단에는 회색 행으로 남습니다");
+    expect(screen.queryByText(/명단에서 제외/)).not.toBeInTheDocument();
   });
 
   it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {

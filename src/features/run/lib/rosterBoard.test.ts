@@ -58,10 +58,10 @@ describe("rosterCounts · filterRoster — 상태 칩 건수와 필터", () => {
     expect(rosterCounts(roster)).toEqual({ all: 7, no_show: 1, absent: 1, waiting: 3, boarded: 2, added: 2, transfer: 1 });
   });
 
-  it("상태 · 정차지 · 이름 조건을 함께 건다", () => {
-    expect(filterRoster(roster, { status: "waiting", stopKey: null, query: "" }).map((item) => item.studentId)).toEqual(["5", "6", "7"]);
-    expect(filterRoster(roster, { status: "all", stopKey: null, query: "" })).toHaveLength(7);
-    expect(filterRoster([row({ name: "이아안" }), row({ name: "천하준" })], { status: "all", stopKey: null, query: "아안" })).toHaveLength(1);
+  // Ruling 844 — 이름 검색 · 승하차지 필터는 사양 근거가 없어 지웠다. 남은 조건은 상태 칩 하나다.
+  it("상태 조건으로 거른다", () => {
+    expect(filterRoster(roster, "waiting").map((item) => item.studentId)).toEqual(["5", "6", "7"]);
+    expect(filterRoster(roster, "all")).toHaveLength(7);
   });
 });
 
