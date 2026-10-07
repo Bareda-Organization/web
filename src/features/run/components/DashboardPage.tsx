@@ -85,8 +85,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   const [loading, setLoading] = useState(true);
   // "지금" — 응답을 받을 때마다 갱신한다(7초 주기). 시간표의 지금 선 · 미승차 남은 분이 이 값을 쓴다.
   const [nowMs, setNowMs] = useState(() => Date.now());
-  // B1 #26 — 기본은 오늘 회차 전부(종료 회차를 남긴다는 사용자 결정). 켜면 확정·운행 중 회차만 표에 남긴다.
-  const [activeOnly, setActiveOnly] = useState(false);
   // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
   const [approvalRequests, setApprovalRequests] = useState<{ approvalId: string; label: string }[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -505,8 +503,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
               loading={loading}
               hasError={Boolean(error)}
               nowMs={nowMs}
-              activeOnly={activeOnly}
-              onActiveOnlyChange={setActiveOnly}
             />
             <DashboardActionsCard runs={runs} unassignedManagers={metrics?.unassignedManagers ?? 0} approvals={approvals} nowMs={nowMs} />
           </StyledBoardRow>

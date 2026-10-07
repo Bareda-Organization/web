@@ -329,8 +329,8 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     render(<TodayRunPage />);
 
     expect(await screen.findByText("김학생")).toBeInTheDocument();
-    // 묶음 머리줄 1곳 + 행 칸 1곳.
-    expect(screen.getAllByText("승하차지 미지정")).toHaveLength(2);
+    // 묶음 머리줄 1곳(승하차지 필터를 지워 그 선택지는 더 없다 · Ruling 844).
+    expect(screen.getAllByText("승하차지 미지정")).toHaveLength(1);
   });
 
   it("명단 조회에 실패하면 오류 배너를 보여준다", async () => {
@@ -918,6 +918,60 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
     const phoneCell = within(row).getAllByRole("cell")[headers.indexOf("보호자 연락처")];
     expect(phoneCell).toHaveTextContent("보호자 미연결");
+  });
+});
+
+// R50 S6 · S3 — 명단 비고 열(A-04 · RST-03)을 그리고, 사양 근거가 없던 이름 검색 · 승하차지 필터는 없다(Ruling 844).
+describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () => {
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  it("명단에 비고 열이 있고 행의 note 를 그린다 — 없으면 빈 칸", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue([
+      { ...baseRoster[0], note: "휠체어 탑승" },
+      { ...baseRoster[0], studentId: "2", name: "이학생", note: null },
+    ]);
+    render(<TodayRunPage />);
+
+    const withNote = (await screen.findByText("김학생")).closest("tr")!;
+    const withoutNote = screen.getByText("이학생").closest("tr")!;
+    const noteColumn = screen.getAllByRole("columnheader").map((th) => th.textContent).indexOf("비고");
+    expect(noteColumn).toBeGreaterThanOrEqual(0);
+    expect(within(withNote).getAllByRole("cell")[noteColumn]).toHaveTextContent("휠체어 탑승");
+    expect(within(withoutNote).getAllByRole("cell")[noteColumn]).toBeEmptyDOMElement();
+  });
+
+  // R50 S4 — 회차 정보 카드의 전화번호 복사 버튼과 "확정까지 N분" 은 사양 근거가 없어 지웠다. 번호 표시 · tel: 링크는 남는다.
+  it("회차 정보 카드는 전화번호를 tel 링크로만 보이고 복사 버튼 · 확정까지 남은 분이 없다", async () => {
+    mockRunIdParam = "7";
+    const departAt = new Date(Date.now() + 60 * 60_000).toISOString();
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], runStatus: "idle", departTime: departAt, driverPhone: "010-5555-1234" }],
+    });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    const card = await screen.findByRole("region", { name: "회차 정보" });
+    expect(within(card).getByRole("link", { name: "010-5555-1234" })).toHaveAttribute("href", "tel:010-5555-1234");
+    expect(within(card).queryByRole("button", { name: /복사/ })).not.toBeInTheDocument();
+    expect(within(card).queryByText(/남음/)).not.toBeInTheDocument();
+    expect(within(card).getByText(/출발 30분 전/)).toBeInTheDocument();
+  });
+
+  it("탑승 명단에 이름 검색 · 승하차지 필터가 없다", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    expect(screen.queryByLabelText("학생 이름 검색")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("정차지 필터")).not.toBeInTheDocument();
   });
 });
 

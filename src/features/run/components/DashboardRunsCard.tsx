@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Icon, RosterTable, RunStatusChip, Switch } from "@/shared/ui";
+import { Icon, RosterTable, RunStatusChip } from "@/shared/ui";
 import { TimetableBar } from "@/shared/ui/display";
 import type { RosterColumn } from "@/shared/types";
 import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
@@ -25,8 +25,6 @@ type Props = {
   loading: boolean;
   hasError: boolean;
   nowMs: number;
-  activeOnly: boolean;
-  onActiveOnlyChange: (next: boolean) => void;
 };
 
 const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
@@ -42,10 +40,8 @@ const statusNote = (run: DashboardRunResponseTypes, attentionReason: string | un
 
 // 오늘 운행 표 — 출발 · 호차 · 상태(+사유) · 시간표 막대 · 탑승 · 배치 인력과 변경 확인을 한 줄에 둔다.
 // 같은 6개 회차를 버스 목록과 표에 두 번 그리던 것을 이 표 하나로 합쳤다.
-export const DashboardRunsCard = ({ runs, loading, hasError, nowMs, activeOnly, onActiveOnlyChange }: Props) => {
+export const DashboardRunsCard = ({ runs, loading, hasError, nowMs }: Props) => {
   const router = useRouter();
-  // 확정(출발 30분 전부터)·운행 중이 "곧 출발·운행 중" 이다. 대기(idle)는 아직 확정 전이라 뺀다.
-  const tableRuns = activeOnly ? runs.filter((run) => run.runStatus === "confirmed" || run.runStatus === "moving") : runs;
   const range = timetableRange(runs, nowMs);
 
   const columns: RosterColumn<DashboardRunResponseTypes>[] = [
@@ -123,7 +119,6 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs, activeOnly, 
         <h2>운행 {runs.length}회</h2>
         <p>출발 순 · 가는 세로선 = 지금 {formatClockTime(new Date(nowMs).toISOString())}</p>
         <StyledBoardCardTools>
-          <Switch label="운행 중·곧 출발만" checked={activeOnly} onChange={(event) => onActiveOnlyChange(event.target.checked)} />
           <Link href="/today-run">
             <Icon name="arrow-right" size={14} /> 운행 상세
           </Link>
@@ -133,8 +128,8 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs, activeOnly, 
         hasError={hasError}
         columns={columns}
         loading={loading}
-        rows={tableRuns}
-        emptyMessage={activeOnly ? "운행 중이거나 곧 출발하는 회차가 없습니다" : "오늘 등록된 회차가 없습니다"}
+        rows={runs}
+        emptyMessage="오늘 등록된 회차가 없습니다"
         getRowKey={(row) => row.runId}
         rowTone={(row) => runAttention(row, nowMs)?.tone}
         onRowClick={(row) => router.push(`/today-run?runId=${row.runId}`)}

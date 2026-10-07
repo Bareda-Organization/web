@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { BoardingStatusChip, Button, FilterBar, FilterGroup, RosterTable, SearchField, SegmentedControl, Select, StatusChip } from "@/shared/ui";
+import { useMemo } from "react";
+import { BoardingStatusChip, Button, FilterBar, FilterGroup, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import type { RosterItemResponseTypes } from "../types";
 import { filterRoster, rosterCounts, rosterStopKey, stopPassage, UNASSIGNED_STOP, type RosterStatusFilter } from "../lib/rosterBoard";
@@ -26,7 +26,7 @@ type Props = {
 
 const PASSAGE_LABEL = { passed: "통과", current: "현재 정차지", next: "다음 정차지" } as const;
 
-// 탑승 명단 — 상태 칩 건수 · 이름 검색 · 정차지 필터 · 정차지 묶음. 미승차 행은 위험색 + [보호자 전화](U-08), 미등원은 회색(Ruling 811).
+// 탑승 명단 — 상태 칩 건수 · 정차지 묶음. 미승차 행은 위험색 + [보호자 전화](U-08), 미등원은 회색(Ruling 811).
 export const RunRosterCard = ({
   roster,
   routeStops,
@@ -40,20 +40,8 @@ export const RunRosterCard = ({
   onTransfer,
   onCancelTransfer,
 }: Props) => {
-  const [query, setQuery] = useState("");
-  const [stopKey, setStopKey] = useState<string>("");
-
   const counts = useMemo(() => rosterCounts(roster), [roster]);
-  const stopOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    roster.forEach((item) => {
-      const key = rosterStopKey(item);
-      if (!seen.has(key)) seen.set(key, item.stopName ?? UNASSIGNED_STOP);
-    });
-    return [{ value: "", label: "전체" }, ...[...seen.entries()].map(([value, label]) => ({ value, label }))];
-  }, [roster]);
-
-  const filtered = useMemo(() => filterRoster(roster, { status: statusFilter, stopKey: stopKey || null, query }), [roster, statusFilter, stopKey, query]);
+  const filtered = useMemo(() => filterRoster(roster, statusFilter), [roster, statusFilter]);
 
   // 운행 중 · 종료 회차는 상태별 건수, 확정 전 회차는 추가 · 이동 대기 건수를 칩으로 둔다.
   const statusOptions: { value: RosterStatusFilter; label: string }[] = isIdle
@@ -77,6 +65,8 @@ export const RunRosterCard = ({
     { key: "className", label: "반", render: (row) => row.className ?? "-" },
     { key: "guardianPhone", label: "보호자 연락처", render: (row) => row.guardianPhone ?? <span>보호자 미연결</span> },
     { key: "status", label: "상태", render: (row) => <BoardingStatusChip status={row.status} /> },
+    // A-04 · RST-03 — 학생 특이사항(STU-07)·강제 추가 메모. 없으면 빈 칸.
+    { key: "note", label: "비고", render: (row) => row.note ?? "" },
     {
       key: "change",
       label: "변경",
@@ -112,14 +102,10 @@ export const RunRosterCard = ({
       <StyledRosterCardHead>
         <h2>탑승 명단 {roster.length}명</h2>
         <p>{isIdle ? "정차지 순" : "정차지 순 · 위쪽이 이미 지난 정차지"}</p>
-        <SearchField value={query} onChange={(event) => setQuery(event.target.value)} onSubmit={setQuery} placeholder="학생 이름 검색" aria-label="학생 이름 검색" />
       </StyledRosterCardHead>
       <FilterBar style={{ marginBottom: 16 }}>
         <FilterGroup label="상태">
           <SegmentedControl aria-label="상태 필터" options={statusOptions} value={statusFilter} onChange={(value) => onStatusFilterChange(value as RosterStatusFilter)} />
-        </FilterGroup>
-        <FilterGroup label="정차지">
-          <Select aria-label="정차지 필터" options={stopOptions} value={stopKey} onChange={(event) => setStopKey(event.target.value)} />
         </FilterGroup>
       </FilterBar>
       <StyledRosterScroll>

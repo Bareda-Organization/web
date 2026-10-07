@@ -185,9 +185,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText("확인")).not.toBeInTheDocument();
   });
 
-  // B1 #26 — 버스가 많은 학원은 종료된 회차까지 표에 쌓인다. 기본은 전부 보이고(종료 회차를 남긴다는 사용자 결정),
-  // "운행 중·곧 출발만" 을 켜면 확정·운행 중 회차만 남는다.
-  it("'운행 중·곧 출발만' 을 켜면 확정·운행 중 회차만 표에 남고, 끄면 전부 돌아온다", async () => {
+  // Ruling 844 — "운행 중·곧 출발만" 스위치는 사양 근거가 없어 지웠다. 표는 언제나 오늘 회차 전부(종료 회차 포함)를 보인다.
+  it("표는 오늘 회차 전부를 보이고 '운행 중·곧 출발만' 스위치는 없다", async () => {
     const run = (runId: string, busNo: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
       ...baseDashboard.runs[0],
       runId,
@@ -203,17 +202,9 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
     const table = (await screen.findByRole("table")) as HTMLElement;
+
     expect(within(table).getAllByRole("row")).toHaveLength(5); // 머리줄 + 4행
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
-
-    expect(within(table).getByText("2호차 · 등원")).toBeInTheDocument();
-    expect(within(table).getByText("3호차 · 등원")).toBeInTheDocument();
-    expect(within(table).queryByText("1호차 · 등원")).not.toBeInTheDocument();
-    expect(within(table).queryByText("4호차 · 등원")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "운행 중·곧 출발만" }));
-    expect(within(table).getAllByRole("row")).toHaveLength(5);
+    expect(screen.queryByRole("checkbox", { name: "운행 중·곧 출발만" })).not.toBeInTheDocument();
   });
 
   // Ruling 810 — 서버가 회차별 미승차·미등원 수를 주면 4분류(탑승·미승차·미등원·대기=나머지) 막대가 그 수로 그려진다.
