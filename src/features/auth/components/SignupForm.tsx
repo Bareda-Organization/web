@@ -31,6 +31,7 @@ type SignupFormState =
 
 const validate = (name: string, phone: string, loginId: string, password: string): string | null => {
   if (name.trim() === "" || phone.trim() === "") return "이름과 연락처를 입력해 주세요.";
+  if (loginId.trim() === "" || password === "") return "아이디와 비밀번호를 입력해 주세요.";
   if (loginId.length > LOGIN_ID_MAX_LENGTH) return `아이디는 ${LOGIN_ID_MAX_LENGTH}자 이하로 입력해 주세요.`;
   if (new TextEncoder().encode(password).length > PASSWORD_MAX_BYTES) return "비밀번호는 한글 24자(영문·숫자 72자) 이하로 입력해 주세요.";
   return null;
