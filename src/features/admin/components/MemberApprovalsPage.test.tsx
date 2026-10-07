@@ -55,6 +55,31 @@ describe("MemberApprovalsPage — 목록 조회 실패", () => {
   });
 });
 
+// R50 M6 — O-02 · UF-O-06 "처리 대기 요청에 붙여 오래 기다린 요청을 구분". 신청 일시 옆에 서울 날짜 기준 N일째를 보인다(신청 당일 = 1일째).
+describe("MemberApprovalsPage — 대기 일수(R50 M6)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("목록의 신청 일시 옆에 N일째를 보인다 — 자정 직전 신청은 다음 날 0시 1분에 2일째", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-03T00:01:00+09:00"));
+    mockGetRequests.mockResolvedValue({
+      items: [{ ...row("1", "가학원", 0), requestedAt: "2026-10-02T23:59:00+09:00" }, { ...row("2", "나학원", 0), requestedAt: "2026-10-03T00:00:30+09:00" }],
+      page: 0,
+      size: 20,
+      totalCount: 2,
+      hasNext: false,
+    });
+    render(<MemberApprovalsPage />);
+
+    const table = await screen.findByRole("table");
+    expect(await within(table).findByText("(2일째)")).toBeInTheDocument();
+    expect(within(table).getByText("(1일째)")).toBeInTheDocument();
+  });
+});
+
 // 정원이 찬 학원(재직 관계자 1명 이상)의 요청은 승인할 수 없다 — 열어 보기 전에 목록에서 알아본다.
 describe("MemberApprovalsPage — 정원이 찬 학원 표시", () => {
   afterEach(() => {

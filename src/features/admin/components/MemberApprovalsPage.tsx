@@ -9,6 +9,7 @@ import { LinkButton } from "@/shared/ui/display";
 import type { RosterColumn } from "@/shared/types";
 import { getStaffSignupRequests } from "../api";
 import { isStaffQuotaFull } from "../lib/staffQuota";
+import { waitingDays } from "../lib/waitingDays";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 import { useAdminPending } from "./AdminPendingProvider";
 import { MemberApprovalDecidePanel } from "./MemberApprovalDecidePanel";
@@ -85,7 +86,11 @@ export const MemberApprovalsPage = () => {
     {
       key: "requestedAt",
       label: "신청 일시",
-      render: (row) => formatDateTime(row.requestedAt),
+      render: (row) => (
+        <>
+          {formatDateTime(row.requestedAt)} <small>({waitingDays(row.requestedAt)}일째)</small>
+        </>
+      ),
     },
     {
       key: "action",

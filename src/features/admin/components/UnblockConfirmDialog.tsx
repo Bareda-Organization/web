@@ -17,16 +17,20 @@ type UnblockConfirmDialogProps = {
 };
 
 // 차단 직전 상태 이름 — 해제하면 이 상태로 돌아간다(§6.12 · Ruling 328).
-const STATUS_LABEL = { active: "활성", pending: "승인 대기", rejected: "거부됨" } as const;
+const STATUS_LABEL = { active: "활성", pending: "승인 대기", rejected: "거절됨" } as const;
 
-// 해제 뒤 상태에 따른 경고 — 승인 대기 · 거부됨은 해제해도 쓸 수 없다. 활성은 바로 로그인한다.
+// 해제 뒤 상태에 따른 경고 — 승인 대기 · 거절됨은 해제해도 쓸 수 없다. 활성은 바로 로그인한다.
+// 가입 승인 주체 — 관계자 가입은 메인 관리자가, 그 밖의 역할은 소속 학원 관계자가 승인한다(AUTH-10 · O-02).
+const approverOf = (account: BlockedAccountItemResponseTypes): string => (account.role === "staff" ? "메인 관리자" : `${account.academyName} 관계자`);
+
 const afterNotice = (account: BlockedAccountItemResponseTypes) => {
   const status = STATUS_LABEL[account.statusBeforeBlock];
   if (account.statusBeforeBlock === "pending") {
+    const approver = approverOf(account);
     return {
       tone: "moving" as const,
-      body: `이 계정은 차단되기 전에 가입 승인을 기다리던 중이었습니다. 해제해도 ${account.academyName} 관계자가 승인하기 전에는 로그인할 수 없습니다.`,
-      toast: `'${status}' 상태로 돌아갔습니다 — 가입 승인을 받기 전에는 쓸 수 없습니다. 처리자와 일시가 이력에 남았습니다.`,
+      body: `이 계정은 차단되기 전에 가입 승인을 기다리던 중이었습니다. 해제해도 ${approver}가 승인하기 전에는 로그인할 수 없습니다.`,
+      toast: `'${status}' 상태로 돌아갔습니다 — ${approver}의 승인을 받기 전에는 쓸 수 없습니다. 처리자와 일시가 이력에 남았습니다.`,
     };
   }
   if (account.statusBeforeBlock === "rejected") {

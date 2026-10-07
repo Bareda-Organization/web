@@ -3,7 +3,8 @@ import { Card, ListRow, ListRows, StatStrip, StatusChip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { TargetBar } from "@/shared/ui/display";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import { directionLabel, loginGrowthText, onTimeText, runsDeltaText } from "../lib/dashboardView";
+import { directionLabel, loginGrowthText, onTimeText, periodLabel, runsDeltaText } from "../lib/dashboardView";
+import { waitingDays } from "../lib/waitingDays";
 import type { DashboardDays, DashboardResponseTypes } from "../types/dashboard";
 import { DailyBarChart, DailyLineChart } from "./DashboardCharts";
 import { StyledCardBody, StyledCardHeading, StyledFaint, StyledFill, StyledHBar, StyledOkTitle, StyledRowLink, StyledTrack, StyledWarnText } from "./DashboardPage.styled";
@@ -127,8 +128,6 @@ const buildStats = (data: DashboardResponseTypes, days: DashboardDays): StatStri
 export const DashboardStats = ({ data, days }: { data: DashboardResponseTypes; days: DashboardDays }) => <StatStrip items={buildStats(data, days)} />;
 
 // ── 지금 처리할 것 ────────────────────────────────────────────────────────
-const waitingDays = (requestedAt: string, now: Date): number => Math.max(1, Math.floor((now.getTime() - new Date(requestedAt).getTime()) / 86_400_000) + 1);
-
 const RowLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
   <StyledRowLink>
     <Link href={href}>{children}</Link>
@@ -243,7 +242,7 @@ export const ResultCard = ({ data }: { data: DashboardResponseTypes }) => {
     <Card padding={0}>
       <StyledCardBody aria-labelledby="dashboard-result-title">
         <StyledCardHeading id="dashboard-result-title">
-          처리 결과 <small>누적 {changeRequests.total}건</small>
+          처리 결과 <small>{periodLabel(data.period.days)} {changeRequests.total}건</small>
         </StyledCardHeading>
         {rows.map((row) => (
           <StyledHBar key={row.label}>

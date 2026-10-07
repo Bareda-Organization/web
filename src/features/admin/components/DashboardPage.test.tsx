@@ -170,6 +170,23 @@ describe("DashboardPage", () => {
     expect(screen.getByText("민창민 · 새봄영어 — 정원 찼음 · 2일째")).toBeInTheDocument();
   });
 
+  // R50 M5 — §6.18 `change_requests` 는 고른 기간에 결정된 건수다. "누적" 이 아니라 그 기간을 적는다.
+  it("처리 결과 건수는 '누적' 이 아니라 고른 기간으로 적는다", async () => {
+    mockGetDashboard.mockResolvedValue(makeDashboard({ period: { from: "2026-10-03", to: "2026-10-03", days: 1 } }));
+    render(<DashboardPage />);
+    await flush();
+
+    expect(screen.getByText("오늘 79건")).toBeInTheDocument();
+    expect(screen.queryByText(/누적/)).not.toBeInTheDocument();
+  });
+
+  it("처리 결과 기간은 7일이면 '최근 7일' 로 적는다", async () => {
+    render(<DashboardPage />);
+    await flush();
+
+    expect(screen.getByText("최근 7일 79건")).toBeInTheDocument();
+  });
+
   it("값이 0 인 처리 항목은 한 줄 '이상 없음 N' 으로 묶는다", async () => {
     render(<DashboardPage />);
     await flush();

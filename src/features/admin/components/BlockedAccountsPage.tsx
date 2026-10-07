@@ -18,7 +18,7 @@ import { StyledAcademyCell, StyledAcademyDot, StyledBlockedAccountsLayout, Style
 const AfterStatusChip = ({ status }: { status: BlockedAccountItemResponseTypes["statusBeforeBlock"] }) => {
   if (status === "active") return <StatusChip tone="conf" quiet>활성</StatusChip>;
   if (status === "pending") return <StatusChip tone="warn" marker={false}>승인 대기</StatusChip>;
-  return <StatusChip tone="bad" marker={false}>거부됨</StatusChip>;
+  return <StatusChip tone="bad" marker={false}>거절됨</StatusChip>;
 };
 
 const PAGE_SIZE = 20;

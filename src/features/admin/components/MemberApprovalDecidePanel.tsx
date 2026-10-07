@@ -10,6 +10,7 @@ import { decideStaffSignupRequest } from "../api";
 import { lastLoginText } from "../lib/lastLogin";
 import { withObject } from "../lib/korean";
 import { isStaffQuotaFull } from "../lib/staffQuota";
+import { waitingDays } from "../lib/waitingDays";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 import { StyledDialogForm } from "./AcademyFormDialog.styled";
 import { StyledAcademyDot, StyledPanelActions, StyledPanelBody, StyledPanelHeader, StyledPanelNote, StyledStaffSub, StyledSteps } from "./MemberApprovalsPage.styled";
@@ -18,11 +19,6 @@ type MemberApprovalDecidePanelProps = {
   request: StaffSignupRequestItemResponseTypes;
   onDone: () => void;
 };
-
-const DAY_MS = 86_400_000;
-
-// 신청한 지 며칠째인지(신청 당일 = 1일째) — 오래 걸린 요청이 눈에 띄게.
-const waitingDays = (requestedAt: string): number => Math.max(1, Math.floor((Date.now() - new Date(requestedAt).getTime()) / DAY_MS) + 1);
 
 // §6.5 POST /admin/staff-signup-requests/{id}/decide (O-02). 학원당 관계자 1명 정원이라(STAFF_QUOTA_EXCEEDED) 재직 관계자가 이미 있는 학원은
 // 승인 단추를 끄고 해결 순서를 같은 칸에 보인다 — 눌러서야 409 를 보면 왜 안 되는지, 무엇을 해야 하는지 알 수 없다(Ruling 807 · 827).

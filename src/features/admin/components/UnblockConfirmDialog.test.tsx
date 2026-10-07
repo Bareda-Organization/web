@@ -64,12 +64,29 @@ describe("UnblockConfirmDialog — 차단 근거 노출 후 해제", () => {
 describe("UnblockConfirmDialog — 해제 뒤 상태 경고(Ruling 328)", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("승인 대기로 돌아가는 계정은 해제 뒤에도 승인 전에는 로그인할 수 없다고 경고한다", () => {
-    render(<UnblockConfirmDialog account={{ ...account, statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />);
+  // R50 M4 — 관계자 가입은 같은 학원 관계자가 아니라 메인 관리자가 승인한다(AUTH-10 · O-02). 승인 주체를 역할로 가른다.
+  it("승인 대기로 돌아가는 관계자 계정은 메인 관리자가 승인하기 전에는 로그인할 수 없다고 경고한다", () => {
+    render(<UnblockConfirmDialog account={{ ...account, role: "staff", statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />);
 
     const dialog = screen.getByRole("dialog", { name: "이관계 계정 차단 해제" });
     expect(within(dialog).getByText("해제 뒤 상태 — 승인 대기")).toBeInTheDocument();
-    expect(within(dialog).getByText(/승인하기 전에는 로그인할 수 없습니다/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/메인 관리자가 승인하기 전에는 로그인할 수 없습니다/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/바래다 학원 관계자가 승인/)).not.toBeInTheDocument();
+  });
+
+  it("승인 대기로 돌아가는 학부모 계정은 소속 학원 관계자가 승인하기 전에는 로그인할 수 없다고 경고한다", () => {
+    render(<UnblockConfirmDialog account={{ ...account, role: "parent", statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    const dialog = screen.getByRole("dialog", { name: "이관계 계정 차단 해제" });
+    expect(within(dialog).getByText(/바래다 학원 관계자가 승인하기 전에는 로그인할 수 없습니다/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/메인 관리자가 승인/)).not.toBeInTheDocument();
+  });
+
+  it("가입이 거절된 상태로 돌아가는 계정은 사양 용어 '거절됨' 으로 적는다", () => {
+    render(<UnblockConfirmDialog account={{ ...account, statusBeforeBlock: "rejected" }} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByText("해제 뒤 상태 — 거절됨")).toBeInTheDocument();
+    expect(screen.queryByText(/거부됨/)).not.toBeInTheDocument();
   });
 
   it("활성으로 돌아가는 계정은 바로 로그인할 수 있다고만 알리고 승인 경고는 내지 않는다", () => {
@@ -79,11 +96,11 @@ describe("UnblockConfirmDialog — 해제 뒤 상태 경고(Ruling 328)", () => 
     expect(screen.queryByText(/승인하기 전에는 로그인할 수 없습니다/)).not.toBeInTheDocument();
   });
 
-  it("해제에 성공하면 처리 완료 토스트에 돌아간 상태를 적는다(S-04)", async () => {
+  it("해제에 성공하면 처리 완료 토스트에 돌아간 상태와 승인 주체를 적는다(S-04 · R50 M4)", async () => {
     mockUnblockAccount.mockResolvedValue({ accountStatus: "active", unblockedBy: "1", unblockedAt: "2026-09-12T00:00:00Z" });
     render(
       <ToastProvider>
-        <UnblockConfirmDialog account={{ ...account, statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />
+        <UnblockConfirmDialog account={{ ...account, role: "staff", statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />
       </ToastProvider>,
     );
 
@@ -91,5 +108,6 @@ describe("UnblockConfirmDialog — 해제 뒤 상태 경고(Ruling 328)", () => 
 
     expect(await screen.findByText("이관계 계정의 로그인 차단을 해제했습니다")).toBeInTheDocument();
     expect(screen.getByText(/'승인 대기' 상태로 돌아갔습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/메인 관리자의 승인을 받기 전에는 쓸 수 없습니다/)).toBeInTheDocument();
   });
 });

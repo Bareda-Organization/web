@@ -33,6 +33,9 @@ export const onTimeText = (rate: number | null): string => (rate === null ? "—
 
 const DELTA_PERIOD_LABEL: Record<DashboardDays, string> = { 1: "어제", 7: "지난주", 30: "직전 30일" };
 
+/** 기간 칩 값을 문구로 — `오늘` · `최근 7일`. 서버가 돌려준 `period.days` 를 그대로 받는다. */
+export const periodLabel = (days: number): string => (days === 1 ? "오늘" : `최근 ${days}일`);
+
 /** `지난주 대비 +2회` — 직전 같은 길이 기간과의 차이. */
 export const runsDeltaText = (days: DashboardDays, current: number, previous: number): string => {
   const diff = current - previous;
