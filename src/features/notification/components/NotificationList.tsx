@@ -6,6 +6,7 @@ import { AlertBanner, Card, FilterBar, Input, PageHeader, Pagination, RosterTabl
 import type { StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getNotifications } from "../api";
+import { isAckTracked } from "../lib/ackTracked";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
 import { StyledNotificationLayout, StyledNotificationFooter, StyledRecipientCell } from "./NotificationList.styled";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -68,7 +69,9 @@ const dayHeading = (key: string): string => {
 };
 
 // 수신자 확인 칸 — 묶음은 "미확인 2/2" · "확인 14/20" · "확인됨", 낱개는 "미확인" · "확인됨".
+// 확인을 추적하지 않는 종류(중요 통지 3종 밖 — Ruling 850)는 경고색 없이 "확인 대상 아님" 이다.
 const ackSummary = (row: NotificationListItemResponseTypes): { label: string; tone: StatusChipTone; quiet: boolean } => {
+  if (!isAckTracked(row.type)) return { label: "확인 대상 아님", tone: "off", quiet: true };
   if (row.recipientCount === undefined) return row.acked ? { label: "확인됨", tone: "ok", quiet: true } : { label: "미확인", tone: "warn", quiet: false };
   const acked = row.ackedCount ?? 0;
   if (acked >= row.recipientCount) return { label: "확인됨", tone: "ok", quiet: true };
@@ -179,10 +182,10 @@ export const NotificationList = () => {
           getRowKey={(row) => row.notificationId}
           groupBy={(row) => dayKey(row.sentAt)}
           renderGroupLabel={(key) => <b>{dayHeading(key)}</b>}
-          rowTone={(row) => (STAFF_ROLES.has(row.recipientRole) && !row.acked ? "warn" : undefined)}
+          rowTone={(row) => (isAckTracked(row.type) && STAFF_ROLES.has(row.recipientRole) && !row.acked ? "warn" : undefined)}
         />
         <StyledNotificationFooter>
-          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}최근 발송이 위</span>
+          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}수신 확인은 지연 · 미승차 · 노선 변경 알림만 추적합니다 · 최근 발송이 위</span>
           <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
         </StyledNotificationFooter>
       </Card>

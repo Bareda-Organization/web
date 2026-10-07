@@ -182,8 +182,10 @@ describe("NotificationList — 묶어 보기 · 관계자 알림만(Ruling 813)"
   });
 
   it("묶음 행은 첫 수신자 외 N명과 확인 수를 보여 준다", async () => {
+    // Ruling 850 — 확인 수는 추적하는 종류(no_show)에서만 보인다.
     const grouped: NotificationListItemResponseTypes = {
       ...row(1),
+      type: "no_show",
       recipientName: "장주희",
       recipientCount: 4,
       ackedCount: 0,
@@ -194,5 +196,54 @@ describe("NotificationList — 묶어 보기 · 관계자 알림만(Ruling 813)"
 
     expect(await screen.findByText("외 3명")).toBeInTheDocument();
     expect(screen.getByText("미확인 4/4")).toBeInTheDocument();
+  });
+});
+
+// Ruling 850 · NTF-10 — 서버가 수신 확인을 추적하는 것은 중요 통지 3종(delay · no_show · route_changed)뿐이고
+// 그 밖의 종류는 acked 가 언제나 false 다. 모든 행에 "미확인" 을 그리면 확인할 수 없는 알림이 경고처럼 읽힌다.
+describe("NotificationList — 확인 여부는 중요 통지 3종만(Ruling 850)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("추적하지 않는 종류(boarding)의 낱개 행은 '확인 대상 아님' 이고 미확인 칩이 없다", async () => {
+    mockGet.mockResolvedValue(pageOf([{ ...row(1), type: "boarding", recipientName: "김학부모", recipientRole: "parent" }], 0, false));
+    render(<NotificationList />);
+
+    const boardingRow = (await screen.findByText("김학부모")).closest("tr")!;
+    expect(within(boardingRow).getByText("확인 대상 아님")).toBeInTheDocument();
+    expect(within(boardingRow).queryByText("미확인")).not.toBeInTheDocument();
+  });
+
+  it("추적하는 종류(delay)의 미확인 낱개 행은 경고색 '미확인' 칩이다", async () => {
+    mockGet.mockResolvedValue(pageOf([{ ...row(1), type: "delay", recipientName: "김학부모", recipientRole: "parent" }], 0, false));
+    render(<NotificationList />);
+
+    const delayRow = (await screen.findByText("김학부모")).closest("tr")!;
+    expect(within(delayRow).getByText("미확인")).toHaveAttribute("data-tone", "warn");
+    expect(within(delayRow).queryByText("확인 대상 아님")).not.toBeInTheDocument();
+  });
+
+  it("추적하지 않는 종류의 묶음 행(run_started)은 확인 N/M 없이 '확인 대상 아님' 이다", async () => {
+    const grouped: NotificationListItemResponseTypes = {
+      ...row(1), type: "run_started", recipientName: "장주희", recipientCount: 4, ackedCount: 0,
+      recipients: [{ recipientName: "장주희", recipientRole: "parent" }],
+    };
+    mockGet.mockResolvedValue(pageOf([grouped], 0, false));
+    render(<NotificationList />);
+
+    const groupRow = (await screen.findByText("장주희")).closest("tr")!;
+    expect(within(groupRow).getByText("확인 대상 아님")).toBeInTheDocument();
+    expect(within(groupRow).queryByText(/확인 \d+\/\d+|미확인/)).not.toBeInTheDocument();
+  });
+
+  it("추적하는 종류의 묶음 행(no_show)은 확인 N/M 을 그대로 보여 준다", async () => {
+    const grouped: NotificationListItemResponseTypes = {
+      ...row(1), type: "no_show", recipientName: "장주희", recipientCount: 20, ackedCount: 14,
+      recipients: [{ recipientName: "장주희", recipientRole: "parent" }],
+    };
+    mockGet.mockResolvedValue(pageOf([grouped], 0, false));
+    render(<NotificationList />);
+
+    const groupRow = (await screen.findByText("장주희")).closest("tr")!;
+    expect(within(groupRow).getByText("확인 14/20")).toBeInTheDocument();
   });
 });
