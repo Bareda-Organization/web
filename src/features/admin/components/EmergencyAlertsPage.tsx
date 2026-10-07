@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { usePagedList, useRealtimeConnection } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatusChip, Tabs } from "@/shared/ui";
@@ -10,7 +9,7 @@ import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { formatRole } from "@/shared/lib/format/roleLabel";
 import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 import { getEmergencies } from "../api";
-import { emergencyTypeLabel } from "../lib/emergencyType";
+import { emergencyTypeLabel, unackedElapsedText } from "../lib/emergencyType";
 import { academyDotColor, eventTimeCell } from "../lib/relativeTime";
 import type { EmergencyItemResponseTypes } from "../types";
 import { EmergencyDetailPanel, raisedClock } from "./EmergencyDetailPanel";
@@ -26,13 +25,12 @@ import {
   StyledFootNote,
   StyledStamp,
   StyledStampDot,
-  StyledStepsCard,
   StyledTwoLine,
 } from "./EmergencyAlertsPage.styled";
 
 type StatusTab = "open" | "acked" | "canceled";
 
-// 발신 후 경과 초 → "N분" (1분 미만은 그대로 알린다).
+// 발신 후 경과 초 → "N분" (1분 미만은 그대로 알린다). 표의 칸용 — 띠 문장은 `unackedElapsedText`.
 const formatElapsed = (seconds: number): string => (seconds < 60 ? "1분 미만" : `${Math.floor(seconds / 60)}분`);
 
 // 비상 알림은 지연 인지 자체가 위험이라(§6.11) 다른 화면보다 짧은 5초로 폴링한다.
@@ -191,7 +189,7 @@ export const EmergencyAlertsPage = () => {
           {worst ? (
             <AlertBanner
               tone="missed"
-              title={`미확인 비상 ${unackedCount}건 — 학원 관계자가 ${formatElapsed(worst.elapsedSinceRaised)}째 응답하지 않았습니다`}
+              title={`미확인 비상 ${unackedCount}건 — 학원 관계자가 아직 응답하지 않았습니다 · ${unackedElapsedText(worst.elapsedSinceRaised)}`}
               action={
                 <StyledBandActions>
                   <LinkButton href={`tel:${worst.academy.contact}`}>학원에 전화</LinkButton>
@@ -248,18 +246,6 @@ export const EmergencyAlertsPage = () => {
                 rowTone={(row) => (!row.staffAcked && !row.canceledAt ? "bad" : undefined)}
               />
             </Card>
-            {tab === "open" ? (
-              <StyledStepsCard aria-labelledby="emergency-steps-title">
-                <h3 id="emergency-steps-title">이 화면에서 하는 일</h3>
-                <ol>
-                  <li>학원 관계자가 확인했는지 · 몇 분째 응답이 없는지 본다</li>
-                  <li>학원 · 기사 · 동승 매니저에게 직접 연락한다</li>
-                  <li>
-                    <Link href="/monitoring">전체 관제</Link>에서 발신 회차 위치를 확인한다
-                  </li>
-                </ol>
-              </StyledStepsCard>
-            ) : null}
           </StyledEmergencyLeft>
           {selected ? <EmergencyDetailPanel emergency={selected} /> : null}
         </StyledEmergencyGrid>

@@ -155,6 +155,24 @@ describe("ForceConfirmPage — 대상과 대기 두 묶음(U-03)", () => {
     expect(await screen.findByText(/확정이 3회 연속 실패한 회차 1건/)).toBeInTheDocument();
   });
 
+  // R50 M7 — "7분 지남했습니다" 처럼 '지남' 에 '했습니다' 가 붙던 문장. 지난 시간을 괄호로 적는다.
+  it("상단 띠는 확정 예정 시각이 얼마나 지났는지 어색한 활용 없이 적는다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-03T07:37:00+09:00"));
+    try {
+      mockGetAcademies.mockResolvedValue([academy]);
+      mockGetRunsLive.mockResolvedValue({
+        runs: [{ ...baseRun, confirmAt: "2026-10-03T07:30:00+09:00", departTime: "2026-10-03T08:00:00+09:00", consecutiveFailures: 3 }],
+      });
+      render(<ForceConfirmPage />);
+
+      expect(await screen.findByText(/확정 예정 07:30 \(7분 지남\)/)).toBeInTheDocument();
+      expect(screen.queryByText(/지남했습니다/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("학원 칩에 확정 실패 회차 수를 붙인다(§6.15)", async () => {
     mockGetAcademies.mockResolvedValue([academy]);
     mockGetAttention.mockResolvedValue({ items: [{ academyId: "1", delayedRuns: 0, confirmFailedRuns: 2 }] });

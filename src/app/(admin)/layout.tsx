@@ -12,7 +12,7 @@ import { AdminPendingProvider, getAdminEmergencies, useAdminPending } from "@/fe
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
 import type { EmergencyAlertSource } from "@/features/emergency";
 import { useAttentionSignals } from "@/shared/hooks";
-import type { AttentionTexts } from "@/shared/hooks/useAttentionSignals";
+import type { AttentionTexts } from "@/shared/hooks";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
 import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { adminLiveDestination } from "@/shared/lib/ws";

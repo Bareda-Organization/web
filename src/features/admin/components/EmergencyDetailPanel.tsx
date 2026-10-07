@@ -7,7 +7,7 @@ import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { formatRole } from "@/shared/lib/format/roleLabel";
 import { Card, StatusChip } from "@/shared/ui";
 import { DefinitionList, LinkButton } from "@/shared/ui/display";
-import { emergencyTypeLabel } from "../lib/emergencyType";
+import { emergencyTypeLabel, unackedElapsedText } from "../lib/emergencyType";
 import { academyDotColor } from "../lib/relativeTime";
 import type { EmergencyItemResponseTypes } from "../types";
 import {
@@ -41,7 +41,7 @@ export const EmergencyDetailPanel = ({ emergency }: { emergency: EmergencyItemRe
   const canceled = emergency.canceledAt !== null;
   const people = [{ name: emergency.raisedBy.name ?? "미상", role: formatRole(emergency.raisedBy.role), phone: emergency.raisedBy.phone }, ...emergency.contacts.map((contact) => ({
     name: contact.name ?? "미상",
-    role: contact.role === "escort" ? "동승 매니저" : formatRole(contact.role),
+    role: formatRole(contact.role),
     phone: contact.phone,
   }))];
 
@@ -104,7 +104,7 @@ export const EmergencyDetailPanel = ({ emergency }: { emergency: EmergencyItemRe
                 </StyledAckLine>
               ) : (
                 <StyledAckLine>
-                  <StatusChip tone="bad">{`미확인 · ${minutesText(emergency.elapsedSinceRaised)}째`}</StatusChip>학원 관계자가 아직 응답하지 않음
+                  <StatusChip tone="bad">{`미확인 · ${unackedElapsedText(emergency.elapsedSinceRaised)}`}</StatusChip>학원 관계자가 아직 응답하지 않음
                 </StyledAckLine>
               ),
             },

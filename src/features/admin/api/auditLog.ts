@@ -76,7 +76,8 @@ type RawLoginHistoryItem = {
   account_id: string | number;
   login_id: string;
   result: LoginHistoryResult | null;
-  ip: string;
+  // 해제 행은 IP 를 남기지 않는다(§6.13) — null · 키 없음 둘 다 온다.
+  ip?: string | null;
   occurred_at: string;
   block_event: boolean;
   block_action: LoginHistoryBlockAction | null;
@@ -96,7 +97,7 @@ const toLoginHistoryItem = (raw: RawLoginHistoryItem): LoginHistoryItemResponseT
   accountId: asIdString(raw.account_id),
   loginId: raw.login_id,
   result: raw.result,
-  ip: raw.ip,
+  ip: raw.ip ?? null,
   occurredAt: raw.occurred_at,
   blockEvent: raw.block_event,
   blockAction: raw.block_action ?? null,

@@ -153,9 +153,18 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     expect(await screen.findByRole("tab", { name: "미확인 1건" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "확인됨 2건" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "취소됨 1건" })).toBeInTheDocument();
-    expect(screen.getByText("미확인 비상 1건 — 학원 관계자가 14분째 응답하지 않았습니다")).toBeInTheDocument();
+    expect(screen.getByText("미확인 비상 1건 — 학원 관계자가 아직 응답하지 않았습니다 · 14분째")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "학원에 전화" })).toHaveAttribute("href", "tel:032-000-0137");
     expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toHaveAttribute("href", "/monitoring");
+  });
+
+  // R50 M7 — "1분 미만째" 는 문장이 안 된다. 1분이 안 됐으면 '째' 없이 '1분 미만' 만 적는다.
+  it("접수 1분이 안 된 미확인 비상은 '1분 미만째' 가 아니라 '1분 미만' 으로 적는다", async () => {
+    byStatus([emergency("1", { elapsedSinceRaised: 30 })], [], []);
+    render(<EmergencyAlertsPage />);
+
+    expect(await screen.findByText("미확인 비상 1건 — 학원 관계자가 아직 응답하지 않았습니다 · 1분 미만")).toBeInTheDocument();
+    expect(screen.queryByText(/1분 미만째/)).not.toBeInTheDocument();
   });
 
   // Ruling 837 — 탭 건수 때문에 상태별로 3번 부르던 것을 응답의 `counts` 로 1번에 끝낸다. 되돌리면(상태별 요청) 이 시험만 실패한다.

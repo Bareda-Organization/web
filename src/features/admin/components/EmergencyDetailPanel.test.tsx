@@ -60,6 +60,20 @@ describe("메인 관리자 EmergencyDetailPanel — 조치 메모", () => {
     expect(screen.getByText("미확인 · 14분째")).toBeInTheDocument();
     expect(screen.getByText("학원 관계자가 아직 응답하지 않음")).toBeInTheDocument();
   });
+
+  it("접수 1분이 안 된 미확인 비상은 '미확인 · 1분 미만' 으로 적는다('째' 를 붙이지 않는다)", () => {
+    render(<EmergencyDetailPanel emergency={{ ...EMERGENCY, staffAcked: false, ackedAt: null, ackedBy: null, elapsedSinceRaised: 30 }} />);
+
+    expect(screen.getByText("미확인 · 1분 미만")).toBeInTheDocument();
+  });
+
+  // R50 M7 — 사양 용어는 동승자(`escort`)다. '동승 매니저' 와 섞어 쓰지 않는다.
+  it("연락처의 동승자는 사양 용어 '동승자' 로 적는다", () => {
+    render(<EmergencyDetailPanel emergency={{ ...EMERGENCY, contacts: [{ name: "윤미경", role: "escort", phone: "010-0000-2013" }] }} />);
+
+    expect(screen.getByText(/동승자/)).toBeInTheDocument();
+    expect(screen.queryByText(/동승 매니저/)).not.toBeInTheDocument();
+  });
 });
 
 // R47 Ruling 744 — 단말이 누른 시각은 참고값이다. 접수 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.

@@ -130,7 +130,7 @@ describe("MonitoringPage — 처음 고르는 학원", () => {
     vi.clearAllMocks();
   });
 
-  // 학원 목록은 최근 등록 순이라 첫 항목이 셔틀 없는 비활성 학원일 수 있다 — 처음 화면이 빈 지도로 열리지 않게 첫 활성 학원을 고른다.
+  // 학원 목록은 이름 순이라 첫 항목이 셔틀 없는 비활성 학원일 수 있다 — 처음 화면이 빈 지도로 열리지 않게 첫 활성 학원을 고른다.
   it("목록 첫 항목이 비활성 학원이면 첫 활성 학원의 회차를 조회한다", async () => {
     mockGetAcademies.mockResolvedValue([
       { id: "3", code: "C001", name: "휴원 학원", region: "서울", staffCount: 1, userCount: 1, status: "inactive" },
@@ -891,6 +891,19 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
 
     await advance(1_500);
     expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
+  });
+
+  // R50 M9 — 머리 설명이 연결 상태와 상관없이 "30초마다" 라고 적던 것(연결이 끊기면 7초 · UF-O-02).
+  it("머리 설명의 갱신 주기는 실시간 연결이 살아 있으면 30초, 끊기면 7초로 사실대로 적는다", async () => {
+    const view = render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    expect(screen.getByText(/회차 목록은 30초마다 갱신/)).toBeInTheDocument();
+
+    mockConnectionState = "reconnecting";
+    view.rerender(<MonitoringPage />);
+
+    expect(screen.getByText(/실시간 연결이 끊겨 7초마다 갱신/)).toBeInTheDocument();
+    expect(screen.queryByText(/30초마다/)).not.toBeInTheDocument();
   });
 
   it("실시간 연결이 끊기면(재연결 중) 7초 안전망 폴링으로 돌아가고, 다시 붙으면 바로 한 번 받은 뒤 30초로 늦춘다", async () => {

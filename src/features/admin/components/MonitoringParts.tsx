@@ -1,5 +1,5 @@
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import { Button, Card, EmptyState, RunStatusChip, StatStrip, StatusChip, Timeline } from "@/shared/ui";
+import { Button, EmptyState, RunStatusChip, StatStrip, StatusChip, Timeline } from "@/shared/ui";
 import type { StatStripItem, TimelineEntry } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
 import type { AcademySummaryResponseTypes, RunAttentionTodayItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
@@ -231,5 +231,3 @@ export const StatusCell = ({ run, nowMs }: { run: RunLiveItemResponseTypes; nowM
     </StyledStatusCell>
   );
 };
-
-export const TimetableCard = Card;

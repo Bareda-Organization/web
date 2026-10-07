@@ -3,9 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuditLogPage } from "./AuditLogPage";
 import { getAllAcademies, getAuditActors, getAuditLogs, getLoginHistory } from "../api";
 
-// §6.13, BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다". 판단 근거(코드 주석)는
-// 무제한 로그인·접속 이력을 기본으로 펼치지 않는 것이므로, 이 검사는 "오늘"로 좁힌
-// from 필터가 실제 조회에 실리는지, "최근 30일 보기"를 눌러야 시작일 제한이 풀리는지를 본다.
+// §6.13 감사·접속 이력 — 기본 조회 조건은 비어 있다(Ruling 844). 첫 조회는 from · to 를 보내지 않고(서버가 최근 30일을 준다 · Ruling 632),
+// 사용자가 시작일 · 종료일을 직접 고르고 조회할 때만 그 값이 요청에 실린다. 이 파일은 그 요청 조건과 표의 표기를 본다.
 vi.mock("../api", () => ({
   getAuditLogs: vi.fn(),
   getLoginHistory: vi.fn(),

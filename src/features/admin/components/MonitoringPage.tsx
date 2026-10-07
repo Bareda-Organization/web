@@ -532,7 +532,9 @@ export const MonitoringPage = () => {
       <PageHeader
         style={{ marginBottom: 20 }}
         title="전체 관제"
-        description="학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · 위치는 실시간, 회차 목록은 30초마다 갱신"
+        description={`학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · ${
+          connected ? `위치는 실시간, 회차 목록은 ${LIVE_POLL_CONNECTED_INTERVAL_MS / 1000}초마다 갱신` : `실시간 연결이 끊겨 ${LIVE_POLL_INTERVAL_MS / 1000}초마다 갱신`
+        }`}
         actions={
           <StyledMonitoringStamp>
             <StyledMonitoringStampDot $live={connected} aria-hidden="true" />

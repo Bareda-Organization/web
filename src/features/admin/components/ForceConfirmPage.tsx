@@ -49,7 +49,7 @@ export const ForceConfirmPage = () => {
         const items = await getAllAcademies();
         if (!cancelled) {
           setAcademies(items);
-          // 목록은 최근 등록 순이라 첫 항목이 회차 없는 비활성 학원일 수 있다 — 첫 운영 중 학원부터 보인다(전체 관제와 같은 규칙).
+          // 목록은 이름 순이라 첫 항목이 회차 없는 비활성 학원일 수 있다 — 첫 운영 중 학원부터 보인다(전체 관제와 같은 규칙).
           const initial = items.find((item) => item.status === "active") ?? items[0];
           if (initial) {
             setAcademyId(initial.id);
@@ -182,7 +182,7 @@ export const ForceConfirmPage = () => {
       {worst ? (
         <StyledBandSlot>
           <AlertBanner tone="missed" title={`확정이 ${worst.consecutiveFailures}회 연속 실패한 회차 ${failingCount}건 — ${academy ? `${academy.name} ` : ""}${worst.busNo} ${directionText(worst)}`}>
-            확정 예정 {formatClockTime(worst.confirmAt)}이 {untilText(worst.confirmAt, new Date(nowMs))}했습니다. 출발 {formatClockTime(worst.departTime)} 전에 확정되지 않으면 기사가 노선을 받지 못합니다.
+            확정 예정 {formatClockTime(worst.confirmAt)} ({untilText(worst.confirmAt, new Date(nowMs))}). 출발 {formatClockTime(worst.departTime)} 전에 확정되지 않으면 기사가 노선을 받지 못합니다.
           </AlertBanner>
         </StyledBandSlot>
       ) : null}

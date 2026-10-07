@@ -11,3 +11,6 @@ const TYPE_LABEL: Record<string, string> = {
 
 // 비상 유형의 화면 표기 — 이력 화면과 관제 배너가 같은 문구를 쓴다. 모르는 값은 원문을 그대로 낸다.
 export const emergencyTypeLabel = (type: EmergencyType | string): string => TYPE_LABEL[type] ?? type;
+
+// 학원 관계자가 아직 확인하지 않은 비상의 경과 표기 — 1분이 안 됐으면 `1분 미만`, 그 뒤로는 `14분째`('1분 미만째' 는 문장이 안 된다).
+export const unackedElapsedText = (seconds: number): string => (seconds < 60 ? "1분 미만" : `${Math.floor(seconds / 60)}분째`);

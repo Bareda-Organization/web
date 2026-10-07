@@ -32,7 +32,7 @@ export const StyledBandActions = styled.div`
   gap: var(--s2);
 `;
 
-// 왼쪽 목록(+ 이 화면에서 하는 일) · 오른쪽 상시 칸 — 시안 폭 비율 658 : 470
+// 왼쪽 목록 · 오른쪽 상시 칸 — 시안 폭 비율 658 : 470
 export const StyledEmergencyGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 658fr) minmax(0, 470fr);
@@ -98,30 +98,6 @@ export const StyledAcademyDot = styled.i<{ $color: string }>`
   height: 8px;
   border-radius: 2px;
   background: ${({ $color }) => $color};
-`;
-
-export const StyledStepsCard = styled.section`
-  padding: var(--s4);
-  border-radius: var(--radius-card);
-  background: var(--surface-sunken);
-
-  h3 {
-    margin: 0 0 var(--s3);
-    font: var(--fw-bold) var(--fs-lg) / 1.4 var(--font-sans);
-  }
-
-  ol {
-    margin: 0;
-    padding-left: 20px;
-    display: grid;
-    gap: 6px;
-    font-size: var(--fs-sm);
-  }
-
-  a {
-    color: inherit;
-    text-decoration: underline;
-  }
 `;
 
 export const StyledFootNote = styled.p`

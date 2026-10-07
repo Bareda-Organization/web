@@ -27,13 +27,11 @@ export const LoginForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<LoginFormState>({ kind: "idle" });
 
-  // 인자를 받는 본체 — 폼 제출과 개발용 빠른 로그인이 함께 쓴다. 상태에서 읽으면 빠른 로그인이
-  // `setState` 직후에 불러 **갱신 전 값**을 보낸다(React 상태 갱신은 비동기다).
-  const submit = async (id: string, pw: string) => {
+  const submit = async () => {
     setSubmitting(true);
     setState({ kind: "idle" });
     try {
-      await login(id, pw);
+      await login(loginId, password);
       // 이동은 여기서 하지 않는다 — AuthGateGuard 가 세션 변화를 보고 한 곳에서 판정한다.
     } catch (error) {
       if (error instanceof AppOnlyRoleError) {
@@ -62,7 +60,7 @@ export const LoginForm = () => {
 
   const handleSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void submit(loginId, password);
+    void submit();
   };
 
   return (
