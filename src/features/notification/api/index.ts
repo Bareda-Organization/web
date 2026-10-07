@@ -8,7 +8,7 @@ import type {
 } from "../types";
 
 type RawNotificationItem = {
-  notification_id: string | number;
+  notification_id?: string | number;
   sent_at: string;
   bus_no: string | null;
   recipient_name: string;
@@ -33,7 +33,8 @@ type RawNotificationListResponse = {
 };
 
 const toItem = (raw: RawNotificationItem): NotificationListItemResponseTypes => ({
-  notificationId: asIdString(raw.notification_id),
+  // 묶음 항목(group=true)에는 notification_id 가 없다 — group_key 가 그 묶음의 식별자다(§5.17).
+  notificationId: raw.group_key ?? asIdString(raw.notification_id),
   sentAt: raw.sent_at,
   busNo: raw.bus_no,
   recipientName: raw.recipient_name ?? raw.recipients?.[0]?.recipient_name ?? "",

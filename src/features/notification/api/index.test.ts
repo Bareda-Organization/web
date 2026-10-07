@@ -13,6 +13,34 @@ describe("notification api — snake_case ↔ camelCase 변환", () => {
     vi.unstubAllGlobals();
   });
 
+  // §5.17 group=true — 묶음 항목에는 notification_id 가 없고 group_key 만 있다. 그 값을 식별자로 쓰지 않으면
+  // 모든 묶음 행의 식별자가 비어 목록 행 key 가 겹친다(쪽 이동 때 행 중복·누락).
+  it("묶음 항목은 group_key 를 식별자로 쓴다 — 묶음마다 서로 다르다", async () => {
+    const group = (key: string) => ({
+      group_key: key,
+      sent_at: "2026-10-07T08:00:00+09:00",
+      bus_no: "1호차",
+      type: "delay",
+      body: "10분 지연",
+      recipient_count: 2,
+      acked_count: 1,
+      recipients: [{ recipient_name: "김학부모", recipient_role: "parent" }],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: { items: [group("delay:11:a"), group("delay:12:b")], page: 0, size: 20, total_count: 2, has_next: false, unacked_count: 1 },
+        }),
+      ),
+    );
+
+    const result = await getNotifications(0, 20, { group: true });
+
+    expect(result.items.map((item) => item.notificationId)).toEqual(["delay:11:a", "delay:12:b"]);
+  });
+
   it("getNotifications 는 busNo 가 null 인 항목도 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",
