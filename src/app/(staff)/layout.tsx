@@ -56,6 +56,7 @@ const NAV_GROUPS: SideNavGroup[] = [
     title: "운행 계획",
     items: [
       { value: "route", label: "고정 노선 편성", icon: "map" },
+      { value: "stops", label: "승하차지", icon: "map-pin" },
       { value: "schedule", label: "운행 스케줄", icon: "calendar-clock" },
     ],
   },

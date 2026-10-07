@@ -163,6 +163,7 @@ describe("(staff) 레이아웃 — 사이드 메뉴 묶음", () => {
     ]);
     expect(itemsOf("운행 계획")).toEqual([
       ["고정 노선 편성", "/route"],
+      ["승하차지", "/stops"],
       ["운행 스케줄", "/schedule"],
     ]);
     expect(itemsOf("기록 · 설정")).toEqual([
@@ -179,5 +180,21 @@ describe("(staff) 레이아웃 — 사이드 메뉴 묶음", () => {
     expect(within(header).getByText(/^\d+월 \d+일 \([일월화수목금토]\) \d{2}:\d{2}$/)).toBeInTheDocument();
     expect(within(header).getByText("바래다")).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "브라우저 알림 꺼짐 · 켜기" })).toBeInTheDocument();
+  });
+});
+
+// Ruling 849 — 승하차지 관리 화면(A-08)은 "고정 노선 편성" 바로 옆 메뉴에서 열린다.
+describe("(staff) 레이아웃 — 승하차지 메뉴", () => {
+  it("사이드바에 '승하차지' 가 /stops 로 이어지고 '고정 노선 편성' 바로 다음에 놓인다", () => {
+    render(
+      <StaffLayout>
+        <p>본문</p>
+      </StaffLayout>,
+    );
+
+    const links = screen.getAllByRole("link");
+    const stops = screen.getByRole("link", { name: "승하차지" });
+    expect(stops).toHaveAttribute("href", "/stops");
+    expect(links[links.indexOf(stops) - 1]).toHaveTextContent("고정 노선 편성");
   });
 });

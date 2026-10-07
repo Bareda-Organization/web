@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AlertBanner, Button, Input } from "@/shared/ui";
 import type { NearbyStopTypes, StopSuggestionTypes } from "../types";
 import { StopAddressSearch } from "./StopAddressSearch";
@@ -23,6 +24,19 @@ type StopFormProps = {
   onPick: (suggestion: StopSuggestionTypes) => void;
   onCancel: () => void;
   onApply: () => void;
+  /** 지금 저장돼 있는(또는 방금 고른) 주소 — 수정 양식은 주소를 입력칸이 아니라 한 줄 글로 보여 준다. */
+  address?: string;
+  /** 적용 단추 글자 — 기본은 추가 "목록에 추가" · 수정 "적용". 서버에 바로 저장하는 화면은 "저장". */
+  applyLabel?: string;
+  /** 바뀐 것이 없거나 저장 중일 때 적용 단추를 끈다. */
+  applyDisabled?: boolean;
+  /**
+   * 50m 안 기존 승하차지를 알릴 때 "저장하면 합쳐집니다" 라고 말할지. 노선 편성의 저장은 가까운 승하차지로 합치지만
+   * 승하차지 관리의 수정(PATCH)은 합치지 않는다(§5.9 Ruling 849) — 그쪽은 false 로 "따로 남습니다" 라고 알린다.
+   */
+  mergesNearby?: boolean;
+  /** 양식 맨 아래(단추 위) 안내·오류. */
+  children?: ReactNode;
 };
 
 // 두 좌표 사이 거리(m) — 평면 근사다. 판정 범위가 수십~수백 m 라 곡률 오차가 보이지 않는다
@@ -46,6 +60,11 @@ export const StopForm = ({
   onPick,
   onCancel,
   onApply,
+  address,
+  applyLabel,
+  applyDisabled = false,
+  mergesNearby = true,
+  children,
 }: StopFormProps) => {
   const moved = pin && anchor ? metersBetween(pin, anchor) : 0;
   // ⚠ 거리를 **옮긴 핀 기준으로 다시 잰다.** 서버가 준 거리는 후보 좌표 기준이라, 겹치지 않으려고 핀을
@@ -56,7 +75,7 @@ export const StopForm = ({
         .filter((stop) => stop.distanceM <= STOP_MERGE_RADIUS_METERS)
         .sort((left, right) => left.distanceM - right.distanceM)
     : [];
-  const canApply = pin !== null && name.trim().length > 0;
+  const canApply = pin !== null && name.trim().length > 0 && !applyDisabled;
 
   return (
     <StyledStopForm aria-label={mode === "add" ? "승하차지 추가" : "승하차지 수정"}>
@@ -73,21 +92,29 @@ export const StopForm = ({
         <StyledFormHint>주소를 검색해 후보를 고르면 지도에 핀이 찍힙니다</StyledFormHint>
       )}
 
+      {address ? <StyledFormHint>주소 · {address}</StyledFormHint> : null}
+
       {overlapping.length > 0 ? (
         <AlertBanner
           tone="moving"
-          title={`이 자리에 이미 "${overlapping[0].name}" 이(가) 있습니다 (${overlapping[0].distanceM}m) — 저장하면 그 승하차지로 합쳐집니다`}
+          title={
+            mergesNearby
+              ? `이 자리에 이미 "${overlapping[0].name}" 이(가) 있습니다 (${overlapping[0].distanceM}m) — 저장하면 그 승하차지로 합쳐집니다`
+              : `이 자리 가까이(${overlapping[0].distanceM}m)에 "${overlapping[0].name}" 승하차지가 이미 있습니다 — 저장해도 합쳐지지 않고 따로 남습니다`
+          }
         />
       ) : null}
 
       <Input label="표시명" value={name} onChange={(event) => onNameChange(event.target.value)} maxLength={100} />
+
+      {children}
 
       <StyledFormActions>
         <Button variant="ghost" size="sm" onClick={onCancel}>
           취소
         </Button>
         <Button variant="primary" size="sm" onClick={onApply} disabled={!canApply}>
-          {mode === "add" ? "목록에 추가" : "적용"}
+          {applyLabel ?? (mode === "add" ? "목록에 추가" : "적용")}
         </Button>
       </StyledFormActions>
     </StyledStopForm>

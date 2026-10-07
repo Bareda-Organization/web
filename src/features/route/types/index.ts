@@ -119,3 +119,39 @@ export type RouteStopSaveItemTypes = {
   lat: number;
   lng: number;
 };
+
+// §5.9 "승하차지 관리"(Ruling 849) — 승하차지 목록 한 항목. `routes` 는 이 승하차지를 정차지로 담은 편성이며
+// 비활성 편성도 싣는다. `studentCount` 는 요일별 주소가 이 승하차지로 매칭된 재원 학생 수(여러 요일·방향이어도 1명).
+export type StopRouteUsageTypes = {
+  routeId: string;
+  busNo: string;
+  weekday: Weekday;
+  direction: RunDirection;
+  active: boolean;
+};
+
+export type StopListItemTypes = {
+  stopId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  routes: StopRouteUsageTypes[];
+  studentCount: number;
+};
+
+export type StopListResponseTypes = {
+  items: StopListItemTypes[];
+  page: number;
+  size: number;
+  totalCount: number;
+  hasNext: boolean;
+};
+
+// PATCH /staff/stops/{id} 요청 — 보낸 필드만 고친다. 좌표는 둘 다 주거나 둘 다 비운다(한쪽만이면 422)
+// — 그래서 `position` 하나로 묶어 한쪽만 보내는 실수를 타입이 막는다.
+export type StopUpdateRequestTypes = {
+  name?: string;
+  address?: string;
+  position?: LatLng;
+};

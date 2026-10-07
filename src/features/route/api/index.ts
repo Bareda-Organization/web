@@ -11,7 +11,10 @@ import type {
   RouteUpsertRequestTypes,
   RunDirection,
   RunRouteResponseTypes,
+  StopListItemTypes,
+  StopListResponseTypes,
   StopSuggestionTypes,
+  StopUpdateRequestTypes,
   Weekday,
 } from "../types";
 
@@ -256,4 +259,54 @@ export const getRunRoute = async (runId: string): Promise<RunRouteResponseTypes>
     // 경로만 돌려줬으므로 기본값 true 가 기존 동작을 그대로 보존한다.
     confirmed: raw.confirmed ?? true,
   };
+};
+
+type RawStopListItem = {
+  stop_id: string | number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  routes: { route_id: string | number; bus_no: string; weekday: Weekday; direction: RunDirection; active: boolean }[];
+  student_count: number;
+};
+
+const toStopListItem = (raw: RawStopListItem): StopListItemTypes => ({
+  stopId: asIdString(raw.stop_id),
+  name: raw.name,
+  address: raw.address,
+  lat: raw.lat,
+  lng: raw.lng,
+  routes: raw.routes.map((route) => ({
+    routeId: asIdString(route.route_id),
+    busNo: route.bus_no,
+    weekday: route.weekday,
+    direction: route.direction,
+    active: route.active,
+  })),
+  studentCount: raw.student_count,
+});
+
+/**
+ * GET /staff/stops?q= (§5.9 "승하차지 관리", Ruling 849, A-08) — 학원의 승하차지 목록. §1.8 페이징,
+ * `q` 는 이름 또는 주소에 들어 있는 글자(비우면 전부). 정렬은 서버가 이름 오름차순으로 정한다.
+ */
+export const getStops = async (page: number, size = 20, q?: string): Promise<StopListResponseTypes> => {
+  const raw = await apiFetch<{ items: RawStopListItem[]; page: number; size: number; total_count: number; has_next: boolean }>(
+    "/staff/stops",
+    { method: "GET", query: { page, size, q: q || undefined } },
+  );
+  return { items: raw.items.map(toStopListItem), page: raw.page, size: raw.size, totalCount: raw.total_count, hasNext: raw.has_next };
+};
+
+/**
+ * PATCH /staff/stops/{id} (§5.9, Ruling 849) — 이름 · 주소 · 좌표 중 **보낸 필드만** 고친다. 그 승하차지를 쓰는 모든
+ * 노선·학생 주소에 함께 반영된다. 응답은 목록 항목과 같은 형태다.
+ */
+export const updateStop = async (id: string, request: StopUpdateRequestTypes): Promise<StopListItemTypes> => {
+  const raw = await apiFetch<RawStopListItem>(`/staff/stops/${id}`, {
+    method: "PATCH",
+    body: { name: request.name, address: request.address, lat: request.position?.lat, lng: request.position?.lng },
+  });
+  return toStopListItem(raw);
 };

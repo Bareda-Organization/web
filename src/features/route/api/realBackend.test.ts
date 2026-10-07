@@ -8,10 +8,12 @@ import {
   deleteRoute,
   getRouteDetail,
   getRoutes,
+  getStops,
   optimizeRoute,
   saveRouteStops,
   suggestStops,
   updateRoute,
+  updateStop,
 } from "./index";
 
 // 고정 노선 편성 화면(§5.9, RTE-01, A-08)이 부르는 조회·등록·수정·삭제·최적화
@@ -188,6 +190,39 @@ describe("route api — 실서버 계약", () => {
       ]);
 
       expect(saved.stops.map((stop) => [stop.stopId, stop.name])).toEqual([[newStop.stopId, "계약시험 이름 바꿈"]]);
+    } finally {
+      await deleteRoute(created.id);
+    }
+  });
+
+  // Ruling 849 — 승하차지 관리. 이름 수정은 시드 승하차지를 건드리지 않게, 이 시험이 노선 저장으로 새로 만든 승하차지
+  // 위에서만 왕복한다(수정은 그 승하차지를 쓰는 모든 노선·학생 주소에 반영된다).
+  it("getStops 는 승하차지 목록(편성·학생 수 포함)을 돌려주고, updateStop 은 이름만 고쳐 같은 모양으로 돌려준다", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+    const created = await createRoute({
+      busId: "2", weekday: "fri", direction: "to_academy", name: "실서버계약시험용-승하차지관리", active: true, stopIds: [],
+    });
+
+    try {
+      const saved = await saveRouteStops(created.id, [{ name: "계약시험 관리 승하차지", lat: 37.403, lng: 126.403 }]);
+      const stopId = saved.stops[0].stopId;
+
+      const list = await getStops(0, 20);
+      expect(list.items.length).toBeGreaterThan(0);
+      const first = list.items[0];
+      expect(typeof first.stopId).toBe("string");
+      expect(typeof first.address).toBe("string");
+      expect(Array.isArray(first.routes)).toBe(true);
+      expect(typeof first.studentCount).toBe("number");
+
+      const searched = await getStops(0, 20, "계약시험 관리");
+      expect(searched.items.map((item) => item.stopId)).toContain(stopId);
+
+      const updated = await updateStop(stopId, { name: "계약시험 관리 이름 바꿈" });
+      expect(updated.stopId).toBe(stopId);
+      expect(updated.name).toBe("계약시험 관리 이름 바꿈");
+      expect(updated.routes.some((route) => route.routeId === created.id)).toBe(true);
     } finally {
       await deleteRoute(created.id);
     }
