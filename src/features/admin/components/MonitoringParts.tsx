@@ -3,7 +3,7 @@ import { Button, Card, EmptyState, RunStatusChip, StatStrip, StatusChip, Timelin
 import type { StatStripItem, TimelineEntry } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
 import type { AcademySummaryResponseTypes, RunAttentionTodayItemTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
-import { barGeometry, needsAttention, nowPercent, runStatusNote, sortAcademiesByAttention } from "../lib/monitoringView";
+import { barGeometry, nowPercent, runStatusNote, sortAcademiesByAttention } from "../lib/monitoringView";
 import type { Axis, TodaySummary } from "../lib/monitoringView";
 import { academyDotColor, untilText } from "../lib/relativeTime";
 import {
@@ -232,5 +232,4 @@ export const StatusCell = ({ run, nowMs }: { run: RunLiveItemResponseTypes; nowM
   );
 };
 
-export { needsAttention };
 export const TimetableCard = Card;

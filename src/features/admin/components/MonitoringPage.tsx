@@ -29,7 +29,7 @@ import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunAttentionTo
 import { emergencyTypeLabel } from "../lib/emergencyType";
 import { countOpenEmergenciesByAcademy } from "../lib/openEmergencyCounts";
 import { RunRosterDialog } from "./RunRosterDialog";
-import { clockOfMs, needsAttention, pickInitialAcademyId, summarizeToday, timetableAxis } from "../lib/monitoringView";
+import { clockOfMs, pickInitialAcademyId, summarizeToday, timetableAxis } from "../lib/monitoringView";
 import { AcademyRail, RunDetailPanel, StatusCell, TimetableCell, TodayStrip, directionText } from "./MonitoringParts";
 
 import {
@@ -630,7 +630,6 @@ export const MonitoringPage = () => {
               rows={sortedRuns}
               getRowKey={(row) => row.runId}
               selectedKey={selectedRunId}
-              rowTone={(row) => (needsAttention(row, nowMs) ? "warn" : undefined)}
             />
           </>
         )}

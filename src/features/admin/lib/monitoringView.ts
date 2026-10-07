@@ -73,14 +73,6 @@ export const runStatusNote = (run: RunLiveItemResponseTypes, nowMs: number): str
   return null;
 };
 
-/** 표 행을 ▲ 주의로 보일지 — 지연 · 확정 연속 실패 · 출발이 지났는데 시작 전 · 출발 전 미배치. 종료 회차는 아니다. */
-export const needsAttention = (run: RunLiveItemResponseTypes, nowMs: number): boolean => {
-  if (run.runStatus === "finished") return false;
-  if ((run.delayMinutes ?? 0) > 0 || run.consecutiveFailures > 0) return true;
-  if ((run.runStatus === "confirmed" || run.runStatus === "idle") && (hasPassedDepart(run, nowMs) || !run.driver || !run.escort)) return true;
-  return false;
-};
-
 export type TodaySummary = {
   total: number;
   moving: number;

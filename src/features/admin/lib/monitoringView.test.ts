@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RunLiveItemResponseTypes } from "../types";
-import { barGeometry, needsAttention, nowPercent, runStatusNote, summarizeToday, timetableAxis, DEFAULT_BAR_MINUTES } from "./monitoringView";
+import { barGeometry, nowPercent, runStatusNote, summarizeToday, timetableAxis, DEFAULT_BAR_MINUTES } from "./monitoringView";
 
 const at = (clock: string) => `2026-10-03T${clock}:00+09:00`;
 const ms = (clock: string) => new Date(at(clock)).getTime();
@@ -63,30 +63,19 @@ describe("nowPercent — 지금 세로선", () => {
   });
 });
 
-describe("runStatusNote · needsAttention — 상태 아래 한 줄과 주의 행", () => {
+describe("runStatusNote — 상태 아래 한 줄", () => {
   it("이동 중이면 위치 수신 시각", () => {
     expect(runStatusNote(run({ position: { lat: 1, lng: 1, receivedAt: at("12:45") } }), ms("12:46"))).toBe("위치 수신 12:45");
   });
 
-  it("확정인데 출발 시각이 지났으면 몇 분 경과 · 운행 시작 전, 주의 행이다", () => {
+  it("확정인데 출발 시각이 지났으면 몇 분 경과 · 운행 시작 전", () => {
     const late = run({ runStatus: "confirmed", departTime: at("12:41"), driver: null, escort: null, destinationEta: at("13:10") });
     expect(runStatusNote(late, ms("12:45"))).toBe("출발 시각 4분 경과 · 운행 시작 전");
-    expect(needsAttention(late, ms("12:45"))).toBe(true);
   });
 
-  it("출발 전이고 기사 · 동승자가 없으면 미배치를 알리고 주의 행이다", () => {
+  it("출발 전이고 기사 · 동승자가 없으면 미배치를 알린다", () => {
     const unassigned = run({ runStatus: "idle", departTime: at("14:53"), driver: null, escort: null });
     expect(runStatusNote(unassigned, ms("12:45"))).toBe("기사 · 동승자 미배치");
-    expect(needsAttention(unassigned, ms("12:45"))).toBe(true);
-  });
-
-  it("정상 종료 회차는 주의가 아니다", () => {
-    expect(needsAttention(run({ runStatus: "finished", finishedAt: at("11:41") }), ms("12:45"))).toBe(false);
-  });
-
-  it("지연 분이 있거나 확정이 연속 실패한 회차는 주의 행이다", () => {
-    expect(needsAttention(run({ delayMinutes: 10 }), ms("12:45"))).toBe(true);
-    expect(needsAttention(run({ runStatus: "idle", consecutiveFailures: 3, departTime: at("14:00") }), ms("12:45"))).toBe(true);
   });
 });
 
