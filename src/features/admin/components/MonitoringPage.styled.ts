@@ -428,6 +428,7 @@ export const StyledRosterGroupRow = styled.tr`
 
 export const StyledRosterAvatar = styled.span`
   display: inline-grid;
+  vertical-align: middle;
   place-items: center;
   width: 28px;
   height: 28px;
