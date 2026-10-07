@@ -55,6 +55,18 @@ export const getSignupRequests = async (
   };
 };
 
+// 기사·동승자 가입 요청만의 대기 건수 — 매니저 관리 화면의 "가입 승인 대기 N건"(Ruling 846 ①).
+// `role` 은 반복 키(`role=driver&role=escort`)인데 apiFetch 의 query 는 키당 값 하나라서 경로에 직접 싣는다
+// (new URL 이 경로의 쿼리를 읽고, apiFetch 가 붙이는 status·page·size 는 그 뒤에 더해진다).
+// 서버가 아직 `role` 을 무시하면 전체 역할의 건수가 온다 — 값이 틀릴 뿐 화면이 깨지지는 않는다.
+export const getManagerSignupPendingCount = async (): Promise<number> => {
+  const raw = await apiFetch<RawSignupRequestsResponse>("/staff/signup-requests?role=driver&role=escort", {
+    method: "GET",
+    query: { status: "pending", page: 0, size: 1 },
+  });
+  return raw.total_count;
+};
+
 type RawSignupDecideResponse = {
   account_status: "active" | "rejected";
   decided_at: string;
