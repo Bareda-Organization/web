@@ -115,6 +115,18 @@ describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", (
     expect(screen.getByLabelText("학원 정보")).toHaveTextContent("하늘수학학원");
   });
 
+  // Ruling 848 ⑦ — 학원 상태 값(`active` · `inactive`)을 영문 그대로 보였다. 다른 화면과 같은 한글 라벨로 그린다.
+  it.each([
+    ["active", "활성"],
+    ["inactive", "비활성"],
+  ])("학원 상태 %s 는 영문 값이 아니라 '%s' 로 보인다", async (status, label) => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: { name: "하늘수학학원", code: "HNL-01", region: "부천", status }, policy });
+    render(<AcademySettingsForm />);
+
+    const row = (await screen.findByText("상태")).parentElement!;
+    expect(row.textContent).toBe(`상태${label}`);
+  });
+
   it("1~30 밖의 값(45)을 넣으면 오류 문구를 보이고 저장 단추가 꺼져 서버를 부르지 않는다", async () => {
     mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     render(<AcademySettingsForm />);

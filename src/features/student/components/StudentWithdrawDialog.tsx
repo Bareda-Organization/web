@@ -96,7 +96,7 @@ export const StudentWithdrawDialog = ({ student, onClose, onDone }: StudentWithd
           </div>
           <div>
             <dt>지난 기록</dt>
-            <dd>탑승 · 알림 기록은 그대로 보존</dd>
+            <dd>퇴원 90일 뒤 개인정보 파기 · 탑승 이력은 이름 없이 보존</dd>
           </div>
         </StyledPreviewList>
       ) : null}
