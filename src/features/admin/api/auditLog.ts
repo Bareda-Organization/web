@@ -80,6 +80,8 @@ type RawLoginHistoryItem = {
   occurred_at: string;
   block_event: boolean;
   block_action: LoginHistoryBlockAction | null;
+  // Ruling 846 — 서버가 아직 안 주면 키가 없다.
+  unblocked_by_name?: string | null;
 };
 
 type RawLoginHistoryResponse = {
@@ -98,6 +100,7 @@ const toLoginHistoryItem = (raw: RawLoginHistoryItem): LoginHistoryItemResponseT
   occurredAt: raw.occurred_at,
   blockEvent: raw.block_event,
   blockAction: raw.block_action ?? null,
+  unblockedByName: raw.unblocked_by_name ?? null,
 });
 
 // GET /admin/login-history (§6.13, SYS-02, O-04).

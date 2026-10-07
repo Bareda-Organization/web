@@ -381,6 +381,8 @@ export type LoginHistoryItemResponseTypes = {
   occurredAt: string;
   blockEvent: boolean;
   blockAction: LoginHistoryBlockAction | null;
+  // 해제 행에서 해제한 메인 관리자의 현재 이름(Ruling 846 · §6.13). 해제 행이 아니거나 서버가 아직 안 주면 null.
+  unblockedByName: string | null;
 };
 
 export type LoginHistoryResponseTypes = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detailActionLabel, periodRange, stampText, targetText } from "./auditView";
+import { detailActionLabel, stampText, targetText } from "./auditView";
 
 describe("detailActionLabel — 감사 행 detail.action 문구(Ruling 809)", () => {
   it("강제 확정 · 강제 종료는 한글 문구, 없으면 null, 모르는 값은 원문", () => {
@@ -26,14 +26,5 @@ describe("stampText — 오늘은 오늘 HH:mm, 그 밖은 M/D HH:mm", () => {
   it("서울 날짜로 가른다", () => {
     expect(stampText("2026-10-03T12:41:00+09:00", now)).toBe("오늘 12:41");
     expect(stampText("2026-09-12T08:00:00Z", now)).toBe("9/12 17:00");
-  });
-});
-
-describe("periodRange — 기간 칩이 시작일 칸에 넣는 값", () => {
-  const today = "2026-10-03";
-  it("오늘 = 오늘, 7일 = 6일 전부터, 30일 = 비움(서버가 최근 30일 — Ruling 632)", () => {
-    expect(periodRange("today", today)).toEqual({ from: "2026-10-03", to: "" });
-    expect(periodRange("7", today)).toEqual({ from: "2026-09-27", to: "" });
-    expect(periodRange("30", today)).toEqual({ from: "", to: "" });
   });
 });

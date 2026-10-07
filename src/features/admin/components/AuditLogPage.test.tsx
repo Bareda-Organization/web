@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuditLogPage } from "./AuditLogPage";
 import { getAllAcademies, getAuditActors, getAuditLogs, getLoginHistory } from "../api";
-import { todayInSeoul } from "@/shared/lib/format/dateTime";
 
 // §6.13, BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다". 판단 근거(코드 주석)는
 // 무제한 로그인·접속 이력을 기본으로 펼치지 않는 것이므로, 이 검사는 "오늘"로 좁힌
@@ -26,34 +25,41 @@ beforeEach(() => {
 
 const emptyResponse = { items: [], page: 1, size: 20, totalCount: 0, hasNext: false };
 
-describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
+describe("AuditLogPage — 기본 조회 조건은 비어 있다(Ruling 844)", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("첫 조회는 from 이 오늘 날짜로 채워져 나간다(무제한 전체 기간이 기본값이 아니다)", async () => {
+  it("첫 조회 요청에 from · to 가 없다(서버가 최근 30일을 준다 — Ruling 632)", async () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
     render(<AuditLogPage />);
 
-    await waitFor(() =>
-      expect(mockGetAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ from: todayInSeoul() })),
-    );
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+    const request = mockGetAuditLogs.mock.calls[0]?.[0];
+    expect(request?.from).toBeUndefined();
+    expect(request?.to).toBeUndefined();
   });
 
-  // F03-07 — UTC 날짜로 뽑으면 한국 시간 00:00~09:00 에 어제가 들어가 "오늘만" 이라는 화면 의도가 어긋난다.
-  it("한국 시간 새벽(UTC 로는 전날)에도 from 은 서울의 오늘 날짜다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-09-30T16:00:00Z")); // 서울 2026-10-01 01:00
-    try {
-      mockGetAuditLogs.mockResolvedValue(emptyResponse);
-      render(<AuditLogPage />);
+  it("시작일 · 종료일 칸은 비어 있고 기간 칩(오늘 · 7일 · 30일 · 직접 입력)은 없다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
 
-      await waitFor(() =>
-        expect(mockGetAuditLogs).toHaveBeenCalledWith(expect.objectContaining({ from: "2026-10-01" })),
-      );
-    } finally {
-      vi.useRealTimers();
+    expect(screen.getByLabelText("시작일")).toHaveValue("");
+    expect(screen.getByLabelText("종료일")).toHaveValue("");
+    for (const name of ["오늘", "7일", "30일", "직접 입력"]) {
+      expect(screen.queryByRole("tab", { name })).not.toBeInTheDocument();
     }
+  });
+
+  it("시작일을 직접 고르고 조회하면 그 값이 요청에 실린다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    render(<AuditLogPage />);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("시작일"), { target: { value: "2026-09-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "조회" }));
+
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ from: "2026-09-01" })));
   });
 
   // R46-FIXCONN Ruling 632 — 서버는 from 을 안 주면 to(없으면 지금)로부터 30일 전부터만 돌려준다. 시작일을 비운다고 전체 기간이
@@ -68,28 +74,6 @@ describe("AuditLogPage — 기본 조회 범위를 오늘로 좁힘", () => {
     fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
 
     expect(screen.getByText(/비우면 종료일.*30일/)).toBeInTheDocument();
-  });
-
-  it("시작일을 비우는 기간 칩은 '전체 기간' 이 아니라 '30일' 이라 부른다", async () => {
-    mockGetAuditLogs.mockResolvedValue(emptyResponse);
-    render(<AuditLogPage />);
-
-    expect(screen.getByRole("tab", { name: "30일" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "전체 기간" })).not.toBeInTheDocument();
-  });
-
-  it("기간 칩 '30일' 을 누르면 from 이 비워진 채로 재조회한다", async () => {
-    mockGetAuditLogs.mockResolvedValue(emptyResponse);
-    render(<AuditLogPage />);
-
-    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
-
-    fireEvent.click(screen.getByRole("tab", { name: "30일" }));
-    fireEvent.click(screen.getByRole("button", { name: "조회" }));
-
-    await waitFor(() =>
-      expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ from: undefined })),
-    );
   });
 
   it("접속 이력 탭으로 전환하면 getLoginHistory 를 호출한다", async () => {
@@ -143,6 +127,45 @@ describe("AuditLogPage — 차단/해제 구분(Ruling 394)", () => {
     expect(await screen.findByText("차단")).toBeInTheDocument();
     expect(screen.getByText("해제")).toBeInTheDocument();
     expect(screen.queryByText("차단·해제")).not.toBeInTheDocument();
+  });
+});
+
+// Ruling 846 ② · 847 — 해제 행에 해제한 관리자 이름. 서버가 안 주면(null · 키 없음) 표시가 없다.
+describe("AuditLogPage — 해제 행의 해제한 관리자(Ruling 846)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const unblockRow = (patch: Record<string, unknown>) => ({
+    accountId: "5",
+    loginId: "unblocked",
+    result: null,
+    ip: null,
+    occurredAt: "2026-09-12T08:05:00Z",
+    blockEvent: true,
+    blockAction: "unblock",
+    unblockedByName: null,
+    ...patch,
+  });
+
+  it("해제 행에 해제한 관리자 이름이 보인다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetLoginHistory.mockResolvedValue({ ...emptyResponse, items: [unblockRow({ unblockedByName: "관리자김" })], totalCount: 1 } as never);
+    render(<AuditLogPage />);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
+
+    expect(await screen.findByText(/관리자김/)).toBeInTheDocument();
+    expect(screen.getByText("해제")).toBeInTheDocument();
+  });
+
+  it("이름이 null 이면 해제 칩만 있고 이름 문구가 없다", async () => {
+    mockGetAuditLogs.mockResolvedValue(emptyResponse);
+    mockGetLoginHistory.mockResolvedValue({ ...emptyResponse, items: [unblockRow({})], totalCount: 1 } as never);
+    render(<AuditLogPage />);
+    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("tab", { name: "접속 이력" }));
+
+    expect(await screen.findByText("해제")).toBeInTheDocument();
+    expect(screen.queryByText(/처리$/)).not.toBeInTheDocument();
   });
 });
 
@@ -244,17 +267,5 @@ describe("AuditLogPage — 행위자 이름 · 대상 · IP(Ruling 809)", () => 
     expect(await screen.findByText("staffA")).toBeInTheDocument();
     expect(screen.queryByText("박지현")).not.toBeInTheDocument();
     expect(screen.getAllByText("–").length).toBeGreaterThan(0);
-  });
-
-  it("기간 칩 7일 은 6일 전부터를 요청에 싣는다", async () => {
-    mockGetAuditLogs.mockResolvedValue(emptyResponse);
-    render(<AuditLogPage />);
-    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenCalledTimes(1));
-
-    fireEvent.click(screen.getByRole("tab", { name: "7일" }));
-    fireEvent.click(screen.getByRole("button", { name: "조회" }));
-
-    const sixDaysAgo = new Date(Date.parse(todayInSeoul()) - 6 * 86_400_000).toISOString().slice(0, 10);
-    await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ from: sixDaysAgo })));
   });
 });

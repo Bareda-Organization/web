@@ -57,6 +57,7 @@ export const StyledFilterHint = styled.span`
 
 export const StyledTwoLine = styled.div`
   display: grid;
+  justify-items: start;
   gap: 2px;
 
   b {

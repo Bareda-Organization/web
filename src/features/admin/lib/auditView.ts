@@ -44,18 +44,3 @@ export const stampText = (raw: string, now: Date = new Date()): string => {
   if (SEOUL_DAY.format(date) === SEOUL_DAY.format(now)) return `오늘 ${clock}`;
   return `${SEOUL_MONTH_DAY.format(date).replace(/\.\s*/g, "/").replace(/\/$/, "")} ${clock}`;
 };
-
-export type AuditPeriod = "today" | "7" | "30" | "custom";
-
-const DAY_MS = 86_400_000;
-
-/**
- * 기간 칩이 날짜 칸에 넣는 값. 오늘은 오늘부터, 7일은 6일 전부터, 30일은 시작일을 비운다 —
- * 서버가 `from` 을 안 주면 종료일(없으면 지금)로부터 최근 30일을 주기 때문이다(Ruling 632).
- */
-export const periodRange = (period: Exclude<AuditPeriod, "custom">, today: string): { from: string; to: string } => {
-  if (period === "30") return { from: "", to: "" };
-  if (period === "today") return { from: today, to: "" };
-  const start = new Date(Date.parse(today) - 6 * DAY_MS);
-  return { from: start.toISOString().slice(0, 10), to: "" };
-};

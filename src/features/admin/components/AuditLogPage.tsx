@@ -26,9 +26,7 @@ import {
   StyledFilterRow,
   StyledTwoLine,
 } from "./AuditLogPage.styled";
-import { todayInSeoul } from "@/shared/lib/format/dateTime";
-import { periodRange, stampText, targetText } from "../lib/auditView";
-import type { AuditPeriod } from "../lib/auditView";
+import { stampText, targetText } from "../lib/auditView";
 import { academyDotColor } from "../lib/relativeTime";
 
 const PAGE_SIZE = 20;
@@ -36,13 +34,6 @@ const PAGE_SIZE = 20;
 const TAB_OPTIONS = [
   { value: "audit", label: "감사 로그" },
   { value: "login", label: "접속 이력" },
-];
-
-const PERIOD_OPTIONS = [
-  { value: "today", label: "오늘" },
-  { value: "7", label: "7일" },
-  { value: "30", label: "30일" },
-  { value: "custom", label: "직접 입력" },
 ];
 
 const ACTION_LABEL: Record<AuditLogItemResponseTypes["action"], string> = {
@@ -65,11 +56,7 @@ const BLOCK_ACTION_LABEL = { block: "차단", unblock: "해제" } as const;
 // 전체 기간이 아니다. 더 오래된 이력은 시작일을 직접 골라야 한다(R46-FIXCONN).
 const FROM_HINT = "시작일을 비우면 종료일(없으면 지금)부터 최근 30일만 조회합니다";
 
-// §6.13 감사·접속 이력(O-04). BRIEF-a1.md §4.3 — "전부 보여주는 것이 기본값이 아니다".
-// 이 화면은 §1.12 가 마스킹하는 필드(보호자 연락처 등)를 응답에 아예 담지 않지만, 대신
-// 계정별 로그인 IP·시각 전체를 무제한으로 펼쳐 보이는 것 자체가 노출 범위 문제라
-// 판단했다(판단 근거, 보고서 §1) — 그래서 기본 조회 범위를 "오늘" 로 좁히고,
-// 전체 기간을 보려면 명시적으로 날짜를 지운 뒤 검색해야 한다.
+// §6.13 감사·접속 이력(O-04). 시작일·종료일은 비워 둔 채 시작하고, 서버가 최근 30일을 돌려준다(Ruling 632 · 844).
 export const AuditLogPage = () => {
   const [tab, setTab] = useState<"audit" | "login">("audit");
   const [academyId, setAcademyId] = useState("");
@@ -80,12 +67,11 @@ export const AuditLogPage = () => {
   const [actors, setActors] = useState<AuditActorResponseTypes[]>([]);
   const [actorSearched, setActorSearched] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
-  const [from, setFrom] = useState(todayInSeoul());
+  const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [period, setPeriod] = useState<AuditPeriod>("today");
 
   // 조회 조건은 [조회] 를 눌러야 적용된다 — 입력 중인 값과 서버에 보내는 값(applied)을 나눈다.
-  const [applied, setApplied] = useState({ academyId: "", accountId: "", action: "", from: todayInSeoul(), to: "" });
+  const [applied, setApplied] = useState({ academyId: "", accountId: "", action: "", from: "", to: "" });
   const query = {
     academyId: applied.academyId || undefined,
     accountId: applied.accountId || undefined,
@@ -192,13 +178,21 @@ export const AuditLogPage = () => {
       key: "blockEvent",
       // block_event 는 차단 행과 해제 행 양쪽에 붙는다(§6.13, BR-219) — block_action 이 둘을 가른다(Ruling 394).
       label: "차단 · 해제",
-      render: (row) => (row.blockAction ? <StatusChip tone={row.blockAction === "block" ? "bad" : "ok"}>{BLOCK_ACTION_LABEL[row.blockAction]}</StatusChip> : "–"),
+      render: (row) =>
+        row.blockAction ? (
+          <StyledTwoLine>
+            <StatusChip tone={row.blockAction === "block" ? "bad" : "ok"}>{BLOCK_ACTION_LABEL[row.blockAction]}</StatusChip>
+            {row.blockAction === "unblock" && row.unblockedByName ? <small>{row.unblockedByName} 처리</small> : null}
+          </StyledTwoLine>
+        ) : (
+          "–"
+        ),
     },
   ];
 
   return (
     <StyledAuditLogLayout>
-      <PageHeader style={{ marginBottom: 20 }} title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 오늘" />
+      <PageHeader style={{ marginBottom: 20 }} title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 최근 30일" />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {filterError ? <AlertBanner tone="missed" title={filterError} /> : null}
@@ -208,25 +202,10 @@ export const AuditLogPage = () => {
       <StyledFilterPanel>
       <StyledFilterRow>
         <StyledFilterField>
-          <StyledFieldLabel>기간</StyledFieldLabel>
-          <SegmentedControl
-            options={PERIOD_OPTIONS}
-            value={period}
-            aria-label="기간"
-            onChange={(value) => {
-              setPeriod(value as AuditPeriod);
-              if (value === "custom") return;
-              const range = periodRange(value as Exclude<AuditPeriod, "custom">, todayInSeoul());
-              setFrom(range.from);
-              setTo(range.to);
-            }}
-          />
+          <Input label="시작일" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
         </StyledFilterField>
         <StyledFilterField>
-          <Input label="시작일" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPeriod("custom"); }} />
-        </StyledFilterField>
-        <StyledFilterField>
-          <Input label="종료일" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPeriod("custom"); }} />
+          <Input label="종료일" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
         </StyledFilterField>
         <StyledFilterHint>{FROM_HINT}</StyledFilterHint>
       </StyledFilterRow>

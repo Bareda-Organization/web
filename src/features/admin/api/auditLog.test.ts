@@ -74,3 +74,43 @@ describe("auditLog api — 동작 필터와 행위자 찾기", () => {
     expect(actors).toEqual([{ accountId: "55", name: "김관계", loginId: "kim_staff", role: "staff", academyName: "바래다학원" }]);
   });
 });
+
+// Ruling 846 ② · 847 — 접속 이력 해제 행의 해제한 관리자 이름(`unblocked_by_name`). 서버가 아직 안 주면 키가 없다.
+describe("getLoginHistory — unblocked_by_name(Ruling 846)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const loginRow = (patch: Record<string, unknown>) => ({
+    account_id: 5,
+    login_id: "parent1",
+    result: null,
+    ip: null,
+    occurred_at: "2026-09-12T08:05:00Z",
+    block_event: true,
+    block_action: "unblock",
+    ...patch,
+  });
+
+  it("해제 행의 해제한 관리자 이름을 unblockedByName 으로 옮기고, null · 키 없음은 null", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          items: [loginRow({ unblocked_by_name: "관리자김" }), loginRow({ unblocked_by_name: null }), loginRow({})],
+          page: 0,
+          size: 20,
+          total_count: 3,
+          has_next: false,
+        },
+      }),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getLoginHistory();
+
+    expect(result.items.map((item) => item.unblockedByName)).toEqual(["관리자김", null, null]);
+  });
+});
