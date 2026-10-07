@@ -67,8 +67,8 @@ const baseDetail: ChangeApprovalDetailResponseTypes = {
   },
   estTimeBefore: "08:10",
   estTimeAfter: "08:15",
-  estDistanceBefore: 1200,
-  estDistanceAfter: 1500,
+  estDistanceBefore: 12.3,
+  estDistanceAfter: 14.1,
   estDurationBefore: 32,
   estDurationAfter: 38,
   affectedStudents: [{ studentId: "1", name: "이학생" }],
@@ -193,6 +193,23 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 
       expect(await screen.findByText("40분")).toBeInTheDocument();
       expect(await screen.findByText("35분 (-5분)")).toBeInTheDocument();
+    });
+
+    // R50 S7 — A-05 · UF-M-02 "전/후 예상 소요시간·거리". 거리(km, §5.5 est_distance_*)를 소요 시간과 같은 자리에 둔다.
+    it("변경 전/후 예상 거리를 km 로 보이고 후에는 증감을 덧붙인다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime });
+      render(<ChangeApprovalDetail approvalId="5" />);
+
+      expect(await screen.findByText("12.3km")).toBeInTheDocument();
+      expect(await screen.findByText("14.1km (+1.8km)")).toBeInTheDocument();
+    });
+
+    it("거리 값이 없으면(null) 이유를 안내하고 화면은 그대로 그려진다", async () => {
+      mockGetDetail.mockResolvedValue({ ...baseDetail, departTime, estDistanceBefore: null, estDistanceAfter: null });
+      render(<ChangeApprovalDetail approvalId="5" />);
+
+      expect(await screen.findAllByText("- (거리 정보가 없습니다)")).toHaveLength(2);
+      expect(screen.getByText("32분")).toBeInTheDocument();
     });
 
     it("옛 확정 노선이라 전체 소요시간이 없으면 이유를 한 줄 안내하고, 도착시간도 계산 불가로 안내한다", async () => {
