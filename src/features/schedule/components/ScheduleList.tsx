@@ -53,6 +53,8 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
   const [items, setItems] = useState<ScheduleItemResponseTypes[]>([]);
   const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
   const [todayRuns, setTodayRuns] = useState<RunItemResponseTypes[]>([]);
+  // 내일 회차 — 못 받았으면 null(건수를 단정하지 않는다).
+  const [tomorrowRuns, setTomorrowRuns] = useState<RunItemResponseTypes[] | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,11 +97,12 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
     })();
   }, [load]);
 
-  // 차량 머리 줄(차량번호 · 운행 불가) · 차량 필터 · 수정 미리보기의 오늘 회차 — 보조 정보라 못 받아도 표는 그대로 쓴다.
+  // 차량 머리 줄(차량번호 · 운행 불가) · 차량 필터 · 수정 미리보기의 오늘 회차 · 지표의 내일 회차 수 — 보조 정보라 못 받아도 표는 그대로 쓴다.
   useEffect(() => {
     let alive = true;
     getBuses(0, BUS_SIZE).then((data) => alive && setBuses(data.items)).catch(() => undefined);
     getRuns(today).then((data) => alive && setTodayRuns(data.items)).catch(() => undefined);
+    getRuns(addDays(today, 1)).then((data) => alive && setTomorrowRuns(data.items)).catch(() => alive && setTomorrowRuns(null));
     return () => {
       alive = false;
     };
@@ -130,6 +133,7 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
   const visible = items.filter((schedule) => (!busId || schedule.busId === busId) && (!direction || schedule.direction === direction));
   const todayWeekday = weekdayOf(today);
   const todayCount = todayRuns.filter((run) => run.canceledAt === null).length;
+  const tomorrowCount = tomorrowRuns?.filter((run) => run.canceledAt === null).length ?? null;
 
   const columns: RosterColumn<ScheduleItemResponseTypes>[] = [
     { key: "busNo", label: "차량" },
@@ -155,15 +159,19 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
 
   const summaryItems: StatStripItem[] = [
     { label: "정규 스케줄", value: summary.total, unit: "건", detail: `차량 ${summary.busCount}대 × 요일 ${new Set(items.map((item) => item.weekday)).size} × 등원·하원` },
-    { label: "비활성", value: summary.inactive, unit: "건", detail: summary.inactive > 0 ? <>{namesOf(summary.inactiveSchedules)}<br />노선 편성도 비활성</> : "비활성 스케줄 없음" },
+    { label: "비활성", value: summary.inactive, unit: "건", detail: summary.inactive > 0 ? namesOf(summary.inactiveSchedules) : "비활성 스케줄 없음" },
     {
       label: "오늘 회차",
       value: todayCount,
       unit: "개",
       detail: (
         <>
-          내일({WEEKDAY_LABEL[weekdayOf(addDays(today, 1))]}) 회차도 생성 완료
-          <br />
+          {tomorrowCount === null ? null : (
+            <>
+              내일({WEEKDAY_LABEL[weekdayOf(addDays(today, 1))]}) 회차 {tomorrowCount}개
+              <br />
+            </>
+          )}
           매일 00:05 에 오늘·내일분 생성
         </>
       ),

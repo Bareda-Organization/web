@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getBuses } from "@/features/bus";
+import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { getRuns, getSchedules } from "../api";
 import type { ScheduleItemResponseTypes } from "../types";
+import { addDays } from "../lib/scheduleBoard";
 import { ScheduleList } from "./ScheduleList";
 
 vi.mock("../api", () => ({ getSchedules: vi.fn(), getRuns: vi.fn() }));
@@ -41,5 +43,43 @@ describe("ScheduleList — 요일표", () => {
 
     expect(screen.getByText("노선이 비어 있는 스케줄").parentElement).toHaveTextContent("1건");
     expect(screen.getByText("비활성", { selector: "div" }).parentElement).toHaveTextContent("1건");
+  });
+});
+
+// R50 S12 — "내일 회차도 생성 완료" 는 조회 없는 고정 문구였다. 내일 날짜로 회차를 읽어 실제 건수를 보이고, "노선 편성도 비활성" 단정은 없앴다.
+describe("ScheduleList — 오늘 · 내일 회차 지표(R50)", () => {
+  const runOf = (id: string, over: Record<string, unknown> = {}) =>
+    ({ id, busId: "3", busNo: "3호차", serviceDate: "x", direction: "to_academy", departTime: "08:00", canceledAt: null, assignments: [], ...over }) as never;
+
+  it("내일 날짜로 회차를 읽어 실제 건수를 보이고, 고정 문구 '생성 완료' 는 없다", async () => {
+    const tomorrow = addDays(todayInSeoul(), 1);
+    vi.mocked(getRuns).mockImplementation(async (date) => ({ items: date === tomorrow ? [runOf("1"), runOf("2"), runOf("3")] : [runOf("9")] }));
+    render(<ScheduleList />);
+
+    const card = (await screen.findByText("오늘 회차")).parentElement!;
+    expect(await screen.findByText(/내일\(.\) 회차 3개/)).toBeInTheDocument();
+    expect(card).toHaveTextContent("1개");
+    expect(screen.queryByText(/생성 완료/)).not.toBeInTheDocument();
+    expect(getRuns).toHaveBeenCalledWith(tomorrow);
+  });
+
+  it("내일 회차를 못 읽으면 건수를 단정하지 않는다(문구를 내지 않는다)", async () => {
+    const tomorrow = addDays(todayInSeoul(), 1);
+    vi.mocked(getRuns).mockImplementation(async (date) => {
+      if (date === tomorrow) throw new Error("network");
+      return { items: [] };
+    });
+    render(<ScheduleList />);
+
+    await screen.findByText("오늘 회차");
+    await vi.waitFor(() => expect(getRuns).toHaveBeenCalledWith(tomorrow));
+    expect(screen.queryByText(/내일\(.\) 회차/)).not.toBeInTheDocument();
+  });
+
+  it("비활성 스케줄 칸은 '노선 편성도 비활성' 이라고 단정하지 않는다", async () => {
+    render(<ScheduleList />);
+    await screen.findByRole("button", { name: "3호차 월요일 하원 17:30 스케줄" });
+
+    expect(screen.queryByText(/노선 편성도 비활성/)).not.toBeInTheDocument();
   });
 });
