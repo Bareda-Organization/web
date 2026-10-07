@@ -6,7 +6,7 @@ import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
 import { getDashboard, getManagers, getRunRoster, getRunsLive, patchRunAssignment, postForcedAdd } from "./index";
 
-// 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06)이 부르는
+// 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06·A-14)이 부르는
 // 엔드포인트를 실제 F5-W1 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
 // `NEXT_PUBLIC_API_BASE_URL=http://localhost:8130 npm test` 로 실행. 미지정이면
 // `requireRealBackendApiBaseUrl()` 이 즉시 던진다(기본값 8080 으로 조용히 새는 것을 막음).

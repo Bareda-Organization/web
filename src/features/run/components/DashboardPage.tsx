@@ -66,7 +66,7 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
   from_academy: "하원",
 };
 
-// §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-04) — 관계자 웹
+// §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-14) — 관계자 웹
 // 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
 // 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
 // `pendingSlot` — 시작 체크리스트 같은 위쪽 안내 자리. `approvals` — 처리 대기 건수(승인 대기 제공자의 값).
