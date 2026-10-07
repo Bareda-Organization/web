@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
+import { useProtectedImageUrl } from "@/shared/hooks";
 import { AlertBanner, BoardingStatusChip, Button, Dialog } from "@/shared/ui";
 import { getRunRoster } from "../api";
-import type { RosterBoardStatus, RunRosterResponseTypes } from "../types";
+import type { RunRosterResponseTypes } from "../types";
 import {
   StyledRosterAvatar,
-  StyledRosterBar,
-  StyledRosterCounts,
   StyledRosterDialogScroll,
   StyledRosterGroupRow,
   StyledRosterNote,
@@ -23,20 +22,23 @@ type RunRosterDialogProps = {
   onClose: () => void;
 };
 
-const COUNT_ORDER: { key: "done" | "no_show" | "absent" | "waiting"; label: string; color: string }[] = [
-  { key: "done", label: "탑승 완료", color: "var(--c-conf)" },
-  { key: "no_show", label: "미승차", color: "var(--c-bad)" },
-  { key: "absent", label: "미등원", color: "var(--c-end)" },
-  { key: "waiting", label: "대기", color: "var(--surface-fill)" },
-];
-
-// 탑승 완료 = 탑승한 학생 + 이미 내린 학생(둘 다 정상 진행). 나머지는 서버 값 그대로 센다.
-const bucketOf = (status: RosterBoardStatus): "done" | "no_show" | "absent" | "waiting" =>
-  status === "boarded" || status === "alighted" ? "done" : status === "no_show" ? "no_show" : status === "absent" ? "absent" : "waiting";
+/** 학생 사진(O-06) — 로그인 토큰으로 받아 그린다. 주소가 없거나 받지 못했거나 이미지가 깨지면 이름 첫 글자. */
+const StudentAvatar = ({ name, photoUrl }: { name: string; photoUrl: string | null }) => {
+  const src = useProtectedImageUrl(photoUrl);
+  const [brokenSrc, setBrokenSrc] = useState<string | undefined>(undefined);
+  if (src && src !== brokenSrc) {
+    return (
+      <StyledRosterAvatar>
+        <img src={src} alt={`${name} 사진`} onError={() => setBrokenSrc(src)} />
+      </StyledRosterAvatar>
+    );
+  }
+  return <StyledRosterAvatar aria-hidden="true">{name.slice(0, 1)}</StyledRosterAvatar>;
+};
 
 // §6.9 GET /admin/runs/{runId}/roster. 관리자는 마스킹 없는 연락처를 그대로 본다(§1.12) —
 // 관계자 화면과 달리 이 화면은 "학원을 넘나드는 조회" 라 노출 범위를 넓힐 근거가 다르다.
-// R48 시안: 맨 위 상태 막대 + 건수 · 승하차지별 묶음 · 학생 / 학부모 연락처 열(보호자가 없으면 –).
+// R48 시안: 승하차지별 묶음 · 학생 사진 · 학생 / 학부모 연락처 열(보호자가 없으면 –). 상태 막대와 건수는 Ruling 844 로 뺐다.
 export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterDialogProps) => {
   const [roster, setRoster] = useState<RunRosterResponseTypes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +67,7 @@ export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterD
     };
   }, [runId]);
 
-  const students = roster?.stops.flatMap((stop) => stop.students) ?? [];
-  const counts = { done: 0, no_show: 0, absent: 0, waiting: 0 };
-  for (const student of students) counts[bucketOf(student.status)] += 1;
+  const hasStudents = roster?.stops.some((stop) => stop.students.length > 0) ?? false;
 
   return (
     <Dialog
@@ -85,16 +85,8 @@ export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterD
         {error ? <AlertBanner tone="missed" title={error} /> : null}
         {loading ? <p>불러오는 중...</p> : null}
         {!loading && roster && roster.stops.length === 0 ? <p>등록된 승하차지가 없습니다</p> : null}
-        {roster && students.length > 0 ? (
+        {roster && hasStudents ? (
           <>
-            <StyledRosterBar role="img" aria-label={COUNT_ORDER.map((item) => `${item.label} ${counts[item.key]}`).join(" · ")}>
-              {COUNT_ORDER.filter((item) => counts[item.key] > 0).map((item) => (
-                <i key={item.key} style={{ flex: counts[item.key], background: item.color }} />
-              ))}
-            </StyledRosterBar>
-            <StyledRosterCounts>
-              {COUNT_ORDER.map((item) => `${item.label} ${counts[item.key]}`).join(" · ")} · {students.length}명
-            </StyledRosterCounts>
             <StyledRosterTable>
               <thead>
                 <tr>
@@ -114,7 +106,7 @@ export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterD
                   ...stop.students.map((student) => (
                     <tr key={student.studentId}>
                       <td>
-                        <StyledRosterAvatar aria-hidden="true">{student.name.slice(0, 1)}</StyledRosterAvatar>
+                        <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
                         <b>{student.name}</b>
                       </td>
                       <td>{student.studentPhone ?? "–"}</td>
@@ -127,7 +119,7 @@ export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterD
                 ])}
               </tbody>
             </StyledRosterTable>
-            <StyledRosterNote>연락처는 마스킹 없이 표시됩니다(메인 관리자 · 관제 목적). 사진이 없는 학생은 이름 첫 글자로 대신합니다.</StyledRosterNote>
+            <StyledRosterNote>연락처는 마스킹 없이 표시됩니다(메인 관리자 · 관제 목적). 사진이 없거나 불러오지 못한 학생은 이름 첫 글자로 대신합니다.</StyledRosterNote>
           </>
         ) : null}
       </StyledRosterDialogScroll>

@@ -13,7 +13,7 @@ const mockGetRunRoster = vi.mocked(getRunRoster);
 const student = (studentId: string, name: string) => ({
   studentId,
   name,
-  photoUrl: null,
+  photoUrl: null as string | null,
   studentPhone: null,
   guardianPhone: null,
   status: "waiting" as const,
@@ -57,11 +57,11 @@ describe("RunRosterDialog — 닫기와 긴 명단", () => {
   });
 });
 
-// R48 시안 `monitoring--roster` — 승하차지별 묶음 · 학생 / 학부모 연락처 · 상태 막대와 건수. 보호자가 없으면 번호 대신 –.
-describe("RunRosterDialog — 묶음 · 연락처 · 건수", () => {
+// R48 시안 `monitoring--roster` — 승하차지별 묶음 · 학생 / 학부모 연락처. 보호자가 없으면 번호 대신 –. 상태 막대와 건수는 Ruling 844 로 뺐다.
+describe("RunRosterDialog — 묶음 · 연락처 · 상태 칩", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("승하차지별 머리줄, 두 연락처 열, 상태 건수를 보인다", async () => {
+  it("승하차지별 머리줄, 두 연락처 열, 학생별 상태 칩을 보인다", async () => {
     mockGetRunRoster.mockResolvedValue({
       stops: [
         {
@@ -82,9 +82,67 @@ describe("RunRosterDialog — 묶음 · 연락처 · 건수", () => {
     expect(screen.getByRole("dialog", { name: "2호차 · 등원 탑승 명단" })).toBeInTheDocument();
     expect(screen.getByText("010-0000-3101")).toBeInTheDocument();
     expect(screen.getByText("010-0000-4106")).toBeInTheDocument();
-    expect(screen.getByText(/탑승 완료 1 · 미승차 1 · 미등원 1 · 대기 0 · 3명/)).toBeInTheDocument();
     // 미등원은 회색(끝남 모양)이고 미승차는 위험이다(Ruling 811).
     expect(screen.getByText("미등원").closest("[data-tone]")).toHaveAttribute("data-tone", "off");
     expect(screen.getByText("미승차").closest("[data-tone]")).toHaveAttribute("data-tone", "bad");
+  });
+});
+
+// Ruling 844 — 상태 막대 · 상태별 건수는 사양 근거가 없어 뺐다. 승하차지별 학생 목록과 학생별 상태 칩은 그대로다.
+describe("RunRosterDialog — 상태 막대 · 건수 없음(Ruling 844)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("상태 막대(role=img)와 '탑승 완료 N · 미승차 N' 건수 줄이 없다", async () => {
+    mockGetRunRoster.mockResolvedValue({
+      stops: [{ stopId: "1", seq: 1, name: "강남역", students: [{ ...student("1", "원하율"), status: "boarded" as const }, { ...student("2", "한도윤"), status: "no_show" as const }] }],
+    });
+    render(<RunRosterDialog runId="1" busNo="1호차" onClose={vi.fn()} />);
+
+    expect(await screen.findByText("강남역 · 2명")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.queryByText(/탑승 완료 \d/)).not.toBeInTheDocument();
+    expect(screen.getByText("미승차")).toBeInTheDocument();
+  });
+});
+
+// Ruling 847 · O-06 — 관제 명단 학생 사진. 없거나 못 불러오면 이름 첫 글자.
+describe("RunRosterDialog — 학생 사진(O-06)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const rosterWith = (...students: ReturnType<typeof student>[]) => ({ stops: [{ stopId: "1", seq: 1, name: "강남역", students }] });
+
+  it("photoUrl 이 있으면 사진을 그리고, 없는 학생은 이름 첫 글자를 그린다", async () => {
+    mockGetRunRoster.mockResolvedValue(rosterWith({ ...student("1", "원하율"), photoUrl: "https://cdn.example.com/p.jpg" }, student("2", "한도윤")));
+    render(<RunRosterDialog runId="1" busNo="1호차" onClose={vi.fn()} />);
+
+    const photo = await screen.findByRole("img", { name: "원하율 사진" });
+    expect(photo).toHaveAttribute("src", "https://cdn.example.com/p.jpg");
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    expect(screen.getByText("한")).toBeInTheDocument();
+    expect(screen.queryByText("원")).not.toBeInTheDocument();
+  });
+
+  it("사진을 못 불러오면(이미지 오류 · 토큰 요청 실패) 이름 첫 글자로 돌아간다", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
+    mockGetRunRoster.mockResolvedValue(
+      rosterWith({ ...student("1", "원하율"), photoUrl: "https://cdn.example.com/broken.jpg" }, { ...student("2", "한도윤"), photoUrl: "/api/v1/files/photos/b.jpg" }),
+    );
+    render(<RunRosterDialog runId="1" busNo="1호차" onClose={vi.fn()} />);
+
+    fireEvent.error(await screen.findByRole("img", { name: "원하율 사진" }));
+
+    await waitFor(() => expect(screen.getByText("원")).toBeInTheDocument());
+    expect(screen.getByText("한")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("하단 안내가 사진 표시와 대체 글자 규칙을 말한다", async () => {
+    mockGetRunRoster.mockResolvedValue(rosterWith(student("1", "원하율")));
+    render(<RunRosterDialog runId="1" busNo="1호차" onClose={vi.fn()} />);
+
+    expect(await screen.findByText(/사진이 없거나 불러오지 못한 학생은 이름 첫 글자/)).toBeInTheDocument();
   });
 });

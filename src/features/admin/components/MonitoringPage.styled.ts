@@ -391,24 +391,6 @@ export const StyledNowLine = styled.i`
 `;
 
 // ── 탑승 명단 대화상자 ─────────────────────────────────────────────────────
-export const StyledRosterBar = styled.div`
-  display: flex;
-  gap: 2px;
-  height: 10px;
-  margin-bottom: var(--s2);
-
-  i {
-    display: block;
-    border-radius: 5px;
-  }
-`;
-
-export const StyledRosterCounts = styled.p`
-  margin: 0 0 var(--s3);
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-`;
-
 export const StyledRosterTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -450,9 +432,16 @@ export const StyledRosterAvatar = styled.span`
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  overflow: hidden;
   background: var(--surface-fill);
   font: var(--fw-medium) var(--fs-xs) / 1 var(--font-sans);
   color: var(--text-secondary);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 `;
 
 export const StyledRosterNote = styled.p`
