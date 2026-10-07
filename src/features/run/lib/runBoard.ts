@@ -50,3 +50,20 @@ export const runAttention = (run: DashboardRunResponseTypes, nowMs: number): Run
   }
   return undefined;
 };
+
+// 지연 반영 예상 도착(ISO) — 저장된 예정 도착에 지연 분을 더한 화면 계산이라 운행 중 재계산 금지(Ruling 232)와 충돌하지 않는다(Ruling 843).
+// 이미 도착했거나 · 지연이 없거나 · 예정 도착을 모르면(시각으로 읽을 수 없는 값 포함) null. 회차 표 출발 칸 설명과 회차 정보 카드가 함께 쓴다.
+export const delayedArrival = (run: Pick<DashboardRunResponseTypes, "estArrivalTime" | "delayMinutes" | "finishedAt">): string | null => {
+  const delay = run.delayMinutes ?? 0;
+  const estimated = run.estArrivalTime ? toMs(run.estArrivalTime) : NaN;
+  if (run.finishedAt || delay <= 0 || !Number.isFinite(estimated)) return null;
+  return new Date(estimated + delay * MINUTE_MS).toISOString();
+};
+
+// 위치 신호가 끊긴 회차의 한 줄 — "마지막 확인 N분 전"(분 단위, 1분 미만은 "방금" — UF-M-05 · MON-07). 확인한 적이 없으면 대기 문구.
+export const lastSeenLine = (lastSeenAt: string | null | undefined, nowMs: number): string => {
+  const seen = lastSeenAt ? toMs(lastSeenAt) : NaN;
+  if (!Number.isFinite(seen)) return "위치 확인 대기";
+  const minutes = Math.floor((nowMs - seen) / MINUTE_MS);
+  return minutes < 1 ? "마지막 확인 방금" : `마지막 확인 ${minutes}분 전`;
+};

@@ -19,6 +19,7 @@ import {
 import { getRunRoute } from "@/features/route";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RosterItemResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
+import { lastSeenLine } from "../lib/runBoard";
 import { rosterForStop, type RosterStatusFilter } from "../lib/rosterBoard";
 import { useNow } from "../lib/useNow";
 import { ForcedAddDialog } from "./ForcedAddDialog";
@@ -430,11 +431,7 @@ export const TodayRunPage = () => {
             <StyledMapChips>
               {selectedRun?.runStatus !== "idle" ? (
                 <p>
-                  {liveRun?.position
-                    ? `현재 ${liveRun.currentStop ?? "-"} → 다음 ${liveRun.nextStop ?? "-"}`
-                    : liveRun?.lastSeenAt
-                      ? `최근 확인 ${formatDateTime(liveRun.lastSeenAt)}`
-                      : "위치 확인 대기"}
+                  {liveRun?.position ? `현재 ${liveRun.currentStop ?? "-"} → 다음 ${liveRun.nextStop ?? "-"}` : lastSeenLine(liveRun?.lastSeenAt, nowMs)}
                 </p>
               ) : null}
               {routeFallback || routePlanned ? (

@@ -8,7 +8,7 @@ import type { RosterColumn } from "@/shared/types";
 import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { timetableRange } from "@/shared/lib/timetable/timetable";
 import type { DashboardRunResponseTypes } from "../types";
-import { runAttention } from "../lib/runBoard";
+import { delayedArrival, runAttention } from "../lib/runBoard";
 import { RouteAckMark } from "./RouteAckMark";
 import {
   StyledBoardCard,
@@ -48,20 +48,24 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs }: Props) => 
     {
       key: "departTime",
       label: "출발",
-      render: (row) => (
-        <StyledDepartCell
-          title={[
-            `예정 출발 ${formatClockTimeWithSeconds(row.departTime)}`,
-            row.startedAt ? `실제 출발 ${formatClockTimeWithSeconds(row.startedAt)}` : null,
-            row.estArrivalTime ? `예정 도착 ${formatClockTimeWithSeconds(row.estArrivalTime)}` : null,
-            row.finishedAt ? `실제 도착 ${formatClockTimeWithSeconds(row.finishedAt)}` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        >
-          {formatClockTime(row.departTime)}
-        </StyledDepartCell>
-      ),
+      render: (row) => {
+        const expected = delayedArrival(row);
+        return (
+          <StyledDepartCell
+            title={[
+              `예정 출발 ${formatClockTimeWithSeconds(row.departTime)}`,
+              row.startedAt ? `실제 출발 ${formatClockTimeWithSeconds(row.startedAt)}` : null,
+              row.estArrivalTime ? `예정 도착 ${formatClockTimeWithSeconds(row.estArrivalTime)}` : null,
+              expected ? `예상 도착 ${formatClockTimeWithSeconds(expected)}` : null,
+              row.finishedAt ? `실제 도착 ${formatClockTimeWithSeconds(row.finishedAt)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          >
+            {formatClockTime(row.departTime)}
+          </StyledDepartCell>
+        );
+      },
     },
     { key: "busNo", label: "호차 · 방향", render: (row) => `${row.busNo} · ${DIRECTION_LABEL[row.direction]}` },
     {

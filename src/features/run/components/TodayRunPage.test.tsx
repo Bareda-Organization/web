@@ -479,7 +479,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
     expect(await screen.findByText("현재 3번 정류장 → 다음 후문")).toBeInTheDocument();
   });
 
-  it("position 이 null 이고 lastSeenAt 만 있으면 마커 없이 최근 확인 문구를 보여준다", async () => {
+  it("position 이 null 이고 lastSeenAt 만 있으면 마커 없이 마지막 확인을 경과 분으로 보여준다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
     mockGetRunsLive.mockResolvedValue({
@@ -496,13 +496,13 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
           delayMinutes: null,
           driverName: "박기사",
           escortName: "최매니저",
-          lastSeenAt: "08:02",
+          lastSeenAt: new Date(Date.now() - 5 * 60_000 - 5_000).toISOString(),
         },
       ],
     });
     render(<TodayRunPage />);
 
-    expect(await screen.findByText("최근 확인 08:02")).toBeInTheDocument();
+    expect(await screen.findByText("마지막 확인 5분 전")).toBeInTheDocument();
     expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [] }));
   });
 
@@ -961,6 +961,35 @@ describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () =
     expect(within(card).queryByRole("button", { name: /복사/ })).not.toBeInTheDocument();
     expect(within(card).queryByText(/남음/)).not.toBeInTheDocument();
     expect(within(card).getByText(/출발 30분 전/)).toBeInTheDocument();
+  });
+
+  // Ruling 848 · T2 — `recipient_count` 는 관계자 · 학부모 · 학생 전체의 수신 건수(§5.3 "적재된 수신 건수")다. 학부모 수가 아니다.
+  it("지연 알림 줄은 학부모 수가 아니라 수신 건수로 보인다", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], delayMinutes: 7, lastDelayNotice: { minutes: 7, reason: null, sentAt: "2026-10-03T03:10:00Z", recipientCount: 12 } }],
+    });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    const card = await screen.findByRole("region", { name: "회차 정보" });
+    expect(within(card).getByText("지연 알림").parentElement).toHaveTextContent("수신 12건");
+    expect(within(card).queryByText(/학부모/)).not.toBeInTheDocument();
+  });
+
+  // Ruling 843 · 848 — 회차 정보 카드의 "→ 예상" 은 회차 표 출발 칸 설명과 같은 계산(delayedArrival)을 쓴다.
+  it("운행 중 지연 회차의 도착 칸은 예정 도착에 지연 분을 더한 예상 도착을 이어 보인다", async () => {
+    mockRunIdParam = "7";
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], estArrivalTime: "2026-10-03T12:50:00+09:00", delayMinutes: 7 }],
+    });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    const card = await screen.findByRole("region", { name: "회차 정보" });
+    expect(within(card).getByText("도착").parentElement).toHaveTextContent("예정 12:50 → 예상 12:57");
   });
 
   it("탑승 명단에 이름 검색 · 승하차지 필터가 없다", async () => {
