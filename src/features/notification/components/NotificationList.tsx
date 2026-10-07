@@ -32,7 +32,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   intent_changed: "의사 변경",
   route_changed: "노선 변경",
   assignment_changed: "배치 변경",
-  no_show_escalated: "미승차 무응답(3분 경과)",
+  no_show_escalated: "미승차 무응답(대기 시간 경과)",
   exception_reported: "예외 상황 신고",
   emergency: "비상 알림",
   emergency_canceled: "비상 알림 해제",

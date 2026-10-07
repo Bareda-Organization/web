@@ -330,7 +330,7 @@ export const TodayRunPage = () => {
     selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
   );
 
-  // 카운트다운(미승차 3분)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
+  // 카운트다운(미승차 대기 시간)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
   const nowMs = useNow(selectedRun && selectedRun.noShowCases.length > 0 ? 1000 : 30_000);
   const addedCount = roster.filter((item) => item.change === "added").length;
   const transferCount = roster.filter((item) => item.transferId != null).length;

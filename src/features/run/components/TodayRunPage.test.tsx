@@ -1038,6 +1038,18 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     { ...baseRoster[0], studentId: "5", name: "이아안", status: "no_show", guardianPhone: "010-0000-1183" },
   ];
 
+  // R50 S15 — 미승차 대기 시간은 학원마다 1~30분(A-17)이다. 띠에 "3분" 을 박아 두면 다른 값을 쓰는 학원에서 사실과 다르다.
+  it("미승차 띠의 카운트다운 문구는 대기 시간을 3분으로 단정하지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
+    mockGetRunRoster.mockResolvedValue(noShowRoster);
+    render(<TodayRunPage />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("카운트다운");
+    expect(alert).toHaveTextContent("남음");
+    expect(alert).not.toHaveTextContent("3분");
+  });
+
   it("미승차 띠에 그 학생의 보호자 전화 링크(tel:)와 시도 횟수가 있다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
     mockGetRunRoster.mockResolvedValue(noShowRoster);

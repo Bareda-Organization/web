@@ -101,6 +101,8 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
 
     expect(await screen.findByText("수신1")).toBeInTheDocument();
     expect(screen.getAllByText(/미승차 무응답/).length).toBeGreaterThan(0);
+    // R50 S15 — 미승차 대기 시간은 학원마다 1~30분(A-17)이라 종류 이름에 3분을 박지 않는다.
+    expect(screen.queryByText(/3분/)).not.toBeInTheDocument();
     expect(screen.queryByText(/escalation/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(parent\)/)).not.toBeInTheDocument();
   });
