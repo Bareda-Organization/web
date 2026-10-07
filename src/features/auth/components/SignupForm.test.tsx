@@ -58,6 +58,28 @@ describe("SignupForm", () => {
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
+  // R50 S11 · UF-X-01 — 제출 버튼 아래에 아직 비어 있는 항목 이름을 보인다. 채우는 만큼 줄고, 다 채우면 사라진다.
+  it("버튼 아래에 아직 채우지 않은 항목 이름을 보이고, 채우는 만큼 줄어든다", async () => {
+    setup();
+    expect(screen.getByText("아직 채우지 않은 항목 · 이름 · 연락처 · 아이디 · 비밀번호 · 학원")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^이름/), { target: { value: "김관계" } });
+    expect(screen.getByText("아직 채우지 않은 항목 · 연락처 · 아이디 · 비밀번호 · 학원")).toBeInTheDocument();
+
+    fillAccount();
+    expect(screen.getByText("아직 채우지 않은 항목 · 학원")).toBeInTheDocument();
+
+    await pickAcademy();
+    expect(screen.queryByText(/아직 채우지 않은 항목/)).not.toBeInTheDocument();
+  });
+
+  it("공백만 넣은 항목은 비어 있는 것으로 센다", () => {
+    setup();
+    fireEvent.change(screen.getByLabelText(/^이름/), { target: { value: "   " } });
+
+    expect(screen.getByText(/^아직 채우지 않은 항목 · 이름 · /)).toBeInTheDocument();
+  });
+
   // F03-03 ① — 검색이 실패하면 아무 변화가 없던 것을 오류로 알린다.
   it("학원 검색이 실패하면 오류 문구를 보여준다", async () => {
     setup();

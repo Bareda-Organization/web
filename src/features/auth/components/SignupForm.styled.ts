@@ -44,3 +44,11 @@ export const StyledSelectedAcademy = styled.p`
   color: var(--text-brand);
   margin: 0;
 `;
+
+// 제출 버튼 아래 — 아직 비어 있는 항목 이름(UF-X-01).
+export const StyledMissingFields = styled.p`
+  font: var(--text-caption);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+`;
