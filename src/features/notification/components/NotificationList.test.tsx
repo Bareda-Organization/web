@@ -235,6 +235,27 @@ describe("NotificationList — 확인 여부는 중요 통지 3종만(Ruling 850
     expect(within(groupRow).queryByText(/확인 \d+\/\d+|미확인/)).not.toBeInTheDocument();
   });
 
+  // 관계자에게 간 알림의 미확인 행은 앰버 면 + ▲ 로 강조된다 — 확인 대상이 아닌 종류는 그 강조도 받지 않는다.
+  // (행 강조는 첫 칸 왼쪽 여백 30px 로 드러난다 — RosterTable 의 경고 행 규칙)
+  it("관계자에게 간 알림이어도 추적하지 않는 종류의 행은 경고 행 강조를 받지 않는다", async () => {
+    mockGet.mockResolvedValue(
+      pageOf(
+        [
+          { ...row(1), type: "boarding", recipientName: "이관계자", recipientRole: "staff" },
+          { ...row(2), type: "delay", recipientName: "박관계자", recipientRole: "staff" },
+        ],
+        0,
+        false,
+      ),
+    );
+    render(<NotificationList />);
+
+    const untracked = (await screen.findByText("이관계자")).closest("tr")!;
+    const tracked = screen.getByText("박관계자").closest("tr")!;
+    expect(getComputedStyle(tracked.querySelector("td")!).paddingLeft).toBe("30px");
+    expect(getComputedStyle(untracked.querySelector("td")!).paddingLeft).not.toBe("30px");
+  });
+
   it("추적하는 종류의 묶음 행(no_show)은 확인 N/M 을 그대로 보여 준다", async () => {
     const grouped: NotificationListItemResponseTypes = {
       ...row(1), type: "no_show", recipientName: "장주희", recipientCount: 20, ackedCount: 14,
