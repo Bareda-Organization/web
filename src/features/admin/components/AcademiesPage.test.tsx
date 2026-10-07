@@ -26,3 +26,26 @@ describe("AcademiesPage — 목록 조회 실패", () => {
     expect(screen.queryByText("총 0개 학원")).not.toBeInTheDocument(); // 건수를 모르는 상태를 0 으로 보이지 않는다(Ruling 597)
   });
 });
+
+// R50 M3 — 서버 `summary` 에는 주소 미등록 · 정원 찬 학원 값이 없어 지금 쪽(20곳)만 센다. 표기가 전체 합계처럼 읽히지 않게 "이 쪽" 을 밝힌다.
+describe("AcademiesPage — 쪽 단위 지표 표기(R50 M3)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("주소 미등록 · 정원 찬 학원 지표는 '이 쪽' 한정으로 적는다", async () => {
+    mockGetAcademies.mockResolvedValue({
+      summary: { total: 45, active: 40, inactive: 5, userCount: 900 },
+      items: [{ id: "1", code: "A1", name: "가학원", region: "서울", staffCount: 1, userCount: 10, status: "active", hasAddress: false, pendingSignupCount: 1 }],
+      page: 0,
+      size: 20,
+      totalCount: 45,
+      hasNext: true,
+    });
+    render(<AcademiesPage />);
+
+    expect(await screen.findByText("이 쪽 주소 미등록")).toBeInTheDocument();
+    expect(screen.getByText(/이 쪽에서 정원 찬 학원: 가학원/)).toBeInTheDocument();
+    expect(screen.getByText(/총 45개 학원 · 이름 순/)).toBeInTheDocument();
+  });
+});

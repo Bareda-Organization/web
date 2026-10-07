@@ -86,6 +86,37 @@ describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () 
   });
 });
 
+// R50 M1 — §6.3 `staff_accounts[]` 는 퇴사 이력까지 섞인 목록이라 첫 행이 퇴사자일 수 있다. 소속 관계자는 재직(`active`)만 보인다.
+describe("AcademyFormDialog — 소속 관계자는 재직자만(R50 M1)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const staffRef = (accountId: string, name: string, status: "active" | "inactive") => ({
+    accountId,
+    name,
+    loginId: `login_${accountId}`,
+    lastLoginAt: null,
+    status,
+  });
+
+  it("퇴사자가 목록 앞에 있어도 재직 중인 관계자를 보인다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, staffAccounts: [staffRef("1", "퇴사한사람", "inactive"), staffRef("2", "재직한사람", "active")] });
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("바래다 학원");
+
+    expect(screen.getByText("재직한사람")).toBeInTheDocument();
+    expect(screen.queryByText("퇴사한사람")).not.toBeInTheDocument();
+  });
+
+  it("재직자가 없으면 퇴사 이력만 있어도 '재직 중인 관계자가 없습니다' 를 보인다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, staffAccounts: [staffRef("1", "퇴사한사람", "inactive")] });
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("바래다 학원");
+
+    expect(screen.getByText("재직 중인 관계자가 없습니다.")).toBeInTheDocument();
+    expect(screen.queryByText("퇴사한사람")).not.toBeInTheDocument();
+  });
+});
+
 // N-04·N-06 — §6.2·§6.3 주소 검증 실패(422)는 저장이 보류된다. 서버 원문 대신 고칠 자리를 알린다. 메모는 200자까지.
 describe("AcademyFormDialog — 주소 검증·메모 길이", () => {
   afterEach(() => vi.clearAllMocks());

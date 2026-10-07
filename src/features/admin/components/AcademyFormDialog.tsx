@@ -233,7 +233,8 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
   }
 
   const movingNos = detail?.stats.movingBusNos ?? [];
-  const staff = detail?.staffAccounts[0];
+  // §6.3 staff_accounts[] 는 퇴사 이력까지 섞인 목록이라 첫 행이 퇴사자일 수 있다 — 재직(active) 관계자만 보인다.
+  const staff = detail?.staffAccounts.find((account) => account.status === "active");
 
   return (
     <>

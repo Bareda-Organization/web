@@ -81,7 +81,7 @@ export const getAllAcademies = async (): Promise<AcademySummaryResponseTypes[]> 
   return all;
 };
 
-type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string; last_login_at?: string | null };
+type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string; last_login_at?: string | null; status: string };
 
 type RawAcademyDetail = RawAcademySummary & {
   address: string | null;
@@ -96,6 +96,7 @@ const toStaffAccountRef = (raw: RawStaffAccountRef): AcademyStaffAccountRefRespo
   name: raw.name,
   loginId: raw.login_id,
   lastLoginAt: raw.last_login_at ?? null,
+  status: raw.status === "inactive" ? "inactive" : "active",
 });
 
 // GET /admin/academies/{id} (§6.3, ACAD-03, O-01).

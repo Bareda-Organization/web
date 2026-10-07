@@ -45,6 +45,7 @@ const Bars = ({ parts, label }: { parts: { value: number; color: string }[]; lab
 const nameList = (academies: AcademySummaryResponseTypes[]): string => academies.map((academy) => academy.name).join(" · ");
 
 // 지표 4칸 — 합계는 서버 `summary`(필터·쪽과 무관한 전체, Ruling 806)를 쓴다. 서버가 아직 안 주면 쪽 안의 값으로 세지 않고 칸을 비운다(21곳째부터 틀리므로).
+// `summary` 에 없는 값(주소 미등록 학원 · 정원 찬 학원 이름)은 지금 쪽(20곳)만 센다 — 라벨에 "이 쪽" 을 밝힌다(R50 M3).
 const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: AcademySummaryResponseTypes[], pendingSignups: number): StatStripItem[] => {
   const hasAddressKnown = items.some((academy) => academy.hasAddress !== undefined);
   const noAddress = items.filter((academy) => academy.hasAddress === false);
@@ -85,7 +86,7 @@ const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: Ac
       detail:
         waitingFull.length > 0 ? (
           <>
-            {nameList(waitingFull)} · 정원 찼음
+            이 쪽에서 정원 찬 학원: {nameList(waitingFull)}
             <br />
             승인하려면 기존 관계자 퇴사 필요
           </>
@@ -96,7 +97,7 @@ const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: Ac
         ),
     },
     {
-      label: "주소 미등록",
+      label: "이 쪽 주소 미등록",
       value: hasAddressKnown ? noAddress.length : "—",
       unit: hasAddressKnown ? "곳" : undefined,
       tone: noAddress.length > 0 ? "warn" : "neutral",
@@ -227,7 +228,7 @@ export const AcademiesPage = () => {
 
       <Tabs items={tabs} value={statusFilter} onChange={setStatusFilter} aria-label="운영 상태" />
 
-      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 학원 · 최근 등록 순`}>
+      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 학원 · 이름 순`}>
         <SearchField
           placeholder="학원명 · 코드로 검색"
           value={query}

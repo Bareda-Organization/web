@@ -50,7 +50,7 @@ describe("메인 관리자 목록 — 총 개수와 다음 쪽", () => {
   afterEach(() => vi.clearAllMocks());
 
   it.each([
-    ["학원", vi.mocked(getAcademies), () => <AcademiesPage />, academy, "총 45개 학원 · 최근 등록 순", "학원21"],
+    ["학원", vi.mocked(getAcademies), () => <AcademiesPage />, academy, "총 45개 학원 · 이름 순", "학원21"],
     ["가입 요청", vi.mocked(getStaffSignupRequests), () => <MemberApprovalsPage />, staffRequest, "가입 요청 45건", "요청자21"],
     ["관계자 계정", vi.mocked(getStaffAccounts), () => <MemberAccountsPage />, staffAccount, "총 45개 계정", "계정21"],
     ["차단 계정", vi.mocked(getBlockedAccounts), () => <BlockedAccountsPage />, blocked, /차단된 계정 45건/, "차단21"],

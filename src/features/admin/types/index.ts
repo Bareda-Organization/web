@@ -37,6 +37,8 @@ export type AcademyStaffAccountRefResponseTypes = {
   loginId: string;
   // §6.3 `staff_accounts[].last_login_at`(Ruling 806) — 로그인한 적이 없거나 서버가 안 주면 null.
   lastLoginAt?: string | null;
+  // §6.3 `staff_accounts[].status` — 퇴사 이력(`inactive`)도 같은 목록에 섞여 온다. 화면은 재직(`active`)만 보인다.
+  status: StaffAccountStatus;
 };
 
 export type AcademyDetailResponseTypes = AcademySummaryResponseTypes & {
@@ -377,7 +379,8 @@ export type LoginHistoryItemResponseTypes = {
   loginId: string;
   // 차단·해제 행은 로그인 결과 축이 아니라 null(§6.13).
   result: LoginHistoryResult | null;
-  ip: string;
+  // 해제 행은 IP 를 남기지 않아 null(§6.13) — 화면은 null 이어도 깨지지 않게 그린다.
+  ip: string | null;
   occurredAt: string;
   blockEvent: boolean;
   blockAction: LoginHistoryBlockAction | null;
