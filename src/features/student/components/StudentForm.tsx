@@ -37,7 +37,7 @@ type StudentFormProps = {
   onWithdraw?: () => void;
 };
 
-// §5.11 메모는 200자까지 — 넘으면 서버가 422 로 거부한다.
+// §5.11 특이사항(note · STU-07)은 200자까지 — 넘으면 서버가 422 로 거부한다.
 const NOTE_MAX_LENGTH = 200;
 
 const GENDER_OPTIONS = [
@@ -336,7 +336,7 @@ export const StudentForm = ({
             ) : null}
             {studentId ? <WeeklyAddressSection studentId={studentId} /> : null}
             <Input
-              label="메모"
+              label="특이사항"
               value={note}
               onChange={(event) => setNote(event.target.value)}
               maxLength={NOTE_MAX_LENGTH}

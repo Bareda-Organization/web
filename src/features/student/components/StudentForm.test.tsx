@@ -177,7 +177,7 @@ describe("StudentForm — F02-01 수정에서 값 지우기", () => {
     accountId: null,
   };
 
-  it("메모·학년·반을 지우고 저장하면 null 을 보내 서버 값을 지운다", async () => {
+  it("특이사항·학년·반을 지우고 저장하면 null 을 보내 서버 값을 지운다", async () => {
     vi.mocked(getStudentDetail).mockResolvedValue(filled);
     vi.mocked(updateStudent).mockResolvedValue({} as never);
     const onDone = vi.fn();
@@ -229,12 +229,12 @@ describe("StudentForm — F02-01 수정에서 값 지우기", () => {
   });
 });
 
-// N-06 — 학생 메모는 200자까지(서버가 넘으면 422). 입력칸에서 먼저 막는다.
-describe("StudentForm — 메모 길이", () => {
-  it("메모 입력칸은 200자까지만 받는다", () => {
+// N-06 — 학생 특이사항(STU-07 · note)은 200자까지(서버가 넘으면 422). 입력칸에서 먼저 막는다.
+describe("StudentForm — 특이사항 길이", () => {
+  it("특이사항 입력칸은 200자까지만 받는다", () => {
     render(<StudentForm onClose={vi.fn()} onDone={vi.fn()} />);
 
-    expect(screen.getByLabelText("메모")).toHaveAttribute("maxlength", "200");
+    expect(screen.getByLabelText("특이사항")).toHaveAttribute("maxlength", "200");
   });
 });
 
