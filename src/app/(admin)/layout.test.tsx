@@ -26,11 +26,14 @@ vi.mock("@/features/emergency", () => ({
   useEmergencyUnackedCount: () => 1,
 }));
 vi.mock("@/shared/ui/realtime", () => ({ RealtimeConnectionStrip: () => <p>연결 띠</p> }));
+const mockPending = { signupCount: 11, blockedCount: 1, isReady: true };
 vi.mock("@/features/admin", () => ({
   AdminPendingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useAdminPending: () => ({ signupCount: 11, blockedCount: 1, isReady: true }),
+  useAdminPending: () => mockPending,
   getAdminEmergencies: vi.fn(),
 }));
+const { mockNotify } = vi.hoisted(() => ({ mockNotify: vi.fn() }));
+vi.mock("@/shared/lib/attention/attentionAlert", async (importOriginal) => ({ ...(await importOriginal<object>()), notifyAttention: mockNotify }));
 vi.mock("@/shared/lib/navigation/useBackNavigation", () => ({ useBackNavigation: () => ({ canGoBack: false, goBack: vi.fn() }) }));
 
 // R46-WEB A#6 · B1 #15 — 메인 관리자는 비상·가입 승인·차단이 모두 무표시였다.
@@ -46,7 +49,50 @@ describe("(admin) 레이아웃 — 알림 인지", () => {
     expect(screen.getByRole("link", { name: /차단 해제/ })).toHaveTextContent("1");
     expect(screen.getByRole("link", { name: /비상 알림/ })).toHaveTextContent("1");
     expect(screen.getByRole("link", { name: /학원 관리/ })).not.toHaveTextContent("1");
-    expect(document.title).toBe("(13) 비상 발생 · 바래다 관계자 웹"); // 비상 1 + 가입 11 + 차단 1
+    expect(document.title).toBe("(13) 비상 발생 · 바래다 메인 관리자 콘솔"); // 비상 1 + 가입 11 + 차단 1 — 콘솔 이름은 PRD §12.4
+  });
+
+  // Ruling 847 — 차단 계정이 늘어도 "승인 요청 N건" 알림이 나가던 것. 늘어난 종류를 그대로 말한다.
+  describe("브라우저 알림 문구", () => {
+    afterEach(() => {
+      mockPending.signupCount = 11;
+      mockPending.blockedCount = 1;
+      mockNotify.mockClear();
+    });
+
+    it("차단 계정만 늘면 차단 계정이라고 알리고 '승인' 이라 부르지 않는다", () => {
+      const { rerender } = render(
+        <AdminLayout>
+          <p>본문</p>
+        </AdminLayout>,
+      );
+      mockPending.blockedCount = 2;
+      rerender(
+        <AdminLayout>
+          <p>본문</p>
+        </AdminLayout>,
+      );
+
+      expect(mockNotify).toHaveBeenCalledTimes(1);
+      expect(mockNotify.mock.calls[0]?.[0]).toBe("차단 계정");
+      expect(JSON.stringify(mockNotify.mock.calls)).not.toContain("승인");
+    });
+
+    it("관계자 가입 승인 요청이 늘면 가입 승인이라고 알린다", () => {
+      const { rerender } = render(
+        <AdminLayout>
+          <p>본문</p>
+        </AdminLayout>,
+      );
+      mockPending.signupCount = 12;
+      rerender(
+        <AdminLayout>
+          <p>본문</p>
+        </AdminLayout>,
+      );
+
+      expect(mockNotify.mock.calls[0]?.[0]).toBe("관계자 가입 승인");
+    });
   });
 
   it("비상 알림 띠를 본문 앞에 그린다", () => {
@@ -103,7 +149,7 @@ describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
 
     expect(screen.queryByText("비상 띠")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /비상 알림/ })).toHaveTextContent("1");
-    expect(document.title).toBe("(13) 비상 발생 · 바래다 관계자 웹");
+    expect(document.title).toBe("(13) 비상 발생 · 바래다 메인 관리자 콘솔");
   });
 
   // R46-FIXCONN C-12 — 전체 관제를 포함한 모든 관리자 화면에서 끊김이 보이게 연결 띠를 레이아웃에 한 번만 둔다.

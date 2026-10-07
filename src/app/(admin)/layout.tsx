@@ -12,6 +12,7 @@ import { AdminPendingProvider, getAdminEmergencies, useAdminPending } from "@/fe
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "@/features/emergency";
 import type { EmergencyAlertSource } from "@/features/emergency";
 import { useAttentionSignals } from "@/shared/hooks";
+import type { AttentionTexts } from "@/shared/hooks/useAttentionSignals";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
 import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { adminLiveDestination } from "@/shared/lib/ws";
@@ -60,6 +61,13 @@ const NAV_GROUPS: SideNavGroup[] = [
   { title: "기록", items: [{ value: "audit-log", label: "감사 · 접속 이력", icon: "history" }] },
 ];
 
+// 탭 제목 · 브라우저 알림 문구 — 콘솔 이름은 `PRD §12.4`(메인 관리자 콘솔). 가입 승인과 차단 계정은 서로 다른 일이라 따로 알린다(Ruling 847).
+const ADMIN_ATTENTION_TEXTS: AttentionTexts = {
+  baseTitle: "바래다 메인 관리자 콘솔",
+  approval: { title: "관계자 가입 승인", body: (count) => `처리할 관계자 가입 승인 요청이 ${count}건 있습니다.` },
+  blocked: { title: "차단 계정", body: (count) => `로그인이 차단된 계정이 ${count}건 있습니다.` },
+};
+
 const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 const resolveActiveValue = (pathname: string): string => {
@@ -73,7 +81,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
   const emergencyUnackedCount = useEmergencyUnackedCount();
   const { signupCount, blockedCount, isReady } = useAdminPending();
   // 탭 제목·브라우저 알림 — 다른 탭에 있어도 비상·승인 대기를 알아채게 한다(브라우저 알림은 사용자가 켠 경우에만).
-  useAttentionSignals(emergencyUnackedCount, signupCount + blockedCount, isReady);
+  useAttentionSignals(emergencyUnackedCount, signupCount, isReady, ADMIN_ATTENTION_TEXTS, blockedCount);
   const badgeCounts: Record<string, number> = {
     "member-approvals": signupCount,
     "blocked-accounts": blockedCount,
