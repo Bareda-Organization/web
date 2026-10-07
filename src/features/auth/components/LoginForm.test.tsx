@@ -79,6 +79,23 @@ describe("LoginForm — 비밀번호 분실 안내", () => {
   });
 });
 
+// Ruling 844 — 개발용 빠른 로그인은 사양 근거가 없어 뺐다(시험 · 개발 빌드에서도 안 그린다).
+describe("LoginForm — 빠른 로그인 없음", () => {
+  it("시드 계정 버튼 묶음을 그리지 않는다", () => {
+    mockUseAuthSession.mockReturnValue({
+      bootstrapStatus: "ready",
+      session: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+    render(<LoginForm />);
+
+    expect(screen.queryByText(/개발용 빠른 로그인/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dev-login-sysadmin")).not.toBeInTheDocument();
+  });
+});
+
 // R32-W1 — 학부모·학생·매니저 계정은 웹 대신 앱 이용을 안내한다.
 describe("LoginForm — 앱 전용 계정 안내", () => {
   it("AppOnlyRoleError 는 앱 이용 안내를 보여준다", async () => {

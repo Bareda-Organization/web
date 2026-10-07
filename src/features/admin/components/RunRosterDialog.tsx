@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { useProtectedImageUrl } from "@/shared/hooks";
@@ -29,7 +30,7 @@ const StudentAvatar = ({ name, photoUrl }: { name: string; photoUrl: string | nu
   if (src && src !== brokenSrc) {
     return (
       <StyledRosterAvatar>
-        <img src={src} alt={`${name} 사진`} onError={() => setBrokenSrc(src)} />
+        <Image src={src} alt={`${name} 사진`} width={28} height={28} unoptimized onError={() => setBrokenSrc(src)} />
       </StyledRosterAvatar>
     );
   }

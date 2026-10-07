@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { DevQuickLogin } from "./DevQuickLogin";
 import { ApiError } from "@/shared/lib/http";
 import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { AlertBanner, Button, Input } from "@/shared/ui";
@@ -121,15 +120,6 @@ export const LoginForm = () => {
               로그인
             </Button>
           </StyledForm>
-
-          <DevQuickLogin
-            disabled={submitting}
-            onPick={(id, pw) => {
-              setLoginId(id);
-              setPassword(pw);
-              void submit(id, pw);
-            }}
-          />
 
           <StyledFooter>
             계정이 없으신가요? <StyledLink href="/signup">회원가입</StyledLink>
