@@ -18,7 +18,7 @@ type RawEmergencyItem = {
   run_id: string | number;
   bus_no: string;
   direction: "to_academy" | "from_academy";
-  position: { lat: number; lng: number; recorded_at: string | null };
+  position: { lat: number | null; lng: number | null; recorded_at: string | null };
   rider_count: number;
   contacts: { name: string; role: "driver" | "escort"; phone: string }[];
   raised_at: string;

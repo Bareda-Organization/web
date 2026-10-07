@@ -13,9 +13,10 @@ export type EmergencyPersonTypes = {
   phone: string | null;
 };
 
+// 서버에 그 회차의 위치 기록이 없으면 세 값이 모두 null 이다(§5.16 · Ruling 848 ③).
 export type EmergencyPositionTypes = {
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   recordedAt: string | null;
 };
 

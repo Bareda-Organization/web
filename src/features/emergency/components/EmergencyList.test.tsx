@@ -204,3 +204,26 @@ describe("EmergencyList — 주기 갱신의 실패·경합(F01-08·F01-05)", ()
     expect(screen.queryByText("1호차 · 등원")).not.toBeInTheDocument();
   });
 });
+
+// Ruling 848 ③ — §5.16 `position` 은 서버에 그 회차의 위치 기록이 없으면 lat · lng · recorded_at 이 모두 null 이다.
+describe("EmergencyList — 발신 위치가 없는 건", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("위치가 null 이면 지도 링크 대신 '위치 확인 불가' 를 보이고, 위치가 있는 건은 링크를 그대로 둔다", async () => {
+    mockGet.mockResolvedValue({
+      items: [
+        { ...ITEM, emergencyId: "1", position: { lat: null, lng: null, recordedAt: null } },
+        { ...ITEM, emergencyId: "2" },
+      ],
+      unackedCount: 2,
+    });
+    render(<EmergencyList />);
+
+    expect(await screen.findByText("위치 확인 불가")).toBeInTheDocument();
+    const links = screen.getAllByRole("link", { name: "지도에서 보기" });
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).not.toContain("null");
+  });
+});

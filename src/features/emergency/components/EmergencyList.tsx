@@ -137,13 +137,20 @@ export const EmergencyList = () => {
     {
       key: "position",
       label: "발신 위치",
-      render: (row) => (
-        <StyledEmergencyPosition>
-          <a href={emergencyMapUrl(row.position)} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-            지도에서 보기
-          </a>
-        </StyledEmergencyPosition>
-      ),
+      render: (row) => {
+        const mapUrl = emergencyMapUrl(row.position);
+        return (
+          <StyledEmergencyPosition>
+            {mapUrl ? (
+              <a href={mapUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                지도에서 보기
+              </a>
+            ) : (
+              "위치 확인 불가"
+            )}
+          </StyledEmergencyPosition>
+        );
+      },
     },
     {
       key: "ack",
