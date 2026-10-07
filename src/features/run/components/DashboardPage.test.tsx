@@ -227,6 +227,17 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByRole("img", { name: "탑승 완료 29명 · 미승차 2명 · 미등원 3명 · 대기 6명" })).toBeInTheDocument();
   });
 
+  // R50 S14 — 관계자 명단은 미등원 행을 남기고 회색으로 보인다(Ruling 811). "명단에서 제외" 라는 보조 문구는 사실과 달랐다.
+  it("미등원 지표의 보조 문구는 명단에서 제외된다고 말하지 않고, 행이 회색으로 남는다고 말한다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    const card = (await screen.findByText("미등원", { selector: "div" })).parentElement!;
+    expect(card).toHaveTextContent("명단에는 회색 행으로 남습니다");
+    expect(screen.queryByText(/명단에서 제외/)).not.toBeInTheDocument();
+  });
+
   it("출발·도착 컬럼이 예정·실제를 구별해 시:분:초로 보여준다", async () => {
     const startedAt = "2026-09-19T08:02:15Z";
     const finishedAt = "2026-09-19T08:41:03Z";

@@ -418,7 +418,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
         ? `${firstNoShow.busNo} ${DIRECTION_LABEL[firstNoShow.direction]} · ${firstNoShow.noShowCases[0].stopName} 통과 후 승차하지 않음`
         : "정차지를 지나고도 타지 않은 학생",
     },
-    { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 미리 끈 학생 명단에서 제외" },
+    { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 미리 끈 학생 · 명단에는 회색 행으로 남습니다" },
     {
       label: "배치 없는 매니저",
       value: metrics?.unassignedManagers ?? "-",
