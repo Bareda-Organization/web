@@ -136,4 +136,15 @@ describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", (
 
     expect(screen.getByRole("spinbutton")).toHaveValue(10);
   });
+
+  // R50 S5 · S17 — 입력칸 이름은 사양 용어(A-17 "미승차 대기 시간")이고, 사양에 없는 "비상 알림이 아니라 …" 문구는 지웠다(Ruling 844).
+  it("입력칸 이름은 미승차 대기 시간이고, 진행 순서에 비상 알림 안내 문구가 없다", async () => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
+    render(<AcademySettingsForm />);
+
+    expect(await screen.findByLabelText(/^미승차 대기 시간/)).toHaveValue(3);
+    expect(screen.queryByLabelText(/무응답 대기 시간/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("미승차 처리 진행 순서")).toHaveTextContent("관계자에게 보고");
+    expect(screen.queryByText(/비상 알림이 아니라/)).not.toBeInTheDocument();
+  });
 });
