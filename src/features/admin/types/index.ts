@@ -415,7 +415,7 @@ export type AuditActorResponseTypes = {
   academyName: string | null;
 };
 
-// ── §6.14 회차 강제 확정 (O-06) — 되돌릴 수 없다 ──────────────────────────
+// ── §6.14 회차 강제 확정 (UF-O-07) — 되돌릴 수 없다 ──────────────────────────
 export type ForceConfirmRequestTypes = {
   reason: string;
 };

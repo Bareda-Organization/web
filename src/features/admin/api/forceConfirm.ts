@@ -9,7 +9,7 @@ type RawForceConfirmResponse = {
   confirmed_at: string;
 };
 
-// POST /admin/runs/{runId}/force-confirm (§6.14, O-06). 되돌릴 수 없는 동작 —
+// POST /admin/runs/{runId}/force-confirm (§6.14, UF-O-07). 되돌릴 수 없는 동작 —
 // reason 은 공백만으로 채울 수 없다(빈 문자열 검증은 호출부 화면에서 막는다).
 // 화면이 코드로 분기하는 오류 — RUN_NOT_IDLE·RUN_NOT_DUE·RUN_CANCELED(§6.14 · §8 사전에 등재, `apiErrorCodes.ts`).
 export const forceConfirmRun = async (runId: string, reason: string): Promise<ForceConfirmResponseTypes> => {

@@ -20,7 +20,7 @@ const isDue = (run: RunLiveItemResponseTypes, nowMs: number): boolean => new Dat
 
 const directionText = (run: RunLiveItemResponseTypes) => (run.direction === "to_academy" ? "등원" : "하원");
 
-// §6.14 회차 강제 확정(O-06). 확정이 계속 실패한 회차를 골라내는 화면이라 idle 상태 회차만 대상으로 둔다.
+// §6.14 회차 강제 확정(UF-O-07 — 기능 ID 는 없다, `FEATURE_SPEC §6.2`). 확정이 계속 실패한 회차를 골라내는 화면이라 idle 상태 회차만 대상으로 둔다.
 // R48 시안: 학원 칩(확정 실패 수 · 비활성 표시) · 대상 / 대기 두 묶음 · 확정 예정 전에는 꺼진 단추 "HH:mm 부터 가능"(U-03).
 export const ForceConfirmPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
