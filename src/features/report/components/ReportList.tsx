@@ -5,7 +5,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Drawer, FilterBar, FilterGroup, Input, PageHeader, RosterTable, SegmentedControl, Select, StatStrip, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem, StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { getRuns } from "@/features/schedule";
+import { getDashboard } from "@/features/run";
 import { getReports, handleReport } from "../api";
 import type { ReportItemResponseTypes, ReportType } from "../types";
 import { StyledReportKv, StyledReportLayout, StyledReportNote } from "./ReportList.styled";
@@ -44,7 +44,7 @@ export const ReportList = () => {
   const [marking, setMarking] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
   const { show } = useToast();
-  // 회차 필터 후보 — 고른 날짜의 회차(GET /staff/runs?service_date=). 날짜를 비우면 서버가 당일을 주므로(§5.10 · §5.20) 둘 다 같은 날 기준이다.
+  // 회차 필터 후보 — 고른 날짜의 회차(GET /staff/dashboard?date= · §5.3 의 runs). 날짜를 비우면 서버가 당일을 주므로(§5.3 · §5.20) 둘 다 같은 날 기준이다.
   const [runOptions, setRunOptions] = useState<{ value: string; label: string }[]>([{ value: "", label: "전체" }]);
   const [items, setItems] = useState<ReportItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,12 +58,12 @@ export const ReportList = () => {
     let canceled = false;
     (async () => {
       try {
-        const data = await getRuns(date === "" ? undefined : date);
+        const data = await getDashboard(date === "" ? undefined : date);
         if (canceled) return;
         setRunOptions([
           { value: "", label: "전체" },
-          ...data.items.map((run) => ({
-            value: run.id,
+          ...data.runs.map((run) => ({
+            value: run.runId,
             label: `${formatClockTime(run.departTime)} ${run.busNo} · ${run.direction === "to_academy" ? "등원" : "하원"}`,
           })),
         ]);
