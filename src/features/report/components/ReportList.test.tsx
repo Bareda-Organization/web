@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportList } from "./ReportList";
 import { getReports, handleReport } from "../api";
-import { getDashboard } from "@/features/run";
+import { getRuns } from "@/features/schedule";
 
 // §5.20 EXC-02·03 · API_SPEC §1.9 — 조회 전용 화면이라 두 갈래만 고정한다:
 // (1) 빈 목록이면 총 0건을 보여주고 표에 행이 없어야 한다.
@@ -12,13 +12,13 @@ vi.mock("../api", () => ({
   handleReport: vi.fn(),
 }));
 
-// 회차 필터 후보(오늘 회차)는 run 기능의 대시보드 조회에서 온다.
-vi.mock("@/features/run", () => ({
-  getDashboard: vi.fn(),
+// 회차 필터 후보는 schedule 기능의 날짜별 회차 조회(GET /staff/runs?service_date=)에서 온다.
+vi.mock("@/features/schedule", () => ({
+  getRuns: vi.fn(),
 }));
 
 const mockGet = vi.mocked(getReports);
-const mockGetDashboard = vi.mocked(getDashboard);
+const mockGetRuns = vi.mocked(getRuns);
 const mockHandle = vi.mocked(handleReport);
 
 describe("ReportList — 조회 갈래", () => {
@@ -96,7 +96,7 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     ({ reportId, type: "etc", busNo: "1호차", studentName: null, reportedBy: "김기사", reportedAt: "2026-09-12T08:00:00Z", memo, handled: false }) as never;
 
   beforeEach(() => {
-    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [{ runId: "7", busNo: "2호차", direction: "to_academy", departTime: "08:10" }] } as never);
+    mockGetRuns.mockResolvedValue({ items: [{ id: "7", busNo: "2호차", direction: "to_academy", departTime: "08:10" }] } as never);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -119,6 +119,25 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
     expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12" }));
+  });
+
+  // R50 S16 — 회차 후보가 늘 오늘 회차였다. 고른 날짜의 회차(GET /staff/runs?service_date=)를 후보로 쓴다.
+  it("날짜를 고르면 회차 후보를 그 날짜의 회차로 다시 읽고, 앞서 고른 회차는 비운다", async () => {
+    mockGet.mockResolvedValue({ items: [], counts: null });
+    mockGetRuns.mockImplementation(async (serviceDate?: string) =>
+      ({ items: [{ id: serviceDate ? "9" : "7", busNo: serviceDate ? "5호차" : "2호차", direction: "to_academy", departTime: "08:10" }] }) as never,
+    );
+    render(<ReportList />);
+    await screen.findByRole("option", { name: "08:10 2호차 · 등원" });
+    expect(mockGetRuns).toHaveBeenLastCalledWith(undefined);
+    fireEvent.change(screen.getByLabelText("회차"), { target: { value: "7" } });
+
+    fireEvent.change(screen.getByLabelText("날짜"), { target: { value: "2026-09-12" } });
+
+    expect(await screen.findByRole("option", { name: "08:10 5호차 · 등원" })).toBeInTheDocument();
+    expect(mockGetRuns).toHaveBeenLastCalledWith("2026-09-12");
+    expect(screen.queryByRole("option", { name: "08:10 2호차 · 등원" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("회차")).toHaveValue("");
   });
 
   it("조건을 바꾸기 전에 보낸 요청의 늦은 응답이 새 조건의 목록을 덮지 않는다", async () => {
@@ -147,7 +166,7 @@ describe("ReportList — 다시 시도", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("조회에 실패하면 다시 시도 버튼이 있고, 누르면 같은 조건으로 다시 조회해 목록이 나온다", async () => {
-    mockGetDashboard.mockResolvedValue({ runs: [] } as never);
+    mockGetRuns.mockResolvedValue({ items: [] } as never);
     mockGet.mockRejectedValueOnce(new Error("네트워크 요청이 실패했습니다"));
     render(<ReportList />);
     await screen.findByText("운행 리포트를 불러오지 못했습니다");
@@ -183,7 +202,7 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
   };
 
   it("행을 눌러 연 옆 패널에서 [처리 완료로 표시] 를 누르면 그 보고 id 로 handle 을 부르고 처리됨으로 보인다", async () => {
-    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGetRuns.mockResolvedValue({ items: [] } as never);
     mockGet.mockResolvedValue({ items: [unhandled], counts: { handled: 0, unhandled: 1 } });
     mockHandle.mockResolvedValue({ ...unhandled, handled: true, handledAt: "2026-10-03T03:35:00Z", handledByName: "박지현" });
     render(<ReportList />);
@@ -198,7 +217,7 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
   });
 
   it("이미 처리된 보고에는 [처리 완료로 표시] 가 없다", async () => {
-    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGetRuns.mockResolvedValue({ items: [] } as never);
     mockGet.mockResolvedValue({ items: [{ ...unhandled, handled: true, handledByName: "박지현" }], counts: { handled: 1, unhandled: 0 } });
     render(<ReportList />);
 
@@ -209,7 +228,7 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
   });
 
   it("처리 필터를 미처리로 바꾸면 handled=false 로 요청한다", async () => {
-    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGetRuns.mockResolvedValue({ items: [] } as never);
     mockGet.mockResolvedValue({ items: [unhandled], counts: { handled: 2, unhandled: 3 } });
     render(<ReportList />);
     await screen.findByText("원하율");

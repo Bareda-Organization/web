@@ -5,7 +5,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Drawer, FilterBar, FilterGroup, Input, PageHeader, RosterTable, SegmentedControl, Select, StatStrip, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem, StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { getDashboard } from "@/features/run";
+import { getRuns } from "@/features/schedule";
 import { getReports, handleReport } from "../api";
 import type { ReportItemResponseTypes, ReportType } from "../types";
 import { StyledReportKv, StyledReportLayout, StyledReportNote } from "./ReportList.styled";
@@ -22,8 +22,6 @@ const TYPE_LABEL: Record<ReportType, string> = {
 
 const TYPE_TONE: Record<ReportType, StatusChipTone> = { guardian_absent: "info", road_block: "warn", vehicle_issue: "bad", etc: "off" };
 const ROLE_LABEL = { driver: "기사", escort: "동승자" } as const;
-// 미처리로 이만큼 묵은 신고는 주의 행으로 올린다 — 5일째 미처리 도로 통제 같은 것이 묻히지 않게(화면 상수).
-const STALE_DAYS = 3;
 const DAY_MS = 86_400_000;
 
 // §5.20 GET /staff/reports(EXC-02·03, M-14) — 예외 보고 조회 전용 목록. 페이징
@@ -46,7 +44,7 @@ export const ReportList = () => {
   const [marking, setMarking] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
   const { show } = useToast();
-  // 회차 필터 후보 — 오늘 회차. 날짜를 비우면 서버가 당일을 주므로(§5.20) 같은 날 기준이다.
+  // 회차 필터 후보 — 고른 날짜의 회차(GET /staff/runs?service_date=). 날짜를 비우면 서버가 당일을 주므로(§5.10 · §5.20) 둘 다 같은 날 기준이다.
   const [runOptions, setRunOptions] = useState<{ value: string; label: string }[]>([{ value: "", label: "전체" }]);
   const [items, setItems] = useState<ReportItemResponseTypes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,21 +55,27 @@ export const ReportList = () => {
   const requestSeq = useRef(0);
 
   useEffect(() => {
+    let canceled = false;
     (async () => {
       try {
-        const data = await getDashboard();
+        const data = await getRuns(date === "" ? undefined : date);
+        if (canceled) return;
         setRunOptions([
           { value: "", label: "전체" },
-          ...data.runs.map((run) => ({
-            value: run.runId,
+          ...data.items.map((run) => ({
+            value: run.id,
             label: `${formatClockTime(run.departTime)} ${run.busNo} · ${run.direction === "to_academy" ? "등원" : "하원"}`,
           })),
         ]);
       } catch {
         // 회차 필터는 보조 조건이라 후보를 못 불러도 "전체" 로 조회는 된다 — 본문 오류로 올리지 않는다.
+        if (!canceled) setRunOptions([{ value: "", label: "전체" }]);
       }
     })();
-  }, []);
+    return () => {
+      canceled = true;
+    };
+  }, [date]);
 
   // 종류·날짜·회차 어느 것이 바뀌어도 조회는 이 한 곳에서 한 번 나간다.
   useEffect(() => {
@@ -112,7 +116,6 @@ export const ReportList = () => {
     (acc, item) => (acc === null || Date.parse(item.reportedAt) < Date.parse(acc.reportedAt) ? item : acc),
     null,
   );
-  const isStale = (item: ReportItemResponseTypes) => !item.handled && nowMs - Date.parse(item.reportedAt) >= STALE_DAYS * DAY_MS;
 
   const handleMark = async (item: ReportItemResponseTypes) => {
     setMarking(true);
@@ -203,7 +206,16 @@ export const ReportList = () => {
           <SegmentedControl aria-label="처리 필터" options={handledOptions} value={handled} onChange={setHandled} />
         </FilterGroup>
         <Select label="회차" options={runOptions} value={runId} onChange={(event) => setRunId(event.target.value)} />
-        <Input label="날짜" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Input
+          label="날짜"
+          type="date"
+          value={date}
+          onChange={(event) => {
+            setDate(event.target.value);
+            // 다른 날짜의 회차 id 를 그대로 두면 후보에 없는 값으로 조회가 나간다.
+            setRunId("");
+          }}
+        />
       </FilterBar>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
@@ -219,7 +231,6 @@ export const ReportList = () => {
           rows={items}
           getRowKey={(row) => row.reportId}
           selectedKey={selected?.reportId ?? null}
-          rowTone={(row) => (isStale(row) ? "warn" : undefined)}
           emptyMessage={filtered ? "조건에 맞는 신고가 없습니다" : undefined}
           onRowClick={(row) => {
             setMarkError(null);
