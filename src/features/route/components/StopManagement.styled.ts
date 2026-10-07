@@ -50,6 +50,11 @@ export const StyledEditBody = styled.div`
   gap: 16px;
   align-items: start;
 
+  /* 양식(StopForm)의 아래 구분선은 목록 위에 놓일 때의 것이다 — 대화상자 안에서는 선이 허공에 걸린다 */
+  & > section {
+    border-bottom: 0;
+  }
+
   @media (max-width: 860px) {
     grid-template-columns: minmax(0, 1fr);
   }
