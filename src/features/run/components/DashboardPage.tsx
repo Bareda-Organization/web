@@ -14,7 +14,7 @@ import {
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
 import { AlertBanner, Button, EmptyState, PageHeader, SkeletonGroup, Skeleton, StatStrip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
-import { formatDateTime, formatHeaderDate } from "@/shared/lib/format/dateTime";
+import { formatHeaderDate } from "@/shared/lib/format/dateTime";
 import {
   MapSurface,
   anchorForSelection,
@@ -29,7 +29,7 @@ import { getRunRoute } from "@/features/route";
 import { formatClockTime, formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import { getDashboard, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RunLiveItemResponseTypes } from "../types";
-import { sumRiders, splitRiders } from "../lib/runBoard";
+import { lastSeenLine, sumRiders, splitRiders } from "../lib/runBoard";
 import { DashboardActionsCard, type PendingApprovals } from "./DashboardActionsCard";
 import { DashboardRunsCard } from "./DashboardRunsCard";
 import { RiderSplitBar, RiderSplitLegend } from "./RiderSplitBar";
@@ -549,7 +549,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
                     </StyledMapOverlayNotice>
                   ) : null}
                 </StyledMapSurface>
-                {/* 운행 중 회차의 현재 → 다음 정차지(§5.18). 위치를 아직 못 받았으면 최근 확인 시각 · 대기 문구로 말한다. */}
+                {/* 운행 중 회차의 현재 → 다음 정차지(§5.18). 위치를 아직 못 받았으면 마지막 확인 N분 전 · 대기 문구로 말한다. */}
                 {runs.some((run) => run.runStatus === "moving") ? (
                   <StyledLiveLines aria-label="운행 중인 버스 위치">
                     {runs
@@ -562,11 +562,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
                               {run.busNo} {DIRECTION_LABEL[run.direction]}
                             </b>
                             <span>
-                              {live?.position
-                                ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}`
-                                : live?.lastSeenAt
-                                  ? `최근 확인 ${formatDateTime(live.lastSeenAt)}`
-                                  : "위치 확인 대기"}
+                              {live?.position ? `현재 ${live.currentStop ?? "-"} → 다음 ${live.nextStop ?? "-"}` : lastSeenLine(live?.lastSeenAt, nowMs)}
                             </span>
                           </li>
                         );

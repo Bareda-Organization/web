@@ -269,6 +269,25 @@ describe("SignupApprovalPage — F02-03 페이징", () => {
   });
 });
 
+// Ruling 848 ② — §5.1 `status` 값은 pending · accepted · rejected 다. "승인 완료" 탭이 옛 계정 상태 값 `active` 를 보내 실서버가 422 VALIDATION_FAILED 로 거절했다.
+describe("SignupApprovalPage — 승인 완료 탭 요청 값", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("승인 완료 탭은 status=accepted 로, 거절됨 탭은 status=rejected 로 요청한다", async () => {
+    mockGetSignupRequests.mockResolvedValue(baseList);
+    render(<SignupApprovalPage />);
+    await screen.findAllByText("김보호");
+
+    fireEvent.click(screen.getByText("승인 완료"));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("accepted", 0, 20));
+
+    fireEvent.click(screen.getByText("거절됨"));
+    await waitFor(() => expect(mockGetSignupRequests).toHaveBeenLastCalledWith("rejected", 0, 20));
+  });
+});
+
 // F02-06 — 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 예전 목록에 그 요청이 남지 않게 닫으면서 목록을 새로 받는다.
 describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침", () => {
   afterEach(() => {

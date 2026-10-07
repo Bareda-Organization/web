@@ -176,7 +176,7 @@ export const ReportList = () => {
       label: TYPE_LABEL[reportType],
       value: typeCounts?.[reportType] ?? items.filter((item) => item.type === reportType).length,
       unit: "건",
-      detail: reportType === "guardian_absent" ? "하원 시 학생 인계 후 신고" : reportType === "road_block" ? "우회 · 지연 사유" : "차량 점검 필요",
+      detail: reportType === "guardian_absent" ? "하원 승하차지에 보호자가 없을 때 보고" : reportType === "road_block" ? "우회 · 지연 사유" : "차량 점검 필요",
     })),
   ];
 

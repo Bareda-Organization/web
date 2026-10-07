@@ -162,6 +162,20 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
   });
 });
 
+// Ruling 848 ⑦ · T9 — 사양에 보호자 인계 정책이 없다(STU-08 · `alighted` 가 최종 상태). 유형별 요약 설명은 EXC-02 문면을 따른다.
+describe("ReportList — 유형별 요약 설명", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("보호자 부재 칸 설명은 보호자 인계가 아니라 하원 승하차지의 보호자 부재 보고로 적는다", async () => {
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGet.mockResolvedValue({ items: [], counts: null });
+    render(<ReportList />);
+
+    expect(await screen.findByText("하원 승하차지에 보호자가 없을 때 보고")).toBeInTheDocument();
+    expect(screen.queryByText(/인계/)).not.toBeInTheDocument();
+  });
+});
+
 // R46-FUWEB B1 #11 — 목록을 못 읽으면 새로고침 말고는 되돌릴 길이 없었다. 조회 조건은 그대로 두고 같은 조회를 다시 낸다.
 describe("ReportList — 다시 시도", () => {
   afterEach(() => vi.clearAllMocks());

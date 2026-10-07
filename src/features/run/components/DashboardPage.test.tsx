@@ -282,6 +282,45 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByTitle(new RegExp(`예정 도착 ${formatClockTimeWithSeconds(estArrivalTime)}`))).toBeInTheDocument();
   });
 
+  // Ruling 843 · 848 — A-03 · UF-M-05 · QA-STF-17: 끝나기 전 지연 회차는 출발 칸 설명에 지연을 반영한 예상 도착도 보인다.
+  it("운행 중 지연 회차는 출발 칸 설명에 예정 도착과 지연 반영 예상 도착을 함께 보여준다", async () => {
+    const estArrivalTime = "2026-09-19T08:27:00Z";
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], estArrivalTime, delayMinutes: 7 }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(
+      screen.getByTitle(new RegExp(`예정 도착 ${formatClockTimeWithSeconds(estArrivalTime)} · 예상 도착 ${formatClockTimeWithSeconds("2026-09-19T08:34:00Z")}`)),
+    ).toBeInTheDocument();
+  });
+
+  it("지연이 없으면 출발 칸 설명에 예상 도착을 넣지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], estArrivalTime: "2026-09-19T08:27:00Z", delayMinutes: 0 }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(screen.queryByTitle(/예상 도착/)).not.toBeInTheDocument();
+  });
+
+  // UF-M-05 — 위치 신호가 끊긴 버스는 "마지막 확인 N분 전" 이다(시각이 아니라 경과 분).
+  it("위치 신호가 끊긴 운행 중 회차는 마지막 확인을 경과 분으로 보여준다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseLiveRun, position: null, lastSeenAt: new Date(Date.now() - 5 * 60_000 - 5_000).toISOString() }],
+    });
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("마지막 확인 5분 전")).toBeInTheDocument();
+  });
+
   it("미승차 확인 대기 건이 있으면 지금 처리할 것에 건수와 남은 분을 보여준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,

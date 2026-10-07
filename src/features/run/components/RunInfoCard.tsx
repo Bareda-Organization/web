@@ -3,7 +3,7 @@
 import { RunStatusChip, StatusChip } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import type { DashboardRunResponseTypes } from "../types";
-import { splitRiders } from "../lib/runBoard";
+import { delayedArrival, splitRiders } from "../lib/runBoard";
 import { RiderSplitBar, RiderSplitLegend } from "./RiderSplitBar";
 import { RouteAckMark } from "./RouteAckMark";
 import {
@@ -49,7 +49,7 @@ export const RunInfoCard = ({ run, addedCount, transferCount }: Props) => {
   const confirmAt = Date.parse(run.departTime) - CONFIRM_LEAD_MS;
   const split = splitRiders(run);
   const delay = run.delayMinutes ?? 0;
-  const estimated = run.estArrivalTime && delay > 0 ? new Date(Date.parse(run.estArrivalTime) + delay * 60_000).toISOString() : null;
+  const estimated = delayedArrival(run);
   return (
     <StyledInfoCard aria-label="회차 정보">
       <StyledInfoCardHead>
@@ -78,7 +78,7 @@ export const RunInfoCard = ({ run, addedCount, transferCount }: Props) => {
           <div>
             <dt>지연 알림</dt>
             <dd>
-              {formatClockTime(run.lastDelayNotice.sentAt)} · 학부모 {run.lastDelayNotice.recipientCount}명에게 발송
+              {formatClockTime(run.lastDelayNotice.sentAt)} · 수신 {run.lastDelayNotice.recipientCount}건
             </dd>
           </div>
         ) : null}

@@ -29,6 +29,7 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
   const [ackMemo, setAckMemo] = useState("");
   const canAck = onAck !== undefined && !emergency.acked && emergency.canceledAt === null;
   const deviceNote = deviceTimeNote(emergency.raisedAt, emergency.occurredAt);
+  const mapUrl = emergencyMapUrl(emergency.position);
 
   return (
     // 옆 패널 — 목록을 그대로 두고 연락처 · 메모 · 확인이 한 화면에 있다(대화상자는 열었다 닫는 두 단계 + 목록을 가렸다). 닫기는 머리의 ×.
@@ -69,9 +70,13 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
         </StyledEmergencyDetailRow>
         <StyledEmergencyDetailRow>
           <span>발신 위치</span>
-          <a href={emergencyMapUrl(emergency.position)} target="_blank" rel="noreferrer">
-            지도에서 보기
-          </a>
+          {mapUrl ? (
+            <a href={mapUrl} target="_blank" rel="noreferrer">
+              지도에서 보기
+            </a>
+          ) : (
+            <span>위치 확인 불가</span>
+          )}
         </StyledEmergencyDetailRow>
         {emergency.contacts.map((contact, index) => (
           <StyledEmergencyDetailRow key={`${contact.role}-${index}`}>

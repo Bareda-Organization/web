@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DashboardRunResponseTypes } from "../types";
-import { runAttention, splitRiders } from "./runBoard";
+import { delayedArrival, lastSeenLine, runAttention, splitRiders } from "./runBoard";
 
 const run = (patch: Partial<DashboardRunResponseTypes> = {}): DashboardRunResponseTypes => ({
   runId: "1",
@@ -72,5 +72,43 @@ describe("runAttention — 행의 긴급도", () => {
 
   it("출발이 먼 확정 회차는 미확인이어도 조용하다", () => {
     expect(runAttention(run({ runStatus: "confirmed", departTime: "2026-10-03T13:13:00+09:00" }), now)).toBeUndefined();
+  });
+});
+
+// Ruling 843 · 848 — 회차 표의 출발 칸 설명과 회차 정보 카드가 같은 "지연 반영 예상 도착" 을 쓴다. 저장된 예정 도착에 지연 분을 더하는 화면 계산이다.
+describe("delayedArrival — 지연 반영 예상 도착", () => {
+  const delayed = { estArrivalTime: "2026-10-03T12:50:00+09:00", delayMinutes: 7, finishedAt: null };
+
+  it("예정 도착에 지연 분을 더한 시각을 돌려준다", () => {
+    expect(delayedArrival(delayed)).toBe("2026-10-03T03:57:00.000Z");
+  });
+
+  it.each([
+    ["지연이 없으면", { delayMinutes: 0 }],
+    ["지연을 모르면", { delayMinutes: null }],
+    ["예정 도착을 모르면", { estArrivalTime: null }],
+    ["예정 도착을 시각으로 읽을 수 없으면", { estArrivalTime: "08:35:00" }],
+    ["이미 도착했으면", { finishedAt: "2026-10-03T13:00:00+09:00" }],
+  ])("%s 돌려주지 않는다", (_name, patch) => {
+    expect(delayedArrival({ ...delayed, ...patch })).toBeNull();
+  });
+});
+
+// UF-M-05 · MON-07 — 위치 신호가 끊긴 회차는 "마지막 확인 N분 전" 을 보인다(분 단위, 1분 미만은 "방금").
+describe("lastSeenLine — 위치 신호가 끊긴 회차의 한 줄", () => {
+  const NOW = Date.parse("2026-10-03T03:30:00Z");
+
+  it.each([
+    [10_000, "마지막 확인 방금"],
+    [59_000, "마지막 확인 방금"],
+    [60_000, "마지막 확인 1분 전"],
+    [5 * 60_000 + 20_000, "마지막 확인 5분 전"],
+    [135 * 60_000, "마지막 확인 135분 전"],
+  ])("%dms 전에 확인했으면 %s", (agoMs, expected) => {
+    expect(lastSeenLine(new Date(NOW - agoMs).toISOString(), NOW)).toBe(expected);
+  });
+
+  it("확인한 적이 없으면 위치 확인 대기", () => {
+    expect(lastSeenLine(null, NOW)).toBe("위치 확인 대기");
   });
 });

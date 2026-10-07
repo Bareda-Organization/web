@@ -13,10 +13,9 @@ import { SignupDecidePanel } from "./SignupDecidePanel";
 import { StyledSignupApprovalLayout, StyledSignupBoard, StyledSignupFooter, StyledWaitedNote } from "./SignupApprovalPage.styled";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 
-// §5.1 은 `status` 값 목록을 열거하지 않고 "기본값 pending" 만 명시한다. §5.2 응답의
-// `account_status`(`active`|`rejected`) 를 근거로 나머지 두 값을 추정해 필터로 뒀다
-// (판단 근거, 보고서 §1) — ChangeApproval 의 `status=all` 500 결함(changeApprovals.ts
-// 주석)과 같은 함정을 피하려고 "전체" 옵션은 넣지 않는다.
+// §5.1 `status` 값은 `pending` · `accepted` · `rejected` 셋뿐이고 그 밖의 값은 422 VALIDATION_FAILED 다(Ruling 848 ②) —
+// §5.2 응답의 `account_status`(`active`) 와 값이 다르니 섞지 않는다. ChangeApproval 의 `status=all` 500 결함
+// (changeApprovals.ts 주석)과 같은 함정을 피하려고 "전체" 옵션은 넣지 않는다.
 const PAGE_SIZE = 20;
 
 // 목록 열 "다음 단계" — 역할마다 필요한 일이 다르다(학생 · 기사 · 동승자는 기록 연결 필수, 학부모는 불필요 — Ruling 324).
@@ -148,7 +147,7 @@ export const SignupApprovalPage = () => {
         aria-label="처리 상태"
         items={[
           { value: "pending", label: "처리 대기", count: pendingCount },
-          { value: "active", label: "승인 완료" },
+          { value: "accepted", label: "승인 완료" },
           { value: "rejected", label: "거절됨" },
         ]}
         value={status}

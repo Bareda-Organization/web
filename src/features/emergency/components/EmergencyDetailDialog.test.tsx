@@ -125,3 +125,26 @@ describe("EmergencyDetailDialog — 단말 기록 시각", () => {
     expect(screen.queryByText(/단말 기록/)).not.toBeInTheDocument();
   });
 });
+
+// Ruling 848 ③ — 위치 기록이 없는 비상 건은 지도 링크 없이 "위치 확인 불가" 로 그린다(지금은 `…/search/null,null` 로 열린다).
+describe("EmergencyDetailDialog — 발신 위치가 없는 건", () => {
+  it("위치가 null 이면 '위치 확인 불가' 를 보이고 지도 링크를 두지 않는다", () => {
+    render(
+      <EmergencyDetailDialog
+        emergency={{ ...EMERGENCY, position: { lat: null, lng: null, recordedAt: null } }}
+        onClose={vi.fn()}
+        onAck={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("위치 확인 불가")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "지도에서 보기" })).not.toBeInTheDocument();
+  });
+
+  it("위치가 있으면 좌표를 실은 지도 링크를 보인다", () => {
+    render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={vi.fn()} />);
+
+    expect(screen.getByRole("link", { name: "지도에서 보기" })).toHaveAttribute("href", "https://map.naver.com/p/search/37.5,127");
+    expect(screen.queryByText("위치 확인 불가")).not.toBeInTheDocument();
+  });
+});

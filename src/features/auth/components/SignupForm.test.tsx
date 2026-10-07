@@ -125,6 +125,23 @@ describe("SignupForm", () => {
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
+  // Ruling 848 · T5 — 제출 버튼은 학원만 고르면 켜진다(UF-X-01). 아이디·비밀번호가 비어 있으면 서버로 보내지 않고 알린다 —
+  // `Input` 은 required 를 DOM 에 싣지 않아 브라우저 검사가 막아 주지 않는다.
+  it.each([
+    ["아이디가 비어 있으면", { 아이디: "" }, "아직 채우지 않은 항목 · 아이디"],
+    ["비밀번호가 비어 있으면", { 비밀번호: "" }, "아직 채우지 않은 항목 · 비밀번호"],
+    ["아이디가 공백뿐이면", { 아이디: "   " }, "아직 채우지 않은 항목 · 아이디"],
+  ])("%s 가입 요청을 보내지 않고 이유를 알린다", async (_name, overrides, missing) => {
+    setup();
+    fillAccount(overrides);
+    await pickAcademy();
+    fireEvent.click(screen.getByRole("button", { name: "가입 신청" }));
+
+    expect(await screen.findByText("아이디와 비밀번호를 입력해 주세요.")).toBeInTheDocument();
+    expect(screen.getByText(missing)).toBeInTheDocument();
+    expect(mockSignup).not.toHaveBeenCalled();
+  });
+
   // F03-15 ② — 가입은 됐는데 뒤이은 로그인이 실패하면 "가입 실패" 로 안내하면 다시 제출해 DUPLICATE_LOGIN_ID 를 맞는다.
   it("가입은 성공했는데 로그인만 실패하면 가입 실패가 아니라 로그인 안내를 보이고 다시 제출하지 못하게 한다", async () => {
     setup();

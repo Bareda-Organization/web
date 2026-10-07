@@ -31,6 +31,9 @@ const POLICY_ROWS: { label: string; format: (policy: AcademyPolicyTypes) => stri
   { label: "알림 보관", format: (p) => `${p.notificationRetentionDays}일` },
 ];
 
+// 학원 상태 값의 한글 표기 — 메인 관리자 화면(학원 목록 · 상태 탭)과 같은 말이다. 모르는 값은 그대로 보인다.
+const ACADEMY_STATUS_LABEL: Record<string, string> = { active: "활성", inactive: "비활성" };
+
 // §5.21 GET·PATCH /staff/academy-settings(A-17) — 학원이 바꿀 수 있는 값은 미승차 대기 시간 하나뿐이다.
 // 오른쪽에 전 학원 공통 정책과 학원 정보를 읽기 전용으로 보인다("왜 이것만 바뀌나" 에 값으로 답한다).
 // 범위(1~30)는 화면이 먼저 알리고(저장 비활성), 서버도 422 VALIDATION_FAILED 로 판정한다 — 그 문구는 그대로 노출한다.
@@ -185,7 +188,7 @@ export const AcademySettingsForm = () => {
                   {academy.status ? (
                     <div>
                       <dt>상태</dt>
-                      <dd>{academy.status}</dd>
+                      <dd>{ACADEMY_STATUS_LABEL[academy.status] ?? academy.status}</dd>
                     </div>
                   ) : null}
                 </StyledKvList>
