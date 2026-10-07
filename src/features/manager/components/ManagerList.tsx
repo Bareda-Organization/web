@@ -30,11 +30,14 @@ export type UnassignedRun = { busNo: string; direction: "to_academy" | "from_aca
 type ManagerListProps = {
   /** null 이면 아직 못 받았다(띠를 내지 않는다) */
   unassignedRuns?: UnassignedRun[] | null;
-  /** 가입 승인 대기 건수 — `approval` 의 값을 페이지가 넘긴다(지표 칸 보조 문구) */
+  /** 가입 승인 대기 건수(기사·동승자 요청만) — `approval` 의 값을 페이지가 넘긴다(지표 칸 보조 문구) */
   pendingSignupCount?: number;
 };
 
 type AssignedFilter = "" | "true" | "false";
+type LinkedFilter = "" | "true" | "false";
+
+const toBoolean = (value: "" | "true" | "false"): boolean | undefined => (value === "" ? undefined : value === "true");
 
 // 같은 호차는 한 줄로 — "2호차 등원 · 하원", 다른 호차는 줄을 바꾼다.
 const todayLines = (manager: ManagerItemResponseTypes, today: string): string[] => {
@@ -45,7 +48,7 @@ const todayLines = (manager: ManagerItemResponseTypes, today: string): string[] 
   return [...byBus.entries()].map(([busNo, directions]) => `${busNo} ${directions.join(" · ")}`);
 };
 
-// §5.13 GET /staff/managers?q=&role=&assigned_today=(MGR-01, A-12) — 매니저 관리 목록. 상세 GET 이 사양에
+// §5.13 GET /staff/managers?q=&role=&linked=&assigned_today=(MGR-01, A-12) — 매니저 관리 목록. 상세 GET 이 사양에
 // 없어 수정은 이 목록의 행 데이터를 그대로 옆 패널에 채운다.
 export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: ManagerListProps) => {
   const [today] = useState(() => todayInSeoul());
@@ -53,6 +56,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"" | ManagerRole>("");
   const [assigned, setAssigned] = useState<AssignedFilter>("");
+  const [linked, setLinked] = useState<LinkedFilter>("");
   const [items, setItems] = useState<ManagerItemResponseTypes[]>([]);
   const [all, setAll] = useState<ManagerItemResponseTypes[]>([]);
   const [counts, setCounts] = useState<ManagerCountsTypes | null>(null);
@@ -69,10 +73,10 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
   // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 탭·필터를 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다.
   const requestSeq = useRef(0);
 
-  const load = useCallback(async (nextPage: number, query: string, nextRole: "" | ManagerRole, nextAssigned: AssignedFilter) => {
+  const load = useCallback(async (nextPage: number, query: string, nextRole: "" | ManagerRole, nextAssigned: AssignedFilter, nextLinked: LinkedFilter) => {
     const seq = ++requestSeq.current;
     setLoading(true);
-    const filters: ManagerListFilters = { role: nextRole || undefined, assignedToday: nextAssigned === "" ? undefined : nextAssigned === "true" };
+    const filters: ManagerListFilters = { role: nextRole || undefined, assignedToday: toBoolean(nextAssigned), linked: toBoolean(nextLinked) };
     try {
       const data = await getManagers(nextPage, PAGE_SIZE, query || undefined, filters);
       if (seq !== requestSeq.current) return;
@@ -103,7 +107,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
 
   useEffect(() => {
     (async () => {
-      await load(page, q, role, assigned);
+      await load(page, q, role, assigned, linked);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
@@ -114,19 +118,21 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
     })();
   }, [loadAll]);
 
-  // 검색어·탭·오늘 배치 필터가 바뀌면 0쪽부터 다시 읽는다. 0쪽이 아니면 쪽이 바뀌며 위 effect 가 새 조건으로 조회한다.
-  const handleConditionChange = (next: { q?: string; role?: "" | ManagerRole; assigned?: AssignedFilter }) => {
+  // 검색어·탭·오늘 배치·계정 연결 필터가 바뀌면 0쪽부터 다시 읽는다. 0쪽이 아니면 쪽이 바뀌며 위 effect 가 새 조건으로 조회한다.
+  const handleConditionChange = (next: { q?: string; role?: "" | ManagerRole; assigned?: AssignedFilter; linked?: LinkedFilter }) => {
     const nextQ = next.q ?? q;
     const nextRole = next.role ?? role;
     const nextAssigned = next.assigned ?? assigned;
+    const nextLinked = next.linked ?? linked;
     setQ(nextQ);
     setRole(nextRole);
     setAssigned(nextAssigned);
+    setLinked(nextLinked);
     if (page !== 0) {
       setPage(0);
       return;
     }
-    load(0, nextQ, nextRole, nextAssigned);
+    load(0, nextQ, nextRole, nextAssigned, nextLinked);
   };
 
   // savedManagerId — 등록·수정한 매니저의 id(삭제는 없다). 그 행을 잠깐 강조한다.
@@ -135,13 +141,13 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
     setEditingId(undefined);
     setCreating(false);
     setDeleting(undefined);
-    load(page, q, role, assigned);
+    load(page, q, role, assigned, linked);
     loadAll();
   };
 
   const summary = useMemo(() => summarizeManagers(all, today), [all, today]);
   const editingRow = items.find((row) => row.id === editingId);
-  const filtered = Boolean(q || role || assigned);
+  const filtered = Boolean(q || role || assigned || linked);
 
   const columns: RosterColumn<ManagerItemResponseTypes>[] = [
     {
@@ -337,6 +343,18 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
                 onChange={(value) => handleConditionChange({ assigned: value as AssignedFilter })}
               />
             </FilterGroup>
+            <FilterGroup label="앱 계정">
+              <SegmentedControl
+                aria-label="앱 계정 필터"
+                options={[
+                  { value: "", label: "전체" },
+                  { value: "true", label: "연결됨" },
+                  { value: "false", label: "앱 가입 전" },
+                ]}
+                value={linked}
+                onChange={(value) => handleConditionChange({ linked: value as LinkedFilter })}
+              />
+            </FilterGroup>
           </FilterBar>
         </>
       )}
@@ -345,7 +363,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card flush aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, role, assigned)}
+        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, role, assigned, linked)}
           emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : filtered ? "조건에 맞는 매니저가 없습니다" : "등록된 매니저가 없습니다"}
           emptyAction={filtered ? undefined : { label: "매니저 등록", onClick: () => setCreating(true) }}
           highlightedKey={highlightedKey}

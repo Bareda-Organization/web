@@ -75,4 +75,20 @@ describe("manager api — snake_case ↔ camelCase 변환", () => {
     expect(url.searchParams.get("q")).toBe("최");
     expect(result.counts).toBeNull();
   });
+
+  // R50 S9 — §5.13 MGR-01 `linked`(boolean) — 계정 연결 여부 필터. false 도 값이라 쿼리에 실려야 한다.
+  it("계정 연결 여부(linked)를 쿼리로 보낸다 — false 도 빠지지 않는다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockJsonResponse(200, { success: true, data: { items: [], page: 0, size: 20, total_count: 0, has_next: false } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getManagers(0, 20, undefined, { linked: false });
+    await getManagers(0, 20, undefined, { linked: true });
+    await getManagers(0, 20);
+
+    expect(new URL(fetchMock.mock.calls[0][0] as string).searchParams.get("linked")).toBe("false");
+    expect(new URL(fetchMock.mock.calls[1][0] as string).searchParams.get("linked")).toBe("true");
+    expect(new URL(fetchMock.mock.calls[2][0] as string).searchParams.has("linked")).toBe(false);
+  });
 });
