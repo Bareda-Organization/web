@@ -16,7 +16,6 @@ import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggl
 import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { adminLiveDestination } from "@/shared/lib/ws";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
-import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import type { SideNavGroup } from "@/shared/types";
 import { Button, SideNav, ToastProvider } from "@/shared/ui";
@@ -88,7 +87,6 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <StyledAdminShell>
-      <SkipLink />
       <SideNav
         groups={NAV_GROUPS.map((group) => ({
           ...group,
@@ -101,7 +99,7 @@ const AdminShell = ({ children }: { children: React.ReactNode }) => {
         }}
         academy="전체 학원"
       />
-      <StyledAdminMain id={MAIN_CONTENT_ID} tabIndex={-1}>
+      <StyledAdminMain>
         <StyledAdminHeader>
           <StyledAdminHeaderSide>
             {canGoBack ? (

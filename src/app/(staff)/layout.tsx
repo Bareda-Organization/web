@@ -13,7 +13,6 @@ import { useAttentionSignals } from "@/shared/hooks";
 import { AttentionAlertToggle } from "@/shared/lib/attention/AttentionAlertToggle";
 import { HeaderClock } from "@/shared/lib/format/HeaderClock";
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
-import { MAIN_CONTENT_ID, SkipLink } from "@/shared/lib/navigation/SkipLink";
 import { useBackNavigation } from "@/shared/lib/navigation/useBackNavigation";
 import { RealtimeConnectionStrip } from "@/shared/ui/realtime";
 import type { SideNavGroup } from "@/shared/types";
@@ -99,7 +98,6 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <StyledStaffShell>
-      <SkipLink />
       <SideNav
         groups={NAV_GROUPS.map((group) => ({
           ...group,
@@ -112,7 +110,7 @@ const StaffShell = ({ children }: { children: React.ReactNode }) => {
         }}
         academy={session?.academy?.name}
       />
-      <StyledStaffMain id={MAIN_CONTENT_ID} tabIndex={-1}>
+      <StyledStaffMain>
         <StyledStaffHeader>
           <StyledStaffHeaderSide>
             {canGoBack ? (

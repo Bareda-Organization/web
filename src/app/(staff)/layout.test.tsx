@@ -100,18 +100,17 @@ describe("(staff) 레이아웃 — 그룹 역할", () => {
   });
 });
 
-// B1 #22 — 본문으로 가려면 사이드바 메뉴를 전부 Tab 으로 지나야 했다.
-describe("(staff) 레이아웃 — 본문 바로가기", () => {
-  it("첫 번째로 초점을 받는 '본문 바로가기' 링크가 본문(main)을 가리킨다", () => {
+// Ruling 844 — "본문 바로가기" 링크는 사양 근거가 없어 뺐다.
+describe("(staff) 레이아웃 — 본문 바로가기 없음", () => {
+  it("'본문 바로가기' 링크를 그리지 않고 본문(main)은 그대로 있다", () => {
     render(
       <StaffLayout>
         <p>본문</p>
       </StaffLayout>,
     );
 
-    const skip = screen.getByRole("link", { name: "본문 바로가기" });
-    expect(skip).toHaveAttribute("href", "#main-content");
-    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+    expect(screen.queryByRole("link", { name: "본문 바로가기" })).not.toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveTextContent("본문");
   });
 });
 
