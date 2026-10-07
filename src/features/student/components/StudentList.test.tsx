@@ -68,6 +68,37 @@ describe("StudentList — 보호자 연결 열", () => {
   });
 });
 
+// R50 S8 — A-10 학생 목록 학년 열. 항목의 grade(null 가능)를 반 옆에 그린다.
+describe("StudentList — 학년 열(A-10)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("학년 열이 grade 를 보이고, 값이 없으면 -", async () => {
+    const student = (studentId: string, name: string, grade: string | null) => ({
+      studentId,
+      name,
+      className: null,
+      guardianPhone: null,
+      guardianCount: 0,
+      grade,
+      canGoAlone: false,
+      accountLinked: false,
+      weeklyAddressStatus: "none" as const,
+    });
+    mockGetStudents.mockResolvedValue({ items: [student("1", "초3학생", "초3"), student("2", "학년없는학생", null)], page: 0, size: 20, totalCount: 2, hasNext: false });
+
+    render(<StudentList />);
+
+    const withGrade = (await screen.findByText("초3학생")).closest("tr")!;
+    const withoutGrade = screen.getByText("학년없는학생").closest("tr")!;
+    const gradeColumn = screen.getAllByRole("columnheader").map((th) => th.textContent).indexOf("학년");
+    expect(gradeColumn).toBeGreaterThanOrEqual(0);
+    expect(within(withGrade).getAllByRole("cell")[gradeColumn]).toHaveTextContent("초3");
+    expect(within(withoutGrade).getAllByRole("cell")[gradeColumn]).toHaveTextContent("-");
+  });
+});
+
 // F02-04 — 검색을 제출했을 때 앞선 요청의 응답이 더 늦게 도착해도 검색 결과가 덮이면 안 된다.
 describe("StudentList — F02-04 늦게 온 옛 응답", () => {
   afterEach(() => {

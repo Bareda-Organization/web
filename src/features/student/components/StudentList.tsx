@@ -99,6 +99,7 @@ export const StudentList = () => {
   const columns: RosterColumn<StudentListItemResponseTypes>[] = [
     { key: "name", label: "이름", render: (row) => <b>{row.name}</b> },
     { key: "className", label: "반", render: (row) => row.className ?? "-" },
+    { key: "grade", label: "학년", render: (row) => row.grade ?? "-" },
     {
       key: "guardianPhone",
       label: "보호자 연락처",
