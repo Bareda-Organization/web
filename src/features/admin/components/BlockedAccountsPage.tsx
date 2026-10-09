@@ -106,7 +106,7 @@ export const BlockedAccountsPage = () => {
 
       <StyledNoticeSlot>
         <AlertBanner tone="info" title="해제는 로그인 차단만 풉니다 — 가입 승인을 대신하지 않습니다">
-          계정은 <b>차단 직전 상태</b>로 돌아갑니다. ‘승인 대기’로 돌아가는 계정은 해제 뒤에도 가입 승인을 받기 전에는 쓸 수 없습니다.
+          계정은 <b>차단 직전 상태</b>로 돌아갑니다. ‘승인 대기’로 돌아가는 계정은 해제하면 로그인은 되지만, 승인하기 전에는 승인 대기 화면만 열립니다.
         </AlertBanner>
       </StyledNoticeSlot>
 
