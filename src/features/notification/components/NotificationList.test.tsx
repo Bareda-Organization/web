@@ -321,3 +321,18 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
     expect(tabText(/수신자 확인됨/).replace(/\D/g, "")).toBe("");
   });
 });
+
+// L5 — 푸터가 "미승차" 라고만 적으면 같은 계열인 '미승차 무응답'(no_show_escalated)도 확인 대상 3종으로 읽힌다.
+describe("NotificationList — 푸터의 확인 대상 설명(L5)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("확인 대상 3종을 적고 '미승차 무응답' 은 확인 대상이 아님을 같이 적는다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+
+    const footer = screen.getByText(/수신 확인은/);
+    expect(footer).toHaveTextContent("지연 · 미승차 · 노선 변경 알림만 추적합니다");
+    expect(footer).toHaveTextContent("'미승차 무응답' 알림은 확인 대상이 아닙니다");
+  });
+});

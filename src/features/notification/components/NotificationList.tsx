@@ -196,7 +196,7 @@ export const NotificationList = () => {
           rowTone={(row) => (isAckTracked(row.type) && STAFF_ROLES.has(row.recipientRole) && !row.acked ? "warn" : undefined)}
         />
         <StyledNotificationFooter>
-          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}수신 확인은 지연 · 미승차 · 노선 변경 알림만 추적합니다 · 최근 발송이 위</span>
+          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}수신 확인은 지연 · 미승차 · 노선 변경 알림만 추적합니다('미승차 무응답' 알림은 확인 대상이 아닙니다) · 최근 발송이 위</span>
           <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
         </StyledNotificationFooter>
       </Card>
