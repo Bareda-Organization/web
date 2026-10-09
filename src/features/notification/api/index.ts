@@ -53,8 +53,9 @@ const toItem = (raw: RawNotificationItem): NotificationListItemResponseTypes => 
 
 // "수신자 확인됨" 탭 건수(M-W4) — 같은 필터에서 `acked=true` 로 좁힌 총 건수만 읽는다(size 1).
 // 서버가 확인을 추적하는 3종(Ruling 850)으로만 좁혀 주므로 "전체 − 미확인" 으로는 만들 수 없는 값이다.
-export const getAckedNotificationCount = async (filters: Omit<NotificationListQueryTypes, "acked"> = {}): Promise<number> =>
-  (await getNotifications(0, 1, { ...filters, acked: true })).totalCount;
+// `group=false` 로 못박는다 — `unacked_count` 가 묶지 않은 행 기준이라 묶으면(total_count 가 묶음 단위) 두 탭 건수의 단위가 갈린다(§5.17).
+export const getAckedNotificationCount = async (filters: Omit<NotificationListQueryTypes, "acked" | "group"> = {}): Promise<number> =>
+  (await getNotifications(0, 1, { ...filters, acked: true, group: false })).totalCount;
 
 // GET /staff/notifications (§5.17, NTF-10·11) — 조회 전용, 쓰기 엔드포인트 없음.
 // unacked_count 는 §1.8 페이징 봉투에 없는 이 엔드포인트만의 추가 필드.

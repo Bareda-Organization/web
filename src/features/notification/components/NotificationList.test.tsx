@@ -289,7 +289,7 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
     expect(tabText(/수신자 확인됨/)).not.toContain("42");
   });
 
-  it("묶어 보기를 켠 기본 상태에서도 확인됨 건수가 보인다", async () => {
+  it("묶어 보기를 켠 기본 상태에서도 확인됨 건수가 보이고, 묶음 여부는 건수 조회에 넘기지 않는다", async () => {
     mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
     // 9 — 옛 계산(45 − 3 = 42)의 글자와 겹치지 않는 값이어야 부분 일치로 통과하지 못한다
     mockAckedCount.mockResolvedValue(9);
@@ -297,19 +297,32 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
     await screen.findByText("내용1");
 
     await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("9"));
-    expect(mockAckedCount).toHaveBeenCalledWith(expect.objectContaining({ group: true }));
+    // 미확인 건수(unacked_count)가 묶지 않은 행 기준이라 확인됨 건수도 같은 단위여야 한다 — 묶음 여부는 api 가 `group=false` 로 못박는다
+    expect(mockAckedCount.mock.lastCall![0]).not.toHaveProperty("group");
   });
 
-  it("종류 · 날짜 · 묶어 보기 · 관계자만 필터를 그대로 넘기되 acked 는 넘기지 않는다(함수가 true 로 고정)", async () => {
+  it("종류 · 날짜 · 관계자만 필터를 그대로 넘기되 acked 는 넘기지 않는다(함수가 true 로 고정)", async () => {
     mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
     render(<NotificationList />);
     await screen.findByText("내용1");
 
     fireEvent.click(screen.getByRole("checkbox", { name: "관계자에게 온 알림만" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "같은 알림 묶어 보기" }));
 
-    await waitFor(() => expect(mockAckedCount).toHaveBeenLastCalledWith(expect.objectContaining({ group: false, recipientRole: "staff" })));
+    await waitFor(() => expect(mockAckedCount).toHaveBeenLastCalledWith(expect.objectContaining({ recipientRole: "staff" })));
     expect(mockAckedCount.mock.lastCall![0]).not.toHaveProperty("acked");
+  });
+
+  it("묶어 보기를 껐다 켜도 확인됨 건수는 다시 세지 않는다(묶음과 무관한 값)", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+    await waitFor(() => expect(mockAckedCount).toHaveBeenCalled());
+    const callsBefore = mockAckedCount.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "같은 알림 묶어 보기" }));
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(0, 20, expect.objectContaining({ group: false })));
+
+    expect(mockAckedCount.mock.calls.length).toBe(callsBefore);
   });
 
   it("건수를 세지 못하면 그 탭 건수만 빼고 목록은 그대로 보인다", async () => {

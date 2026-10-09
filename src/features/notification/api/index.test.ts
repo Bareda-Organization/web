@@ -112,7 +112,9 @@ describe("notification api — 확인됨 건수(M-W4)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("getAckedNotificationCount 는 받은 필터에 acked=true 를 붙여 total_count 만 돌려준다", async () => {
+  // §5.17 — unacked_count 는 묶지 않은 행 기준이고 total_count 는 group=true 면 묶음 기준이다. 두 탭 건수를 같은 단위(알림 행)로
+  // 맞추려고 확인됨 건수는 언제나 group=false 로 읽는다.
+  it("getAckedNotificationCount 는 받은 필터에 acked=true · group=false 를 붙여 total_count 만 돌려준다", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -120,13 +122,13 @@ describe("notification api — 확인됨 건수(M-W4)", () => {
     } as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    const count = await getAckedNotificationCount({ type: "delay", group: true });
+    const count = await getAckedNotificationCount({ type: "delay" });
 
     const url = new URL(String(fetchMock.mock.calls[0][0]));
     expect(count).toBe(7);
     expect(url.searchParams.get("acked")).toBe("true");
     expect(url.searchParams.get("size")).toBe("1");
     expect(url.searchParams.get("type")).toBe("delay");
-    expect(url.searchParams.get("group")).toBe("true");
+    expect(url.searchParams.get("group")).toBe("false");
   });
 });

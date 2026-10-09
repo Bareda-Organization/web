@@ -104,18 +104,19 @@ export const NotificationList = () => {
   const unackedCount = data?.unackedCount ?? 0;
 
   // "수신자 확인됨" 탭 건수 — 서버가 acked=true 로 센 값. 목록과 별개 조회라 실패해도 목록은 그대로 두고 그 탭의 건수만 뺀다.
+  // 묶어 보기와 무관하다 — 미확인 건수(unacked_count)처럼 묶지 않은 알림 행 기준이라 api 가 group=false 로 센다(§5.17).
   // 결과에 센 필터의 열쇠를 붙여 둔다 — 필터가 바뀐 직후 옛 건수를 보이지 않고(열쇠가 다르면 비움), 효과 안에서 비우는 setState 도 필요 없다.
-  const ackedKey = `${type}|${date}|${grouped}|${staffOnly}`;
+  const ackedKey = `${type}|${date}|${staffOnly}`;
   const [ackedResult, setAckedResult] = useState<{ key: string; count: number } | undefined>(undefined);
   useEffect(() => {
     let cancelled = false;
-    getAckedNotificationCount({ type: type ? (type as NotificationType) : undefined, date: date || undefined, group: grouped, recipientRole: staffOnly ? "staff" : undefined })
+    getAckedNotificationCount({ type: type ? (type as NotificationType) : undefined, date: date || undefined, recipientRole: staffOnly ? "staff" : undefined })
       .then((count) => !cancelled && setAckedResult({ key: ackedKey, count }))
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [type, date, grouped, staffOnly, ackedKey]);
+  }, [type, date, staffOnly, ackedKey]);
   const ackedTotal = ackedResult?.key === ackedKey ? ackedResult.count : undefined;
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
