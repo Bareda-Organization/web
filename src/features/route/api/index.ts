@@ -301,7 +301,7 @@ export const getStops = async (page: number, size = 20, q?: string): Promise<Sto
 
 /**
  * PATCH /staff/stops/{id} (§5.9, Ruling 849) — 이름 · 주소 · 좌표 중 **보낸 필드만** 고친다. 그 승하차지를 쓰는 모든
- * 노선·학생 주소에 함께 반영된다. 응답은 목록 항목과 같은 형태다.
+ * 노선의 표시에 함께 반영된다(학생 요일별 주소는 사본이라 불변). 응답은 목록 항목과 같은 형태다.
  */
 export const updateStop = async (id: string, request: StopUpdateRequestTypes): Promise<StopListItemTypes> => {
   const raw = await apiFetch<RawStopListItem>(`/staff/stops/${id}`, {

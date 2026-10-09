@@ -19,7 +19,8 @@ const routeLabel = (route: StopRouteUsageTypes) => `${route.busNo} · ${WEEKDAY_
  * 승하차지 관리(A-08, Ruling 849) — 학원의 승하차지를 한곳에 모아 보고 이름 · 주소 · 좌표를 고친다.
  *
  * <p>목록은 `GET /staff/stops`, 수정은 `PATCH /staff/stops/{id}` 다. 새로 만들기 · 삭제는 두지 않는다 — 승하차지는
- * 노선 저장과 학생 주소 매칭이 만들고, 지난 회차와 요일별 주소가 그 행을 가리키기 때문이다(§5.9).
+ * 노선 저장과 학생 주소 매칭이 만들고, 지난 회차와 요일별 주소가 그 행을 가리키기 때문이다(§5.9). 고친 값은 노선의 표시에
+ * 반영될 뿐 학생의 요일별 주소(주소·좌표 사본)는 바뀌지 않는다(Ruling 858 ⑤).
  */
 export const StopManagement = () => {
   const [q, setQ] = useState("");
@@ -87,10 +88,10 @@ export const StopManagement = () => {
     <StyledStopLayout>
       <PageHeader
         title="승하차지"
-        description={error ? undefined : `총 ${totalCount}곳 — 노선 편성과 학생 주소가 함께 쓰는 정차 지점입니다`}
+        description={error ? undefined : `총 ${totalCount}곳 — 노선 편성이 함께 쓰는 정차 지점입니다`}
       />
       <StyledStopGuide>
-        새 승하차지는 고정 노선 편성 화면에서 만듭니다. 여기서 고친 이름 · 주소 · 위치는 그 승하차지를 쓰는 모든 노선과 학생 주소에 반영됩니다.
+        새 승하차지는 고정 노선 편성 화면에서 만듭니다. 여기서 고친 이름 · 주소 · 위치는 그 승하차지를 쓰는 모든 노선의 표시에 반영됩니다. 학생의 요일별 주소는 사본이라 바뀌지 않습니다.
       </StyledStopGuide>
 
       <FilterBar>

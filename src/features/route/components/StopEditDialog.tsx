@@ -36,7 +36,7 @@ const changesOf = (stop: StopListItemTypes, name: string, address: string, pin: 
 
 /**
  * 승하차지 수정 대화상자(Ruling 849) — 노선 편성 화면의 승하차지 양식(`StopForm`)을 그대로 쓰되, 이 화면의 저장은
- * 목록에 모아 두지 않고 `PATCH /staff/stops/{id}` 로 바로 간다. 고친 값은 그 승하차지를 쓰는 모든 노선·학생 주소에 반영된다.
+ * 목록에 모아 두지 않고 `PATCH /staff/stops/{id}` 로 바로 간다. 고친 값은 그 승하차지를 쓰는 모든 노선의 표시에 반영되고 학생의 요일별 주소(사본)는 바뀌지 않는다.
  */
 export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDialogProps) => {
   const original = { lat: stop.lat, lng: stop.lng };
@@ -105,7 +105,7 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
           applyDisabled={!changed || saving}
           mergesNearby={false}
         >
-          <StyledFormHint>이 승하차지를 쓰는 모든 노선과 학생 주소에 함께 반영됩니다</StyledFormHint>
+          <StyledFormHint>이 승하차지를 쓰는 모든 노선의 표시에 함께 반영됩니다 — 학생의 요일별 주소는 바뀌지 않습니다</StyledFormHint>
           {error ? <AlertBanner tone="missed" title={error} role="alert" /> : null}
         </StopForm>
         <StyledPinMap>

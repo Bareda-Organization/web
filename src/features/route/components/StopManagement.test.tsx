@@ -117,6 +117,16 @@ describe("StopManagement — 목록", () => {
     expect(screen.getByText(/새 승하차지는 고정 노선 편성 화면에서 만듭니다/)).toBeInTheDocument();
   });
 
+  it("머리 설명과 안내 줄은 고친 값이 학생 주소에 반영된다고 말하지 않고, 노선 표시에만 반영됨을 알린다(Ruling 858 ⑤)", async () => {
+    render(<StopManagement />);
+    await screen.findByText("신정역 2번 출구");
+
+    expect(screen.getByText(/학생의 요일별 주소는 사본이라 바뀌지 않습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/그 승하차지를 쓰는 모든 노선의 표시에 반영됩니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/학생 주소가 함께 쓰는/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/모든 노선과 학생 주소에 반영/)).not.toBeInTheDocument();
+  });
+
   it("검색 결과가 없으면 검색어를 넣은 빈 목록 문구를 보인다", async () => {
     mockGetStops.mockResolvedValue(pageOf([]));
     render(<StopManagement />);
@@ -145,7 +155,10 @@ describe("StopManagement — 수정", () => {
 
     expect(within(dialog).getByLabelText("표시명")).toHaveValue("신정역 2번 출구");
     expect(within(dialog).getByText(/서울 양천구 신정동 1/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/이 승하차지를 쓰는 모든 노선과 학생 주소에 함께 반영됩니다/)).toBeInTheDocument();
+    // Ruling 858 ⑤ — 요일별 주소는 주소·좌표 사본이라 안 바뀐다. 바뀌는 것은 그 승하차지를 쓰는 노선의 표시다
+    expect(within(dialog).getByText(/이 승하차지를 쓰는 모든 노선의 표시에 함께 반영됩니다/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/학생의 요일별 주소는 바뀌지 않습니다/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/학생 주소에 함께 반영/)).not.toBeInTheDocument();
   });
 
   it("바뀐 것이 없으면 저장 단추가 꺼져 있다", async () => {

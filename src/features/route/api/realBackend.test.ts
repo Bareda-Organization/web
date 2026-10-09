@@ -170,7 +170,7 @@ describe("route api — 실서버 계약", () => {
   });
 
   // 2026-09-23 — 저장 한 번에 수정·추가·순서가 반영된다. 전용 노선 위에서만(비가역).
-  // 수정 대상은 이 시험이 새로 만든 승하차지다 — 시드 승하차지를 고치면 다른 노선·학생 주소가 따라 바뀐다.
+  // 수정 대상은 이 시험이 새로 만든 승하차지다 — 시드 승하차지를 고치면 그것을 쓰는 다른 노선의 표시가 따라 바뀐다.
   it("saveRouteStops 는 새 승하차지를 만들고 순서·이름 수정까지 한 번에 반영한다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -196,7 +196,7 @@ describe("route api — 실서버 계약", () => {
   });
 
   // Ruling 849 — 승하차지 관리. 이름 수정은 시드 승하차지를 건드리지 않게, 이 시험이 노선 저장으로 새로 만든 승하차지
-  // 위에서만 왕복한다(수정은 그 승하차지를 쓰는 모든 노선·학생 주소에 반영된다).
+  // 위에서만 왕복한다(수정은 그 승하차지를 쓰는 모든 노선의 표시에 반영된다).
   it("getStops 는 승하차지 목록(편성·학생 수 포함)을 돌려주고, updateStop 은 이름만 고쳐 같은 모양으로 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
