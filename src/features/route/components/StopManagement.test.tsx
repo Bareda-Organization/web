@@ -2,13 +2,13 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MapSurfaceProps } from "@/features/map";
 import { ApiError } from "@/shared/lib/http";
-import { getStops, updateStop } from "../api";
+import { getAllStops, getStops, updateStop } from "../api";
 import type { StopListItemTypes, StopSuggestionTypes } from "../types";
 import { StopManagement } from "./StopManagement";
 
 // Ruling 849 · §5.9 "승하차지 관리" — 목록(GET /staff/stops) · 수정(PATCH /staff/stops/{id}) 화면.
 // 서버 계약은 api 시험이 맡고, 여기서는 화면이 무엇을 부르고 무엇을 보여 주는지만 고정한다.
-vi.mock("../api", () => ({ getStops: vi.fn(), updateStop: vi.fn(), suggestStops: vi.fn() }));
+vi.mock("../api", () => ({ getAllStops: vi.fn(), getStops: vi.fn(), updateStop: vi.fn(), suggestStops: vi.fn() }));
 
 // jsdom 은 네이버 지도 SDK 를 못 그리므로 지도는 목으로 바꾸고, 핀을 끌어 놓은 일은 onMarkerDragEnd 로 흉내 낸다.
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
@@ -28,6 +28,7 @@ vi.mock("./StopAddressSearch", () => ({
 }));
 
 const mockGetStops = vi.mocked(getStops);
+const mockGetAllStops = vi.mocked(getAllStops);
 const mockUpdateStop = vi.mocked(updateStop);
 
 const stop = (overrides: Partial<StopListItemTypes> = {}): StopListItemTypes => ({
@@ -58,6 +59,7 @@ const openEdit = async (name = "신정역 2번 출구") => {
 
 beforeEach(() => {
   mockGetStops.mockResolvedValue(pageOf([stop()]));
+  mockGetAllStops.mockResolvedValue([stop()]);
 });
 afterEach(() => vi.clearAllMocks());
 
@@ -225,6 +227,96 @@ describe("StopManagement — 수정", () => {
     expect(within(dialog).getByText(/"신정역 3번 출구" 승하차지가 이미 있습니다/)).toBeInTheDocument();
     expect(within(dialog).getByText(/합쳐지지 않고 따로 남습니다/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/"신정역 2번 출구" 승하차지가 이미 있습니다/)).not.toBeInTheDocument();
+  });
+
+  // M-W3 — 주소를 고르면 핀도 후보 자리로 옮겨 가 좌표가 바뀐다. 운행 중 승하차지는 좌표를 못 고치므로(403) 되돌릴 길이 화면에 있어야 이름·주소만 고칠 수 있다.
+  it("핀을 옮기지 않았으면 '핀 되돌리기' 단추가 없고, 끌어 옮기면 나타난다", async () => {
+    render(<StopManagement />);
+    const dialog = await openEdit();
+    expect(within(dialog).queryByRole("button", { name: "핀 되돌리기" })).not.toBeInTheDocument();
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.521, lng: 126.831 });
+
+    expect(await within(dialog).findByRole("button", { name: "핀 되돌리기" })).toBeInTheDocument();
+  });
+
+  it("주소를 고른 뒤 '핀 되돌리기' 를 누르면 좌표는 빼고 주소만 싣는다(운행 중 승하차지의 주소만 고치기)", async () => {
+    pendingSuggestion = { lat: 37.53, lng: 126.84, displayName: "서울 양천구 신정동 2", nearby: [] };
+    mockUpdateStop.mockResolvedValue(stop());
+    render(<StopManagement />);
+    const dialog = await openEdit();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "후보 고르기" }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: "핀 되돌리기" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockUpdateStop).toHaveBeenCalledWith("7", { address: "서울 양천구 신정동 2" }));
+    expect(within(dialog).queryByRole("button", { name: "핀 되돌리기" })).not.toBeInTheDocument();
+  });
+
+  it("핀을 되돌리면 지도 카메라도 원래 자리로 돌아간다", async () => {
+    pendingSuggestion = { lat: 37.53, lng: 126.84, displayName: "서울 양천구 신정동 2", nearby: [] };
+    render(<StopManagement />);
+    const dialog = await openEdit();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "후보 고르기" }));
+    expect(mockMapSurface.mock.lastCall![0].camera).toMatchObject({ lat: 37.53, lng: 126.84 });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "핀 되돌리기" }));
+
+    expect(mockMapSurface.mock.lastCall![0].camera).toMatchObject({ lat: 37.52, lng: 126.83 });
+    expect(mockMapSurface.mock.lastCall![0].markers[0]).toMatchObject({ lat: 37.52, lng: 126.83 });
+  });
+
+  // L3 — QA-STF-26: 50m 안 다른 승하차지는 주소를 고를 때도, 핀만 끌어 옮길 때도 저장 전에 알린다.
+  it("주소를 고르지 않고 핀만 다른 승하차지 50m 안으로 끌어도 저장 전에 알린다", async () => {
+    mockGetAllStops.mockResolvedValue([
+      stop(),
+      stop({ stopId: "9", name: "신정역 3번 출구", address: "서울 양천구 신정동 3", lat: 37.5301, lng: 126.84, routes: [] }),
+    ]);
+    render(<StopManagement />);
+    const dialog = await openEdit();
+    await waitFor(() => expect(mockGetAllStops).toHaveBeenCalled());
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.5301, lng: 126.8401 });
+
+    expect(await within(dialog).findByText(/"신정역 3번 출구" 승하차지가 이미 있습니다/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/합쳐지지 않고 따로 남습니다/)).toBeInTheDocument();
+  });
+
+  it("핀을 끌어 놓은 자리가 다른 승하차지에서 50m 밖이면 알리지 않고, 자기 자신도 세지 않는다", async () => {
+    mockGetAllStops.mockResolvedValue([
+      stop(),
+      stop({ stopId: "9", name: "신정역 3번 출구", lat: 37.5301, lng: 126.84, routes: [] }),
+    ]);
+    render(<StopManagement />);
+    const dialog = await openEdit();
+    await waitFor(() => expect(mockGetAllStops).toHaveBeenCalled());
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.5205, lng: 126.8305 });
+
+    await within(dialog).findByRole("button", { name: "핀 되돌리기" });
+    expect(within(dialog).queryByText(/승하차지가 이미 있습니다/)).not.toBeInTheDocument();
+  });
+
+  it("다른 승하차지 목록을 못 읽으면 거리 확인을 못 했다고 알리되 저장은 막지 않는다", async () => {
+    mockGetAllStops.mockRejectedValue(new Error("네트워크"));
+    render(<StopManagement />);
+    const dialog = await openEdit();
+
+    expect(await within(dialog).findByText(/다른 승하차지와의 거리를 확인하지 못했습니다/)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("표시명"), { target: { value: "신정역 1번 출구" } });
+    expect(within(dialog).getByRole("button", { name: "저장" })).toBeEnabled();
+  });
+
+  it("403 CHANGE_WINDOW_CLOSED 안내는 '핀 되돌리기' 로 이름·주소만 저장하는 길을 가리킨다", async () => {
+    mockUpdateStop.mockRejectedValue(new ApiError(403, "CHANGE_WINDOW_CLOSED", "변경 가능 시간이 지났습니다"));
+    render(<StopManagement />);
+    const dialog = await openEdit();
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.521, lng: 126.831 });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "저장" }));
+
+    expect(await within(dialog).findByText(/핀 되돌리기/, { selector: "[role=alert] *" })).toBeInTheDocument();
   });
 
   it("403 CHANGE_WINDOW_CLOSED 는 운행 중이라 옮길 수 없다는 안내를 양식에 보이고 목록은 그대로 둔다", async () => {

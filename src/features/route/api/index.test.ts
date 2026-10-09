@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getRouteDetail, getRoutePath, getRoutes, getRunRoute, getStops, saveRouteStops, suggestStops, updateStop } from "./index";
+import { getAllStops, getRouteDetail, getRoutePath, getRoutes, getRunRoute, getStops, saveRouteStops, suggestStops, updateStop } from "./index";
 
 // §5.9 RTE-01·09 · §5.15 RTE-10 — snake_case ↔ camelCase 변환 경계. toListItem 의
 // name 필드와 toStop 의 name 필드는 서로 다른 raw 타입(노선 이름 vs 정차지 이름)이지만
@@ -294,6 +294,22 @@ describe("route api — 승하차지 관리(Ruling 849)", () => {
     await getStops(0, 20, "");
 
     expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.has("q")).toBe(false);
+  });
+
+  it("getAllStops 는 has_next 가 끝날 때까지 쪽을 이어 받아 한 배열로 돌려준다(size 100)", async () => {
+    const second = { ...stopItemRaw, stop_id: 8, name: "신정역 3번 출구" };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mockJsonResponse(200, { success: true, data: { items: [stopItemRaw], page: 0, size: 100, total_count: 2, has_next: true } }))
+      .mockResolvedValueOnce(mockJsonResponse(200, { success: true, data: { items: [second], page: 1, size: 100, total_count: 2, has_next: false } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getAllStops();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.get("size")).toBe("100");
+    expect(new URL(String(fetchMock.mock.calls[1][0])).searchParams.get("page")).toBe("1");
+    expect(result.map((item) => item.name)).toEqual([stopItem.name, "신정역 3번 출구"]);
   });
 
   it("updateStop 은 PATCH 로 보낸 필드만 싣고 좌표는 lat·lng 를 함께 싣는다", async () => {

@@ -287,6 +287,9 @@ const toStopListItem = (raw: RawStopListItem): StopListItemTypes => ({
   studentCount: raw.student_count,
 });
 
+// §1.8 — 페이징 `size` 의 서버 상한.
+const STOP_PAGE_SIZE_MAX = 100;
+
 /**
  * GET /staff/stops?q= (§5.9 "승하차지 관리", Ruling 849, A-08) — 학원의 승하차지 목록. §1.8 페이징,
  * `q` 는 이름 또는 주소에 들어 있는 글자(비우면 전부). 정렬은 서버가 이름 오름차순으로 정한다.
@@ -297,6 +300,20 @@ export const getStops = async (page: number, size = 20, q?: string): Promise<Sto
     { method: "GET", query: { page, size, q: q || undefined } },
   );
   return { items: raw.items.map(toStopListItem), page: raw.page, size: raw.size, totalCount: raw.total_count, hasNext: raw.has_next };
+};
+
+/**
+ * 학원의 승하차지 전부 — 수정 대화상자가 핀을 옮긴 자리의 50m 안 다른 승하차지를 가려내려고 한 번 읽는다(L3).
+ * 서버에는 좌표로 묻는 길이 없어 목록을 쪽 단위(상한 100)로 이어 받는다.
+ * ponytail: 승하차지가 수천 곳이 되면 쪽 수만큼 왕복 — 그때 `GET /staff/stops` 에 반경 조회를 둔다.
+ */
+export const getAllStops = async (): Promise<StopListItemTypes[]> => {
+  const all: StopListItemTypes[] = [];
+  for (let page = 0; ; page += 1) {
+    const result = await getStops(page, STOP_PAGE_SIZE_MAX);
+    all.push(...result.items);
+    if (!result.hasNext) return all;
+  }
 };
 
 /**

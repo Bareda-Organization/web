@@ -35,6 +35,8 @@ type StopFormProps = {
    * 승하차지 관리의 수정(PATCH)은 합치지 않는다(§5.9 Ruling 849) — 그쪽은 false 로 "따로 남습니다" 라고 알린다.
    */
   mergesNearby?: boolean;
+  /** 핀을 원래 자리로 되돌린다 — 주소를 고르면 핀도 따라 옮겨 가므로 좌표는 두고 이름·주소만 고치려는 길이다. 핀이 옮겨졌을 때만 단추가 보인다. */
+  onResetPin?: () => void;
   /** 양식 맨 아래(단추 위) 안내·오류. */
   children?: ReactNode;
 };
@@ -64,6 +66,7 @@ export const StopForm = ({
   applyLabel,
   applyDisabled = false,
   mergesNearby = true,
+  onResetPin,
   children,
 }: StopFormProps) => {
   const moved = pin && anchor ? metersBetween(pin, anchor) : 0;
@@ -91,6 +94,12 @@ export const StopForm = ({
       ) : (
         <StyledFormHint>주소를 검색해 후보를 고르면 지도에 핀이 찍힙니다</StyledFormHint>
       )}
+
+      {onResetPin && moved > 0 ? (
+        <Button variant="ghost" size="sm" onClick={onResetPin}>
+          핀 되돌리기
+        </Button>
+      ) : null}
 
       {address ? <StyledFormHint>주소 · {address}</StyledFormHint> : null}
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MapSurface } from "@/features/map";
 import type { MapMarker } from "@/features/map";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Dialog } from "@/shared/ui";
-import { updateStop } from "../api";
-import type { LatLng, StopListItemTypes, StopSuggestionTypes, StopUpdateRequestTypes } from "../types";
+import { getAllStops, updateStop } from "../api";
+import type { LatLng, NearbyStopTypes, StopListItemTypes, StopSuggestionTypes, StopUpdateRequestTypes } from "../types";
 import { StopForm } from "./StopForm";
 import { StyledFormHint } from "./StopForm.styled";
 import { StyledEditBody, StyledPinMap } from "./StopManagement.styled";
@@ -16,8 +16,9 @@ const PIN_MAP_ZOOM = 18;
 const PIN_MARKER_ID = "draft-stop";
 
 // §5.9 403 CHANGE_WINDOW_CLOSED — 운행 중(`moving`) 회차의 현재 노선에 서는 승하차지는 좌표를 고칠 수 없다(이름·주소만은 허용).
+// 주소를 고르면 핀도 따라 옮겨 가 좌표가 바뀌므로, 이름·주소만 고치는 길은 '핀 되돌리기' 다(M-W3).
 const CHANGE_WINDOW_CLOSED_MESSAGE =
-  "운행 중인 회차가 서는 승하차지라 위치를 지금 옮길 수 없습니다 — 이름·주소만 고치거나 운행이 끝난 뒤 다시 저장하세요";
+  "운행 중인 회차가 서는 승하차지라 위치를 지금 옮길 수 없습니다 — '핀 되돌리기' 로 핀을 원래 자리에 두고 이름·주소만 저장하거나, 운행이 끝난 뒤 다시 저장하세요";
 
 type StopEditDialogProps = {
   stop: StopListItemTypes;
@@ -46,8 +47,27 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
   // 카메라는 후보를 고를 때만 옮긴다 — 핀을 끌 때마다 따라가면 끌던 핀이 제자리로 돌아간다.
   const [focus, setFocus] = useState<LatLng>(original);
   const [nearby, setNearby] = useState<StopSuggestionTypes["nearby"]>([]);
+  // 학원의 다른 승하차지 — 핀만 끌어도 50m 안 승하차지를 알리려고 한 번 읽어 둔다(L3). 읽지 못하면 후보를 고를 때 오는 nearby 만 남는다.
+  const [others, setOthers] = useState<NearbyStopTypes[]>([]);
+  const [othersFailed, setOthersFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllStops()
+      .then((all) => {
+        if (cancelled) return;
+        setOthers(all.filter((other) => other.stopId !== stop.stopId).map((other) => ({ ...other, distanceM: 0 })));
+      })
+      .catch(() => !cancelled && setOthersFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [stop.stopId]);
+
+  // StopForm 이 핀 기준으로 거리를 다시 재어 50m 안만 남긴다 — 여기서는 후보를 모으기만 한다.
+  const candidates = [...nearby, ...others.filter((other) => !nearby.some((known) => known.stopId === other.stopId))];
 
   const changes = changesOf(stop, name, address, pin);
   const changed = Object.keys(changes).length > 0;
@@ -60,6 +80,12 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
     setFocus(point);
     // 후보 근처에는 이 승하차지 자신도 걸린다 — 자기 자신은 "이미 있는 승하차지" 가 아니다.
     setNearby(suggestion.nearby.filter((candidate) => candidate.stopId !== stop.stopId));
+  };
+
+  // 핀을 원래 자리로 — 좌표가 같으면 PATCH 에서 좌표가 빠져, 운행 중 승하차지도 이름·주소만 고칠 수 있다.
+  const resetPin = () => {
+    setPin(original);
+    setFocus(original);
   };
 
   const save = async () => {
@@ -96,7 +122,7 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
           onNameChange={setName}
           pin={pin}
           anchor={original}
-          nearby={nearby}
+          nearby={candidates}
           onPick={pickSuggestion}
           onCancel={onClose}
           onApply={save}
@@ -104,8 +130,10 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
           applyLabel={saving ? "저장 중..." : "저장"}
           applyDisabled={!changed || saving}
           mergesNearby={false}
+          onResetPin={resetPin}
         >
           <StyledFormHint>이 승하차지를 쓰는 모든 노선의 표시에 함께 반영됩니다 — 학생의 요일별 주소는 바뀌지 않습니다</StyledFormHint>
+          {othersFailed ? <StyledFormHint>다른 승하차지와의 거리를 확인하지 못했습니다 — 50m 안 중복 안내가 주소를 고를 때만 나옵니다</StyledFormHint> : null}
           {error ? <AlertBanner tone="missed" title={error} role="alert" /> : null}
         </StopForm>
         <StyledPinMap>
