@@ -60,10 +60,14 @@ export const delayedArrival = (run: Pick<DashboardRunResponseTypes, "estArrivalT
   return new Date(estimated + delay * MINUTE_MS).toISOString();
 };
 
-// 위치 신호가 끊긴 회차의 한 줄 — "마지막 확인 N분 전"(분 단위, 1분 미만은 "방금" — UF-M-05 · MON-07). 확인한 적이 없으면 대기 문구.
+// 위치 유실 판정 기준 — 마지막 수신 후 2분 초과(API_SPEC §5.18 · Ruling 208). 서버가 이 기준을 넘긴 회차만 위치를 비우므로 유실 줄의 분은 2 이상이다.
+const SIGNAL_LOST_MINUTES = 2;
+
+// 위치 신호가 끊긴 회차의 한 줄 — "마지막 확인 N분 전"(분 단위, UF-M-05 · MON-07). 확인한 적이 없으면 대기 문구.
+// 브라우저 시계가 서버보다 느려 N 이 기준 아래로 읽히면 기준값으로 맞춘다(유실 줄에 "방금" · 음수 분이 나오지 않게).
 export const lastSeenLine = (lastSeenAt: string | null | undefined, nowMs: number): string => {
   const seen = lastSeenAt ? toMs(lastSeenAt) : NaN;
   if (!Number.isFinite(seen)) return "위치 확인 대기";
-  const minutes = Math.floor((nowMs - seen) / MINUTE_MS);
-  return minutes < 1 ? "마지막 확인 방금" : `마지막 확인 ${minutes}분 전`;
+  const minutes = Math.max(SIGNAL_LOST_MINUTES, Math.floor((nowMs - seen) / MINUTE_MS));
+  return `마지막 확인 ${minutes}분 전`;
 };
