@@ -8,7 +8,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getStops } from "../api";
 import type { RunDirection, StopListItemTypes, StopRouteUsageTypes } from "../types";
 import { StopEditDialog } from "./StopEditDialog";
-import { StyledMuted, StyledRouteTag, StyledRouteTags, StyledStopGuide, StyledStopLayout } from "./StopManagement.styled";
+import { StyledInactiveMark, StyledMuted, StyledRouteTag, StyledRouteTags, StyledStopGuide, StyledStopLayout } from "./StopManagement.styled";
 
 const PAGE_SIZE = 20;
 const DIRECTION_LABEL: Record<RunDirection, string> = { to_academy: "등원", from_academy: "하원" };
@@ -58,6 +58,7 @@ export const StopManagement = () => {
             {row.routes.map((route) => (
               <StyledRouteTag key={route.routeId} data-active={route.active}>
                 {routeLabel(route)}
+                {route.active ? null : <StyledInactiveMark>비활성</StyledInactiveMark>}
               </StyledRouteTag>
             ))}
           </StyledRouteTags>

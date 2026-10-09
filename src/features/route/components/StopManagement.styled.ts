@@ -22,7 +22,7 @@ export const StyledRouteTags = styled.span`
   gap: 4px 6px;
 `;
 
-// 비활성 편성은 흐리게 — 이력으로만 남은 편성이라 지금 이 승하차지를 쓰는 편성과 구별한다.
+// 비활성 편성은 흐리게 + 글자 "비활성" — 이력으로만 남은 편성이라 지금 이 승하차지를 쓰는 편성과 구별한다(색·농도만으로 상태를 전하지 않는다).
 export const StyledRouteTag = styled.span`
   padding: 2px 8px;
   border: 1px solid var(--border-subtle);
@@ -37,6 +37,11 @@ export const StyledRouteTag = styled.span`
     background: transparent;
     opacity: 0.6;
   }
+`;
+
+export const StyledInactiveMark = styled.span`
+  margin-left: 6px;
+  font-weight: var(--fw-medium);
 `;
 
 export const StyledMuted = styled.span`

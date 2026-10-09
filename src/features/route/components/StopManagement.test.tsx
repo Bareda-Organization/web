@@ -82,6 +82,17 @@ describe("StopManagement — 목록", () => {
     expect(screen.getByText("1호차 · 월 · 등원")).toHaveAttribute("data-active", "true");
   });
 
+  // L4 — 흐림만으로는 상태를 전할 수 없다(색·농도만으로 말하지 않는다). 비활성 편성에는 글자 "비활성" 이 붙는다.
+  it("비활성 편성 태그에는 '비활성' 글자가 붙고 활성 편성 태그에는 붙지 않는다", async () => {
+    render(<StopManagement />);
+
+    const inactive = (await screen.findByText("2호차 · 화 · 하원")).closest("span[data-active]") as HTMLElement;
+    const active = screen.getByText("1호차 · 월 · 등원").closest("span[data-active]") as HTMLElement;
+
+    expect(within(inactive).getByText("비활성")).toBeInTheDocument();
+    expect(within(active).queryByText("비활성")).not.toBeInTheDocument();
+  });
+
   it("쓰는 편성이 없는 승하차지는 '쓰는 편성 없음' 이다", async () => {
     mockGetStops.mockResolvedValue(pageOf([stop({ routes: [], studentCount: 0 })]));
     render(<StopManagement />);
