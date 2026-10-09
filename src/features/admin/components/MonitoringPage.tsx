@@ -489,6 +489,12 @@ export const MonitoringPage = () => {
   const axis = useMemo(() => timetableAxis(sortedRuns), [sortedRuns]);
   const selectedRun = runs.find((run) => run.runId === selectedRunId) ?? null;
   const connected = connectionState === "connected";
+  // 한 번도 붙지 않은 채 연결을 시도하는 중이면 "끊겼다" 가 아니라 "연결 중" 이다(R51 L2) — 한 번 붙었다 끊긴 뒤의 재연결은 계속 "끊김" 이다.
+  const [everConnected, setEverConnected] = useState(false);
+  useEffect(() => {
+    if (connected) setEverConnected(true);
+  }, [connected]);
+  const firstConnecting = !everConnected && (connectionState === "connecting" || connectionState === "disconnected");
   const movingCount = runs.filter((run) => run.runStatus === "moving").length;
 
   const columns: RosterColumn<RunLiveItemResponseTypes>[] = [
@@ -533,12 +539,16 @@ export const MonitoringPage = () => {
         style={{ marginBottom: 20 }}
         title="전체 관제"
         description={`학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · ${
-          connected ? `위치는 실시간, 회차 목록은 ${LIVE_POLL_CONNECTED_INTERVAL_MS / 1000}초마다 갱신` : `실시간 연결이 끊겨 ${LIVE_POLL_INTERVAL_MS / 1000}초마다 갱신`
+          connected
+            ? `위치는 실시간, 회차 목록은 ${LIVE_POLL_CONNECTED_INTERVAL_MS / 1000}초마다 갱신`
+            : firstConnecting
+              ? `실시간 연결 중 — 연결되기 전까지 ${LIVE_POLL_INTERVAL_MS / 1000}초마다 갱신`
+              : `실시간 연결이 끊겨 ${LIVE_POLL_INTERVAL_MS / 1000}초마다 갱신`
         }`}
         actions={
           <StyledMonitoringStamp>
             <StyledMonitoringStampDot $live={connected} aria-hidden="true" />
-            {clockOfMs(nowMs)} 기준 · {connected ? "실시간 연결됨" : "실시간 연결 끊김"}
+            {clockOfMs(nowMs)} 기준 · {connected ? "실시간 연결됨" : firstConnecting ? "실시간 연결 중" : "실시간 연결 끊김"}
           </StyledMonitoringStamp>
         }
       />

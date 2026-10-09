@@ -906,6 +906,40 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
     expect(screen.queryByText(/30초마다/)).not.toBeInTheDocument();
   });
 
+  // R51 L2 — 한 번도 붙기 전(최초 연결 중)에는 "끊겼다" 가 아니라 "연결하는 중" 이다. 한 번 붙었다 끊긴 뒤의 재연결은 계속 "끊겨" 로 말한다.
+  it("처음 연결하는 중(connecting)에는 '끊겨' 가 아니라 연결 중이라고 적는다", async () => {
+    mockConnectionState = "connecting";
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    expect(screen.getByText(/실시간 연결 중 — 연결되기 전까지 7초마다 갱신/)).toBeInTheDocument();
+    expect(screen.getByText(/기준 · 실시간 연결 중/)).toBeInTheDocument();
+    expect(screen.queryByText(/끊겨/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/실시간 연결 끊김/)).not.toBeInTheDocument();
+  });
+
+  it("처음부터 연결하지 못해 재연결 대기(reconnecting)에 들어가면 '끊겨' 로 적는다", async () => {
+    mockConnectionState = "reconnecting";
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    expect(screen.getByText(/실시간 연결이 끊겨 7초마다 갱신/)).toBeInTheDocument();
+  });
+
+  it("한 번 붙었다가 끊긴 뒤 다시 connecting 이 되어도 '끊겨' 를 유지한다", async () => {
+    const view = render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+    expect(screen.getByText(/회차 목록은 30초마다 갱신/)).toBeInTheDocument();
+
+    mockConnectionState = "reconnecting";
+    view.rerender(<MonitoringPage />);
+    mockConnectionState = "connecting";
+    view.rerender(<MonitoringPage />);
+
+    expect(screen.getByText(/실시간 연결이 끊겨 7초마다 갱신/)).toBeInTheDocument();
+    expect(screen.queryByText(/실시간 연결 중/)).not.toBeInTheDocument();
+  });
+
   it("실시간 연결이 끊기면(재연결 중) 7초 안전망 폴링으로 돌아가고, 다시 붙으면 바로 한 번 받은 뒤 30초로 늦춘다", async () => {
     const view = render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
