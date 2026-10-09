@@ -303,7 +303,8 @@ describe("StopManagement — 수정", () => {
     const dialog = await openEdit();
     await waitFor(() => expect(mockGetAllStops).toHaveBeenCalled());
 
-    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.5205, lng: 126.8305 });
+    // 원래 자리(자기 자신)에서 약 11m · 다른 승하차지(37.5301, 126.84)에서는 1km 넘게 — 자기 자신을 세면 경고가 뜨는 자리다
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.5201, lng: 126.83 });
 
     await within(dialog).findByRole("button", { name: "핀 되돌리기" });
     expect(within(dialog).queryByText(/승하차지가 이미 있습니다/)).not.toBeInTheDocument();
