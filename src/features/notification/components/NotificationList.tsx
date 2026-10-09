@@ -8,7 +8,7 @@ import type { RosterColumn } from "@/shared/types";
 import { getAckedNotificationCount, getNotifications } from "../api";
 import { isAckTracked } from "../lib/ackTracked";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
-import { StyledNotificationLayout, StyledNotificationFooter, StyledRecipientCell } from "./NotificationList.styled";
+import { StyledNotificationLayout, StyledNotificationFooter, StyledNotificationHint, StyledRecipientCell } from "./NotificationList.styled";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { formatHeaderDate, todayInSeoul } from "@/shared/lib/format/dateTime";
 import { formatRole } from "@/shared/lib/format/roleLabel";
@@ -103,21 +103,23 @@ export const NotificationList = () => {
   );
   const unackedCount = data?.unackedCount ?? 0;
 
-  // "수신자 확인됨" 탭 건수 — 서버가 acked=true 로 센 값. 목록과 별개 조회라 실패해도 목록은 그대로 두고 그 탭의 건수만 뺀다.
+  // "수신자 확인됨" 탭 건수 — 서버가 acked=true 로 센 값. 목록과 별개 조회라 실패해도 목록은 그대로 두고 그 탭의 건수만 빼며, 못 센 사실은 한 줄로 알린다.
   // 묶어 보기와 무관하다 — 미확인 건수(unacked_count)처럼 묶지 않은 알림 행 기준이라 api 가 group=false 로 센다(§5.17).
   // 결과에 센 필터의 열쇠를 붙여 둔다 — 필터가 바뀐 직후 옛 건수를 보이지 않고(열쇠가 다르면 비움), 효과 안에서 비우는 setState 도 필요 없다.
   const ackedKey = `${type}|${date}|${staffOnly}`;
-  const [ackedResult, setAckedResult] = useState<{ key: string; count: number } | undefined>(undefined);
+  // `count` 가 null 이면 센 것이 실패한 것이다.
+  const [ackedResult, setAckedResult] = useState<{ key: string; count: number | null } | undefined>(undefined);
   useEffect(() => {
     let cancelled = false;
     getAckedNotificationCount({ type: type ? (type as NotificationType) : undefined, date: date || undefined, recipientRole: staffOnly ? "staff" : undefined })
       .then((count) => !cancelled && setAckedResult({ key: ackedKey, count }))
-      .catch(() => undefined);
+      .catch(() => !cancelled && setAckedResult({ key: ackedKey, count: null }));
     return () => {
       cancelled = true;
     };
   }, [type, date, staffOnly, ackedKey]);
-  const ackedTotal = ackedResult?.key === ackedKey ? ackedResult.count : undefined;
+  const ackedTotal = ackedResult?.key === ackedKey ? (ackedResult.count ?? undefined) : undefined;
+  const ackedCountFailed = ackedResult?.key === ackedKey && ackedResult.count === null;
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
     { key: "sentAt", label: "발송", render: (row) => <b>{formatClockTime(row.sentAt)}</b> },
@@ -176,6 +178,7 @@ export const NotificationList = () => {
         value={acked}
         onChange={setAcked}
       />
+      {ackedCountFailed ? <StyledNotificationHint>수신자 확인됨 건수를 불러오지 못했습니다 — 목록은 그대로 볼 수 있습니다</StyledNotificationHint> : null}
 
       <FilterBar>
         <Select label="종류" value={type} options={TYPE_OPTIONS} onChange={(event) => setType(event.target.value)} />

@@ -334,6 +334,21 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
     await waitFor(() => expect(mockAckedCount).toHaveBeenCalled());
     expect(tabText(/수신자 확인됨/).replace(/\D/g, "")).toBe("");
   });
+
+  // 건수가 조용히 비면 "0건이라 비워 둔 것" 과 "못 센 것" 이 구분되지 않는다 — 못 센 것은 한 줄로 알린다(승하차지 수정의 '거리를 확인하지 못했습니다' 안내와 같은 모양).
+  it("건수를 세지 못하면 그 사실을 한 줄로 알리고, 센 뒤에는 안내가 없다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    mockAckedCount.mockRejectedValueOnce(new Error("네트워크")).mockResolvedValue(4);
+    render(<NotificationList />);
+
+    expect(await screen.findByText("내용1")).toBeInTheDocument();
+    expect(await screen.findByText(/확인됨 건수를 불러오지 못했습니다/)).toBeInTheDocument();
+
+    // 필터를 바꿔 다시 세면 — 이번엔 센다 — 안내가 사라지고 건수가 보인다
+    fireEvent.click(screen.getByRole("checkbox", { name: "관계자에게 온 알림만" }));
+    await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("4"));
+    expect(screen.queryByText(/확인됨 건수를 불러오지 못했습니다/)).not.toBeInTheDocument();
+  });
 });
 
 // L5 — 푸터가 "미승차" 라고만 적으면 같은 계열인 '미승차 무응답'(no_show_escalated)도 확인 대상 3종으로 읽힌다.

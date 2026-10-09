@@ -42,3 +42,10 @@ export const StyledNotificationFooter = styled.div`
   font-size: var(--fs-xs);
   color: var(--text-secondary);
 `;
+
+/* 보조 조회가 실패했을 때의 한 줄 안내 — 목록은 그대로 두고 조용한 글씨로만 알린다. */
+export const StyledNotificationHint = styled.p`
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--fw-regular) var(--fs-micro) / 1.5 var(--font-sans);
+`;
