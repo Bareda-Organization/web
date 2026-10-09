@@ -69,7 +69,8 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
   it("저장하고 나면 다시 묻지 않는다", async () => {
     mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     mockUpdate.mockResolvedValue({ noShowWaitMinutes: 10, academy: null, policy: null });
-    const confirm = vi.spyOn(window, "confirm");
+    // false 를 돌려주게 해 둔다 — 경고가 남아 있으면 confirmLeave() 는 true 가 될 수 없다(jsdom 원본 confirm 은 undefined 를 돌려준다).
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     // 저장 결과는 처리 결과 알림(토스트)으로 알린다 — 알림 주인 안에서 그린다.
     render(
       <ToastProvider>
@@ -82,6 +83,9 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await screen.findByText("학원 설정을 저장했습니다");
 
+    // 토스트와 경고 해제는 같은 저장 처리에서 나오지만, 해제는 렌더 뒤 효과(useLeaveWarning)라 토스트가 먼저 보일 수 있다 — 풀릴 때까지 기다린 뒤 묻는다.
+    await waitFor(() => expect(confirmLeave()).toBe(true));
+    confirm.mockClear();
     expect(confirmLeave()).toBe(true);
     expect(confirm).not.toHaveBeenCalled();
   });
