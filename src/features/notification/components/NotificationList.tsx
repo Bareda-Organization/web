@@ -104,17 +104,19 @@ export const NotificationList = () => {
   const unackedCount = data?.unackedCount ?? 0;
 
   // "수신자 확인됨" 탭 건수 — 서버가 acked=true 로 센 값. 목록과 별개 조회라 실패해도 목록은 그대로 두고 그 탭의 건수만 뺀다.
-  const [ackedTotal, setAckedTotal] = useState<number | undefined>(undefined);
+  // 결과에 센 필터의 열쇠를 붙여 둔다 — 필터가 바뀐 직후 옛 건수를 보이지 않고(열쇠가 다르면 비움), 효과 안에서 비우는 setState 도 필요 없다.
+  const ackedKey = `${type}|${date}|${grouped}|${staffOnly}`;
+  const [ackedResult, setAckedResult] = useState<{ key: string; count: number } | undefined>(undefined);
   useEffect(() => {
     let cancelled = false;
-    setAckedTotal(undefined);
     getAckedNotificationCount({ type: type ? (type as NotificationType) : undefined, date: date || undefined, group: grouped, recipientRole: staffOnly ? "staff" : undefined })
-      .then((count) => !cancelled && setAckedTotal(count))
+      .then((count) => !cancelled && setAckedResult({ key: ackedKey, count }))
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [type, date, grouped, staffOnly]);
+  }, [type, date, grouped, staffOnly, ackedKey]);
+  const ackedTotal = ackedResult?.key === ackedKey ? ackedResult.count : undefined;
 
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
     { key: "sentAt", label: "발송", render: (row) => <b>{formatClockTime(row.sentAt)}</b> },
@@ -196,7 +198,7 @@ export const NotificationList = () => {
           rowTone={(row) => (isAckTracked(row.type) && STAFF_ROLES.has(row.recipientRole) && !row.acked ? "warn" : undefined)}
         />
         <StyledNotificationFooter>
-          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}수신 확인은 지연 · 미승차 · 노선 변경 알림만 추적합니다('미승차 무응답' 알림은 확인 대상이 아닙니다) · 최근 발송이 위</span>
+          <span>{grouped ? "같은 알림의 수신자는 한 줄로 묶었습니다 · " : ""}수신 확인은 지연 · 미승차 · 노선 변경 알림만 추적합니다(&apos;미승차 무응답&apos; 알림은 확인 대상이 아닙니다) · 최근 발송이 위</span>
           <Pagination hasError={Boolean(error)} page={page} size={PAGE_SIZE} totalCount={totalCount} hasNext={hasNext} onPageChange={setPage} />
         </StyledNotificationFooter>
       </Card>
