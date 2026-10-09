@@ -490,10 +490,9 @@ export const MonitoringPage = () => {
   const selectedRun = runs.find((run) => run.runId === selectedRunId) ?? null;
   const connected = connectionState === "connected";
   // 한 번도 붙지 않은 채 연결을 시도하는 중이면 "끊겼다" 가 아니라 "연결 중" 이다(R51 L2) — 한 번 붙었다 끊긴 뒤의 재연결은 계속 "끊김" 이다.
+  // 렌더 중 상태 보정(React 공식 패턴) — 효과로 올리면 한 박자 늦은 렌더가 한 번 더 생긴다.
   const [everConnected, setEverConnected] = useState(false);
-  useEffect(() => {
-    if (connected) setEverConnected(true);
-  }, [connected]);
+  if (connected && !everConnected) setEverConnected(true);
   const firstConnecting = !everConnected && (connectionState === "connecting" || connectionState === "disconnected");
   const movingCount = runs.filter((run) => run.runStatus === "moving").length;
 
