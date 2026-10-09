@@ -251,6 +251,16 @@ describe("StopManagement — 수정", () => {
     expect(await within(dialog).findByRole("button", { name: "핀 되돌리기" })).toBeInTheDocument();
   });
 
+  // 0.5m 미만 이동은 거리 표시가 0m 로 반올림되지만 좌표는 달라서 PATCH 에 position 이 실린다(운행 중이면 403) — 되돌릴 길이 있어야 한다.
+  it("핀을 0.5m 도 안 되게 옮겨도 좌표가 달라졌으면 '핀 되돌리기' 단추가 보인다", async () => {
+    render(<StopManagement />);
+    const dialog = await openEdit();
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.520001, lng: 126.83 });
+
+    expect(await within(dialog).findByRole("button", { name: "핀 되돌리기" })).toBeInTheDocument();
+  });
+
   it("주소를 고른 뒤 '핀 되돌리기' 를 누르면 좌표는 빼고 주소만 싣는다(운행 중 승하차지의 주소만 고치기)", async () => {
     pendingSuggestion = { lat: 37.53, lng: 126.84, displayName: "서울 양천구 신정동 2", nearby: [] };
     mockUpdateStop.mockResolvedValue(stop());

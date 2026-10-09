@@ -19,7 +19,7 @@ type StopFormProps = {
   pin: Point | null;
   /** 옮긴 거리를 잴 기준 — 추가는 고른 후보, 수정은 원래 자리. */
   anchor: Point | null;
-  /** 고른 후보 근처(50m)의 기존 승하차지 — 수정 양식에서 주소를 다시 고르지 않았으면 비어 있다. */
+  /** 50m 안인지 가릴 기존 승하차지 후보 — 추가는 고른 후보 근처, 수정은 학원의 다른 승하차지 전체(못 읽었으면 고른 후보 근처만). 거리는 핀 기준으로 다시 잰다. */
   nearby: NearbyStopTypes[];
   onPick: (suggestion: StopSuggestionTypes) => void;
   onCancel: () => void;
@@ -70,6 +70,8 @@ export const StopForm = ({
   children,
 }: StopFormProps) => {
   const moved = pin && anchor ? metersBetween(pin, anchor) : 0;
+  // 단추는 거리가 아니라 좌표로 가른다 — 0.5m 미만은 거리가 0 으로 반올림돼도 좌표는 달라 PATCH 에 position 이 실린다.
+  const pinDiffers = pin !== null && anchor !== null && (pin.lat !== anchor.lat || pin.lng !== anchor.lng);
   // ⚠ 거리를 **옮긴 핀 기준으로 다시 잰다.** 서버가 준 거리는 후보 좌표 기준이라, 겹치지 않으려고 핀을
   // 옮긴 뒤에도 경고가 남으면 관계자의 판단을 흐린다.
   const overlapping = pin
@@ -95,7 +97,7 @@ export const StopForm = ({
         <StyledFormHint>주소를 검색해 후보를 고르면 지도에 핀이 찍힙니다</StyledFormHint>
       )}
 
-      {onResetPin && moved > 0 ? (
+      {onResetPin && pinDiffers ? (
         <Button variant="ghost" size="sm" onClick={onResetPin}>
           핀 되돌리기
         </Button>
