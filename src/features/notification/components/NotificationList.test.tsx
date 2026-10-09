@@ -291,11 +291,12 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
 
   it("묶어 보기를 켠 기본 상태에서도 확인됨 건수가 보인다", async () => {
     mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
-    mockAckedCount.mockResolvedValue(2);
+    // 9 — 옛 계산(45 − 3 = 42)의 글자와 겹치지 않는 값이어야 부분 일치로 통과하지 못한다
+    mockAckedCount.mockResolvedValue(9);
     render(<NotificationList />);
     await screen.findByText("내용1");
 
-    await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("2"));
+    await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("9"));
     expect(mockAckedCount).toHaveBeenCalledWith(expect.objectContaining({ group: true }));
   });
 
