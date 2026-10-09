@@ -2,16 +2,18 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotificationList } from "./NotificationList";
 import type { NotificationListItemResponseTypes } from "../types";
-import { getNotifications } from "../api";
+import { getAckedNotificationCount, getNotifications } from "../api";
 
 // §5.17 NTF-10·11 · API_SPEC §1.9 — 조회 전용 화면이라 두 갈래만 고정한다:
 // (1) 빈 목록이면 총 건수를 0으로 정확히 보여주고 표에 행이 없어야 한다.
 // (2) 조회가 실패하면 조용히 넘어가지 않고 오류 문구를 보여줘야 한다.
 vi.mock("../api", () => ({
   getNotifications: vi.fn(),
+  getAckedNotificationCount: vi.fn().mockResolvedValue(0),
 }));
 
 const mockGet = vi.mocked(getNotifications);
+const mockAckedCount = vi.mocked(getAckedNotificationCount);
 
 describe("NotificationList — 조회 갈래", () => {
   afterEach(() => {
@@ -266,5 +268,56 @@ describe("NotificationList — 확인 여부는 중요 통지 3종만(Ruling 850
 
     const groupRow = (await screen.findByText("장주희")).closest("tr")!;
     expect(within(groupRow).getByText("확인 14/20")).toBeInTheDocument();
+  });
+});
+
+// M-W4 — "수신자 확인됨" 탭 건수. 전체 건수 − 미확인 건수는 확인을 추적하지 않는 종류(승차 · 하차 · 운행 시작 …)까지 섞고,
+// 확인됨 탭을 눌러 필터가 걸린 뒤에는 목록 크기 자체와도 맞지 않았다. 건수는 서버가 `acked=true` 로 센 값만 쓴다.
+describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const tabText = (name: RegExp) => screen.getByRole("tab", { name }).textContent ?? "";
+
+  it("확인됨 건수는 전체 − 미확인이 아니라 acked=true 로 센 값이다", async () => {
+    // 전체 45건 · 미확인 3건이면 옛 계산은 42 — 그 안에는 확인 대상이 아닌 종류가 섞여 있다.
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    mockAckedCount.mockResolvedValue(5);
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+
+    await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("5"));
+    expect(tabText(/수신자 확인됨/)).not.toContain("42");
+  });
+
+  it("묶어 보기를 켠 기본 상태에서도 확인됨 건수가 보인다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    mockAckedCount.mockResolvedValue(2);
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+
+    await waitFor(() => expect(tabText(/수신자 확인됨/)).toContain("2"));
+    expect(mockAckedCount).toHaveBeenCalledWith(expect.objectContaining({ group: true }));
+  });
+
+  it("종류 · 날짜 · 묶어 보기 · 관계자만 필터를 그대로 넘기되 acked 는 넘기지 않는다(함수가 true 로 고정)", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    render(<NotificationList />);
+    await screen.findByText("내용1");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "관계자에게 온 알림만" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "같은 알림 묶어 보기" }));
+
+    await waitFor(() => expect(mockAckedCount).toHaveBeenLastCalledWith(expect.objectContaining({ group: false, recipientRole: "staff" })));
+    expect(mockAckedCount.mock.lastCall![0]).not.toHaveProperty("acked");
+  });
+
+  it("건수를 세지 못하면 그 탭 건수만 빼고 목록은 그대로 보인다", async () => {
+    mockGet.mockResolvedValue(pageOf([row(1)], 0, false));
+    mockAckedCount.mockRejectedValue(new Error("네트워크"));
+    render(<NotificationList />);
+
+    expect(await screen.findByText("내용1")).toBeInTheDocument();
+    await waitFor(() => expect(mockAckedCount).toHaveBeenCalled());
+    expect(tabText(/수신자 확인됨/).replace(/\D/g, "")).toBe("");
   });
 });

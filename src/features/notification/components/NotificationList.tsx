@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Card, FilterBar, Input, PageHeader, Pagination, RosterTable, Select, StatusChip, Switch, Tabs } from "@/shared/ui";
 import type { StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
-import { getNotifications } from "../api";
+import { getAckedNotificationCount, getNotifications } from "../api";
 import { isAckTracked } from "../lib/ackTracked";
 import type { NotificationListItemResponseTypes, NotificationType } from "../types";
 import { StyledNotificationLayout, StyledNotificationFooter, StyledRecipientCell } from "./NotificationList.styled";
@@ -103,6 +103,19 @@ export const NotificationList = () => {
   );
   const unackedCount = data?.unackedCount ?? 0;
 
+  // "수신자 확인됨" 탭 건수 — 서버가 acked=true 로 센 값. 목록과 별개 조회라 실패해도 목록은 그대로 두고 그 탭의 건수만 뺀다.
+  const [ackedTotal, setAckedTotal] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    setAckedTotal(undefined);
+    getAckedNotificationCount({ type: type ? (type as NotificationType) : undefined, date: date || undefined, group: grouped, recipientRole: staffOnly ? "staff" : undefined })
+      .then((count) => !cancelled && setAckedTotal(count))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [type, date, grouped, staffOnly]);
+
   const columns: RosterColumn<NotificationListItemResponseTypes>[] = [
     { key: "sentAt", label: "발송", render: (row) => <b>{formatClockTime(row.sentAt)}</b> },
     { key: "busNo", label: "차량", render: (row) => row.busNo ?? "-" },
@@ -143,8 +156,6 @@ export const NotificationList = () => {
     },
   ];
 
-  const ackedCountLabel = grouped ? undefined : Math.max(0, totalCount - unackedCount);
-
   return (
     <StyledNotificationLayout>
       <PageHeader
@@ -157,7 +168,7 @@ export const NotificationList = () => {
         items={[
           { value: "", label: "전체", count: totalCount },
           { value: "false", label: "수신자 미확인", count: unackedCount },
-          { value: "true", label: "수신자 확인됨", count: ackedCountLabel },
+          { value: "true", label: "수신자 확인됨", count: ackedTotal },
         ]}
         value={acked}
         onChange={setAcked}

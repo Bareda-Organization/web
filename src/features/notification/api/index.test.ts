@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getNotifications } from "./index";
+import { getAckedNotificationCount, getNotifications } from "./index";
 
 // §5.17 NTF-10·11 — snake_case ↔ camelCase 변환 경계. 조회 전용 화면이라 변환
 // 함수가 toItem 하나뿐이라 다른 기능처럼 두 함수를 대조하는 기법은 적용 대상이
@@ -103,5 +103,30 @@ describe("notification api — snake_case ↔ camelCase 변환", () => {
     expect(calledUrl).toContain("type=emergency");
     expect(calledUrl).toContain("date=2026-09-15");
     expect(calledUrl).toContain("acked=false");
+  });
+});
+
+// M-W4 — "수신자 확인됨" 탭 건수는 acked=true · size=1 로 읽은 total_count 다(전체 − 미확인으로 만들지 않는다).
+describe("notification api — 확인됨 건수(M-W4)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("getAckedNotificationCount 는 받은 필터에 acked=true 를 붙여 total_count 만 돌려준다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: { items: [], page: 0, size: 1, total_count: 7, has_next: true, unacked_count: 3 } }),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const count = await getAckedNotificationCount({ type: "delay", group: true });
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(count).toBe(7);
+    expect(url.searchParams.get("acked")).toBe("true");
+    expect(url.searchParams.get("size")).toBe("1");
+    expect(url.searchParams.get("type")).toBe("delay");
+    expect(url.searchParams.get("group")).toBe("true");
   });
 });
