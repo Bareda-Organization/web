@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
@@ -19,6 +19,9 @@ import { StyledEmergencyPopupStack, StyledFoldRow } from "./EmergencyAlertProvid
 // 팝업 한 건에 필요한 것만 — REST 목록과 WebSocket 통지 양쪽에서 같은 모양으로 만든다.
 export type EmergencyAlert = { emergencyId: string; busNo: string; type: string; raisedByName: string | null };
 
+// 보고 있던 신고가 취소됐다는 안내 한 건 — 닫기 전까지 띠에 남는다(오인 신고였는지 처리됐는지 알 수 있게).
+export type EmergencyCancelNotice = { emergencyId: string; busNo: string };
+
 // 비상 알림을 어디서 받아 오는가 — 관계자는 기본값을 쓰고, 메인 관리자 레이아웃은 관리자 쪽 조회·채널을 넘긴다(A#6).
 // `ack` 가 없으면 이 화면의 사용자는 확인 주체가 아니라(메인 관리자) 확인 버튼 없이 목록으로만 안내한다.
 export type EmergencyAlertSource = {
@@ -30,6 +33,8 @@ export type EmergencyAlertSource = {
 
 type EmergencyAlertState = {
   alerts: EmergencyAlert[];
+  canceledNotices: EmergencyCancelNotice[];
+  onDismissCanceled: (emergencyId: string) => void;
   ackingId: string | null;
   ackFailedId: string | null;
   isAckable: boolean;
@@ -44,7 +49,7 @@ const EMERGENCY_POLL_INTERVAL_MS = 5000;
 // 관계자 25명 기준 초당 1건 미만.
 const EMERGENCY_HIDDEN_POLL_INTERVAL_MS = 30000;
 
-const EMPTY_STATE: EmergencyAlertState = { alerts: [], ackingId: null, ackFailedId: null, isAckable: true, listPath: "/emergency", onAck: () => {} };
+const EMPTY_STATE: EmergencyAlertState = { alerts: [], canceledNotices: [], onDismissCanceled: () => {}, ackingId: null, ackFailedId: null, isAckable: true, listPath: "/emergency", onAck: () => {} };
 
 const EmergencyAlertContext = createContext<EmergencyAlertState>(EMPTY_STATE);
 
@@ -73,6 +78,12 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
   );
   const { destination, fetchUnacked, ack, listPath } = source ?? defaultSource;
   const [alerts, setAlerts] = useState<EmergencyAlert[]>([]);
+  const [canceledNotices, setCanceledNotices] = useState<EmergencyCancelNotice[]>([]);
+  // 취소 방송이 왔을 때 그 신고가 화면에 떠 있었는지 읽는다 — 일반 효과는 커밋보다 늦게 돌아, 방금 그려진 목록을 놓칠 수 있다.
+  const alertsRef = useRef(alerts);
+  useLayoutEffect(() => {
+    alertsRef.current = alerts;
+  });
   const [ackingId, setAckingId] = useState<string | null>(null);
   // 실패 문구는 실패한 알림 id 에 묶는다 — 그 알림이 사라지면 문구도 함께 사라져 새 비상 건 옆에 남지 않는다(F01-12).
   const [ackFailedId, setAckFailedId] = useState<string | null>(null);
@@ -119,7 +130,14 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
         void load();
       } else if (envelope.event === "emergency_canceled") {
         const payload = parseWsEmergencyCanceledPayload(envelope.payload);
+        // 화면에 떠 있던 신고만 취소 안내를 남긴다 — 한 번도 보이지 않은 신고의 취소는 알릴 일이 아니다.
+        const wasShown = alertsRef.current.some((alert) => alert.emergencyId === payload.emergencyId);
         setAlerts((prev) => prev.filter((alert) => alert.emergencyId !== payload.emergencyId));
+        if (wasShown) {
+          setCanceledNotices((prev) =>
+            prev.some((notice) => notice.emergencyId === payload.emergencyId) ? prev : [...prev, { emergencyId: payload.emergencyId, busNo: payload.busNo }],
+          );
+        }
         void load();
       }
     },
@@ -156,9 +174,23 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
     [ack, closeAcked],
   );
 
+  const handleDismissCanceled = useCallback(
+    (emergencyId: string) => setCanceledNotices((prev) => prev.filter((notice) => notice.emergencyId !== emergencyId)),
+    [],
+  );
+
   const state = useMemo<EmergencyAlertState>(
-    () => ({ alerts, ackingId, ackFailedId, isAckable: ack !== undefined, listPath, onAck: (id) => void handleAck(id) }),
-    [alerts, ackingId, ackFailedId, ack, listPath, handleAck],
+    () => ({
+      alerts,
+      canceledNotices,
+      onDismissCanceled: handleDismissCanceled,
+      ackingId,
+      ackFailedId,
+      isAckable: ack !== undefined,
+      listPath,
+      onAck: (id) => void handleAck(id),
+    }),
+    [alerts, canceledNotices, handleDismissCanceled, ackingId, ackFailedId, ack, listPath, handleAck],
   );
 
   return <EmergencyAlertContext.Provider value={state}>{children}</EmergencyAlertContext.Provider>;
@@ -170,11 +202,27 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
 // (접은 건 아이디를 기억해 두고 비교 — 건수만 비교하면 한 건 확인 뒤 새 신고가 와도 같은 건수라 접힌 채 가려진다).
 export const EmergencyAlertStrip = () => {
   const router = useRouter();
-  const { alerts, ackingId, ackFailedId, isAckable, listPath, onAck } = useContext(EmergencyAlertContext);
+  const { alerts, canceledNotices, onDismissCanceled, ackingId, ackFailedId, isAckable, listPath, onAck } = useContext(EmergencyAlertContext);
   const [foldedIds, setFoldedIds] = useState<ReadonlySet<string> | null>(null);
-  if (alerts.length === 0) return null;
+  if (alerts.length === 0 && canceledNotices.length === 0) return null;
 
-  const isFolded = foldedIds !== null && alerts.every((alert) => foldedIds.has(alert.emergencyId));
+  // 취소 안내 — 신고자가 발신 1분 안에 취소한 건(§4.14). 조치할 일이 없다는 뜻이라 경고색이 아니라 안내색이다.
+  const canceledBanners = canceledNotices.map((notice) => (
+    <AlertBanner
+      key={`canceled-${notice.emergencyId}`}
+      tone="moving"
+      title={`비상 신고가 취소됐습니다 — ${notice.busNo}`}
+      action={
+        <Button size="sm" variant="secondary" onClick={() => onDismissCanceled(notice.emergencyId)}>
+          닫기
+        </Button>
+      }
+    >
+      신고한 사람이 발신 직후 취소했습니다. 이 신고에는 따로 확인할 일이 없습니다.
+    </AlertBanner>
+  ));
+
+  const isFolded = alerts.length > 0 && foldedIds !== null && alerts.every((alert) => foldedIds.has(alert.emergencyId));
   if (isFolded) {
     return (
       <StyledEmergencyPopupStack role="alert">
@@ -187,6 +235,7 @@ export const EmergencyAlertStrip = () => {
             </Button>
           }
         />
+        {canceledBanners}
       </StyledEmergencyPopupStack>
     );
   }
@@ -220,11 +269,14 @@ export const EmergencyAlertStrip = () => {
       {ackFailedId != null && alerts.some((alert) => alert.emergencyId === ackFailedId) ? (
         <AlertBanner tone="missed" title="확인 처리에 실패했습니다. 다시 눌러 주세요." />
       ) : null}
-      <StyledFoldRow>
-        <Button size="sm" variant="ghost" onClick={() => setFoldedIds(new Set(alerts.map((alert) => alert.emergencyId)))}>
-          접기
-        </Button>
-      </StyledFoldRow>
+      {canceledBanners}
+      {alerts.length > 0 ? (
+        <StyledFoldRow>
+          <Button size="sm" variant="ghost" onClick={() => setFoldedIds(new Set(alerts.map((alert) => alert.emergencyId)))}>
+            접기
+          </Button>
+        </StyledFoldRow>
+      ) : null}
     </StyledEmergencyPopupStack>
   );
 };

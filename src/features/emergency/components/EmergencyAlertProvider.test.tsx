@@ -124,15 +124,41 @@ describe("EmergencyAlertProvider — 관계자 전 화면 비상 팝업", () => 
     expect(mockPush).toHaveBeenCalledWith("/emergency");
   });
 
-  it("emergency_canceled 를 받으면 그 팝업이 사라진다", async () => {
+  it("emergency_canceled 를 받으면 그 비상 팝업이 사라진다", async () => {
     mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
     renderProvider();
-    await screen.findByText(/2호차/);
+    await screen.findByText(/비상 상황/);
 
     mockGet.mockResolvedValue({ items: [], unackedCount: 0 });
     act(() => capturedOnEnvelope?.(envelope("emergency_canceled", { emergency_id: 9, bus_no: "2호차", canceled_at: "x" })));
 
-    await waitFor(() => expect(screen.queryByText(/2호차/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/비상 상황/)).not.toBeInTheDocument());
+    expect(screen.getByText("미확인 0건")).toBeInTheDocument();
+  });
+
+  // R52 · t5-sonnet A-5 — 보던 신고가 말없이 사라지면 오인 신고였는지 처리됐는지 알 수 없다. 취소됐다는 사실을 띠로 남기고 [닫기] 로 치운다.
+  it("보고 있던 신고가 취소되면 취소됐다는 안내를 남기고 닫기로 치운다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    renderProvider();
+    await screen.findByText(/비상 상황/);
+
+    mockGet.mockResolvedValue({ items: [], unackedCount: 0 });
+    act(() => capturedOnEnvelope?.(envelope("emergency_canceled", { emergency_id: 9, bus_no: "2호차", canceled_at: "x" })));
+
+    expect(await screen.findByText("비상 신고가 취소됐습니다 — 2호차")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    expect(screen.queryByText(/비상 신고가 취소됐습니다/)).not.toBeInTheDocument();
+  });
+
+  it("화면에 뜬 적 없는 신고의 취소는 안내를 만들지 않는다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    renderProvider();
+    await screen.findByText(/비상 상황/);
+
+    act(() => capturedOnEnvelope?.(envelope("emergency_canceled", { emergency_id: 99, bus_no: "9호차", canceled_at: "x" })));
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+    expect(screen.queryByText(/비상 신고가 취소됐습니다/)).not.toBeInTheDocument();
   });
 });
 
