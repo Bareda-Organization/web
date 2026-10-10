@@ -149,3 +149,51 @@ describe("PhotoUploadField — 보호된 기존 사진", () => {
     expect(screen.queryByText("제거")).toBeNull();
   });
 });
+
+// R52 M7 · Ruling 874⑦ — 사진 삭제 API 가 없어 저장된 사진은 [제거] 를 숨기고 교체만 받는다.
+// 새로 고른(아직 저장 전) 사진을 취소하는 [제거] 는 그대로이고, 취소하면 저장된 사진이 다시 보인다.
+describe("PhotoUploadField — 저장된 사진은 교체만", () => {
+  const okImage = () =>
+    ({ ok: true, status: 200, blob: async () => new Blob(["x"], { type: "image/jpeg" }) }) as Response;
+  const REPLACE_ONLY = /교체만 할 수 있습니다/;
+
+  beforeEach(() => {
+    let counter = 0;
+    URL.createObjectURL = vi.fn(() => `blob:mock-${++counter}`);
+    URL.revokeObjectURL = vi.fn();
+    setAccessToken("tok-3");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okImage()));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setAccessToken(null);
+  });
+
+  const renderExisting = async (onChange = vi.fn()) => {
+    const view = render(<PhotoUploadField onChange={onChange} existingPhotoUrl="/api/v1/files/photos/a.jpg" />);
+    await waitFor(() => expect(view.container.querySelector("img")).not.toBeNull());
+    return view;
+  };
+
+  it("저장된 사진만 있을 때는 [제거] 가 없고 교체만 가능하다는 안내가 나온다", async () => {
+    await renderExisting();
+
+    expect(screen.queryByText("제거")).toBeNull();
+    expect(screen.getByText(REPLACE_ONLY)).toBeInTheDocument();
+  });
+
+  it("저장된 사진 위에 새 사진을 고르면 [제거] 가 생기고, 누르면 저장된 사진으로 돌아가며 [제거] 는 다시 사라진다", async () => {
+    const onChange = vi.fn();
+    const { container } = await renderExisting(onChange);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { files: [jpegFile()] } });
+    expect(onChange).toHaveBeenLastCalledWith(expect.any(File));
+    fireEvent.click(screen.getByText("제거"));
+
+    expect(onChange).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByText("제거")).toBeNull();
+    expect(container.querySelector("img")?.getAttribute("src")).toContain("blob:mock-1");
+  });
+});

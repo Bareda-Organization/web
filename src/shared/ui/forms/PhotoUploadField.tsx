@@ -12,12 +12,14 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 // §5.11.1 · Ruling 745 — 서버에 WebP 쓰기가 없어 올린 WebP 는 JPEG 로(투명 배경이 있으면 PNG 로) 저장된다.
 const WEBP_NOTE = "WebP 는 JPEG 로 저장됩니다 (투명 배경이 있으면 PNG)";
+// Ruling 874⑦ — 사진 삭제 API 가 없어 저장된 사진은 지울 수 없고 다른 사진으로 바꾸는 것만 된다.
+const REPLACE_ONLY_NOTE = "등록된 사진은 삭제할 수 없고 다른 사진으로 교체만 할 수 있습니다.";
 
 export type PhotoUploadFieldProps = {
   label?: string;
   /** 이미 등록된 사진 URL(수정 화면 진입 시) */
   existingPhotoUrl?: string;
-  /** 유효성 검증을 통과한 파일만 올라온다. 제거 시 null. */
+  /** 유효성 검증을 통과한 파일만 올라온다. 새로 고른 사진을 취소하면 null. */
   onChange: (file: File | null) => void;
   error?: string;
 };
@@ -32,8 +34,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
   const existingSrc = useProtectedImageUrl(existingPhotoUrl);
   // 사용자가 새로 고른 파일의 미리보기 blob: URL. 없으면 기존 사진을 그린다.
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | undefined>(undefined);
-  const [removed, setRemoved] = useState(false);
-  const previewUrl = removed ? undefined : (localPreviewUrl ?? existingSrc);
+  const previewUrl = localPreviewUrl ?? existingSrc;
   const [localError, setLocalError] = useState<string | undefined>(undefined);
   const [localNote, setLocalNote] = useState<string | undefined>(undefined);
 
@@ -73,12 +74,12 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
 
     setLocalError(undefined);
     setLocalNote(file.type === "image/webp" ? WEBP_NOTE : undefined);
-    setRemoved(false);
     setLocalPreviewUrl(nextUrl);
     onChange(file);
   };
 
-  const handleRemove = () => {
+  // 저장 전에 새로 고른 사진을 취소한다 — 저장된 사진이 있으면 그 사진이 다시 보인다.
+  const handleCancelPicked = () => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = undefined;
@@ -86,14 +87,13 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
     setLocalError(undefined);
     setLocalNote(undefined);
     setLocalPreviewUrl(undefined);
-    setRemoved(true);
     onChange(null);
     if (inputRef.current) {
       inputRef.current.value = "";
     }
   };
 
-  const helperText = localError ?? error ?? localNote;
+  const helperText = localError ?? error ?? localNote ?? (existingPhotoUrl ? REPLACE_ONLY_NOTE : undefined);
 
   return (
     <StyledWrap>
@@ -111,8 +111,8 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
         <Button type="button" variant="secondary" size="sm" onClick={() => inputRef.current?.click()}>
           사진 선택
         </Button>
-        {previewUrl ? (
-          <Button type="button" variant="ghost" size="sm" onClick={handleRemove}>
+        {localPreviewUrl ? (
+          <Button type="button" variant="ghost" size="sm" onClick={handleCancelPicked}>
             제거
           </Button>
         ) : null}
