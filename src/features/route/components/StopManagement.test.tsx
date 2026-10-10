@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MapSurfaceProps } from "@/features/map";
 import { ApiError } from "@/shared/lib/http";
@@ -302,6 +302,23 @@ describe("StopManagement — 수정", () => {
 
     expect(await within(dialog).findByText(/"신정역 3번 출구" 승하차지가 이미 있습니다/)).toBeInTheDocument();
     expect(within(dialog).getByText(/합쳐지지 않고 따로 남습니다/)).toBeInTheDocument();
+  });
+
+  // 867 — 창을 열자마자는 원래 자리 50m 안의 다른 승하차지를 알리지 않는다. 핀을 옮기면 그때 알린다.
+  it("열자마자는 원래 자리 50m 안 다른 승하차지를 알리지 않고, 핀을 옮기면 알린다", async () => {
+    mockGetAllStops.mockResolvedValue([
+      stop(),
+      stop({ stopId: "9", name: "신정역 3번 출구", address: "서울 양천구 신정동 3", lat: 37.5201, lng: 126.83, routes: [] }),
+    ]);
+    render(<StopManagement />);
+    const dialog = await openEdit();
+    // 다른 승하차지 목록 응답이 도착할 시간을 준다 — 안 주면 경고가 없는 게 목록을 아직 못 받아서일 수 있다
+    await act(async () => {});
+    expect(within(dialog).queryByText(/승하차지가 이미 있습니다/)).not.toBeInTheDocument();
+
+    mockMapSurface.mock.lastCall![0].onMarkerDragEnd!("draft-stop", { lat: 37.5201, lng: 126.8301 });
+
+    expect(await within(dialog).findByText(/"신정역 3번 출구" 승하차지가 이미 있습니다/)).toBeInTheDocument();
   });
 
   it("핀을 끌어 놓은 자리가 다른 승하차지에서 50m 밖이면 알리지 않고, 자기 자신도 세지 않는다", async () => {

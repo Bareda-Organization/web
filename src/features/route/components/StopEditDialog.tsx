@@ -50,6 +50,8 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
   // 학원의 다른 승하차지 — 핀만 끌어도 50m 안 승하차지를 알리려고 한 번 읽어 둔다(L3). 읽지 못하면 후보를 고를 때 오는 nearby 만 남는다.
   const [others, setOthers] = useState<NearbyStopTypes[]>([]);
   const [othersFailed, setOthersFailed] = useState(false);
+  // 주소를 한 번이라도 고르면 참 — 고른 자리가 원래 자리와 같아도 그 이웃은 알린다(867).
+  const [addressPicked, setAddressPicked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,7 +69,12 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
   }, [stop.stopId]);
 
   // StopForm 이 핀 기준으로 거리를 다시 재어 50m 안만 남긴다 — 여기서는 후보를 모으기만 한다.
-  const candidates = [...nearby, ...others.filter((other) => !nearby.some((known) => known.stopId === other.stopId))];
+  // 867 — 열자마자는 원래 자리의 이웃을 알리지 않는다. 핀을 원래 자리에서 옮기거나 주소를 고른 뒤에만 후보를 넘긴다.
+  const pinMoved = pin.lat !== original.lat || pin.lng !== original.lng;
+  const candidates =
+    pinMoved || addressPicked
+      ? [...nearby, ...others.filter((other) => !nearby.some((known) => known.stopId === other.stopId))]
+      : [];
 
   const changes = changesOf(stop, name, address, pin);
   const changed = Object.keys(changes).length > 0;
@@ -76,6 +83,7 @@ export const StopEditDialog = ({ stop, onClose, onSaved, onMissing }: StopEditDi
     const point = { lat: suggestion.lat, lng: suggestion.lng };
     // 수정은 관계자가 붙인 이름을 지우지 않는다 — 주소와 자리만 후보로 바꾼다.
     setAddress(suggestion.displayName);
+    setAddressPicked(true);
     setPin(point);
     setFocus(point);
     // 후보 근처에는 이 승하차지 자신도 걸린다 — 자기 자신은 "이미 있는 승하차지" 가 아니다.
