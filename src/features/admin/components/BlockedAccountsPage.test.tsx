@@ -73,6 +73,14 @@ describe("BlockedAccountsPage — 안내 띠와 빈 상태", () => {
     expect(await screen.findByText("해제는 로그인 차단만 풉니다 — 가입 승인을 대신하지 않습니다")).toBeInTheDocument();
   });
 
+  it("안내 띠는 '거절됨'으로 돌아가는 계정도 해제 뒤 가입 거절 안내 화면만 연다고 적는다", async () => {
+    mockGetBlockedAccounts.mockResolvedValue({ items: [account], page: 0, size: 20, totalCount: 1, hasNext: false });
+    render(<BlockedAccountsPage />);
+
+    await screen.findByText("이관계");
+    expect(screen.getByText(/‘거절됨’으로 돌아가는 계정은 해제하면 로그인은 되지만, 거절 상태 그대로라 가입 거절 안내 화면만 열립니다/)).toBeInTheDocument();
+  });
+
   it("차단 계정이 0건이면 빈 상태를 보인다", async () => {
     mockGetBlockedAccounts.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false });
     render(<BlockedAccountsPage />);
