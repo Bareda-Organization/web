@@ -78,7 +78,7 @@ export const AcademySettingsForm = () => {
       setValue(String(updated.noShowWaitMinutes));
       setSavedMinutes(updated.noShowWaitMinutes);
       markSaved(String(updated.noShowWaitMinutes));
-      show({ title: "학원 설정을 저장했습니다", detail: `미승차 대기 ${updated.noShowWaitMinutes}분 — 이미 카운트다운 중인 건에도 바로 적용됩니다` });
+      show({ title: "학원 설정을 저장했습니다", detail: `미승차 대기 ${updated.noShowWaitMinutes}분 — 저장 뒤 새로 시작되는 미승차부터 적용됩니다. 이미 진행 중인 카운트다운은 그대로입니다` });
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "학원 설정 저장에 실패했습니다");
     } finally {
@@ -133,7 +133,7 @@ export const AcademySettingsForm = () => {
                 ]}
               />
             )}
-            <p>저장하면 이미 카운트다운 중인 건에도 즉시 적용됩니다.</p>
+            <p>저장 뒤 새로 시작되는 미승차부터 적용됩니다. 이미 진행 중인 카운트다운은 시작 때 정한 만료 시각 그대로입니다.</p>
           </StyledSettingsSection>
 
           <StyledSaveBar data-dirty={isChanged || undefined}>

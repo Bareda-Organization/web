@@ -164,3 +164,19 @@ describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", (
     expect(screen.queryByText(/비상 알림이 아니라/)).not.toBeInTheDocument();
   });
 });
+
+// Ruling 876 — 미승차 대기 시간 변경은 저장 뒤 새로 시작되는 미승차부터 적용되고, 이미 진행 중인 카운트다운은 시작 때 정한 만료 시각 그대로다.
+describe("AcademySettingsForm — 변경 적용 시점 안내(Ruling 876)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("진행 중인 카운트다운은 그대로라는 적용 시점 안내가 보이고, 이전 문구(즉시 적용)는 없다", async () => {
+    mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
+    render(<AcademySettingsForm />);
+    await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveValue(3));
+
+    expect(
+      screen.getByText("저장 뒤 새로 시작되는 미승차부터 적용됩니다. 이미 진행 중인 카운트다운은 시작 때 정한 만료 시각 그대로입니다."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/즉시 적용|바로 적용/)).not.toBeInTheDocument();
+  });
+});
