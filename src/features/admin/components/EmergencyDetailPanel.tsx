@@ -131,11 +131,13 @@ export const EmergencyDetailPanel = ({ emergency }: { emergency: EmergencyItemRe
             <div>
               <b>학원 대표</b>
               <small>{emergency.academy.name}</small>
-              <span>{emergency.academy.contact}</span>
+              <span>{emergency.academy.contact ?? "연락처 미등록"}</span>
             </div>
-            <LinkButton href={`tel:${emergency.academy.contact}`} aria-label="학원 대표 전화">
-              전화
-            </LinkButton>
+            {emergency.academy.contact ? (
+              <LinkButton href={`tel:${emergency.academy.contact}`} aria-label="학원 대표 전화">
+                전화
+              </LinkButton>
+            ) : null}
           </StyledContactRow>
         </StyledContactList>
       </StyledPanelBody>

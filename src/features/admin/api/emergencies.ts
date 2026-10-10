@@ -9,7 +9,7 @@ import type {
   EmergencyType,
 } from "../types";
 
-type RawAcademyRef = { id: string | number; name: string; contact: string };
+type RawAcademyRef = { id: string | number; name: string; contact: string | null };
 type RawPerson = { name: string | null; role: string; phone: string | null };
 type RawPosition = { lat: number; lng: number; recorded_at: string | null } | null;
 

@@ -104,3 +104,21 @@ describe("메인 관리자 EmergencyDetailPanel — 단말 기록 시각", () =>
     expect(screen.queryByText(/단말 기록/)).not.toBeInTheDocument();
   });
 });
+
+// R52 M10 · API_SPEC §6.11 — 학원이 대표 연락처를 등록하지 않으면 `contact` 는 키는 있고 값이 null 이다. `tel:null` 링크를 만들지 않는다.
+describe("메인 관리자 EmergencyDetailPanel — 학원 연락처 미등록", () => {
+  it("contact 가 null 이면 '연락처 미등록' 을 적고 학원 대표 전화 링크를 두지 않는다", () => {
+    render(<EmergencyDetailPanel emergency={{ ...EMERGENCY, academy: { ...EMERGENCY.academy, contact: null } }} />);
+
+    expect(screen.getByText("연락처 미등록")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "학원 대표 전화" })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="tel:null"]')).toBeNull();
+  });
+
+  it("contact 가 있으면 번호와 전화 링크가 그대로 있다", () => {
+    render(<EmergencyDetailPanel emergency={EMERGENCY} />);
+
+    expect(screen.getByRole("link", { name: "학원 대표 전화" })).toHaveAttribute("href", "tel:02-000-0000");
+    expect(screen.queryByText("연락처 미등록")).not.toBeInTheDocument();
+  });
+});

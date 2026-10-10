@@ -277,7 +277,8 @@ export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" |
 export type EmergencyAcademyRefResponseTypes = {
   id: string;
   name: string;
-  contact: string;
+  /** 학원 대표 연락처 — 미등록이면 null(§6.11 · §2.5 `academy.contact`). */
+  contact: string | null;
 };
 
 export type EmergencyPersonResponseTypes = {

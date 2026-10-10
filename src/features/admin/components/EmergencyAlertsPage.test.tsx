@@ -158,6 +158,18 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toHaveAttribute("href", "/monitoring");
   });
 
+  // R52 M10 · §6.11 — 학원이 대표 연락처를 등록하지 않으면 contact 는 null 이다. 띠의 [학원에 전화] 가 `tel:null` 이 되면 안 된다.
+  it("미확인 비상의 학원 연락처가 null 이면 띠에 [학원에 전화] 를 두지 않고 미등록이라고 적는다", async () => {
+    byStatus([emergency("1", { academy: { id: "1", name: "학원1", contact: null } })], [], []);
+    render(<EmergencyAlertsPage />);
+
+    await screen.findByRole("tab", { name: "미확인 1건" });
+    expect(screen.queryByRole("link", { name: "학원에 전화" })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="tel:null"]')).toBeNull();
+    expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toBeInTheDocument();
+    expect(screen.getAllByText(/연락처 미등록/).length).toBeGreaterThan(0);
+  });
+
   // R50 M7 — "1분 미만째" 는 문장이 안 된다. 1분이 안 됐으면 '째' 없이 '1분 미만' 만 적는다.
   it("접수 1분이 안 된 미확인 비상은 '1분 미만째' 가 아니라 '1분 미만' 으로 적는다", async () => {
     byStatus([emergency("1", { elapsedSinceRaised: 30 })], [], []);

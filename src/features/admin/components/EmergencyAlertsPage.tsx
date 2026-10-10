@@ -192,12 +192,13 @@ export const EmergencyAlertsPage = () => {
               title={`미확인 비상 ${unackedCount}건 — 학원 관계자가 아직 응답하지 않았습니다 · ${unackedElapsedText(worst.elapsedSinceRaised)}`}
               action={
                 <StyledBandActions>
-                  <LinkButton href={`tel:${worst.academy.contact}`}>학원에 전화</LinkButton>
+                  {worst.academy.contact ? <LinkButton href={`tel:${worst.academy.contact}`}>학원에 전화</LinkButton> : null}
                   <LinkButton href="/monitoring">전체 관제에서 보기</LinkButton>
                 </StyledBandActions>
               }
             >
               {worst.academy.name} {worst.busNo} {directionText(worst.direction)} · {emergencyTypeLabel(worst.type)} · {formatClockTime(worst.raisedAt)} 발신
+              {worst.academy.contact ? "" : " · 학원 연락처 미등록"}
             </AlertBanner>
           ) : (
             <AlertBanner tone="boarded" title="미확인 비상이 없습니다">
