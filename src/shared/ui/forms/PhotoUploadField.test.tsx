@@ -183,6 +183,12 @@ describe("PhotoUploadField — 저장된 사진은 교체만", () => {
     expect(screen.getByText(REPLACE_ONLY)).toBeInTheDocument();
   });
 
+  it("저장된 사진이 없는 신규 등록 화면에는 교체만 가능하다는 안내가 뜨지 않는다", () => {
+    render(<PhotoUploadField onChange={vi.fn()} />);
+
+    expect(screen.queryByText(REPLACE_ONLY)).toBeNull();
+  });
+
   it("저장된 사진 위에 새 사진을 고르면 [제거] 가 생기고, 누르면 저장된 사진으로 돌아가며 [제거] 는 다시 사라진다", async () => {
     const onChange = vi.fn();
     const { container } = await renderExisting(onChange);
