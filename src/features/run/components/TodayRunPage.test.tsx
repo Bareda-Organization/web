@@ -7,6 +7,7 @@ import { TodayRunPage } from "./TodayRunPage";
 import { deleteTransfer, getDashboard, getRunRoster, getRunsLive } from "../api";
 import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseTypes } from "../types";
+import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 
 // §5.4 는 runId 쿼리가 없으면 첫 회차로 리다이렉트해 명단을 불러오는 것이 진입점의
 // 핵심 동작이다. absent 는 매니저 앱과 반대로 계속 결측(missed) 로 보여야 한다는
@@ -37,6 +38,31 @@ vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
 }));
 
+// Ruling 873 — 운행 상세는 오늘 현황과 같은 학원 채널 구독으로 갱신한다. 시험은 실제 WebSocket 을 열지 않고
+// `useRealtimeChannel` 을 가짜로 바꿔 봉투 전달 · 재연결 · 연결 상태를 직접 제어한다(DashboardPage.test.tsx 와 같은 방식).
+// 기본은 끊긴 상태(주기 갱신 7초) — 구독 시험만 "connected" 로 바꾼다.
+vi.mock("@/features/auth", () => ({
+  useAuthSession: () => ({ session: { academy: { id: "1" } } }),
+}));
+let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
+let capturedOnReconnected: (() => void) | undefined;
+let mockConnectionState: WsConnectionState = "disconnected";
+vi.mock("@/shared/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+  useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
+    capturedOnEnvelope = onEnvelope;
+    capturedOnReconnected = onReconnected;
+    return { connectionState: mockConnectionState, reconnect: vi.fn() };
+  },
+}));
+const envelope = (event: WebSocketEnvelope["event"], payload: Record<string, unknown>, runId = "7"): WebSocketEnvelope => ({
+  event,
+  eventWireValue: event ?? undefined,
+  runId,
+  occurredAt: "2026-10-10T00:00:00Z",
+  payload,
+});
+
 // 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
@@ -63,6 +89,9 @@ const mockDeleteTransfer = vi.mocked(deleteTransfer);
 // "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
 beforeEach(() => {
   mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
+  mockConnectionState = "disconnected";
+  capturedOnEnvelope = undefined;
+  capturedOnReconnected = undefined;
 });
 
 const baseDashboard: DashboardResponseTypes = {
@@ -856,6 +885,103 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     expect(await screen.findByText("탑승 완료")).toBeInTheDocument();
     expect(mockGetRunsLive.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(mockGetDashboard.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  // R52 · Ruling 873 — 운행 상세(MON-03)는 오늘 현황과 같은 학원 채널 구독으로 갱신한다. 연결돼 있으면 7초 폴링이 없고,
+  // 방송이 없는 값(지연 · 확정 전환 · 노선 확인)만 안전망 조회(30초)로 남는다. 연결이 끊기면 7초 조회로 돌아간다.
+  describe("실시간 구독(Ruling 873)", () => {
+    const liveRun7 = (lat: number, lng: number): RunsLiveResponseTypes => ({
+      runs: [
+        {
+          runId: "7",
+          busNo: "7호차",
+          direction: "to_academy",
+          status: "moving",
+          position: { lat, lng, recordedAt: "2026-10-10T08:05:00+09:00" },
+          currentStop: "3번 정류장",
+          nextStop: "후문",
+          progress: { done: 3, total: 6 },
+          delayMinutes: null,
+          driverName: "박기사",
+          escortName: "최매니저",
+          lastSeenAt: null,
+        },
+      ],
+    });
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      mockRunIdParam = "7";
+      mockConnectionState = "connected";
+      mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "moving"), runOf("8", "moving")));
+      mockGetRunsLive.mockResolvedValue(liveRun7(37.5, 127.0));
+    });
+
+    it("연결돼 있으면 7초가 지나도 다시 읽지 않고, 안전망 30초가 되면 한 번 읽는다", async () => {
+      mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], status: "waiting" }]);
+      render(<TodayRunPage />);
+      await screen.findByText("대기");
+      const before = mockGetRunRoster.mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(mockGetRunRoster.mock.calls.length).toBe(before);
+
+      await vi.advanceTimersByTimeAsync(23000);
+      expect(mockGetRunRoster.mock.calls.length).toBe(before + 1);
+    });
+
+    it("이 회차의 rider_changed 방송이 오면 폴링을 기다리지 않고 명단을 다시 읽어 탑승 현황이 바뀐다", async () => {
+      mockGetRunRoster.mockResolvedValueOnce([{ ...baseRoster[0], status: "waiting" }]);
+      render(<TodayRunPage />);
+      await screen.findByText("대기");
+
+      mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], status: "boarded" }]);
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(await screen.findByText("탑승 완료")).toBeInTheDocument();
+    });
+
+    it("position 방송은 REST 를 다시 부르지 않고 버스 마커 좌표를 바꾼다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
+      const liveCalls = mockGetRunsLive.mock.calls.length;
+
+      act(() =>
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+      );
+
+      await waitFor(() =>
+        expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
+      );
+      expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls);
+    });
+
+    it("다른 회차의 방송은 회차 목록만 다시 읽고 이 회차의 명단은 읽지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      const rosterCalls = mockGetRunRoster.mock.calls.length;
+      const dashboardCalls = mockGetDashboard.mock.calls.length;
+
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {}, "8")));
+      await vi.advanceTimersByTimeAsync(300);
+
+      await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls + 1));
+      expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls);
+    });
+
+    it("끊겼다 다시 붙으면 끊긴 사이의 방송을 되찾을 수 없어 한 번 다시 읽는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      const rosterCalls = mockGetRunRoster.mock.calls.length;
+
+      act(() => capturedOnReconnected?.());
+
+      await waitFor(() => expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls + 1));
+    });
   });
 
   it("종료된 회차는 다시 불러오지 않는다", async () => {
