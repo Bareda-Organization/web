@@ -14,6 +14,12 @@ vi.mock("../api", () => ({
 }));
 
 const mockGetManagers = vi.mocked(getManagers);
+// 후보는 역할별로 따로 조회한다 — 역할 인자에 맞는 쪽만 돌려준다.
+const mockCandidates = (all: ManagerSummaryResponseTypes[], hasNext: Partial<Record<"driver" | "escort", boolean>> = {}) =>
+  mockGetManagers.mockImplementation(async (role) => ({
+    items: all.filter((m) => m.role === role),
+    hasNext: hasNext[role] ?? false,
+  }));
 const mockPatchRunAssignment = vi.mocked(patchRunAssignment);
 
 const managers: ManagerSummaryResponseTypes[] = [
@@ -27,16 +33,39 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   });
 
   it("열리면 후보 목록을 불러와 기사·동승 매니저 옵션으로 나눠 보여준다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
     expect(await screen.findByText("김기사")).toBeInTheDocument();
     expect(screen.getByText("박매니저")).toBeInTheDocument();
   });
 
+  // R52 M9 — 앞 20명만 오고 안내가 없던 것. 역할별로 받고, 한쪽이라도 상한을 넘으면 일부만 보인다고 알린다.
+  it("기사·동승 매니저를 역할별로 따로 조회한다", async () => {
+    mockCandidates(managers);
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+
+    expect(mockGetManagers).toHaveBeenCalledWith("driver");
+    expect(mockGetManagers).toHaveBeenCalledWith("escort");
+  });
+
+  it("후보가 상한을 넘으면 앞의 100명만 보인다고 알리고, 넘지 않으면 안내가 없다", async () => {
+    mockCandidates(managers, { driver: true });
+    const { unmount } = render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+    expect(screen.getByText("기사가 100명을 넘어 앞의 100명만 보입니다")).toBeInTheDocument();
+    unmount();
+
+    mockCandidates(managers);
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+    expect(screen.queryByText(/명만 보입니다/)).not.toBeInTheDocument();
+  });
+
   // N-01 — §5.14 임시 취소된 회차의 배치 변경은 409 RUN_CANCELED(Ruling 376).
   it("RUN_CANCELED 는 서버 원문이 아니라 취소된 회차라는 한국어 문구로 알린다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     mockPatchRunAssignment.mockRejectedValue(new ApiError(409, "RUN_CANCELED", "서버 원문"));
     render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
     await screen.findByText("김기사");
@@ -48,7 +77,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   });
 
   it("경고 없이 저장되면 onDone 을 곧바로 호출한다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     mockPatchRunAssignment.mockResolvedValue({
       runId: "7",
       assignments: [{ managerId: "1", name: "김기사", role: "driver" }],
@@ -64,7 +93,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   });
 
   it("경고가 있으면 배치 반영 안내와 경고 메시지를 보여주고, 저장 시점에는 onDone 을 부르지 않는다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     mockPatchRunAssignment.mockResolvedValue({
       runId: "7",
       assignments: [{ managerId: "1", name: "김기사", role: "driver" }],
@@ -85,7 +114,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   // F01-06 — 부모는 이 대화상자를 항상 마운트해 두고 `open` 만 바꾼다. 닫혔다 다시 열 때 이전 저장의
   // 경고 화면(확인 버튼만)이나 고른 값이 남아 있으면 안 된다.
   it("경고를 확인하고 닫은 뒤 다시 열면 저장 버튼이 있는 새 입력 화면이다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     mockPatchRunAssignment.mockResolvedValue({
       runId: "7",
       assignments: [{ managerId: "1", name: "김기사", role: "driver" }],
@@ -103,7 +132,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   });
 
   it("저장에 성공하면 고른 기사·동승 매니저 값을 비워, 다른 회차에서 열어도 이전 선택이 남지 않는다", async () => {
-    mockGetManagers.mockResolvedValue(managers);
+    mockCandidates(managers);
     mockPatchRunAssignment.mockResolvedValue({
       runId: "7",
       assignments: [{ managerId: "1", name: "김기사", role: "driver" }],

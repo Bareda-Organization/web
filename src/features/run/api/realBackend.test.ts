@@ -64,9 +64,9 @@ describe("run api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    const result = await getManagers();
+    const result = await getManagers("driver");
 
-    expect(Array.isArray(result)).toBe(true);
+    expect(Array.isArray(result.items)).toBe(true);
   });
 
   // 목표 4 — ACADEMY_SCOPE_VIOLATION 실제 재현. staffB(학원 2)가 학원 1 소속

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Select } from "@/shared/ui";
 import { getManagers, patchRunAssignment } from "../api";
+import { MANAGER_CANDIDATE_LIMIT } from "../api/managers";
 import type { ManagerSummaryResponseTypes } from "../types";
 import { StyledDialogForm, StyledWarningList } from "./ManagerAssignmentDialog.styled";
 
@@ -23,15 +24,19 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
   const [escorts, setEscorts] = useState<ManagerSummaryResponseTypes[]>([]);
   const [driverManagerId, setDriverManagerId] = useState("");
   const [escortManagerId, setEscortManagerId] = useState("");
+  const [driversTruncated, setDriversTruncated] = useState(false);
+  const [escortsTruncated, setEscortsTruncated] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const loadCandidates = useCallback(async () => {
     try {
-      const managers = await getManagers();
-      setDrivers(managers.filter((m) => m.role === "driver"));
-      setEscorts(managers.filter((m) => m.role === "escort"));
+      const [driverPage, escortPage] = await Promise.all([getManagers("driver"), getManagers("escort")]);
+      setDrivers(driverPage.items);
+      setEscorts(escortPage.items);
+      setDriversTruncated(driverPage.hasNext);
+      setEscortsTruncated(escortPage.hasNext);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "후보 목록을 불러오지 못했습니다");
     }
@@ -126,6 +131,8 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
           onChange={(event) => setEscortManagerId(event.target.value)}
           options={[{ value: "", label: "변경 안 함" }, ...escorts.map((e) => ({ value: String(e.id), label: e.name }))]}
         />
+        {driversTruncated ? <AlertBanner tone="info" title={`기사가 ${MANAGER_CANDIDATE_LIMIT}명을 넘어 앞의 ${MANAGER_CANDIDATE_LIMIT}명만 보입니다`} /> : null}
+        {escortsTruncated ? <AlertBanner tone="info" title={`동승 매니저가 ${MANAGER_CANDIDATE_LIMIT}명을 넘어 앞의 ${MANAGER_CANDIDATE_LIMIT}명만 보입니다`} /> : null}
         {warnings.length > 0 ? (
           <StyledWarningList>
             <AlertBanner tone="moving" title="배치는 반영됐지만 확인할 경고가 있습니다" />
