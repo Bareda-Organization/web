@@ -612,11 +612,15 @@ describe("ChangeApprovalDetail — 처리 기한 표시(Ruling 870)", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-12T23:47:30Z"));
     // 출발 08:50 KST · 처리 기한 09:00 KST(출발 + 10분)
-    mockGetDetail.mockResolvedValue({ ...baseDetail, departTime: "2026-09-12T23:50:00Z", deadlineAt: "2026-09-13T00:00:00Z" });
+    mockGetDetail.mockResolvedValue({ ...baseDetail, source: "intent", departTime: "2026-09-12T23:50:00Z", deadlineAt: "2026-09-13T00:00:00Z" });
 
     render(<ChangeApprovalDetail approvalId="5" />);
 
     expect(await screen.findByText(/09:00 \(출발 10분 뒤 또는 운행 시작 중 먼저 오는 때\)/)).toBeInTheDocument();
+    // R52 haiku A-3 — 접수 출처 라벨은 사양 용어(등하원 토글)다.
+    expect(screen.getByText("09:00 · 등하원 토글")).toBeInTheDocument();
+    expect(screen.getAllByText("등하원 토글")).toHaveLength(1); // 요청 유형 칸
+    expect(screen.queryByText(/예고/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(출발 시각\)/)).not.toBeInTheDocument();
     expect(screen.getByText(/처리 기한 09:00 — 남은 시간 12분 30초/)).toBeInTheDocument();
   });

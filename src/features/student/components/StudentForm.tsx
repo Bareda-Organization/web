@@ -344,7 +344,7 @@ export const StudentForm = ({
             <Checkbox
               checked={canGoAlone}
               onChange={(event) => setCanGoAlone(event.target.checked)}
-              label="혼자 하차 가능"
+              label="혼자 귀가 가능"
             />
             {error ? <AlertBanner tone="missed" title={error} /> : null}
           </>

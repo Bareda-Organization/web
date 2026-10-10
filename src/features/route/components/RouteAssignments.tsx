@@ -17,7 +17,7 @@ const monthDay = (date: string): string => date.slice(5).replace("-", "/");
 // 한 회차의 기사 · 동승 — 비어 있으면 미배치.
 const crewText = (run: RunItemResponseTypes): string => {
   const nameOf = (role: "driver" | "escort") => run.assignments.find((assignment) => assignment.role === role)?.name ?? "미배치";
-  return `기사 ${nameOf("driver")} · 동승 ${nameOf("escort")}`;
+  return `기사 ${nameOf("driver")} · 동승자 ${nameOf("escort")}`;
 };
 
 // A-08 — 이 편성(차량 × 요일 × 방향)과 같은 오늘 · 내일 회차의 배치 매니저(GET /staff/runs?service_date=, §5.10).

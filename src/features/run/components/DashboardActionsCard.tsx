@@ -89,7 +89,7 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
       key: "unassigned",
       tone: "info",
       title: "배치 없는 매니저",
-      description: gap ? `${gap.busNo} ${DIRECTION_LABEL[gap.direction]} ${gap.driverName === null ? "기사" : "동승 매니저"} 배치 필요` : "오늘 회차에 배치되지 않은 매니저가 있습니다",
+      description: gap ? `${gap.busNo} ${DIRECTION_LABEL[gap.direction]} ${gap.driverName === null ? "기사" : "동승자"} 배치 필요` : "오늘 회차에 배치되지 않은 매니저가 있습니다",
       count: unassignedManagers,
       href: "/manager",
     });

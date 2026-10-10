@@ -13,7 +13,7 @@ export type StudentListItemResponseTypes = {
   className: string | null;
   guardianPhone: string | null;
   guardianCount: number;
-  // Ruling 815 — 서버가 아직 안 주면 grade null · 혼자 하차 false · 학생 앱 미연결 · 주소 none.
+  // Ruling 815 — 서버가 아직 안 주면 grade null · 혼자 귀가 false · 학생 앱 미연결 · 주소 none.
   grade: string | null;
   canGoAlone: boolean;
   accountLinked: boolean;

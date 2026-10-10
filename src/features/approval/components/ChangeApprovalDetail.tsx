@@ -200,7 +200,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     setDecideError(null);
     try {
       await decideChangeApproval(approvalId, { approve: true, previewToken: detail.previewToken });
-      show({ title: `${detail.studentName} 구간 변경을 승인했습니다`, detail: "노선을 다시 확정해 기사·동승 매니저에게 재배포하고 학부모에게 알립니다" });
+      show({ title: `${detail.studentName} 구간 변경을 승인했습니다`, detail: "노선을 다시 확정해 기사·동승자에게 재배포하고 학부모에게 알립니다" });
       void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
@@ -320,7 +320,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       <PageHeader
         title={`${detail.studentName} 구간 변경`}
         description={`${detail.busNo} · ${directionLabel}${detail.departTime ? ` · ${formatClockTime(detail.departTime)} 출발` : ""} — ${
-          isAlreadyDecided ? "이미 결정된 건입니다" : `승인하면 노선을 다시 확정해 ${crew || "기사·동승 매니저"}에게 재배포하고 학부모에게 알립니다`
+          isAlreadyDecided ? "이미 결정된 건입니다" : `승인하면 노선을 다시 확정해 ${crew || "기사·동승자"}에게 재배포하고 학부모에게 알립니다`
         }`}
         actions={
           isAlreadyDecided ? null : (
@@ -380,7 +380,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>요청 유형</StyledInfoLabel>
-          <span>{detail.source === "intent" ? "예고(등하원 토글)" : "구간 변경 신청(일일 스케줄 변경)"}</span>
+          <span>{detail.source === "intent" ? "등하원 토글" : "일일 스케줄 변경"}</span>
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>버스</StyledInfoLabel>
@@ -410,7 +410,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>접수</StyledInfoLabel>
-          <span>{formatClockTime(detail.requestedAt)} · {detail.source === "intent" ? "예고" : "학부모 신청"}</span>
+          <span>{formatClockTime(detail.requestedAt)} · {detail.source === "intent" ? "등하원 토글" : "학부모 신청"}</span>
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>처리 기한</StyledInfoLabel>
@@ -536,7 +536,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         }
       >
         <p>{approveConfirmText}</p>
-        <p>승인하면 노선을 다시 확정해 {crew || "기사·동승 매니저"}에게 재배포하고 학부모에게 알립니다. 되돌릴 수 없습니다.</p>
+        <p>승인하면 노선을 다시 확정해 {crew || "기사·동승자"}에게 재배포하고 학부모에게 알립니다. 되돌릴 수 없습니다.</p>
       </Dialog>
       <Dialog
         open={canDecide && mode === "reject"}

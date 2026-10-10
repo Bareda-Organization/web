@@ -155,8 +155,8 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(mockGetRunRoster).toHaveBeenCalledWith("7");
   });
 
-  // A #3 — 선택한 회차의 기사·동승 매니저가 노선 확인 버튼을 눌렀는지 보인다(MON-05).
-  it("선택한 회차의 기사·동승 매니저 옆에 노선 확인 여부를 보여 준다", async () => {
+  // A #3 — 선택한 회차의 기사·동승자가 노선 확인 버튼을 눌렀는지 보인다(MON-05).
+  it("선택한 회차의 기사·동승자 옆에 노선 확인 여부를 보여 준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
       runs: [{ ...baseDashboard.runs[0], ackDriver: false, ackEscort: true }],
@@ -1227,7 +1227,7 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     expect(await within(band).findByRole("link", { name: "이아안 보호자 전화" })).toHaveAttribute("href", "tel:010-0000-1183");
   });
 
-  it("회차 정보 카드에 기사·동승 매니저의 전화가 tel: 링크로 있다", async () => {
+  it("회차 정보 카드에 기사·동승자의 전화가 tel: 링크로 있다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
     mockGetRunRoster.mockResolvedValue(baseRoster);
     render(<TodayRunPage />);

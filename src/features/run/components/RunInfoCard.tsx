@@ -43,7 +43,7 @@ const Crew = ({ role, name, phone, acked, run }: { role: string; name: string | 
   </StyledCrewItem>
 );
 
-// 선택한 회차의 카드 — 출발 · 도착(예정 · 실제 · 예상) · 지연 알림 · 기사 · 동승 매니저(전화 · 확인 여부) · 학생 현황.
+// 선택한 회차의 카드 — 출발 · 도착(예정 · 실제 · 예상) · 지연 알림 · 기사 · 동승자(전화 · 확인 여부) · 학생 현황.
 // 지연·미승차가 났을 때 명단 표에서 전화번호를 찾지 않도록 연락처를 이 카드로 모았다.
 export const RunInfoCard = ({ run, addedCount, transferCount }: Props) => {
   const confirmAt = Date.parse(run.departTime) - CONFIRM_LEAD_MS;
@@ -95,7 +95,7 @@ export const RunInfoCard = ({ run, addedCount, transferCount }: Props) => {
       <StyledInfoCardSection>
         <h3>배치 인력 · 변경 확인</h3>
         <Crew role="기사" name={run.driverName} phone={run.driverPhone} acked={run.ackDriver} run={run} />
-        <Crew role="동승 매니저" name={run.escortName} phone={run.escortPhone} acked={run.ackEscort} run={run} />
+        <Crew role="동승자" name={run.escortName} phone={run.escortPhone} acked={run.ackEscort} run={run} />
       </StyledInfoCardSection>
 
       <StyledInfoCardSection>

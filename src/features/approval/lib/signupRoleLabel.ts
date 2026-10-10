@@ -5,5 +5,5 @@ export const SIGNUP_ROLE_LABEL: Record<SignupRole, string> = {
   parent: "학부모",
   student: "학생",
   driver: "기사",
-  escort: "동승 매니저",
+  escort: "동승자",
 };

@@ -155,7 +155,7 @@ export const RunDetailPanel = ({ run, academyName, nowMs, onRoster }: { run: Run
     return (
       <StyledDetailCard aria-label="선택한 회차">
         <EmptyState icon="bus" title="회차를 골라 보세요" slim>
-          표나 지도에서 회차를 고르면 기사 · 동승 · 승하차지가 여기 보입니다.
+          표나 지도에서 회차를 고르면 기사 · 동승자 · 승하차지가 여기 보입니다.
         </EmptyState>
       </StyledDetailCard>
     );
@@ -172,7 +172,7 @@ export const RunDetailPanel = ({ run, academyName, nowMs, onRoster }: { run: Run
       </StyledDetailChips>
       <div>
         <ContactRow label="기사" contact={run.driver} missing="미배치" />
-        <ContactRow label="동승 매니저" contact={run.escort} missing="미배치" />
+        <ContactRow label="동승자" contact={run.escort} missing="미배치" />
         <StyledDetailRow>
           <span>출발</span>
           <span>

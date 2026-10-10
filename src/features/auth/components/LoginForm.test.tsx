@@ -60,6 +60,9 @@ describe("LoginForm — 에러 코드별 분기", () => {
   it("AUTH_STAFF_INACTIVE 는 퇴사 안내를 보여준다", async () => {
     await submitLoginForm(new ApiError(403, "AUTH_STAFF_INACTIVE", "퇴사 처리됨"));
     expect(await screen.findByText("퇴사 처리된 계정입니다")).toBeInTheDocument();
+    // R52 A-10 — 퇴사 처리는 메인 관리자가 한다(API_SPEC §6.7). 문의처를 학원 데스크로 적지 않는다.
+    expect(screen.getByText(/메인 관리자에게 문의해 주세요/)).toBeInTheDocument();
+    expect(screen.queryByText(/학원 데스크/)).not.toBeInTheDocument();
   });
 });
 

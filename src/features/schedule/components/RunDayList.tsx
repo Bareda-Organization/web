@@ -136,7 +136,7 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
         return (
           <>
             {driver ? `기사 ${driver.name}` : <StatusChip tone="bad">기사 미배치</StatusChip>}
-            <StyledRunSub>{escort ? `동승 ${escort.name}` : "동승 미배치"}</StyledRunSub>
+            <StyledRunSub>{escort ? `동승자 ${escort.name}` : "동승자 미배치"}</StyledRunSub>
           </>
         );
       },

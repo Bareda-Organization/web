@@ -126,13 +126,13 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
           options={[{ value: "", label: "변경 안 함" }, ...drivers.map((d) => ({ value: String(d.id), label: d.name }))]}
         />
         <Select
-          label="동승 매니저"
+          label="동승자"
           value={escortManagerId}
           onChange={(event) => setEscortManagerId(event.target.value)}
           options={[{ value: "", label: "변경 안 함" }, ...escorts.map((e) => ({ value: String(e.id), label: e.name }))]}
         />
         {driversTruncated ? <AlertBanner tone="info" title={`기사가 ${MANAGER_CANDIDATE_LIMIT}명을 넘어 앞의 ${MANAGER_CANDIDATE_LIMIT}명만 보입니다`} /> : null}
-        {escortsTruncated ? <AlertBanner tone="info" title={`동승 매니저가 ${MANAGER_CANDIDATE_LIMIT}명을 넘어 앞의 ${MANAGER_CANDIDATE_LIMIT}명만 보입니다`} /> : null}
+        {escortsTruncated ? <AlertBanner tone="info" title={`동승자가 ${MANAGER_CANDIDATE_LIMIT}명을 넘어 앞의 ${MANAGER_CANDIDATE_LIMIT}명만 보입니다`} /> : null}
         {warnings.length > 0 ? (
           <StyledWarningList>
             <AlertBanner tone="moving" title="배치는 반영됐지만 확인할 경고가 있습니다" />

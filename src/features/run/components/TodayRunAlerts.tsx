@@ -67,7 +67,7 @@ export const TodayRunAlerts = ({ run, roster, nowMs, onShowNoShow, onOpenAssignm
   if ((run.runStatus === "idle" || run.runStatus === "confirmed") && (run.driverName === null || run.escortName === null)) {
     const confirmAt = Date.parse(run.departTime) - CONFIRM_LEAD_MS;
     const left = formatMinutesLeft(confirmAt, nowMs);
-    const missing = run.driverName === null ? "기사" : "동승 매니저";
+    const missing = run.driverName === null ? "기사" : "동승자";
     const other = run.driverName === null ? run.escortName : null;
     return (
       <AlertBanner
@@ -80,7 +80,7 @@ export const TodayRunAlerts = ({ run, roster, nowMs, onShowNoShow, onOpenAssignm
         }
       >
         {left ? `확정까지 ${left}` : "확정 시각이 지났습니다"}
-        {other && !run.ackEscort ? ` · 동승 매니저 ${other}도 아직 변경 내용을 확인하지 않았습니다.` : ""}
+        {other && !run.ackEscort ? ` · 동승자 ${other}도 아직 변경 내용을 확인하지 않았습니다.` : ""}
       </AlertBanner>
     );
   }

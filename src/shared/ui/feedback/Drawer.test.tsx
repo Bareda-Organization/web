@@ -5,9 +5,9 @@ import { Drawer } from "./Drawer";
 // 옆 패널(drawer) — 목록을 두고 상세를 보는 작업. 대화상자와 같은 접근성 약속(역할 · Esc · 초점)을 지킨다.
 describe("Drawer", () => {
   it("대화상자 역할(aria-modal)과 제목으로 된 이름을 가진다", () => {
-    render(<Drawer title="김정은 · 동승 매니저">본문</Drawer>);
+    render(<Drawer title="김정은 · 동승자">본문</Drawer>);
 
-    const drawer = screen.getByRole("dialog", { name: "김정은 · 동승 매니저" });
+    const drawer = screen.getByRole("dialog", { name: "김정은 · 동승자" });
     expect(drawer).toHaveAttribute("aria-modal", "true");
   });
 

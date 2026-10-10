@@ -18,7 +18,7 @@ const DIRECTION_LABEL: Record<ChangeApprovalSummaryResponseTypes["direction"], s
 };
 
 const SOURCE_LABEL: Record<ChangeApprovalSummaryResponseTypes["source"], string> = {
-  intent: "예고",
+  intent: "등하원 토글",
   change_request: "구간 변경 신청",
 };
 

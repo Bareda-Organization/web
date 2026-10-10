@@ -86,7 +86,7 @@ export const LoginForm = () => {
 
           {state.kind === "staff-inactive" ? (
             <AlertBanner tone="missed" title="퇴사 처리된 계정입니다">
-              학원 관계자 퇴사 처리로 접근이 제한됐습니다. 학원 데스크에 문의해 주세요.
+              학원 관계자 퇴사 처리로 접근이 제한됐습니다. 메인 관리자에게 문의해 주세요.
             </AlertBanner>
           ) : null}
 

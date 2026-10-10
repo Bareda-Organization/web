@@ -399,7 +399,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       unit: "명",
       detail: (
         <>
-          등원 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
+          등원 회차 기준 · 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
           <StyledSegmentBar role="img" aria-label={`등원 대상 ${toAcademyRiders.total}명 중 ${boardedPercent}% 탑승`}>
             <span style={{ flex: boardedPercent, background: "var(--c-conf)" }} />
             <span style={{ flex: 100 - boardedPercent, background: "var(--border-subtle)" }} />
@@ -416,12 +416,12 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
         ? `${firstNoShow.busNo} ${DIRECTION_LABEL[firstNoShow.direction]} · ${firstNoShow.noShowCases[0].stopName} 통과 후 승차하지 않음`
         : "정차지를 지나고도 타지 않은 학생",
     },
-    { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 미리 끈 학생 · 명단에는 회색 행으로 남습니다" },
+    { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 탑승을 미리 끈 학생(구간 변경 승인분 포함) · 명단에는 회색 행으로 남습니다" },
     {
       label: "배치 없는 매니저",
       value: metrics?.unassignedManagers ?? "-",
       unit: "명",
-      detail: firstGap ? `${firstGap.busNo} ${DIRECTION_LABEL[firstGap.direction]}은 ${firstGap.driverName === null ? "기사도" : "동승 매니저도"} 미배치` : "오늘 회차에 배치되지 않은 매니저",
+      detail: firstGap ? `${firstGap.busNo} ${DIRECTION_LABEL[firstGap.direction]}은 ${firstGap.driverName === null ? "기사도" : "동승자도"} 미배치` : "오늘 회차에 배치되지 않은 매니저",
     },
   ];
 

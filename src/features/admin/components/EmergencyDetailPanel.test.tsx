@@ -40,7 +40,7 @@ describe("메인 관리자 EmergencyDetailPanel — 조치 메모", () => {
     expect(screen.queryByText(/조치 메모/)).not.toBeInTheDocument();
   });
 
-  // R48 시안 `emergency-alerts` — 오른쪽 상시 칸의 [바로 연락]: 발신자 · 동승 매니저 · 학원 대표에 전화 단추(tel:).
+  // R48 시안 `emergency-alerts` — 오른쪽 상시 칸의 [바로 연락]: 발신자 · 동승자 · 학원 대표에 전화 단추(tel:).
   it("바로 연락에 발신자와 연락처 목록, 학원 대표 번호를 전화 링크로 둔다", () => {
     render(
       <EmergencyDetailPanel

@@ -172,7 +172,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
   // 포함 여부로 본다(판단 근거, 보고서 §1).
   // A #3 — 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
-  it("확정·운행 중 회차는 기사·동승 매니저 옆에 노선 확인 여부를 보여 준다", async () => {
+  it("확정·운행 중 회차는 기사·동승자 옆에 노선 확인 여부를 보여 준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
       runs: [{ ...baseDashboard.runs[0], escortName: "이매니저", ackDriver: true, ackEscort: false }],
@@ -218,6 +218,17 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
     expect(within(table).getAllByRole("row")).toHaveLength(5); // 머리줄 + 4행
     expect(screen.queryByRole("checkbox", { name: "운행 중·곧 출발만" })).not.toBeInTheDocument();
+  });
+
+  // R52 haiku A-6 · sonnet A-15 — 지표 보조 문장은 집계 기준을 말한다: 미등원에 구간 변경 승인분이 들어가고, 탑승 완료 비율은 등원 회차 기준이다.
+  it("미등원·탑승 완료 지표의 보조 문장이 집계 기준을 적는다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(screen.getByText(/구간 변경 승인분 포함/)).toBeInTheDocument();
+    expect(screen.getByText(/등원 회차 기준 · 대상 12명 중 83%/)).toBeInTheDocument();
   });
 
   // Ruling 810 — 서버가 회차별 미승차·미등원 수를 주면 4분류(탑승·미승차·미등원·대기=나머지) 막대가 그 수로 그려진다.

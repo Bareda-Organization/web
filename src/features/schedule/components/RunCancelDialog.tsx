@@ -18,7 +18,7 @@ type RunCancelDialogProps = {
 };
 
 const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
-const ROLE_LABEL = { driver: "기사", escort: "동승" } as const;
+const ROLE_LABEL = { driver: "기사", escort: "동승자" } as const;
 
 // §5.10 DELETE /staff/runs/{id}(SCH-03) — "행을 지우지 않고 canceled_at 을 채운다"
 // (실측 확인, api/index.ts 주석). 404 RUN_NOT_FOUND 는 존재 비노출(Ruling 163,
@@ -60,7 +60,7 @@ export const RunCancelDialog = ({ runId, run, onCancel, onCanceled }: RunCancelD
       }
     >
       <p>
-        {label ? <b>{label}</b> : "이"} 회차를 취소할까요? 오늘 하루만 빠지는 임시 취소입니다.
+        {label ? <b>{label}</b> : "이"} 회차를 취소할까요? 이 날 하루만 빠지는 임시 취소입니다.
       </p>
       <StyledCancelKv aria-label="회차 취소 영향">
         {run ? (

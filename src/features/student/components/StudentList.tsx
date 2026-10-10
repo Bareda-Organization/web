@@ -138,7 +138,7 @@ export const StudentList = () => {
           <StatusChip tone="bad">미등록</StatusChip>
         ),
     },
-    { key: "canGoAlone", label: "혼자 하차", render: (row) => (row.canGoAlone ? "가능" : "-") },
+    { key: "canGoAlone", label: "혼자 귀가", render: (row) => (row.canGoAlone ? "가능" : "-") },
     {
       key: "actions",
       label: "",
@@ -174,7 +174,7 @@ export const StudentList = () => {
       tone: (summary?.addressMissing ?? 0) > 0 ? "warn" : "neutral",
       detail: "승하차지가 없어 어느 노선에도 들어가지 못함",
     },
-    { label: "혼자 하차 가능", value: summary?.canGoAlone ?? "-", unit: "명", detail: "도착 시 보호자 인계 없이 하차" },
+    { label: "혼자 귀가 가능", value: summary?.canGoAlone ?? "-", unit: "명", detail: "도착 시 보호자 인계 없이 하차" },
   ];
 
   return (

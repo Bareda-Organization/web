@@ -512,7 +512,7 @@ export const MonitoringPage = () => {
     // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다(R16, Ruling 315) — 빈 칸 대신 "미배치" 를 보여 준다. 관제 화면에서 배치 누락은 관리자가 봐야 하는 정보다.
     {
       key: "people",
-      label: "기사 · 동승",
+      label: "기사 · 동승자",
       render: (row) => (row.driver || row.escort ? `${row.driver?.name ?? "미배치"} · ${row.escort?.name ?? "미배치"}` : "미배치"),
     },
     {
@@ -625,7 +625,7 @@ export const MonitoringPage = () => {
         {!loadingAcademies && !error && academies.length === 0 ? (
           <EmptyState icon="building" title="등록된 학원이 없습니다" />
         ) : !error && runs.length === 0 && !loadingRuns && !loadingFirstAcademy ? (
-          <EmptyState icon="bus" title="지금 운행 중인 회차가 없습니다" />
+          <EmptyState icon="bus" title="오늘 운행하는 회차가 없습니다" />
         ) : (
           <>
             <StyledTableHeading>

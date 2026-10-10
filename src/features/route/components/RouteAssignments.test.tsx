@@ -57,7 +57,7 @@ describe("RouteAssignments — 편성의 오늘·내일 회차 배치(A-08)", ()
     render(<RouteAssignments {...routeOf(today)} />);
 
     const card = await screen.findByRole("region", { name: "배치 매니저" });
-    expect(await within(card).findByText(/박기사/)).toHaveTextContent("기사 박기사 · 동승 최매니저");
+    expect(await within(card).findByText(/박기사/)).toHaveTextContent("기사 박기사 · 동승자 최매니저");
     expect(within(card).queryByText(/남의기사/)).not.toBeInTheDocument();
     expect(within(card).queryByText(/하원기사/)).not.toBeInTheDocument();
   });
@@ -66,7 +66,7 @@ describe("RouteAssignments — 편성의 오늘·내일 회차 배치(A-08)", ()
     mockGetRuns.mockImplementation(async (date) => ({ items: date === today ? [run({ assignments: [] })] : [] }));
     render(<RouteAssignments {...routeOf(today)} />);
 
-    expect(await screen.findByText("기사 미배치 · 동승 미배치")).toBeInTheDocument();
+    expect(await screen.findByText("기사 미배치 · 동승자 미배치")).toBeInTheDocument();
   });
 
   it("오늘 · 내일 중 같은 편성의 회차가 없으면 없다고 말한다", async () => {

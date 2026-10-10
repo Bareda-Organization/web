@@ -32,7 +32,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     vi.clearAllMocks();
   });
 
-  it("열리면 후보 목록을 불러와 기사·동승 매니저 옵션으로 나눠 보여준다", async () => {
+  it("열리면 후보 목록을 불러와 기사·동승자 옵션으로 나눠 보여준다", async () => {
     mockCandidates(managers);
     render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 
@@ -41,7 +41,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
   });
 
   // R52 M9 — 앞 20명만 오고 안내가 없던 것. 역할별로 받고, 한쪽이라도 상한을 넘으면 일부만 보인다고 알린다.
-  it("기사·동승 매니저를 역할별로 따로 조회한다", async () => {
+  it("기사·동승자를 역할별로 따로 조회한다", async () => {
     mockCandidates(managers);
     render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
     await screen.findByText("김기사");
@@ -131,7 +131,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     expect(screen.queryByText("근무 시간과 맞지 않습니다")).not.toBeInTheDocument();
   });
 
-  it("저장에 성공하면 고른 기사·동승 매니저 값을 비워, 다른 회차에서 열어도 이전 선택이 남지 않는다", async () => {
+  it("저장에 성공하면 고른 기사·동승자 값을 비워, 다른 회차에서 열어도 이전 선택이 남지 않는다", async () => {
     mockCandidates(managers);
     mockPatchRunAssignment.mockResolvedValue({
       runId: "7",

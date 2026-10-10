@@ -112,7 +112,7 @@ export const BusList = ({ unassignedRuns = null }: BusListProps) => {
               </StyledSeatTrack>
               {row.capacity}석
             </StyledSeatBar>
-            <StyledSeatNote>{reserved === 2 ? `학생 ${student} · 기사 1 · 동승 1` : `학생 ${student} · 기사·동승 ${reserved}`}</StyledSeatNote>
+            <StyledSeatNote>{reserved === 2 ? `학생 ${student} · 기사 1 · 동승자 1` : `학생 ${student} · 기사·동승자 ${reserved}`}</StyledSeatNote>
           </StyledSeatCell>
         );
       },

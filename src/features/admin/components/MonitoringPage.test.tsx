@@ -200,7 +200,7 @@ describe("MonitoringPage — 실시간 회차 조회 실패", () => {
     render(<MonitoringPage />);
 
     await waitFor(() => expect(screen.getByText("실시간 회차 조회 중 오류가 발생했습니다")).toBeInTheDocument());
-    expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
+    expect(screen.queryByText("오늘 운행하는 회차가 없습니다")).not.toBeInTheDocument();
   });
 });
 
@@ -354,7 +354,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
       mockConnectionState = state;
       render(<MonitoringPage />);
 
-      expect(await screen.findByText("지금 운행 중인 회차가 없습니다")).toBeInTheDocument();
+      expect(await screen.findByText("오늘 운행하는 회차가 없습니다")).toBeInTheDocument();
       expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
       expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
       expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
@@ -371,7 +371,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
 
     // baseLiveRun 은 position 이 null 이라 "위치 확인 대기" 로 렌더된다 — 목록이 실제로 채워졌다는 유일한 표식이다.
     expect(await screen.findByText("위치 확인 대기")).toBeInTheDocument();
-    expect(screen.queryByText("지금 운행 중인 회차가 없습니다")).not.toBeInTheDocument();
+    expect(screen.queryByText("오늘 운행하는 회차가 없습니다")).not.toBeInTheDocument();
   });
 });
 

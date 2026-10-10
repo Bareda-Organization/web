@@ -66,6 +66,17 @@ describe("StudentList — 보호자 연결 열", () => {
     await waitFor(() => expect(screen.getAllByText("보호자 미연결").length).toBeGreaterThan(0));
     expect(screen.getByText("2명 연결")).toBeInTheDocument();
   });
+
+  // R52 t5-sonnet A-8 — 사양 용어는 '혼자 귀가'(STU-08)다. 열 머리와 요약 칸이 '혼자 하차' 로 적히지 않는다.
+  it("혼자 귀가 열 머리와 요약 칸 이름은 사양 용어를 쓴다", async () => {
+    mockGetStudents.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false });
+
+    render(<StudentList />);
+
+    expect(await screen.findByRole("columnheader", { name: "혼자 귀가" })).toBeInTheDocument();
+    expect(screen.getByText("혼자 귀가 가능")).toBeInTheDocument();
+    expect(screen.queryByText(/혼자 하차/)).not.toBeInTheDocument();
+  });
 });
 
 // R50 S8 — A-10 학생 목록 학년 열. 항목의 grade(null 가능)를 반 옆에 그린다.

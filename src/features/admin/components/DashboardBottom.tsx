@@ -63,7 +63,7 @@ export const TodayRunsCard = ({ data }: { data: DashboardResponseTypes;  }) => {
     <Card padding={0}>
       <StyledCardBody aria-labelledby="dashboard-runs-title">
         <StyledCardHeading id="dashboard-runs-title">
-          회차 {runs.length} <small>출발 순 · 진행률 = (지금 − 출발) / (도착 − 출발)</small>
+          회차 {runs.length} <small>출발 순 · 진행률 = (지금 − 출발) / (도착 예정 − 출발)</small>
         </StyledCardHeading>
         {runs.length === 0 ? (
           <EmptyState icon="bus" title="오늘 운행하는 회차가 없습니다">

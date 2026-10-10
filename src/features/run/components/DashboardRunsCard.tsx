@@ -108,7 +108,7 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs }: Props) => 
             <RouteAckMark name={row.driverName} acked={row.ackDriver} runStatus={row.runStatus} />
           </span>
           <span>
-            <small>동승</small>
+            <small>동승자</small>
             <b>{row.escortName ?? "미배치"}</b>
             <RouteAckMark name={row.escortName} acked={row.ackEscort} runStatus={row.runStatus} />
           </span>
