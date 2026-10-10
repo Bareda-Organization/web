@@ -997,9 +997,12 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       mockRunIdParam = "8";
       rerender(<TodayRunPage />);
       act(() => capturedOnEnvelope?.(envelope("position", { lat: 37.9, lng: 127.9, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: null, eta: null }, "8")));
+      // 앞 회차(7번)의 방송도 지금 보는 회차가 아니므로 마커를 옮기지 않는다.
+      act(() => capturedOnEnvelope?.(envelope("position", { lat: 37.8, lng: 127.8, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: null, eta: null }, "7")));
       await vi.advanceTimersByTimeAsync(300);
 
       expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.9 })] }));
+      expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.8 })] }));
     });
 
     it("이 회차의 stop_arrived 방송은 명단을 다시 읽고, 다른 회차의 것은 아무것도 다시 읽지 않는다", async () => {
