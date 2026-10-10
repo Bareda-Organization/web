@@ -600,3 +600,24 @@ describe("ChangeApprovalDetail — 처리 직후 사이드바 배지 갱신", ()
     await waitFor(() => expect(mockRefreshPending).toHaveBeenCalledTimes(1));
   });
 });
+
+// R52 · Ruling 870 — 처리 기한은 서버의 `deadline_at` 이다(출발 10분 뒤, 운행이 먼저 시작되면 그 시점). 출발 시각에서 다시 계산하지 않고 "(출발 시각)" 이라 부르지도 않는다.
+describe("ChangeApprovalDetail — 처리 기한 표시(Ruling 870)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("처리 기한 칸은 출발 시각이 아니라 deadline_at 시각을 보이고 마감 규칙을 적는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-12T23:47:30Z"));
+    // 출발 08:50 KST · 처리 기한 09:00 KST(출발 + 10분)
+    mockGetDetail.mockResolvedValue({ ...baseDetail, departTime: "2026-09-12T23:50:00Z", deadlineAt: "2026-09-13T00:00:00Z" });
+
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByText(/09:00 \(출발 10분 뒤 또는 운행 시작 중 먼저 오는 때\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/\(출발 시각\)/)).not.toBeInTheDocument();
+    expect(screen.getByText(/처리 기한 09:00 — 남은 시간 12분 30초/)).toBeInTheDocument();
+  });
+});

@@ -414,7 +414,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         </StyledInfoRow>
         <StyledInfoRow>
           <StyledInfoLabel>처리 기한</StyledInfoLabel>
-          <span>{formatClockTime(detail.deadlineAt)} (출발 시각){remaining === null ? " — 처리 기한이 지났습니다" : ""}</span>
+          <span>{formatClockTime(detail.deadlineAt)} (출발 10분 뒤 또는 운행 시작 중 먼저 오는 때){remaining === null ? " — 처리 기한이 지났습니다" : ""}</span>
         </StyledInfoRow>
       </Card>
 

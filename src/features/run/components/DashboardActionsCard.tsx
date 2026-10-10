@@ -75,7 +75,7 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
       key: "change",
       tone: "warn",
       title: "구간 변경 승인",
-      description: remaining ? `처리하지 않으면 출발 시각에 자동 거절 · 가장 이른 건 ${remaining} 남음` : "기한이 지난 신청이 있습니다",
+      description: remaining ? `처리하지 않으면 처리 기한에 자동 거절 · 가장 이른 건 ${remaining} 남음` : "기한이 지난 신청이 있습니다",
       count: approvals.changeCount,
       href: "/change-approval",
     });

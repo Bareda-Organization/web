@@ -143,13 +143,13 @@ export const ChangeApprovalList = () => {
     <StyledChangeApprovalLayout>
       <PageHeader
         title="구간 변경 승인"
-        description={error ? undefined : `처리 대기 ${pendingCount}건 · 출발 30분 안쪽에 들어온 탑승 변경 — 출발 시각까지 처리하지 않으면 자동 거절됩니다`}
+        description={error ? undefined : `처리 대기 ${pendingCount}건 · 출발 30분 안쪽에 들어온 탑승 변경 — 출발 10분 뒤 또는 운행 시작 중 먼저 오는 때까지 처리하지 않으면 자동 거절됩니다`}
       />
 
       {soonest ? (
         <AlertBanner
           tone="moving"
-          title={`${soonest.busNo} · ${DIRECTION_LABEL[soonest.direction]} ${formatClockTime(soonest.deadlineAt)} 출발 — ${soonestRemaining ? `${soonestRemaining} 안에 ` : ""}처리하지 않으면 ${soonestRunItems.length}건이 자동 거절됩니다`}
+          title={`${soonest.busNo} · ${DIRECTION_LABEL[soonest.direction]} 처리 기한 ${formatClockTime(soonest.deadlineAt)} — ${soonestRemaining ? `${soonestRemaining} 안에 ` : ""}처리하지 않으면 ${soonestRunItems.length}건이 자동 거절됩니다`}
         >
           자동 거절되면 기존 노선이 유지되고 학부모에게 실패가 통지됩니다. 한 건씩 열어 전 · 후 노선을 확인한 뒤 결정하세요.
         </AlertBanner>
@@ -187,7 +187,7 @@ export const ChangeApprovalList = () => {
                   {rows[0].busNo} · {DIRECTION_LABEL[rows[0].direction]}
                 </b>
                 <span>
-                  {formatClockTime(rows[0].deadlineAt)} 출발 · {status === "pending" ? "대기" : "건수"} {rows.length}건
+                  처리 기한 {formatClockTime(rows[0].deadlineAt)} · {status === "pending" ? "대기" : "건수"} {rows.length}건
                 </span>
               </StyledGroupHead>
             )}

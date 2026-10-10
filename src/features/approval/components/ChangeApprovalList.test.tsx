@@ -148,3 +148,27 @@ describe("ChangeApprovalList — 자동 거절까지 남은 시간", () => {
     expect(screen.queryByRole("columnheader", { name: "자동 거절까지" })).not.toBeInTheDocument();
   });
 });
+
+// R52 · Ruling 870 — 처리 기한(`deadline_at`)은 "운행 시작 또는 출발 10분 뒤 중 먼저 오는 시점" 이다. 출발 시각이 아니므로
+// 화면은 그 값을 "출발" 로 부르지 않고 서버 값 그대로 "처리 기한" 으로 보인다.
+describe("ChangeApprovalList — 처리 기한 표시(Ruling 870)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("마감 띠와 회차 묶음 머리줄이 deadline_at 시각을 '출발' 이 아닌 '처리 기한' 으로 적고, 머리 설명이 마감 규칙을 말한다", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-12T23:45:00Z"));
+    mockGetChangeApprovals.mockResolvedValue({
+      ...baseList,
+      items: [{ ...baseList.items[0]!, deadlineAt: "2026-09-13T00:10:00Z" }], // 09:10 KST
+    });
+    render(<ChangeApprovalList />);
+
+    expect(await screen.findByText(/1호차 · 등원 처리 기한 09:10 — 25분 0초 안에 처리하지 않으면 1건이 자동 거절됩니다/)).toBeInTheDocument();
+    expect(screen.getByText("처리 기한 09:10 · 대기 1건")).toBeInTheDocument();
+    expect(screen.queryByText(/09:10 출발/)).not.toBeInTheDocument();
+    expect(screen.getByText(/출발 10분 뒤 또는 운행 시작 중 먼저 오는 때까지 처리하지 않으면 자동 거절됩니다/)).toBeInTheDocument();
+  });
+});
