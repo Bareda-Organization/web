@@ -63,6 +63,53 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     expect(screen.queryByText(/명만 보입니다/)).not.toBeInTheDocument();
   });
 
+  it("동승자 후보가 상한을 넘으면 동승자 쪽 안내만 뜬다", async () => {
+    mockCandidates(managers, { escort: true });
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("김기사");
+
+    expect(screen.getByText("동승자가 100명을 넘어 앞의 100명만 보입니다")).toBeInTheDocument();
+    expect(screen.queryByText(/기사가 100명/)).not.toBeInTheDocument();
+  });
+
+  // 한쪽 조회만 실패해도 받은 쪽 후보는 보여 준다 — 기사만 바꾸려는데 동승자 조회 실패로 화면 전체가 비면 일을 못 한다.
+  it("동승자 후보 조회만 실패하면 기사 후보는 보이고 실패한 쪽만 알린다", async () => {
+    mockGetManagers.mockImplementation(async (role) => {
+      if (role === "escort") throw new Error("boom");
+      return { items: managers.filter((m) => m.role === role), hasNext: false };
+    });
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText("김기사")).toBeInTheDocument();
+    expect(screen.getByText("동승자 후보를 불러오지 못했습니다")).toBeInTheDocument();
+    expect(screen.queryByText("박매니저")).not.toBeInTheDocument();
+  });
+
+  it("기사 후보 조회만 실패하면 동승자 후보는 보이고 실패한 쪽만 알린다", async () => {
+    mockGetManagers.mockImplementation(async (role) => {
+      if (role === "driver") throw new Error("boom");
+      return { items: managers.filter((m) => m.role === role), hasNext: false };
+    });
+    render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText("박매니저")).toBeInTheDocument();
+    expect(screen.getByText("기사 후보를 불러오지 못했습니다")).toBeInTheDocument();
+    expect(screen.queryByText("김기사")).not.toBeInTheDocument();
+  });
+
+  it("다시 열었을 때 이전에 떴던 '일부만 보입니다' 안내가 조회 실패 뒤에도 남지 않는다", async () => {
+    mockCandidates(managers, { driver: true, escort: true });
+    const { rerender } = render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByText("기사가 100명을 넘어 앞의 100명만 보입니다");
+    rerender(<ManagerAssignmentDialog runId="7" open={false} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    mockGetManagers.mockRejectedValue(new Error("boom"));
+    rerender(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText(/후보를 불러오지 못했습니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/명만 보입니다/)).not.toBeInTheDocument();
+  });
+
   // N-01 — §5.14 임시 취소된 회차의 배치 변경은 409 RUN_CANCELED(Ruling 376).
   it("RUN_CANCELED 는 서버 원문이 아니라 취소된 회차라는 한국어 문구로 알린다", async () => {
     mockCandidates(managers);

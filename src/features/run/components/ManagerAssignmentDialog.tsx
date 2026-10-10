@@ -30,16 +30,24 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // 기사·동승자를 따로 조회하고 한쪽이 실패해도 받은 쪽은 보여 준다(기사만 바꾸려는데 동승자 조회 실패로 화면 전체가 비면 일을 못 한다).
+  // 실패한 쪽은 목록과 "일부만 보입니다" 표시를 함께 비운다 — 다시 열었을 때 이전 열림의 값이 남지 않게.
   const loadCandidates = useCallback(async () => {
-    try {
-      const [driverPage, escortPage] = await Promise.all([getManagers("driver"), getManagers("escort")]);
-      setDrivers(driverPage.items);
-      setEscorts(escortPage.items);
-      setDriversTruncated(driverPage.hasNext);
-      setEscortsTruncated(escortPage.hasNext);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "후보 목록을 불러오지 못했습니다");
-    }
+    const [driverResult, escortResult] = await Promise.allSettled([getManagers("driver"), getManagers("escort")]);
+    setDrivers(driverResult.status === "fulfilled" ? driverResult.value.items : []);
+    setEscorts(escortResult.status === "fulfilled" ? escortResult.value.items : []);
+    setDriversTruncated(driverResult.status === "fulfilled" && driverResult.value.hasNext);
+    setEscortsTruncated(escortResult.status === "fulfilled" && escortResult.value.hasNext);
+    const failures = [
+      { label: "기사", result: driverResult },
+      { label: "동승자", result: escortResult },
+    ]
+      .filter(({ result }) => result.status === "rejected")
+      .map(({ label, result }) => {
+        const cause = (result as PromiseRejectedResult).reason;
+        return cause instanceof ApiError ? cause.message : `${label} 후보를 불러오지 못했습니다`;
+      });
+    setError(failures.length > 0 ? failures.join(" · ") : null);
   }, []);
 
   useEffect(() => {
