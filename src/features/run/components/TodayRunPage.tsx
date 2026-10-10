@@ -375,7 +375,8 @@ export const TodayRunPage = () => {
           if (!isSelectedRun) return;
           const payload = parseWsPositionPayload(envelope.payload);
           setLiveRun((prev) =>
-            prev
+            // 회차를 막 바꿔 새 회차의 위치 응답이 오기 전에는 prev 가 앞 회차 값이다 — 같은 회차일 때만 좌표를 바꾼다.
+            prev && prev.runId === envelope.runId
               ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
               : prev,
           );

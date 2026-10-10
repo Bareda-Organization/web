@@ -972,6 +972,86 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls);
     });
 
+    it("다른 회차의 position 방송은 버스 마커를 바꾸지 않고 REST 도 부르지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
+      const liveCalls = mockGetRunsLive.mock.calls.length;
+      mockMapSurface.mockClear();
+
+      act(() => capturedOnEnvelope?.(envelope("position", { lat: 37.9, lng: 127.9, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: null, eta: null }, "8")));
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.9 })] }));
+      expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls);
+    });
+
+    it("회차를 막 바꿔 새 회차 위치가 아직 오기 전에는 새 회차의 position 방송이 앞 회차 마커에 붙지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      const { rerender } = render(<TodayRunPage />);
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ id: "7", lat: 37.5 })] })));
+      mockMapSurface.mockClear();
+
+      // 8번 회차로 옮긴 직후 — 위치 응답이 아직 안 와서 liveRun 은 7번 회차 값이다.
+      mockGetRunsLive.mockReturnValue(new Promise(() => {}));
+      mockRunIdParam = "8";
+      rerender(<TodayRunPage />);
+      act(() => capturedOnEnvelope?.(envelope("position", { lat: 37.9, lng: 127.9, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: null, eta: null }, "8")));
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.9 })] }));
+    });
+
+    it("이 회차의 stop_arrived 방송은 명단을 다시 읽고, 다른 회차의 것은 아무것도 다시 읽지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      const rosterCalls = mockGetRunRoster.mock.calls.length;
+      const dashboardCalls = mockGetDashboard.mock.calls.length;
+
+      act(() => capturedOnEnvelope?.(envelope("stop_arrived", {}, "8")));
+      await vi.advanceTimersByTimeAsync(600);
+      expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls);
+      expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls);
+
+      act(() => capturedOnEnvelope?.(envelope("stop_arrived", {}, "7")));
+      await vi.advanceTimersByTimeAsync(300);
+      await waitFor(() => expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls + 1));
+    });
+
+    it("300ms 안에 방송이 여러 건 와도 다시 읽기는 한 번으로 묶인다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      const rosterCalls = mockGetRunRoster.mock.calls.length;
+      const dashboardCalls = mockGetDashboard.mock.calls.length;
+
+      act(() => {
+        capturedOnEnvelope?.(envelope("rider_changed", {}));
+        capturedOnEnvelope?.(envelope("rider_changed", {}));
+        capturedOnEnvelope?.(envelope("run_started", {}));
+      });
+      await vi.advanceTimersByTimeAsync(600);
+
+      await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls + 1));
+      expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls + 1);
+    });
+
+    it("화면을 떠나면 예약해 둔 다시 읽기는 돌지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      const { unmount } = render(<TodayRunPage />);
+      await screen.findByText("김학생");
+      const dashboardCalls = mockGetDashboard.mock.calls.length;
+      const rosterCalls = mockGetRunRoster.mock.calls.length;
+
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      unmount();
+      await vi.advanceTimersByTimeAsync(600);
+
+      expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls);
+      expect(mockGetRunRoster.mock.calls.length).toBe(rosterCalls);
+    });
+
     it("끊겼다 다시 붙으면 끊긴 사이의 방송을 되찾을 수 없어 한 번 다시 읽는다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);
