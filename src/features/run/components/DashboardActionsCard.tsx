@@ -58,7 +58,7 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
   runs.forEach((run) => {
     const attention = runAttention(run, nowMs);
     if (attention?.tone !== "warn" || !attention.reason.startsWith("출발")) return;
-    const unacked = [run.ackDriver ? null : `기사 ${run.driverName ?? ""}`, run.ackEscort ? null : `동승 ${run.escortName ?? ""}`].filter(Boolean);
+    const unacked = [run.ackDriver ? null : `기사 ${run.driverName ?? ""}`, run.ackEscort ? null : `동승자 ${run.escortName ?? ""}`].filter(Boolean);
     items.push({
       key: `imminent-${run.runId}`,
       tone: "warn",

@@ -118,6 +118,14 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     expect(mockPush).toHaveBeenCalledWith("/change-approval");
   });
 
+  // R52 A-9 — 재배포 안내는 동승자를 '동승자' 로 부른다.
+  it("재배포 안내가 기사와 동승자 이름을 '기사 · 동승자' 로 적는다", async () => {
+    mockGetDetail.mockResolvedValue({ ...baseDetail, driverName: "박기사", escortName: "최동승" });
+    render(<ChangeApprovalDetail approvalId="5" />);
+
+    expect(await screen.findByText(/기사 박기사 · 동승자 최동승에게 재배포하고/)).toBeInTheDocument();
+  });
+
   it("거절 사유가 없으면 거절 확정 버튼이 비활성 상태다", async () => {
     mockGetDetail.mockResolvedValue(baseDetail);
     render(<ChangeApprovalDetail approvalId="5" />);

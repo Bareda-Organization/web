@@ -272,7 +272,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
     removedStopCount > 0 ? `이 변경을 승인합니다 (삭제 예정 승하차지 ${removedStopCount}곳)` : "이 변경을 승인합니다";
 
   const directionLabel = detail.direction === "to_academy" ? "등원" : "하원";
-  const crew = [detail.driverName ? `기사 ${detail.driverName}` : null, detail.escortName ? `동승 ${detail.escortName}` : null].filter(Boolean).join(" · ");
+  const crew = [detail.driverName ? `기사 ${detail.driverName}` : null, detail.escortName ? `동승자 ${detail.escortName}` : null].filter(Boolean).join(" · ");
   const canDecide = !isAlreadyDecided && !isExpired;
   const route = detail.routePreview;
 

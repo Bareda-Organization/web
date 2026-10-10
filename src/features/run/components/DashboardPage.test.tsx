@@ -185,6 +185,21 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByText("미확인")).toBeInTheDocument();
   });
 
+  // R52 A-9 — 사용자에게 보이는 말은 동승자로 통일한다(출발 임박 미확인 줄에도 "동승" 이 남아 있었다).
+  it("출발 임박 미확인 줄은 동승자를 '동승자' 로 부른다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-13T07:55:00Z"));
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [{ ...baseDashboard.runs[0], runStatus: "confirmed", departTime: "2026-09-13T08:00:00Z", escortName: "이매니저", ackDriver: true, ackEscort: false }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("동승자 이매니저 미확인")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it("노선이 아직 없는 대기 회차는 확인 여부를 보이지 않는다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
