@@ -6,6 +6,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { AlertBanner, Button, Input } from "@/shared/ui";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { QuickLogin } from "./QuickLogin";
 import { StyledBrand, StyledContainer, StyledFooter, StyledForm, StyledLayout, StyledLink, StyledWrapper } from "./LoginForm.styled";
 
 // 로그인 실패 상태 — 화면에 보일 문구까지 여기서 결정한다. AUTH_ACCOUNT_BLOCKED 는
@@ -27,11 +28,11 @@ export const LoginForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<LoginFormState>({ kind: "idle" });
 
-  const submit = async () => {
+  const submit = async (id: string, pw: string) => {
     setSubmitting(true);
     setState({ kind: "idle" });
     try {
-      await login(loginId, password);
+      await login(id, pw);
       // 이동은 여기서 하지 않는다 — AuthGateGuard 가 세션 변화를 보고 한 곳에서 판정한다.
     } catch (error) {
       if (error instanceof AppOnlyRoleError) {
@@ -60,7 +61,7 @@ export const LoginForm = () => {
 
   const handleSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void submit();
+    void submit(loginId, password);
   };
 
   return (
@@ -118,6 +119,16 @@ export const LoginForm = () => {
               로그인
             </Button>
           </StyledForm>
+
+          {/* Ruling 877 — 배포 시험 빌드에서만 그린다(환경변수 없으면 빈 칸). */}
+          <QuickLogin
+            disabled={submitting}
+            onPick={(id, pw) => {
+              setLoginId(id);
+              setPassword(pw);
+              void submit(id, pw);
+            }}
+          />
 
           <StyledFooter>
             계정이 없으신가요? <StyledLink href="/signup">회원가입</StyledLink>

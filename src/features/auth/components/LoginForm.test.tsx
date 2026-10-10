@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { LoginForm } from "./LoginForm";
@@ -104,5 +104,29 @@ describe("LoginForm — 앱 전용 계정 안내", () => {
   it("AppOnlyRoleError 는 앱 이용 안내를 보여준다", async () => {
     await submitLoginForm(new AppOnlyRoleError() as unknown as ApiError);
     expect(await screen.findByText(/학부모·학생·매니저는 앱을 이용해 주세요/)).toBeInTheDocument();
+  });
+});
+
+// Ruling 877 — 배포 시험 빌드의 빠른 로그인 단추는 기존 로그인 함수를 그대로 부른다(인증을 건너뛰지 않는다).
+describe("LoginForm — 배포 시험 빌드 빠른 로그인", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("단추를 누르면 기존 login 을 역할 아이디와 환경변수 비밀번호로 부른다", async () => {
+    vi.stubEnv("NEXT_PUBLIC_QUICK_LOGIN_PASSWORD", "test-pass");
+    const login = vi.fn().mockResolvedValue(undefined);
+    mockUseAuthSession.mockReturnValue({
+      bootstrapStatus: "ready",
+      session: null,
+      login,
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+    render(<LoginForm />);
+
+    fireEvent.click(screen.getByTestId("quick-login-staffA"));
+
+    await waitFor(() => expect(login).toHaveBeenCalledWith("staffA", "test-pass"));
   });
 });
