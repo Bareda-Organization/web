@@ -52,7 +52,7 @@ export const TodayRunAlerts = ({ run, roster, nowMs, onShowNoShow, onOpenAssignm
           </>
         }
       >
-        {cases.map((c) => c.studentName).join(" · ")} — 학부모에게 알림 전송 · {contactSummary(attempts, first.lastContactResult)} ·{" "}
+        {cases.map((c) => c.studentName).join(" · ")} — 학부모 알림은 기사가 이 승하차지를 출발할 때 나갑니다 · {contactSummary(attempts, first.lastContactResult)} ·{" "}
         {countdown ? (
           <>
             카운트다운 <b>{countdown}</b> 남음. 만료되면 관계자 판단으로 출발합니다.

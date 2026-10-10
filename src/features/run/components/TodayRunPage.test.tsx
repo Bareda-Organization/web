@@ -1079,6 +1079,17 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     expect(alert).not.toHaveTextContent("3분");
   });
 
+  // R52 M8 · Ruling 854 — 학부모 알림은 표시 즉시가 아니라 기사가 그 승하차지를 출발할 때 나간다(오조작 흡수).
+  it("미승차 띠가 학부모 알림을 이미 보낸 것처럼 적지 않고 기사가 출발할 때 나간다고 적는다", async () => {
+    mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
+    mockGetRunRoster.mockResolvedValue(noShowRoster);
+    render(<TodayRunPage />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("학부모 알림은 기사가 이 승하차지를 출발할 때");
+    expect(alert).not.toHaveTextContent("알림 전송");
+  });
+
   it("미승차 띠에 그 학생의 보호자 전화 링크(tel:)와 시도 횟수가 있다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
     mockGetRunRoster.mockResolvedValue(noShowRoster);
