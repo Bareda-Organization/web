@@ -155,6 +155,19 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
   });
 
+  // R52 · Ruling 874⑤ — 사양 근거 없는 정적 안내 문장은 두지 않는다(Ruling 844 기준). 하원 회차가 있어도 탑승 현황 카드에 집계 시점 각주가 없다.
+  it("하원 회차가 있어도 '학원 출발 뒤부터 집계' 각주를 두지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [baseDashboard.runs[0], { ...baseDashboard.runs[0], runId: "2", busNo: "2호차", direction: "from_academy" }],
+    });
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("2호차 · 하원");
+    expect(screen.queryByText(/학원 출발 뒤부터 집계/)).not.toBeInTheDocument();
+  });
+
   // R21-B 목표 1·3·4 — 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
   // 포함 여부로 본다(판단 근거, 보고서 §1).

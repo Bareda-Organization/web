@@ -172,14 +172,6 @@ export const StyledRunRiderBlock = styled.div`
   }
 `;
 
-export const StyledFootnote = styled.p`
-  margin: 12px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-`;
-
 // 상태 칩 + 그 아래 한 줄 사유.
 export const StyledStatusCell = styled.span`
   display: flex;

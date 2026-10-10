@@ -40,7 +40,6 @@ import {
   StyledBoardRow,
   StyledDashboardLayout,
   StyledFallbackNotice,
-  StyledFootnote,
   StyledLiveLines,
   StyledLiveStatus,
   StyledMapOverlayNotice,
@@ -356,7 +355,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   }, LIVE_POLL_INTERVAL_MS);
 
   const toAcademyRuns = runs.filter((run) => run.direction === "to_academy");
-  const fromAcademyRuns = runs.filter((run) => run.direction === "from_academy");
   const toAcademyRiders = sumRiders(toAcademyRuns);
   const lastPositionAt = liveRuns.reduce<string | null>(
     (latest, run) => (run.position && (latest === null || run.position.recordedAt > latest) ? run.position.recordedAt : latest),
@@ -611,11 +609,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
                     </StyledRunRiderBlock>
                   );
                 })}
-                {fromAcademyRuns.length > 0 ? (
-                  <StyledFootnote>
-                    하원 {fromAcademyRuns.length}회 · 대상 {fromAcademyRuns.reduce((sum, run) => sum + run.totalCount, 0)}명은 학원 출발 뒤부터 집계됩니다
-                  </StyledFootnote>
-                ) : null}
               </StyledBoardCardBody>
             </StyledBoardCard>
           </StyledBoardRow>
