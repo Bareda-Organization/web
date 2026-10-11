@@ -356,6 +356,8 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
 
   const toAcademyRuns = runs.filter((run) => run.direction === "to_academy");
   const toAcademyRiders = sumRiders(toAcademyRuns);
+  // "탑승 완료" 지표는 전 회차(등원 · 하원) 값이라 비율도 같은 범위로 계산한다(Ruling 887 ⑤).
+  const allRiders = sumRiders(runs);
   const lastPositionAt = liveRuns.reduce<string | null>(
     (latest, run) => (run.position && (latest === null || run.position.recordedAt > latest) ? run.position.recordedAt : latest),
     null,
@@ -364,7 +366,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   const runCount = (status: DashboardRunResponseTypes["runStatus"]) => runs.filter((run) => run.runStatus === status).length;
   const firstNoShow = runs.find((run) => run.noShowCases.length > 0);
   const firstGap = runs.find((run) => run.runStatus !== "finished" && (run.driverName === null || run.escortName === null));
-  const boardedPercent = toAcademyRiders.total === 0 ? 0 : Math.round((toAcademyRiders.boarded / toAcademyRiders.total) * 100);
+  const boardedPercent = allRiders.total === 0 ? 0 : Math.round((allRiders.boarded / allRiders.total) * 100);
 
   const statItems: StatStripItem[] = [
     {
@@ -399,8 +401,8 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       unit: "명",
       detail: (
         <>
-          하차한 학생 포함 · 등원 회차 기준 · 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
-          <StyledSegmentBar role="img" aria-label={`등원 대상 ${toAcademyRiders.total}명 중 ${boardedPercent}% 탑승`}>
+          하차한 학생 포함 · 대상 {allRiders.total}명 중 {boardedPercent}%
+          <StyledSegmentBar role="img" aria-label={`대상 ${allRiders.total}명 중 ${boardedPercent}% 탑승`}>
             <span style={{ flex: boardedPercent, background: "var(--c-conf)" }} />
             <span style={{ flex: 100 - boardedPercent, background: "var(--border-subtle)" }} />
           </StyledSegmentBar>

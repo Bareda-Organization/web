@@ -236,15 +236,24 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByRole("checkbox", { name: "운행 중·곧 출발만" })).not.toBeInTheDocument();
   });
 
-  // R52 haiku A-6 · sonnet A-15 — 지표 보조 문장은 집계 기준을 말한다: 미등원에 구간 변경 승인분이 들어가고, 탑승 완료 비율은 등원 회차 기준이다.
+  // R52 haiku A-6 · sonnet A-15 / Ruling 887 ⑤ — 지표 보조 문장은 집계 기준을 말한다: 미등원에 구간 변경 승인분이 들어가고,
+  // 탑승 완료 비율은 값(전 회차)과 같은 범위로 계산한다 — 등원 회차만 세지 않는다.
   it("미등원·탑승 완료 지표의 보조 문장이 집계 기준을 적는다", async () => {
-    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [
+        baseDashboard.runs[0],
+        { ...baseDashboard.runs[0], runId: "2", busNo: "2호차", direction: "from_academy", boardedCount: 3, totalCount: 8 },
+      ],
+    });
     mockGetRunsLive.mockResolvedValue(emptyLive);
     render(<DashboardPage />);
 
-    await screen.findByText("1호차 · 등원");
+    await screen.findByText("2호차 · 하원");
     expect(screen.getByText(/구간 변경 승인분 포함/)).toBeInTheDocument();
-    expect(screen.getByText(/등원 회차 기준 · 대상 12명 중 83%/)).toBeInTheDocument();
+    // 전 회차: 대상 12 + 8 = 20명, 탑승 완료 10 + 3 = 13명 → 65%.
+    expect(screen.getByText(/대상 20명 중 65%/)).toBeInTheDocument();
+    expect(screen.queryByText(/등원 회차 기준/)).not.toBeInTheDocument();
   });
 
   // R53 Ruling 879 — 회차 표의 건수는 탑승 완료 누계(boarded + alighted)다. 머리글과 보조 문장이 '현재 탑승' 으로 읽히지 않는다.
