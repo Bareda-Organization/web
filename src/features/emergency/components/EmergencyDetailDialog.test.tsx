@@ -158,4 +158,20 @@ describe("EmergencyDetailDialog — 취소된 건", () => {
     expect(screen.queryByText("학원 확인 대기")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "확인" })).not.toBeInTheDocument();
   });
+
+  // Ruling 887 ① — 확인된 뒤 취소된 건: 확인 기록과 취소 줄을 둘 다 남기고, 마지막 사건인 취소를 끝에 둔다.
+  it("확인된 뒤 취소된 건은 타임라인에 확인 기록과 '취소됨' 줄을 둘 다 둔다", () => {
+    render(
+      <EmergencyDetailDialog
+        emergency={{ ...EMERGENCY, acked: true, ackedAt: "2026-09-12T08:01:00", ackedBy: { name: "김관계", memo: null }, canceledAt: "2026-09-12T08:03:00" }}
+        onClose={vi.fn()}
+        onAck={vi.fn()}
+      />,
+    );
+
+    const timeline = screen.getByLabelText("처리 순서");
+    expect(timeline).toHaveTextContent(/2026-09-12 08:01 확인 · 김관계/);
+    expect(timeline).toHaveTextContent(/2026-09-12 08:03 취소됨/);
+    expect(screen.queryByText("학원 확인 대기")).not.toBeInTheDocument();
+  });
 });

@@ -112,11 +112,13 @@ export const EmergencyDetailDialog = ({ emergency, onClose, onAck, acking = fals
           aria-label="처리 순서"
           items={[
             { tone: "bad", title: `${formatDateTime(emergency.raisedAt)} 접수`, meta: `${emergency.raisedBy.name ?? "미상"}(${EMERGENCY_ROLE_LABEL[emergency.raisedBy.role]})가 발신${deviceNote ? ` · ${deviceNote}` : ""}` },
-            emergency.acked
-              ? { tone: "ok", title: `${formatDateTime(emergency.ackedAt)} 확인${emergency.ackedBy?.name ? ` · ${emergency.ackedBy.name}` : ""}` }
-              : emergency.canceledAt !== null
-                ? { tone: "end", title: `${formatDateTime(emergency.canceledAt)} 취소됨`, meta: "발신자가 철회한 신고라 확인하지 않습니다" }
-                : { tone: "end", title: "학원 확인 대기", meta: '[확인]을 누르면 발신자 앱에 "학원이 확인했습니다"가 표시됩니다' },
+            // 확인 기록과 취소 줄을 둘 다 둔다 — 확인된 뒤 취소된 건은 취소가 마지막 사건이다(Ruling 887 ①).
+            ...(emergency.acked ? [{ tone: "ok" as const, title: `${formatDateTime(emergency.ackedAt)} 확인${emergency.ackedBy?.name ? ` · ${emergency.ackedBy.name}` : ""}` }] : []),
+            ...(emergency.canceledAt !== null
+              ? [{ tone: "end" as const, title: `${formatDateTime(emergency.canceledAt)} 취소됨`, meta: emergency.acked ? "발신자가 신고를 철회했습니다" : "발신자가 철회한 신고라 확인하지 않습니다" }]
+              : emergency.acked
+                ? []
+                : [{ tone: "end" as const, title: "학원 확인 대기", meta: '[확인]을 누르면 발신자 앱에 "학원이 확인했습니다"가 표시됩니다' }]),
           ]}
         />
       </StyledEmergencyDetailBody>

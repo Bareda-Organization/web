@@ -269,4 +269,40 @@ describe("EmergencyList — 취소된 건", () => {
     expect(await screen.findByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  // R53 최종 대조 — 철회 안내는 5초 폴링 성공이 지우지 않는다. 사용자가 닫거나 다음 조작을 할 때까지 남는다.
+  it("철회 안내는 다음 5초 폴링이 성공해도 지워지지 않고 [닫기] 로 치운다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+      mockAck.mockRejectedValue(new ApiError(409, "EMERGENCY_CANCELED", "취소된 비상 알림입니다"));
+      render(<EmergencyList />);
+      fireEvent.click(await screen.findByRole("button", { name: /확인$/ }));
+      await screen.findByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다");
+
+      mockGet.mockClear();
+      await vi.advanceTimersByTimeAsync(5000);
+      await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+      expect(screen.getByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+      expect(screen.queryByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Ruling 887 ① — 확인된 뒤 취소된 건은 취소가 마지막 사건이라 "취소됨" 으로 그린다.
+  it("확인된 뒤 취소된 건은 행에 '취소됨' 을 보인다('확인됨' 이 아니다)", async () => {
+    mockGet.mockResolvedValue({
+      items: [{ ...CANCELED, acked: true, ackedAt: "2026-09-12T08:01:00", ackedBy: { name: "김관계", memo: null } }],
+      unackedCount: 0,
+    });
+    render(<EmergencyList />);
+
+    await screen.findAllByText("1호차 · 등원");
+    const row = within(screen.getAllByRole("row", { name: /1호차/ })[0]);
+    expect(row.getByText("취소됨")).toBeInTheDocument();
+    expect(row.queryByText("확인됨")).not.toBeInTheDocument();
+  });
 });

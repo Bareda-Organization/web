@@ -10,7 +10,7 @@ import { deviceTimeNote } from "@/shared/lib/format/deviceTimeNote";
 import { formatElapsed } from "@/shared/lib/format/elapsed";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { ackEmergency, getEmergencies } from "../api";
-import { EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
+import { CANCELED_ACK_MESSAGE, EMERGENCY_ROLE_LABEL, EMERGENCY_TYPE_LABEL } from "../lib/emergencyLabels";
 import { emergencyMapUrl } from "../lib/mapLink";
 import type { EmergencyItemResponseTypes, EmergencyStatus } from "../types";
 import { EmergencyDetailDialog } from "./EmergencyDetailDialog";
@@ -29,9 +29,6 @@ import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 // 메인 관리자 화면(EmergencyAlertsPage)과 같은 주기.
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
 
-
-const CANCELED_ACK_MESSAGE = "발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다";
-
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
 
 // §5.16 GET·POST /staff/emergencies(EXC-04, A-16) — 비상 알림 목록·확인. 실시간 수신 팝업은
@@ -45,6 +42,8 @@ export const EmergencyList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ackingId, setAckingId] = useState<string | null>(null);
+  // 철회 안내(Ruling 885 ①) — 오류와 따로 둔다. 5초 폴링 성공이 오류를 지워도 이 안내는 사용자가 닫거나 다음 확인을 누를 때까지 남는다.
+  const [canceledNotice, setCanceledNotice] = useState(false);
   const [detail, setDetail] = useState<EmergencyItemResponseTypes | null>(null);
   // 오늘 처리한 비상 알림 — 미확인 탭 아래에 함께 둔다(누가 · 언제 · 무엇을 했는지, A-16 이력). 보조 정보라 실패해도 본문 오류로 승격하지 않는다.
   const [history, setHistory] = useState<EmergencyItemResponseTypes[]>([]);
@@ -97,6 +96,7 @@ export const EmergencyList = () => {
   const handleAck = async (emergencyId: string, memo?: string) => {
     setAckingId(emergencyId);
     setError(null);
+    setCanceledNotice(false);
     try {
       await ackEmergency(emergencyId, memo);
       setDetail(null);
@@ -106,7 +106,7 @@ export const EmergencyList = () => {
         // Ruling 885 ① — 확인하려는 순간 발신자가 철회했다. 확인 대상이 아니므로 목록을 다시 읽어 취소 건으로 옮기고 이유를 알린다.
         setDetail(null);
         await load(status, date);
-        setError(CANCELED_ACK_MESSAGE);
+        setCanceledNotice(true);
       } else {
         setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
       }
@@ -166,10 +166,10 @@ export const EmergencyList = () => {
       label: "확인",
       align: "right",
       render: (row) =>
-        row.acked ? (
-          <Badge tone="added">확인됨</Badge>
-        ) : row.canceledAt !== null ? (
+        row.canceledAt !== null ? (
           <Badge tone="neutral">취소됨</Badge>
+        ) : row.acked ? (
+          <Badge tone="added">확인됨</Badge>
         ) : (
           <Button
             variant="secondary"
@@ -220,6 +220,17 @@ export const EmergencyList = () => {
       </StyledEmergencyFilters>
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
+      {canceledNotice ? (
+        <AlertBanner
+          tone="info"
+          title={CANCELED_ACK_MESSAGE}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setCanceledNotice(false)}>
+              닫기
+            </Button>
+          }
+        />
+      ) : null}
       {items.length >= RECENT_LIST_CAP ? (
         <AlertBanner tone="info" title={`최근 ${RECENT_LIST_CAP}건까지만 표시합니다 — 이전 기록은 날짜로 좁혀 확인하세요`} />
       ) : null}
