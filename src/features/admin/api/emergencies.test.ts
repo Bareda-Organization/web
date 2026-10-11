@@ -61,4 +61,29 @@ describe("admin emergencies api — occurred_at 변환", () => {
     respond({ items: [raw({})], unacked_count: 1 });
     expect((await getEmergencies("open")).counts).toBeUndefined();
   });
+
+  // R53 t5 A2 — 위치 기록이 없을 때 서버는 position 을 null 이 아니라 {lat:null, lng:null, recorded_at:null} 객체로 준다(§5.16).
+  // 그대로 통과시키면 미니 지도에 null 좌표가 그려지고 "null, null" 이 표시된다 → position 자체를 null 로 바꾼다.
+  it("position 이 좌표 null 객체면 position 을 null 로 옮긴다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockJsonResponse(200, {
+          success: true,
+          data: {
+            items: [
+              raw({ position: { lat: null, lng: null, recorded_at: null } }),
+              raw({ emergency_id: 2, position: { lat: 37.5, lng: 127.0, recorded_at: "2026-09-15T08:09:00" } }),
+            ],
+            unacked_count: 2,
+          },
+        }),
+      ),
+    );
+
+    const result = await getEmergencies();
+
+    expect(result.items[0].position).toBeNull();
+    expect(result.items[1].position).toEqual({ lat: 37.5, lng: 127.0, recordedAt: "2026-09-15T08:09:00" });
+  });
 });

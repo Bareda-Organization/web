@@ -11,7 +11,8 @@ import type {
 
 type RawAcademyRef = { id: string | number; name: string; contact: string | null };
 type RawPerson = { name: string | null; role: string; phone: string | null };
-type RawPosition = { lat: number; lng: number; recorded_at: string | null } | null;
+// 서버는 위치 기록이 없으면 null 이 아니라 세 값이 모두 null 인 객체를 준다(§5.16 · Ruling 848 ③).
+type RawPosition = { lat: number | null; lng: number | null; recorded_at: string | null } | null;
 
 type RawEmergencyItem = {
   emergency_id: string | number;
@@ -51,7 +52,7 @@ const toPerson = (raw: RawPerson): EmergencyPersonResponseTypes => ({
 });
 
 const toPosition = (raw: RawPosition): EmergencyPositionResponseTypes =>
-  raw ? { lat: raw.lat, lng: raw.lng, recordedAt: raw.recorded_at } : null;
+  raw && raw.lat !== null && raw.lng !== null ? { lat: raw.lat, lng: raw.lng, recordedAt: raw.recorded_at } : null;
 
 const toEmergencyItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => ({
   emergencyId: asIdString(raw.emergency_id),
