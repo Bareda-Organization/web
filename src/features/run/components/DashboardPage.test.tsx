@@ -366,7 +366,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
       runs: [
         {
           ...baseDashboard.runs[0],
-          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: "2026-09-12T09:00:00Z", callAttempts: 0, lastContactResult: null }],
+          // 만료 전이어야 남은 분이 나온다(R53 A8 — 지난 만료는 '카운트다운 끝남').
+          noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: new Date(Date.now() + 2.5 * 60_000).toISOString(), callAttempts: 0, lastContactResult: null }],
         },
       ],
     });

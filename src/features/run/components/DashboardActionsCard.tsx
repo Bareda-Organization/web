@@ -40,13 +40,14 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
   if (noShowTotal > 0) {
     const first = noShowRuns[0];
     const nearestExpiry = Math.min(...noShowRuns.flatMap((run) => run.noShowCases.map((c) => Date.parse(c.expiresAt))));
-    const minutesLeft = Math.max(1, Math.ceil((nearestExpiry - nowMs) / 60_000));
+    // 만료가 지났으면 '1분 안' 으로 붙잡지 않고 끝났다고 알린다 — 운행 상세 띠(TodayRunAlerts)와 같은 판단(R53 A8).
+    const minutesLeft = formatMinutesLeft(nearestExpiry, nowMs);
     items.push({
       key: "no-show",
       tone: "bad",
       title: (
         <>
-          미승차 {noShowTotal}명 <StatusChip tone="warn" marker={false}>{minutesLeft}분 안</StatusChip>
+          미승차 {noShowTotal}명 <StatusChip tone="warn" marker={false}>{minutesLeft ? `${minutesLeft} 안` : "카운트다운 끝남"}</StatusChip>
         </>
       ),
       description: `${first.busNo} ${DIRECTION_LABEL[first.direction]} · ${first.noShowCases[0].stopName} · 보호자 연락 중`,
