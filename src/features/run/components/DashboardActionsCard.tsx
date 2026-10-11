@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ListRow, ListRows, StatusChip } from "@/shared/ui";
 import type { DashboardRunResponseTypes } from "../types";
 import { runAttention } from "../lib/runBoard";
+import { formatMinutesLeft } from "../lib/useNow";
 import { StyledActionList, StyledBoardCard, StyledBoardCardHead, StyledCountPill } from "./DashboardPage.styled";
 
 export type PendingApprovals = {
@@ -21,12 +22,6 @@ type Props = {
 };
 
 const DIRECTION_LABEL = { to_academy: "등원", from_academy: "하원" } as const;
-
-// 기한까지 남은 시간 — 분 단위로 올림("6분"). 이미 지났으면 null. (approval 기능의 초 단위 포맷은 기능 경계 때문에 가져오지 않는다)
-const formatMinutesLeft = (deadlineMs: number, nowMs: number): string | null => {
-  const minutes = Math.ceil((deadlineMs - nowMs) / 60_000);
-  return minutes > 0 ? `${minutes}분` : null;
-};
 
 type ActionItem = { key: string; tone: "bad" | "warn" | "info"; title: React.ReactNode; description: string; count: React.ReactNode };
 
@@ -50,7 +45,8 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
           미승차 {noShowTotal}명 <StatusChip tone="warn" marker={false}>{minutesLeft ? `${minutesLeft} 안` : "카운트다운 끝남"}</StatusChip>
         </>
       ),
-      description: `${first.busNo} ${DIRECTION_LABEL[first.direction]} · ${first.noShowCases[0].stopName} · 보호자 연락 중`,
+      // 만료 뒤에는 운행 상세 띠(TodayRunAlerts)와 같은 뜻 — 연락을 계속하는 중이 아니라 관계자 판단으로 출발한다(Ruling 887 ⑤ 곁가지).
+      description: `${first.busNo} ${DIRECTION_LABEL[first.direction]} · ${first.noShowCases[0].stopName} · ${minutesLeft ? "보호자 연락 중" : "관계자 판단으로 출발"}`,
       count: noShowTotal,
       href: `/today-run?runId=${first.runId}`,
     });
