@@ -37,7 +37,10 @@ export const ReportList = () => {
   const [handled, setHandled] = useState("");
   const [counts, setCounts] = useState<{ handled: number; unhandled: number } | null>(null);
   // 종류별 건수 — 종류를 고르지 않은 조회에서만 새로 센다(고르면 다른 종류의 건수를 모른다).
-  const [typeCounts, setTypeCounts] = useState<Record<ReportType, number> | null>(null);
+  // 센 조건(날짜 · 회차 · 처리)을 함께 기억해, 그 조건이 바뀐 뒤에는 낡은 건수를 쓰지 않는다(R53 A5).
+  const [typeCountsState, setTypeCountsState] = useState<{ key: string; counts: Record<ReportType, number> } | null>(null);
+  const countsKey = `${date}|${runId}|${handled}`;
+  const typeCounts = typeCountsState?.key === countsKey ? typeCountsState.counts : null;
   const [selected, setSelected] = useState<ReportItemResponseTypes | null>(null);
   // "며칠째 미처리" 계산의 기준 시각 — 조회 결과를 받을 때 갱신한다(렌더 중에 시계를 읽지 않는다).
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -98,7 +101,7 @@ export const ReportList = () => {
           result.items.forEach((item) => {
             next[item.type] += 1;
           });
-          setTypeCounts(next);
+          setTypeCountsState({ key: `${date}|${runId}|${handled}`, counts: next });
         }
         setError(null);
       } catch (cause) {
@@ -112,6 +115,8 @@ export const ReportList = () => {
   }, [type, date, runId, handled, retryCount]);
 
   const unhandledItems = items.filter((item) => !item.handled);
+  // "미처리 N" 숫자와 보조 문구는 같은 원천(서버 counts)으로 판단한다 — 처리 필터가 '처리됨' 이면 목록에는 미처리 행이 없어도 N건이 있을 수 있다.
+  const unhandledTotal = counts?.unhandled ?? unhandledItems.length;
   const oldest = unhandledItems.reduce<ReportItemResponseTypes | null>(
     (acc, item) => (acc === null || Date.parse(item.reportedAt) < Date.parse(acc.reportedAt) ? item : acc),
     null,
@@ -165,17 +170,20 @@ export const ReportList = () => {
     { label: "표시 중 신고", value: items.length, unit: "건", detail: `최근 신고부터 · 최대 ${RECENT_LIST_CAP}건` },
     {
       label: "미처리",
-      value: counts?.unhandled ?? unhandledItems.length,
+      value: unhandledTotal,
       unit: "건",
-      tone: (counts?.unhandled ?? unhandledItems.length) > 0 ? "warn" : "neutral",
+      tone: unhandledTotal > 0 ? "warn" : "neutral",
       detail: oldest
         ? `가장 오래된 건 ${formatDateTime(oldest.reportedAt).slice(5, 10).replace("-", "/")} (${Math.max(1, Math.floor((nowMs - Date.parse(oldest.reportedAt)) / DAY_MS) + 1)}일째)`
-        : "미처리 신고가 없습니다",
+        : unhandledTotal > 0
+          ? "처리 필터를 '미처리' 로 바꾸면 볼 수 있습니다"
+          : "미처리 신고가 없습니다",
     },
     ...(["guardian_absent", "road_block", "vehicle_issue"] as const).map((reportType) => ({
       label: TYPE_LABEL[reportType],
-      value: typeCounts?.[reportType] ?? items.filter((item) => item.type === reportType).length,
-      unit: "건",
+      // 종류를 고른 조회에서는 다른 종류의 건수를 모른다 — 0건으로 보이지 않게 센 적이 없으면 "-" 로 둔다.
+      value: typeCounts?.[reportType] ?? (type === "" || type === reportType ? items.filter((item) => item.type === reportType).length : "-"),
+      unit: typeCounts || type === "" || type === reportType ? "건" : undefined,
       detail: reportType === "guardian_absent" ? "하원 승하차지에 보호자가 없을 때 보고" : reportType === "road_block" ? "우회 · 지연 사유" : "차량 점검 필요",
     })),
   ];

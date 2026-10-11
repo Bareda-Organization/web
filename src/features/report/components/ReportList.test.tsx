@@ -253,3 +253,67 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
     await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ handled: false })));
   });
 });
+
+// R53 t5 A5 — "미처리 N" 카드의 숫자는 서버 counts 인데 보조 문구는 지금 목록 계수라, 처리 필터를 "처리됨" 으로 두면
+// "미처리 3건 / 미처리 신고가 없습니다" 처럼 모순이었다. 같은 원천(counts)으로 맞춘다.
+describe("ReportList — 미처리 카드와 필터의 일관성(R53 A5)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const base = {
+    type: "etc" as const,
+    memo: "m",
+    runId: "7",
+    busNo: "1호차",
+    studentName: null,
+    reportedBy: "이기사",
+    reportedByRole: "driver" as const,
+    handledAt: null,
+    handledByName: null,
+  };
+  const OPEN = { ...base, reportId: "1", reportedAt: "2026-10-01T09:40:00Z", handled: false };
+  const DONE = { ...base, reportId: "2", reportedAt: "2026-10-01T09:50:00Z", handled: true };
+
+  it("처리 필터가 '처리됨' 이어도 미처리 N건이면 '미처리 신고가 없습니다' 라고 하지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGet.mockImplementation(async (query) => ({
+      items: query?.handled === true ? [DONE] : [OPEN, DONE],
+      counts: { handled: 1, unhandled: 3 },
+    }));
+    render(<ReportList />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: /처리됨 1/ }));
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ handled: true })));
+
+    expect(screen.queryByText("미처리 신고가 없습니다")).not.toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("미처리가 정말 0건이면 '미처리 신고가 없습니다' 를 보인다", async () => {
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGet.mockResolvedValue({ items: [DONE], counts: { handled: 1, unhandled: 0 } });
+    render(<ReportList />);
+
+    expect(await screen.findByText("미처리 신고가 없습니다")).toBeInTheDocument();
+  });
+
+  it("종류를 고른 채 처리 필터를 바꾸면, 앞 조건에서 센 종류별 건수를 그대로 쓰지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue({ metrics: {}, runs: [] } as never);
+    mockGet.mockImplementation(async (query) => ({
+      items: query?.type === "road_block" ? [{ ...OPEN, type: "road_block" as const }] : [OPEN, { ...OPEN, reportId: "5" }, { ...OPEN, reportId: "6", type: "road_block" as const }],
+      counts: { handled: 0, unhandled: 3 },
+    }));
+    render(<ReportList />);
+    expect(await screen.findByRole("tab", { name: "기타 2" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /^도로 통제/ }));
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ type: "road_block" })));
+    // 같은 조건(처리 전체)이라 종류별 건수는 아직 유효하다.
+    expect(screen.getByRole("tab", { name: "기타 2" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /^미처리/ }));
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ type: "road_block", handled: false })));
+    // 처리 조건이 달라졌으니 '기타 2' 는 낡은 값이다 — 건수 없이 이름만 보인다.
+    expect(screen.getByRole("tab", { name: "기타" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "기타 2" })).not.toBeInTheDocument();
+  });
+});
