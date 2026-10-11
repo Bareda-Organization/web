@@ -19,7 +19,7 @@ const DETAIL = {
   userCount: 12,
   status: "active" as const,
   address: "서울 강동구 천호대로 1",
-  contact: null,
+  contact: "02-000-0000",
   memo: null,
   staffAccounts: [],
   stats: { movingBusCount: 0 },
@@ -235,3 +235,49 @@ describe("AcademyFormDialog — 주소 없는 옛 학원의 상태 변경(Ruling
   });
 });
 
+
+// R53 t5 A4 · Ruling 885 ⑤ — 수정에서 내부 메모 "" 는 지움, 대표 연락처는 비울 수 없다(서버 빈 값 422).
+// 비우고 저장해도 서버에 남던 것(`|| undefined` 로 키를 안 보냄)을 막는다.
+describe("AcademyFormDialog — 연락처 필수 · 메모 지우기(Ruling 885 ⑤)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("수정 — 대표 연락처를 비우면 저장할 수 없고, 채우면 그 값으로 저장한다", async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    mockUpdate.mockResolvedValue(undefined as never);
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("02-000-0000");
+
+    fireEvent.change(screen.getByLabelText(/대표 연락처/), { target: { value: "  " } });
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/대표 연락처/), { target: { value: "032-111-2222" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("3", expect.objectContaining({ contact: "032-111-2222" })));
+  });
+
+  it("수정 — 내부 메모를 비우고 저장하면 빈 문자열을 보내 지운다", async () => {
+    mockGet.mockResolvedValue({ ...DETAIL, memo: "옛 메모" });
+    mockUpdate.mockResolvedValue(undefined as never);
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("옛 메모");
+
+    fireEvent.change(screen.getByLabelText(/내부 메모/), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("3", expect.objectContaining({ memo: "" })));
+  });
+
+  it("등록 — 대표 연락처와 메모는 비워도 저장되고 키를 보내지 않는다", async () => {
+    mockCreate.mockResolvedValue({ warnings: [] } as never);
+    render(<AcademyFormDialog onClose={vi.fn()} onDone={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/학원명/), { target: { value: "새 학원" } });
+    fireEvent.change(screen.getByLabelText(/^지역/), { target: { value: "서울" } });
+    fireEvent.change(screen.getByLabelText(/^주소/), { target: { value: "서울 강동구 천호대로 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].contact).toBeUndefined();
+    expect(mockCreate.mock.calls[0][0].memo).toBeUndefined();
+  });
+});

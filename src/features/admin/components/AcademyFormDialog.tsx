@@ -96,7 +96,9 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
   }, [academyId, isEditMode]);
 
   const isAddressMissing = address.trim().length === 0;
-  const canSubmit = name.trim().length > 0 && region.trim().length > 0 && !isAddressMissing;
+  // Ruling 885 ⑤ — 수정에서는 대표 연락처를 비울 수 없다(서버가 빈 값을 422 로 거절). 등록은 선택이다(§6.2).
+  const isContactMissing = isEditMode && contact.trim().length === 0;
+  const canSubmit = name.trim().length > 0 && region.trim().length > 0 && !isAddressMissing && !isContactMissing;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -108,8 +110,9 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
           name: name.trim(),
           region: region.trim(),
           address: address.trim(),
-          contact: contact.trim() || undefined,
-          memo: memo.trim() || undefined,
+          contact: contact.trim(),
+          // Ruling 885 ⑤ — 비운 메모는 빈 문자열로 보내 서버에서 지운다(키를 빼면 "유지" 라 말없이 남는다).
+          memo: memo.trim(),
         });
         onDone();
         return;
@@ -197,7 +200,16 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
       }
     />
   );
-  const contactInput = <Input label="대표 연락처" placeholder="예: 032-000-0000" value={contact} onChange={(event) => setContact(event.target.value)} />;
+  const contactInput = (
+    <Input
+      label="대표 연락처"
+      placeholder="예: 032-000-0000"
+      required={isEditMode}
+      value={contact}
+      onChange={(event) => setContact(event.target.value)}
+      error={isContactMissing ? "대표 연락처를 입력해 주세요" : undefined}
+    />
+  );
   const memoInput = (
     <Textarea label="내부 메모" hint={MEMO_HINT} value={memo} onChange={(event) => setMemo(event.target.value)} rows={3} maxLength={MEMO_MAX_LENGTH} />
   );
