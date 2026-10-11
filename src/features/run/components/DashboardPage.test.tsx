@@ -114,6 +114,7 @@ const baseDashboard: DashboardResponseTypes = {
       estArrivalTime: null,
       driverName: "김기사",
       escortName: null,
+      // 탑승 완료 누계(boarded + alighted) — Ruling 879. 지금 타고 있는 수가 아니다.
       boardedCount: 10,
       totalCount: 12,
       runStatus: "moving",
@@ -244,6 +245,17 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     await screen.findByText("1호차 · 등원");
     expect(screen.getByText(/구간 변경 승인분 포함/)).toBeInTheDocument();
     expect(screen.getByText(/등원 회차 기준 · 대상 12명 중 83%/)).toBeInTheDocument();
+  });
+
+  // R53 Ruling 879 — 회차 표의 건수는 탑승 완료 누계(boarded + alighted)다. 머리글과 보조 문장이 '현재 탑승' 으로 읽히지 않는다.
+  it("회차 표 머리글과 지표 보조 문장이 탑승 완료(하차 포함) 기준이다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(screen.getByRole("columnheader", { name: "탑승 완료" })).toBeInTheDocument();
+    expect(screen.getByText(/하차한 학생 포함/)).toBeInTheDocument();
   });
 
   // Ruling 810 — 서버가 회차별 미승차·미등원 수를 주면 4분류(탑승·미승차·미등원·대기=나머지) 막대가 그 수로 그려진다.

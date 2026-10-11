@@ -4,7 +4,8 @@ import type { DashboardRunResponseTypes } from "../types";
 
 export type RiderSplit = { boarded: number; noShow: number; absent: number; waiting: number };
 
-// Ruling 810 — 서버는 회차별 미승차·미등원 수만 준다. 대기는 `total − 탑승 − 미승차 − 미등원` 으로 화면이 계산한다.
+// Ruling 810 — 서버는 회차별 미승차·미등원 수만 준다. 대기는 `total − 탑승 완료 − 미승차 − 미등원` 으로 화면이 계산한다.
+// Ruling 879 — `boardedCount` 는 탑승 완료 누계(`boarded` + `alighted`)라 이미 내린 학생이 대기로 합산되지 않는다.
 export const splitRiders = (run: Pick<DashboardRunResponseTypes, "totalCount" | "boardedCount" | "noShowCount" | "absentCount">): RiderSplit => ({
   boarded: run.boardedCount,
   noShow: run.noShowCount,

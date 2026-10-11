@@ -399,7 +399,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       unit: "명",
       detail: (
         <>
-          등원 회차 기준 · 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
+          하차한 학생 포함 · 등원 회차 기준 · 대상 {toAcademyRiders.total}명 중 {boardedPercent}%
           <StyledSegmentBar role="img" aria-label={`등원 대상 ${toAcademyRiders.total}명 중 ${boardedPercent}% 탑승`}>
             <span style={{ flex: boardedPercent, background: "var(--c-conf)" }} />
             <span style={{ flex: 100 - boardedPercent, background: "var(--border-subtle)" }} />

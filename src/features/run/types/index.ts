@@ -37,6 +37,7 @@ export type DashboardRunResponseTypes = {
   estArrivalTime: string | null;
   driverName: string | null;
   escortName: string | null;
+  // 탑승 완료 누계 — `boarded` + `alighted`(지금 타고 있는 수가 아니다, §5.3 · Ruling 879).
   boardedCount: number;
   totalCount: number;
   runStatus: RunStatus;

@@ -44,7 +44,7 @@ export const RunStrip = ({ runs, selectedRunId, nowMs, onSelect }: Props) => (
           <StyledRunCardRow>
             <StyledRunCardNote data-tone={attention?.tone}>{attention?.reason ?? ""}</StyledRunCardNote>
             <span>
-              탑승 {run.boardedCount}/{run.totalCount}
+              탑승 완료 {run.boardedCount}/{run.totalCount}
             </span>
           </StyledRunCardRow>
         </StyledRunCard>

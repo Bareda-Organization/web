@@ -88,7 +88,7 @@ export const DashboardRunsCard = ({ runs, loading, hasError, nowMs }: Props) => 
     },
     {
       key: "boardedCount",
-      label: "탑승",
+      label: "탑승 완료",
       align: "right",
       render: (row) => (
         <>
