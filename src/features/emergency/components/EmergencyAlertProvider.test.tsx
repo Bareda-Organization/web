@@ -162,6 +162,26 @@ describe("EmergencyAlertProvider — 관계자 전 화면 비상 팝업", () => 
   });
 });
 
+// R53 최종 대조 · Ruling 885 ① — 띠 [확인] 을 누르는 순간 발신자가 철회하면(409 EMERGENCY_CANCELED) 실패 문구가 아니라 철회 안내를 보이고 그 건을 띠에서 닫는다.
+describe("EmergencyAlertProvider — 확인 직전 철회(409 EMERGENCY_CANCELED)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("철회 안내를 보이고 그 건을 띠에서 닫으며 '확인 처리에 실패' 로 안내하지 않는다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    mockAck.mockRejectedValue(new ApiError(409, "EMERGENCY_CANCELED", "취소된 비상 알림입니다"));
+    renderProvider();
+    await screen.findByText(/비상 상황/);
+
+    mockGet.mockResolvedValue({ items: [], unackedCount: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "확인" }));
+
+    expect(await screen.findByText(/발신자가 이 비상 신고를 철회했습니다\. 확인할 필요가 없습니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/비상 상황/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/확인 처리에 실패/)).not.toBeInTheDocument();
+    expect(screen.getByText("미확인 0건")).toBeInTheDocument();
+  });
+});
+
 // F01-12 — ack 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리거나, 이미 처리된 건을 실패로 안내하면 안 된다.
 describe("EmergencyAlertProvider — 확인(ack) 경합·실패 문구(F01-12)", () => {
   afterEach(() => vi.clearAllMocks());

@@ -13,14 +13,15 @@ import {
 } from "@/shared/lib/ws";
 import { AlertBanner, Button } from "@/shared/ui";
 import { ackEmergency, getEmergencies } from "../api";
-import { toEmergencyTypeLabel } from "../lib/emergencyLabels";
+import { CANCELED_ACK_MESSAGE, toEmergencyTypeLabel } from "../lib/emergencyLabels";
 import { StyledEmergencyPopupStack, StyledFoldRow } from "./EmergencyAlertProvider.styled";
 
 // 팝업 한 건에 필요한 것만 — REST 목록과 WebSocket 통지 양쪽에서 같은 모양으로 만든다.
 export type EmergencyAlert = { emergencyId: string; busNo: string; type: string; raisedByName: string | null };
 
 // 보고 있던 신고가 취소됐다는 안내 한 건 — 닫기 전까지 띠에 남는다(오인 신고였는지 처리됐는지 알 수 있게).
-export type EmergencyCancelNotice = { emergencyId: string; busNo: string };
+// `viaAck` 는 [확인] 을 누르는 순간 철회가 드러난 경우(409 EMERGENCY_CANCELED) — 안내 문구가 그 사정을 말한다.
+export type EmergencyCancelNotice = { emergencyId: string; busNo: string; viaAck?: boolean };
 
 // 비상 알림을 어디서 받아 오는가 — 관계자는 기본값을 쓰고, 메인 관리자 레이아웃은 관리자 쪽 조회·채널을 넘긴다(A#6).
 // `ack` 가 없으면 이 화면의 사용자는 확인 주체가 아니라(메인 관리자) 확인 버튼 없이 목록으로만 안내한다.
@@ -166,7 +167,14 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
       } catch (cause) {
         // 다른 관계자가 먼저 확인한 건(409)은 이미 처리된 것이라 실패로 안내하지 않는다 — 다시 눌러도 같은 결과다.
         if (cause instanceof ApiError && cause.code === "ALREADY_ACKED") closeAcked(emergencyId);
-        else setAckFailedId(emergencyId);
+        else if (cause instanceof ApiError && cause.code === "EMERGENCY_CANCELED") {
+          // Ruling 885 ① — 누르는 순간 발신자가 철회한 건은 실패가 아니라 철회 안내다. 목록 · 상세와 같게 알리고 이 건을 띠에서 닫는다.
+          const busNo = alertsRef.current.find((alert) => alert.emergencyId === emergencyId)?.busNo ?? "";
+          setCanceledNotices((prev) =>
+            prev.some((notice) => notice.emergencyId === emergencyId) ? prev : [...prev, { emergencyId, busNo, viaAck: true }],
+          );
+          closeAcked(emergencyId);
+        } else setAckFailedId(emergencyId);
       } finally {
         setAckingId(null);
       }
@@ -218,7 +226,7 @@ export const EmergencyAlertStrip = () => {
         </Button>
       }
     >
-      신고한 사람이 발신 직후 취소했습니다. 이 신고에는 따로 확인할 일이 없습니다.
+      {notice.viaAck ? CANCELED_ACK_MESSAGE : "신고한 사람이 발신 직후 취소했습니다. 이 신고에는 따로 확인할 일이 없습니다."}
     </AlertBanner>
   ));
 
