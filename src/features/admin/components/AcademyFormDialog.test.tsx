@@ -281,3 +281,31 @@ describe("AcademyFormDialog — 연락처 필수 · 메모 지우기(Ruling 885 
     expect(mockCreate.mock.calls[0][0].memo).toBeUndefined();
   });
 });
+
+// R53 t5 A4 · Ruling 885 ⑤ — 수정에서 연락처를 비우면 칸 아래에 이유를 보이고, 앞뒤 공백은 저장 전에 뺀다.
+describe("AcademyFormDialog — 연락처 오류 문구 · 공백 제거(Ruling 885 ⑤)", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("수정 — 대표 연락처를 비우면 칸 아래에 '대표 연락처를 입력해 주세요' 를 보인다", async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("02-000-0000");
+    expect(screen.queryByText("대표 연락처를 입력해 주세요")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/대표 연락처/), { target: { value: "" } });
+
+    expect(screen.getByText("대표 연락처를 입력해 주세요")).toBeInTheDocument();
+  });
+
+  it("수정 — 앞뒤 공백이 있는 연락처는 공백을 뺀 값으로 보낸다", async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    mockUpdate.mockResolvedValue(undefined as never);
+    render(<AcademyFormDialog academyId="3" onClose={vi.fn()} onDone={vi.fn()} />);
+    await screen.findByDisplayValue("02-000-0000");
+
+    fireEvent.change(screen.getByLabelText(/대표 연락처/), { target: { value: "  032-111-2222  " } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("3", expect.objectContaining({ contact: "032-111-2222" })));
+  });
+});

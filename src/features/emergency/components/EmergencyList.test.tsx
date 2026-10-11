@@ -256,4 +256,17 @@ describe("EmergencyList — 취소된 건", () => {
     // 첫 조회 2회 + 철회 뒤 재조회 2회 이상 — 목록에서 사라지도록 다시 읽는다.
     await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(2));
   });
+
+  it("상세창에서 [확인] 을 눌렀는데 409 EMERGENCY_CANCELED 가 오면 철회 안내를 보이고 상세창을 닫는다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    mockAck.mockRejectedValue(new ApiError(409, "EMERGENCY_CANCELED", "취소된 비상 알림입니다"));
+    render(<EmergencyList />);
+
+    fireEvent.click(await screen.findByText("1호차 · 등원"));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "확인" }));
+
+    expect(await screen.findByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

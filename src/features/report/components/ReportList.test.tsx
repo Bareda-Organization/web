@@ -315,5 +315,9 @@ describe("ReportList — 미처리 카드와 필터의 일관성(R53 A5)", () =>
     // 처리 조건이 달라졌으니 '기타 2' 는 낡은 값이다 — 건수 없이 이름만 보인다.
     expect(screen.getByRole("tab", { name: "기타" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "기타 2" })).not.toBeInTheDocument();
+    // 종류 카드 중 고르지 않은 '차량 이상' 은 센 적이 없으니 0 이 아니라 "-" 로 보인다(탭 이름과 구분하려고 칸의 라벨 쪽을 본다).
+    const vehicleLabel = screen.getAllByText("차량 이상").find((el) => !el.closest('[role="tab"]'));
+    expect(vehicleLabel?.parentElement).toHaveTextContent("-");
+    expect(vehicleLabel?.parentElement).not.toHaveTextContent("0");
   });
 });
