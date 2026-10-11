@@ -30,6 +30,8 @@ import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
 const EMERGENCY_POLL_INTERVAL_MS = 5000;
 
 
+const CANCELED_ACK_MESSAGE = "발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다";
+
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
 
 // §5.16 GET·POST /staff/emergencies(EXC-04, A-16) — 비상 알림 목록·확인. 실시간 수신 팝업은
@@ -100,7 +102,14 @@ export const EmergencyList = () => {
       setDetail(null);
       await load(status, date);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
+      if (cause instanceof ApiError && cause.code === "EMERGENCY_CANCELED") {
+        // Ruling 885 ① — 확인하려는 순간 발신자가 철회했다. 확인 대상이 아니므로 목록을 다시 읽어 취소 건으로 옮기고 이유를 알린다.
+        setDetail(null);
+        await load(status, date);
+        setError(CANCELED_ACK_MESSAGE);
+      } else {
+        setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
+      }
     } finally {
       setAckingId(null);
     }
@@ -159,6 +168,8 @@ export const EmergencyList = () => {
       render: (row) =>
         row.acked ? (
           <Badge tone="added">확인됨</Badge>
+        ) : row.canceledAt !== null ? (
+          <Badge tone="neutral">취소됨</Badge>
         ) : (
           <Button
             variant="secondary"

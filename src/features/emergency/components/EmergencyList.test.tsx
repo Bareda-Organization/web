@@ -227,3 +227,33 @@ describe("EmergencyList — 발신 위치가 없는 건", () => {
     expect(links[0].getAttribute("href")).not.toContain("null");
   });
 });
+
+// R53 t5 A3 · Ruling 885 ① — 발신자가 철회한 신고는 확인할 수 없다. 서버가 409 EMERGENCY_CANCELED 로 거절하므로 화면도 [확인] 을 그리지 않는다.
+describe("EmergencyList — 취소된 건", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CANCELED = { ...ITEM, emergencyId: "9", canceledAt: "2026-09-12T08:02:00" };
+
+  it("취소된 건 행에는 [확인] 이 없고 '취소됨' 이 보인다", async () => {
+    mockGet.mockResolvedValue({ items: [CANCELED], unackedCount: 0 });
+    render(<EmergencyList />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(screen.queryByRole("button", { name: /확인$/ })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("row", { name: /1호차/ })).getByText("취소됨")).toBeInTheDocument();
+  });
+
+  it("확인 직전에 신고가 철회돼 409 EMERGENCY_CANCELED 가 오면 철회 안내를 보이고 목록을 다시 불러온다", async () => {
+    mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
+    mockAck.mockRejectedValue(new ApiError(409, "EMERGENCY_CANCELED", "취소된 비상 알림입니다"));
+    render(<EmergencyList />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /확인$/ }));
+
+    expect(await screen.findByText("발신자가 이 비상 신고를 철회했습니다. 확인할 필요가 없습니다")).toBeInTheDocument();
+    // 첫 조회 2회 + 철회 뒤 재조회 2회 이상 — 목록에서 사라지도록 다시 읽는다.
+    await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(2));
+  });
+});

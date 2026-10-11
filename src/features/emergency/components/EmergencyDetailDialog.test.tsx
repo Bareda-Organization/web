@@ -148,3 +148,14 @@ describe("EmergencyDetailDialog — 발신 위치가 없는 건", () => {
     expect(screen.queryByText("위치 확인 불가")).not.toBeInTheDocument();
   });
 });
+
+// R53 t5 A3 · Ruling 885 ① — 취소된 건은 타임라인에 "취소됨" 을 그리고 확인 대기로 보이지 않는다. [확인] 도 없다.
+describe("EmergencyDetailDialog — 취소된 건", () => {
+  it("타임라인 끝이 '취소됨' 이고 '학원 확인 대기' · [확인] 이 없다", () => {
+    render(<EmergencyDetailDialog emergency={{ ...EMERGENCY, canceledAt: "2026-09-12T08:03:00" }} onClose={vi.fn()} onAck={vi.fn()} />);
+
+    expect(screen.getByText(/2026-09-12 08:03 취소/)).toBeInTheDocument();
+    expect(screen.queryByText("학원 확인 대기")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "확인" })).not.toBeInTheDocument();
+  });
+});
