@@ -31,18 +31,23 @@ vi.mock("../api", () => ({
   deleteTransfer: vi.fn(),
   getManagers: vi.fn(),
   patchRunAssignment: vi.fn(),
+  postWaypoint: vi.fn(),
+  deleteWaypoint: vi.fn(),
 }));
 
 // R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
 vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
+  StopAddressSearch: () => null,
 }));
 
 // Ruling 873 — 운행 상세는 오늘 현황과 같은 학원 채널 구독으로 갱신한다. 시험은 실제 WebSocket 을 열지 않고
 // `useRealtimeChannel` 을 가짜로 바꿔 봉투 전달 · 재연결 · 연결 상태를 직접 제어한다(DashboardPage.test.tsx 와 같은 방식).
 // 기본은 끊긴 상태(주기 갱신 7초) — 구독 시험만 "connected" 로 바꾼다.
+// A-15(Ruling 893) — [경유 지점] 은 역할을 본다. 기본은 학원 관계자다.
+let mockRole: string | undefined = "staff";
 vi.mock("@/features/auth", () => ({
-  useAuthSession: () => ({ session: { academy: { id: "1" } } }),
+  useAuthSession: () => ({ session: { academy: { id: "1" }, role: mockRole } }),
 }));
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let capturedOnReconnected: (() => void) | undefined;
@@ -90,6 +95,7 @@ const mockDeleteTransfer = vi.mocked(deleteTransfer);
 beforeEach(() => {
   mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   mockConnectionState = "disconnected";
+  mockRole = "staff";
   capturedOnEnvelope = undefined;
   capturedOnReconnected = undefined;
 });
@@ -1329,5 +1335,58 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     expect(await screen.findByText("이 학원의 회차가 아니라서 열 수 없습니다")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "오늘 운행 목록으로" })).toBeInTheDocument();
     expect(screen.getByText(/403 ACADEMY_SCOPE_VIOLATION/)).toBeInTheDocument();
+  });
+});
+
+// Ruling 893(A-15) — [경유 지점] 단추: 학원 관계자 + 확정된 회차에만 보이고, 확정 전·운행 시작 뒤에는 단추 대신 이유 한 줄이다.
+describe("TodayRunPage — 경유 지점 진입(A-15)", () => {
+  afterEach(() => {
+    mockRunIdParam = null;
+    vi.clearAllMocks();
+  });
+
+  const withStatus = (runStatus: "idle" | "confirmed" | "moving" | "finished"): DashboardResponseTypes => ({
+    ...baseDashboard,
+    runs: [{ ...baseDashboard.runs[0], runStatus }],
+  });
+
+  it("확정된 회차에서 학원 관계자에게 [경유 지점] 이 보이고, 누르면 같은 화면 안에 패널이 열린다", async () => {
+    mockGetDashboard.mockResolvedValue(withStatus("confirmed"));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "경유 지점" }));
+
+    expect(await screen.findByRole("region", { name: "경유 지점" })).toBeInTheDocument();
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it("확정 전(idle) 회차는 단추 대신 이유 한 줄", async () => {
+    mockGetDashboard.mockResolvedValue(withStatus("idle"));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText(/아직 확정 전인 회차예요/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "경유 지점" })).not.toBeInTheDocument();
+  });
+
+  it.each(["moving", "finished"] as const)("%s 회차는 단추 대신 운행 시작 이유 한 줄", async (status) => {
+    mockGetDashboard.mockResolvedValue(withStatus(status));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    expect(await screen.findByText(/운행이 시작되어 경유 지점을 바꿀 수 없어요/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "경유 지점" })).not.toBeInTheDocument();
+  });
+
+  it("학원 관계자가 아니면(메인 관리자) 단추도 이유도 없다", async () => {
+    mockRole = "system_admin";
+    mockGetDashboard.mockResolvedValue(withStatus("confirmed"));
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    render(<TodayRunPage />);
+
+    await screen.findByText("김학생");
+    expect(screen.queryByRole("button", { name: "경유 지점" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/경유 지점을 바꿀 수 없어요/)).not.toBeInTheDocument();
   });
 });
