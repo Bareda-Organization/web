@@ -34,7 +34,7 @@ describe("RealtimeConnectionStrip", () => {
     mockConnectionState = "reconnecting";
     render(<RealtimeConnectionStrip />);
 
-    expect(screen.getByText("재연결 시도 중입니다")).toBeInTheDocument();
+    expect(screen.getByText("재연결 시도 중")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "다시 연결" })).not.toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe("RealtimeConnectionStrip", () => {
     mockConnectionState = "reconnecting";
     render(<RealtimeConnectionStrip />);
 
-    const wrapper = screen.getByText("재연결 시도 중입니다").closest("[data-realtime-strip]");
+    const wrapper = screen.getByText("재연결 시도 중").closest("[data-realtime-strip]");
     expect(wrapper).not.toBeNull();
     expect(getComputedStyle(wrapper as Element).paddingLeft).toBe("24px");
     expect(getComputedStyle(wrapper as Element).paddingRight).toBe("24px");

@@ -5,7 +5,7 @@ import { getWsConnectionNotice } from "./wsConnectionNotice";
 describe("getWsConnectionNotice", () => {
   it("재연결 대기 중이면 재연결 안내를 돌려준다", () => {
     expect(getWsConnectionNotice("reconnecting")).toEqual({
-      title: "재연결 시도 중입니다",
+      title: "재연결 시도 중",
       body: "연결될 때까지 자동으로 계속 시도합니다. 그동안 새 소식이 늦게 보일 수 있습니다.",
     });
   });
