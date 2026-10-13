@@ -35,7 +35,9 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
   const objectUrlRef = useRef<string | undefined>(undefined);
   // 기존 사진은 로그인 토큰으로 받아 온다(Ruling 377) — 받기 전·실패 땐 undefined 라 "사진 없음" 표시.
   // 서버에서 지운 뒤에는 부모가 prop 을 비우기 전에도 사진 없음으로 그린다.
-  const [removed, setRemoved] = useState(false);
+  // 지운 사진의 URL 을 들고 있다 — 부모가 다른 사진 URL 을 주면 지운 것이 아니므로 다시 보인다.
+  const [removedUrl, setRemovedUrl] = useState<string | undefined>(undefined);
+  const removed = existingPhotoUrl !== undefined && removedUrl === existingPhotoUrl;
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const shownExistingUrl = removed ? undefined : existingPhotoUrl;
@@ -106,7 +108,7 @@ export const PhotoUploadField = ({ label = "사진", existingPhotoUrl, onChange,
     setRemoving(true);
     try {
       await onRemoveExisting();
-      setRemoved(true);
+      setRemovedUrl(existingPhotoUrl);
       setLocalError(undefined);
     } catch {
       setLocalError(REMOVE_FAILED_NOTE);

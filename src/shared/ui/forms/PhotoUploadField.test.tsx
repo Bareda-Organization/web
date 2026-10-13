@@ -194,6 +194,18 @@ describe("PhotoUploadField — 저장된 사진 [제거]", () => {
     expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull();
   });
 
+  it("지운 뒤 부모가 다른 사진 URL 을 주면 그 새 사진을 보인다", async () => {
+    const onRemoveExisting = vi.fn().mockResolvedValue(undefined);
+    const { container, rerender } = await renderExisting({ onRemoveExisting });
+    fireEvent.click(screen.getByRole("button", { name: "저장된 사진 제거" }));
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+    await waitFor(() => expect(container.querySelector("img")).toBeNull());
+
+    rerender(<PhotoUploadField onChange={vi.fn()} onRemoveExisting={onRemoveExisting} existingPhotoUrl="/api/v1/files/photos/b.jpg" />);
+
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull());
+  });
+
   it("확인 대화상자에서 취소하면 서버를 부르지 않고 사진이 남는다", async () => {
     const onRemoveExisting = vi.fn().mockResolvedValue(undefined);
     const { container } = await renderExisting({ onRemoveExisting });
