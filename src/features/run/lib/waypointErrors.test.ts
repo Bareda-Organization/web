@@ -29,6 +29,7 @@ describe("describeWaypointFailure", () => {
     expect(fail(404, "WAYPOINT_NOT_FOUND").reload).toBe(true);
     expect(fail(409, "PREVIEW_STALE").reload).toBe(false);
     expect(fail(409, "PREVIEW_STALE").redoPreview).toBe(true);
+    expect(fail(403, "CHANGE_WINDOW_CLOSED").redoPreview).toBe(true);
   });
 
   it("알 수 없는 실패는 일반 문구", () => {

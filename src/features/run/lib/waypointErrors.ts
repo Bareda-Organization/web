@@ -4,7 +4,7 @@ export type WaypointFailure = {
   message: string;
   // 안내 뒤 경유 지점 목록을 서버 값으로 새로 읽는다(마감 · 이미 사라진 경유 지점).
   reload: boolean;
-  // 낡은 미리보기 — 입력은 두고 미리보기만 다시 받게 한다.
+  // 미리보기를 버린다(입력은 둔다) — 낡은 미리보기 · 마감처럼 그 미리보기로는 배포할 수 없을 때.
   redoPreview: boolean;
 };
 
@@ -19,7 +19,7 @@ export const describeWaypointFailure = (cause: unknown): WaypointFailure => {
   if (!(cause instanceof ApiError)) return plain("경유 지점을 처리하지 못했어요. 잠시 뒤 다시 시도해 주세요");
   switch (cause.code) {
     case "CHANGE_WINDOW_CLOSED":
-      return plain("변경 마감 시각이 지나 경유 지점을 바꿀 수 없어요 (운행 시작 뒤, 또는 출발 시각 10분 뒤)", { reload: true });
+      return plain("변경 마감 시각이 지나 경유 지점을 바꿀 수 없어요 (운행 시작 뒤, 또는 출발 시각 10분 뒤)", { reload: true, redoPreview: true });
     case "RUN_CANCELED":
       return plain("취소된 회차라 경유 지점을 바꿀 수 없어요");
     case "PREVIEW_STALE":

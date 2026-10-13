@@ -226,6 +226,18 @@ describe("RunWaypointPanel", () => {
     await waitFor(() => expect(mockGetRunRoute.mock.calls.length).toBeGreaterThan(routeCallsBefore));
   });
 
+  it("배포 중 403 CHANGE_WINDOW_CLOSED 면 미리보기를 버려 [배포] 를 다시 누를 수 없다", async () => {
+    mockPost.mockResolvedValueOnce(preview()).mockRejectedValueOnce(new ApiError(403, "CHANGE_WINDOW_CLOSED", "원문"));
+    renderPanel();
+    await requestAddPreview();
+
+    fireEvent.click(screen.getByRole("button", { name: "배포" }));
+
+    expect(await screen.findByText(/변경 마감 시각이 지나/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "배포" })).not.toBeInTheDocument();
+    expect(screen.queryByText("추가 미리보기")).not.toBeInTheDocument();
+  });
+
   it("409 PREVIEW_STALE 은 낡은 미리보기를 버리고 다시 미리보기를 누르게 한다", async () => {
     mockPost.mockResolvedValueOnce(preview()).mockRejectedValueOnce(new ApiError(409, "PREVIEW_STALE", "원문"));
     renderPanel();
