@@ -26,7 +26,7 @@ type RawStudentListItem = {
 };
 
 type RawStudentListResponse = {
-  summary?: { total: number; class_count: number; guardian_unlinked: number; address_missing: number; can_go_alone: number } | null;
+  summary?: { total: number; class_count: number; guardian_unlinked: number; address_missing: number; can_go_alone: number; class_names?: string[] } | null;
   items: RawStudentListItem[];
   page: number;
   size: number;
@@ -66,6 +66,7 @@ export const getStudents = async (
           guardianUnlinked: raw.summary.guardian_unlinked,
           addressMissing: raw.summary.address_missing,
           canGoAlone: raw.summary.can_go_alone,
+          classNames: raw.summary.class_names,
         }
       : null,
     items: raw.items.map(toListItem),

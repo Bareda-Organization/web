@@ -54,6 +54,15 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
     ]);
   });
 
+  it("getStudents 는 summary.class_names 를 classNames 로 옮기고, 없으면 undefined 로 둔다", async () => {
+    const body = (summary: unknown) => ({ success: true, data: { summary, items: [], page: 0, size: 20, total_count: 0, has_next: false } });
+    const base = { total: 3, class_count: 2, guardian_unlinked: 0, address_missing: 0, can_go_alone: 0 };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockJsonResponse(200, body({ ...base, class_names: ["고등 심화반", "초등 기본반"] }))).mockResolvedValueOnce(mockJsonResponse(200, body(base))));
+
+    expect((await getStudents(0, 20)).summary?.classNames).toEqual(["고등 심화반", "초등 기본반"]);
+    expect((await getStudents(0, 20)).summary?.classNames).toBeUndefined();
+  });
+
   it("getStudentDetail 은 canGoAlone·guardians 등 상세 전용 필드까지 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",

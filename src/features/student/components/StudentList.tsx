@@ -240,7 +240,7 @@ export const StudentList = () => {
               <Select
                 aria-label="반 필터"
                 value={className}
-                options={[{ value: "", label: "전체" }, ...classNames.map((name) => ({ value: name, label: name }))]}
+                options={[{ value: "", label: "전체" }, ...(summary?.classNames ?? classNames).map((name) => ({ value: name, label: name }))]}
                 onChange={(event) => handleConditionChange({ className: event.target.value })}
               />
             </FilterGroup>
