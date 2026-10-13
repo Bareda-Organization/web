@@ -303,4 +303,13 @@ describe("StudentList — 상태 탭 · 반 필터 · 지표(Ruling 815)", () =>
 
     await waitFor(() => expect(mockGetStudents).toHaveBeenLastCalledWith(0, 20, undefined, { className: "중등 선행반", filter: undefined }));
   });
+
+  it("반 선택지는 summary 의 학원 전체 반 목록을 쓴다 — 이 쪽에 없는 반도 보인다", async () => {
+    mockGetStudents.mockResolvedValue({ ...page, summary: { ...page.summary, classNames: ["고등 심화반", "중등 선행반", "초등 기본반"] } });
+    render(<StudentList />);
+    await screen.findByText("학생1");
+
+    const options = within(screen.getByLabelText("반 필터")).getAllByRole("option").map((option) => option.textContent);
+    expect(options).toEqual(["전체", "고등 심화반", "중등 선행반", "초등 기본반"]);
+  });
 });

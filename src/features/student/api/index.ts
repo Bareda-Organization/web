@@ -26,7 +26,7 @@ type RawStudentListItem = {
 };
 
 type RawStudentListResponse = {
-  summary?: { total: number; class_count: number; guardian_unlinked: number; address_missing: number; can_go_alone: number } | null;
+  summary?: { total: number; class_count: number; guardian_unlinked: number; address_missing: number; can_go_alone: number; class_names?: string[] } | null;
   items: RawStudentListItem[];
   page: number;
   size: number;
@@ -66,6 +66,7 @@ export const getStudents = async (
           guardianUnlinked: raw.summary.guardian_unlinked,
           addressMissing: raw.summary.address_missing,
           canGoAlone: raw.summary.can_go_alone,
+          classNames: raw.summary.class_names,
         }
       : null,
     items: raw.items.map(toListItem),
@@ -153,6 +154,11 @@ export const updateStudent = async (
     file: request.photo ? { field: "photo", value: request.photo } : undefined,
   });
   return toDetail(raw);
+};
+
+// DELETE /staff/students/{id}/photo (STU-03 · R56 K2 · Ruling 894③) — 저장 파일과 photo_url 을 함께 지운다. 204, 사진이 이미 없어도 204(멱등).
+export const deleteStudentPhoto = async (studentId: string): Promise<void> => {
+  await apiFetch<void>(`/staff/students/${studentId}/photo`, { method: "DELETE" });
 };
 
 // DELETE /staff/students/{id} (STU-04) — 퇴원 soft delete. 오늘 명단은 유지, 내일부터 제외.

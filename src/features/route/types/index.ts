@@ -1,5 +1,5 @@
 // features/route 가 다루는 타입 전부 — 고정 노선 편성 · 정차 순서 최적화(§5.9, RTE-01·09,
-// A-08) + 확정 노선 경유 지점 지정(§5.15, RTE-10, A-15 — 타입만 남고 화면은 없다, Ruling 325).
+// A-08) + 확정 노선 경유 지점 지정(§5.15, RTE-10, A-15 — 화면은 오늘 운행 상세의 [경유 지점] 패널 `features/run`, Ruling 893).
 // (지시서 화면 4 — "고정 노선 편성 · 정차 순서 최적화").
 // snake_case ↔ camelCase 변환은 api/*.ts 호출부 경계에서 한 번만 한다.
 
@@ -17,6 +17,8 @@ export type RouteStop = {
   isDestination?: boolean;
   // R39 Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
   isWaypoint?: boolean;
+  // R56 K1 — §5.19 `waypoint_id`(경유 행만 값). `DELETE /staff/runs/{runId}/waypoints/{waypointId}` 의 경로 값이다.
+  waypointId?: string | null;
   // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
   change?: "added" | "skipped" | null;
   // Ruling 819 — §5.9 상세 응답의 `rider_count`(그 편성의 요일·방향 요일별 주소가 이 정차지로 매칭된 재원 학생 수). 경로(path) 응답에는 없다.

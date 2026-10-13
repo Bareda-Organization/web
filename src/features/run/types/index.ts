@@ -197,3 +197,49 @@ export type AssignmentResponseTypes = {
   assignments: AssignmentEntryResponseTypes[];
   warnings: AssignmentWarningResponseTypes[];
 };
+
+// §5.15 POST /staff/runs/{runId}/waypoints · DELETE …/waypoints/{waypointId} — 경유 지점 미리보기·배포(A-15, Ruling 893).
+// 요청 `note` 는 화면이 받지 않아 싣지 않는다(§5.19 응답에 안 실려 다시 볼 곳이 없다).
+export type WaypointRequestTypes = {
+  address?: string;
+  lat?: number;
+  lng?: number;
+  label: string;
+  // 설 자리(1부터). 생략하면 맨 뒤.
+  seq?: number;
+  apply: boolean;
+  // apply=true 일 때 필수 — 미리보기 응답의 값.
+  previewToken?: string;
+};
+
+export type WaypointDeleteRequestTypes = { apply: boolean; previewToken?: string };
+
+export type WaypointPreviewStopTypes = {
+  seq: number;
+  stopName: string;
+  eta: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export type WaypointRoutePreviewTypes = {
+  stopsBefore: WaypointPreviewStopTypes[];
+  stopsAfter: WaypointPreviewStopTypes[];
+  // 순서가 바뀐 · 빠진 승하차지(이름만 쓴다).
+  reordered: { stopId: string; stopName: string | null }[];
+  removed: { stopId: string; stopName: string | null }[];
+  roadPathBefore: { lat: number; lng: number }[];
+  roadPathAfter: { lat: number; lng: number }[];
+};
+
+export type WaypointResponseTypes = {
+  waypointId: string | null;
+  // 미리보기일 때만 값이 있다 — 배포 요청에 그대로 돌려보낸다.
+  previewToken: string | null;
+  applied: boolean;
+  routePreview: WaypointRoutePreviewTypes;
+  estDurationBefore: number | null;
+  estDurationAfter: number | null;
+  estDistanceBefore: number | null;
+  estDistanceAfter: number | null;
+};

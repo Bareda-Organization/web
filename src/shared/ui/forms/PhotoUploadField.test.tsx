@@ -150,12 +150,11 @@ describe("PhotoUploadField — 보호된 기존 사진", () => {
   });
 });
 
-// R52 M7 · Ruling 874⑦ — 사진 삭제 API 가 없어 저장된 사진은 [제거] 를 숨기고 교체만 받는다.
+// R56 K2 · Ruling 894③ — 874⑦ 이 숨겼던 저장된 사진의 [제거] 를 되살린다(서버 `DELETE /staff/students/{id}/photo`).
 // 새로 고른(아직 저장 전) 사진을 취소하는 [제거] 는 그대로이고, 취소하면 저장된 사진이 다시 보인다.
-describe("PhotoUploadField — 저장된 사진은 교체만", () => {
+describe("PhotoUploadField — 저장된 사진 [제거]", () => {
   const okImage = () =>
     ({ ok: true, status: 200, blob: async () => new Blob(["x"], { type: "image/jpeg" }) }) as Response;
-  const REPLACE_ONLY = /교체만 할 수 있습니다/;
 
   beforeEach(() => {
     let counter = 0;
@@ -170,32 +169,80 @@ describe("PhotoUploadField — 저장된 사진은 교체만", () => {
     setAccessToken(null);
   });
 
-  const renderExisting = async (onChange = vi.fn()) => {
-    const view = render(<PhotoUploadField onChange={onChange} existingPhotoUrl="/api/v1/files/photos/a.jpg" />);
+  const renderExisting = async (props: { onChange?: () => void; onRemoveExisting?: () => Promise<void> } = {}) => {
+    const view = render(
+      <PhotoUploadField
+        onChange={props.onChange ?? vi.fn()}
+        onRemoveExisting={props.onRemoveExisting}
+        existingPhotoUrl="/api/v1/files/photos/a.jpg"
+      />,
+    );
     await waitFor(() => expect(view.container.querySelector("img")).not.toBeNull());
     return view;
   };
 
-  it("저장된 사진만 있을 때는 [제거] 가 없고 교체만 가능하다는 안내가 나온다", async () => {
+  it("저장된 사진에 [제거] 가 있고, 확인 대화상자에서 지우면 서버 삭제를 부른 뒤 사진 없음이 된다", async () => {
+    const onRemoveExisting = vi.fn().mockResolvedValue(undefined);
+    const { container } = await renderExisting({ onRemoveExisting });
+
+    fireEvent.click(screen.getByRole("button", { name: "저장된 사진 제거" }));
+    expect(onRemoveExisting).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+
+    await waitFor(() => expect(onRemoveExisting).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(container.querySelector("img")).toBeNull());
+    expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull();
+  });
+
+  it("지운 뒤 부모가 다른 사진 URL 을 주면 그 새 사진을 보인다", async () => {
+    const onRemoveExisting = vi.fn().mockResolvedValue(undefined);
+    const { container, rerender } = await renderExisting({ onRemoveExisting });
+    fireEvent.click(screen.getByRole("button", { name: "저장된 사진 제거" }));
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+    await waitFor(() => expect(container.querySelector("img")).toBeNull());
+
+    rerender(<PhotoUploadField onChange={vi.fn()} onRemoveExisting={onRemoveExisting} existingPhotoUrl="/api/v1/files/photos/b.jpg" />);
+
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull());
+  });
+
+  it("확인 대화상자에서 취소하면 서버를 부르지 않고 사진이 남는다", async () => {
+    const onRemoveExisting = vi.fn().mockResolvedValue(undefined);
+    const { container } = await renderExisting({ onRemoveExisting });
+
+    fireEvent.click(screen.getByRole("button", { name: "저장된 사진 제거" }));
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+
+    expect(onRemoveExisting).not.toHaveBeenCalled();
+    expect(container.querySelector("img")).not.toBeNull();
+  });
+
+  it("서버 삭제가 실패하면 사진을 그대로 두고 실패 안내를 보인다", async () => {
+    const onRemoveExisting = vi.fn().mockRejectedValue(new Error("boom"));
+    const { container } = await renderExisting({ onRemoveExisting });
+
+    fireEvent.click(screen.getByRole("button", { name: "저장된 사진 제거" }));
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+
+    expect(await screen.findByText(/사진을 지우지 못했습니다/)).toBeInTheDocument();
+    expect(container.querySelector("img")).not.toBeNull();
+  });
+
+  it("삭제 수단(onRemoveExisting)이 없으면 저장된 사진에 [제거] 가 없다", async () => {
     await renderExisting();
 
+    expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull();
     expect(screen.queryByText("제거")).toBeNull();
-    expect(screen.getByText(REPLACE_ONLY)).toBeInTheDocument();
   });
 
-  it("저장된 사진이 없는 신규 등록 화면에는 교체만 가능하다는 안내가 뜨지 않는다", () => {
-    render(<PhotoUploadField onChange={vi.fn()} />);
-
-    expect(screen.queryByText(REPLACE_ONLY)).toBeNull();
-  });
-
-  it("저장된 사진 위에 새 사진을 고르면 [제거] 가 생기고, 누르면 저장된 사진으로 돌아가며 [제거] 는 다시 사라진다", async () => {
+  it("저장된 사진 위에 새 사진을 고르면 [제거] 는 선택 취소이고, 누르면 저장된 사진으로 돌아가며 [제거] 는 다시 사라진다", async () => {
     const onChange = vi.fn();
-    const { container } = await renderExisting(onChange);
+    const { container } = await renderExisting({ onChange });
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
 
     fireEvent.change(input, { target: { files: [jpegFile()] } });
     expect(onChange).toHaveBeenLastCalledWith(expect.any(File));
+    expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull();
     fireEvent.click(screen.getByText("제거"));
 
     expect(onChange).toHaveBeenLastCalledWith(null);

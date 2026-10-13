@@ -30,6 +30,8 @@ export type StudentListSummaryTypes = {
   guardianUnlinked: number;
   addressMissing: number;
   canGoAlone: number;
+  // 학원 재원 학생의 반 이름 전체(가나다순) — 서버가 아직 안 주면 없다(반 선택지는 본 쪽의 반 이름으로 대신한다).
+  classNames?: string[];
 };
 
 // 목록 필터 — guardian_unlinked 보호자 미연결 · address_missing 주소 미등록.

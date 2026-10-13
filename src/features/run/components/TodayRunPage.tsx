@@ -22,6 +22,7 @@ import { getRunRoute } from "@/features/route";
 import { getDashboard, getRunRoster, getRunsLive } from "../api";
 import type { DashboardRunResponseTypes, RosterItemResponseTypes, RunLiveItemResponseTypes, RunStatus } from "../types";
 import { lastSeenLine } from "../lib/runBoard";
+import { waypointAccess } from "../lib/waypointGate";
 import { rosterForStop, type RosterStatusFilter } from "../lib/rosterBoard";
 import { useNow } from "../lib/useNow";
 import { ForcedAddDialog } from "./ForcedAddDialog";
@@ -29,6 +30,7 @@ import { ManagerAssignmentDialog } from "./ManagerAssignmentDialog";
 import { RunInfoCard } from "./RunInfoCard";
 import { RunRosterCard } from "./RunRosterCard";
 import { RunStrip } from "./RunStrip";
+import { RunWaypointPanel } from "./RunWaypointPanel";
 import { StudentTransferDialog } from "./StudentTransferDialog";
 import { TodayRunAlerts } from "./TodayRunAlerts";
 import { TransferCancelDialog } from "./TransferCancelDialog";
@@ -88,6 +90,9 @@ export const TodayRunPage = () => {
   const [loading, setLoading] = useState(true);
   const [forcedAddOpen, setForcedAddOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  // A-15 — [경유 지점] 패널(같은 화면 안, 새 라우트 없음).
+  // 패널을 연 회차 id — 선택한 회차가 그 회차일 때만 연 것으로 본다(회차가 바뀌면 자동으로 닫힌다).
+  const [waypointRunId, setWaypointRunId] = useState<string | null>(null);
   // A-07 — [다른 버스로]를 누른 학생. null 이면 대화상자가 닫혀 있다.
   const [transferTarget, setTransferTarget] = useState<RosterItemResponseTypes | null>(null);
   // A-07 — [이동 취소]를 누른 이동 대기 학생(§5.8.1). null 이면 확인 대화상자가 닫혀 있다.
@@ -119,6 +124,7 @@ export const TodayRunPage = () => {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   const selectedRunId = runIdParam ?? (runs[0]?.runId ?? null);
+  const waypointOpen = waypointRunId != null && waypointRunId === selectedRunId;
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
   // 명단·위치·노선 조회의 의존성은 회차 객체가 아니라 이 원시값이다 — 회차 목록을 다시 받을 때마다 배열이 새로
   // 만들어져도 값이 같으면 다시 부르지 않는다(F01-04).
@@ -129,6 +135,8 @@ export const TodayRunPage = () => {
   // A-07(UF-M-04) — 확정 전(①구간, idle) 회차에서만 학생을 다른 버스로 옮길 수 있고, 도착 회차는
   // 같은 날짜(이 화면은 오늘)·같은 방향의 확정 전 다른 버스다. 확정된 회차는 추가에 해당해 막힌다.
   const canTransfer = selectedRun?.runStatus === "idle";
+  // A-15(Ruling 893) — 학원 관계자 + 확정된 회차에만 연다. 마감(출발 + 10분)은 서버의 403 으로 안내한다.
+  const waypoint = selectedRun ? waypointAccess(session?.role, selectedRun.runStatus) : null;
   const transferCandidates = useMemo(
     () =>
       selectedRun
@@ -472,6 +480,11 @@ export const TodayRunPage = () => {
               >
                 강제 승하차지 추가
               </Button>
+              {waypoint?.kind === "open" ? (
+                <Button variant="secondary" icon="map-pin" onClick={() => setWaypointRunId((openRunId) => (openRunId === selectedRunId ? null : selectedRunId))}>
+                  경유 지점
+                </Button>
+              ) : null}
             </>
           ) : null
         }
@@ -480,6 +493,18 @@ export const TodayRunPage = () => {
       {error ? <AlertBanner tone="missed" title={error} /> : null}
 
       <RunStrip runs={runs} selectedRunId={selectedRunId} nowMs={nowMs} onSelect={(runId) => router.replace(`/today-run?runId=${runId}`)} />
+      {waypoint?.kind === "blocked" ? <StyledCrewLabel>{waypoint.reason}</StyledCrewLabel> : null}
+      {waypoint?.kind === "open" && waypointOpen && selectedRun ? (
+        <RunWaypointPanel
+          key={selectedRun.runId}
+          runId={selectedRun.runId}
+          onClose={() => setWaypointRunId(null)}
+          onChanged={() => {
+            void loadRoute(selectedRun.runId, selectedRun.runStatus);
+            refreshAll(true);
+          }}
+        />
+      ) : null}
 
       {selectedRun ? (
         <TodayRunAlerts
