@@ -14,7 +14,7 @@ import {
   PhotoUploadField,
   Select,
 } from "@/shared/ui";
-import { createStudent, getStudentDetail, updateStudent } from "../api";
+import { createStudent, deleteStudentPhoto, getStudentDetail, updateStudent } from "../api";
 import type {
   StudentGender,
   StudentGuardianTypes,
@@ -244,6 +244,14 @@ export const StudentForm = ({
             <PhotoUploadField
               existingPhotoUrl={existingPhotoUrl}
               onChange={setPhoto}
+              onRemoveExisting={
+                studentId
+                  ? async () => {
+                      await deleteStudentPhoto(studentId);
+                      setExistingPhotoUrl(undefined);
+                    }
+                  : undefined
+              }
             />
             <Input
               label="이름"

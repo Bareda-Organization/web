@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getStudentDetail, getStudents } from "./index";
+import { deleteStudentPhoto, getStudentDetail, getStudents } from "./index";
 
 // §5.11 STU-01 — snake_case ↔ camelCase 변환 경계. student_id 는 문자열 PK 라
 // 다른 관리 화면(숫자 id)과 타입이 다르다는 점을 이 테스트가 함께 고정한다.
@@ -84,5 +84,23 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
     expect(result.guardians).toEqual([{ guardianId: "7", name: "최부모", phone: "010-1111-2222", accountId: "5" }]);
     expect(result.accountId).toBe("10");
     expect(result.gender).toBe("male");
+  });
+});
+
+// R56 K2 · Ruling 894③ — DELETE /staff/students/{id}/photo → 204(본문 없음). 사진이 이미 없어도 204 라 멱등이다.
+describe("student api — deleteStudentPhoto", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("DELETE /staff/students/{id}/photo 를 부른다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await deleteStudentPhoto("stu-1");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/staff/students/stu-1/photo");
+    expect(init.method).toBe("DELETE");
   });
 });

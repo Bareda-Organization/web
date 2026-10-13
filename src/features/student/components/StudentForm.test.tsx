@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmLeave, setLeaveWarning } from "@/shared/lib/navigation/leaveGuard";
 import { StudentForm } from "./StudentForm";
-import { createStudent, getStudentDetail, updateStudent } from "../api";
+import { createStudent, deleteStudentPhoto, getStudentDetail, updateStudent } from "../api";
 
 // §5.11 STU-02·03 · API_SPEC §1.9 — 등록이 서버에서 거부되면 화면이 조용히
 // onDone 을 호출해 넘어가지 않고 오류 문구를 보여줘야 한다.
@@ -14,6 +14,7 @@ vi.mock("../api", () => ({
   createStudent: vi.fn(),
   updateStudent: vi.fn(),
   getStudentDetail: vi.fn(),
+  deleteStudentPhoto: vi.fn(),
   getStudentWeeklyAddresses: vi.fn(async () => []),
 }));
 
@@ -256,3 +257,46 @@ describe("StudentForm — 저장한 학생 id 전달", () => {
   });
 });
 
+// R56 K2 · Ruling 894③ — 수정 화면의 저장된 사진 [제거] 는 서버 삭제(DELETE …/photo)를 부르고 사진 없음이 된다. 등록 화면에는 지울 사진이 없다.
+describe("StudentForm — 저장된 사진 [제거]", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const withPhoto = {
+    studentId: "1",
+    name: "김바래",
+    studentPhone: null,
+    photoUrl: "/api/v1/files/photos/a.jpg",
+    gender: null,
+    birthDate: null,
+    grade: null,
+    className: null,
+    note: null,
+    canGoAlone: false,
+    guardians: [],
+    accountId: null,
+  };
+
+  it("확인 후 지우면 그 학생의 사진 삭제를 부른다", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(["x"], { type: "image/jpeg" }) } as Response));
+    URL.createObjectURL = vi.fn(() => "blob:photo");
+    URL.revokeObjectURL = vi.fn();
+    vi.mocked(getStudentDetail).mockResolvedValue(withPhoto);
+    vi.mocked(deleteStudentPhoto).mockResolvedValue(undefined);
+    render(<StudentForm studentId="1" onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "저장된 사진 제거" }));
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+
+    await waitFor(() => expect(deleteStudentPhoto).toHaveBeenCalledWith("1"));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull());
+    vi.unstubAllGlobals();
+  });
+
+  it("등록 화면에는 저장된 사진이 없어 [제거] 가 없다", () => {
+    render(<StudentForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "저장된 사진 제거" })).toBeNull();
+  });
+});
