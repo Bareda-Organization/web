@@ -28,6 +28,7 @@ type RawRouteStop = {
   lng: number;
   is_destination?: boolean;
   is_waypoint?: boolean;
+  waypoint_id?: string | number | null;
   change?: "added" | "skipped" | null;
   rider_count?: number;
 };
@@ -63,6 +64,7 @@ const toStop = (raw: RawRouteStop): RouteStop => ({
   lng: raw.lng,
   isDestination: raw.is_destination ?? false,
   isWaypoint: raw.is_waypoint ?? false,
+  waypointId: raw.waypoint_id == null ? null : asIdString(raw.waypoint_id),
   change: raw.change ?? null,
   riderCount: raw.rider_count,
 });

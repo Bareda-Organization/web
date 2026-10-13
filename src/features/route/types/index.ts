@@ -17,6 +17,8 @@ export type RouteStop = {
   isDestination?: boolean;
   // R39 Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
   isWaypoint?: boolean;
+  // R56 K1 — §5.19 `waypoint_id`(경유 행만 값). `DELETE /staff/runs/{runId}/waypoints/{waypointId}` 의 경로 값이다.
+  waypointId?: string | null;
   // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
   change?: "added" | "skipped" | null;
   // Ruling 819 — §5.9 상세 응답의 `rider_count`(그 편성의 요일·방향 요일별 주소가 이 정차지로 매칭된 재원 학생 수). 경로(path) 응답에는 없다.
