@@ -580,7 +580,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
 
       expect(await screen.findByText("오늘 등록된 회차가 없습니다")).toBeInTheDocument();
       expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
-      expect(screen.queryByText("재연결 시도 중입니다")).not.toBeInTheDocument();
+      expect(screen.queryByText("재연결 시도 중")).not.toBeInTheDocument();
       expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
     },
   );
