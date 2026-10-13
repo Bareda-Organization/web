@@ -4,7 +4,8 @@ import { ApiError, setAccessToken } from "@/shared/lib/http";
 import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget";
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
-import { getDashboard, getManagers, getRunRoster, getRunsLive, patchRunAssignment, postForcedAdd } from "./index";
+import { getRunRoute } from "@/features/route";
+import { deleteWaypoint, getDashboard, getManagers, getRunRoster, getRunsLive, patchRunAssignment, postForcedAdd, postWaypoint } from "./index";
 
 // 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06·A-14)이 부르는
 // 엔드포인트를 실제 F5-W1 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
@@ -141,6 +142,83 @@ describe("run api — 실서버 계약", () => {
       const apiError = error as ApiError;
       expect(apiError.status).toBe(409);
       expect(apiError.code).toBe("CAPACITY_EXCEEDED");
+      return true;
+    });
+  });
+});
+
+// R56 · Ruling 893 — §5.15 경유 지점 지정·삭제 계약(A-15). Ruling 325 때 뺀 검사를 되살린 것이다.
+// run_id=8(R8)은 R14-T3 가 이 검사용으로 시드에 둔 확정 회차(정차 2곳, V2__seed_data.sql)라 다른 시험을 건드리지 않는다.
+//
+// ⚠ 네이버 Directions 를 부르는 요청은 **미리보기 2회**(추가 1 · 삭제 1)뿐이다 — 배포(apply=true)는 미리보기의 계산을 그대로 쓰고
+// 지도 API 를 다시 부르지 않는다(§5.15). 503 MAP_ROUTE_UNAVAILABLE 재시도를 한 번씩 허용해도 통틀어 4회 이하다.
+// 이 검사는 서버가 K1(`stops[].waypoint_id`)을 싣는 빌드에서만 끝까지 간다.
+const MAP_ROUTE_RETRY_DELAY_MS = 11_000;
+
+const retryOnMapRouteUnavailable = async <T,>(fn: () => Promise<T>): Promise<T> => {
+  try {
+    return await fn();
+  } catch (cause) {
+    if (!(cause instanceof ApiError) || cause.code !== "MAP_ROUTE_UNAVAILABLE") throw cause;
+    await new Promise((resolve) => setTimeout(resolve, MAP_ROUTE_RETRY_DELAY_MS));
+    return fn();
+  }
+};
+
+describe("run api — 경유 지점 실서버 계약(§5.15)", () => {
+  const WAYPOINT = { label: "실서버계약시험-경유지", lat: 37.573, lng: 126.981 };
+
+  it(
+    "미리보기는 확정 노선을 바꾸지 않고, 배포는 그 토큰으로만 되며, 삭제도 미리보기 → 배포로 원래 노선으로 돌아간다(run_id=8)",
+    async ({ skip }) => {
+      if (!backendReachable) skip();
+      setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+      const stopCount = async () => (await getRunRoute("8")).stops.filter((stop) => !stop.isDestination).length;
+      const baseCount = await stopCount();
+
+      const preview = await retryOnMapRouteUnavailable(() => postWaypoint("8", { ...WAYPOINT, apply: false }));
+      expect(preview.applied).toBe(false);
+      expect(preview.previewToken).toBeTruthy();
+      expect(preview.routePreview.stopsAfter.length).toBe(preview.routePreview.stopsBefore.length + 1);
+      expect(await stopCount()).toBe(baseCount);
+
+      const deployed = await postWaypoint("8", { ...WAYPOINT, apply: true, previewToken: preview.previewToken as string });
+      // 이 시점부터는 반드시 되돌린다 — 아래 단언이 던져도 R8 이 경유 지점을 단 채로 남지 않게 한다.
+      let removedOk = false;
+      try {
+        expect(deployed.applied).toBe(true);
+        expect(await stopCount()).toBe(baseCount + 1);
+        const waypointRow = (await getRunRoute("8")).stops.find((stop) => stop.isWaypoint);
+        expect(waypointRow?.waypointId).toBeTruthy();
+
+        const removePreview = await retryOnMapRouteUnavailable(() => deleteWaypoint("8", waypointRow?.waypointId as string, { apply: false }));
+        expect(removePreview.applied).toBe(false);
+        const removed = await deleteWaypoint("8", waypointRow?.waypointId as string, { apply: true, previewToken: removePreview.previewToken as string });
+        removedOk = true;
+        expect(removed.applied).toBe(true);
+        expect(await stopCount()).toBe(baseCount);
+      } finally {
+        if (!removedOk) {
+          const leftover = (await getRunRoute("8")).stops.find((stop) => stop.isWaypoint);
+          if (leftover?.waypointId) {
+            const cleanup = await deleteWaypoint("8", leftover.waypointId, { apply: false }).catch(() => null);
+            if (cleanup?.previewToken) await deleteWaypoint("8", leftover.waypointId, { apply: true, previewToken: cleanup.previewToken }).catch(() => {});
+          }
+        }
+      }
+    },
+    2 * MAP_ROUTE_RETRY_DELAY_MS + 30_000,
+  );
+
+  // 경로 계산을 부르지 않는 오류 계약 — 토큰 없이 배포하면 409 PREVIEW_STALE 이다(미리보기를 거치지 않은 배포 거부).
+  it("preview_token 없는 배포는 409 PREVIEW_STALE 로 거부된다(run_id=8)", async ({ skip }) => {
+    if (!backendReachable) skip();
+    setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
+
+    await expect(postWaypoint("8", { ...WAYPOINT, apply: true })).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).status).toBe(409);
+      expect((error as ApiError).code).toBe("PREVIEW_STALE");
       return true;
     });
   });
