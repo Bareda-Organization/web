@@ -91,7 +91,8 @@ export const TodayRunPage = () => {
   const [forcedAddOpen, setForcedAddOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   // A-15 — [경유 지점] 패널(같은 화면 안, 새 라우트 없음).
-  const [waypointOpen, setWaypointOpen] = useState(false);
+  // 패널을 연 회차 id — 선택한 회차가 그 회차일 때만 연 것으로 본다(회차가 바뀌면 자동으로 닫힌다).
+  const [waypointRunId, setWaypointRunId] = useState<string | null>(null);
   // A-07 — [다른 버스로]를 누른 학생. null 이면 대화상자가 닫혀 있다.
   const [transferTarget, setTransferTarget] = useState<RosterItemResponseTypes | null>(null);
   // A-07 — [이동 취소]를 누른 이동 대기 학생(§5.8.1). null 이면 확인 대화상자가 닫혀 있다.
@@ -123,6 +124,7 @@ export const TodayRunPage = () => {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   const selectedRunId = runIdParam ?? (runs[0]?.runId ?? null);
+  const waypointOpen = waypointRunId != null && waypointRunId === selectedRunId;
   const selectedRun = useMemo(() => runs.find((run) => run.runId === selectedRunId) ?? null, [runs, selectedRunId]);
   // 명단·위치·노선 조회의 의존성은 회차 객체가 아니라 이 원시값이다 — 회차 목록을 다시 받을 때마다 배열이 새로
   // 만들어져도 값이 같으면 다시 부르지 않는다(F01-04).
@@ -479,7 +481,7 @@ export const TodayRunPage = () => {
                 강제 승하차지 추가
               </Button>
               {waypoint?.kind === "open" ? (
-                <Button variant="secondary" icon="map-pin" onClick={() => setWaypointOpen((open) => !open)}>
+                <Button variant="secondary" icon="map-pin" onClick={() => setWaypointRunId((openRunId) => (openRunId === selectedRunId ? null : selectedRunId))}>
                   경유 지점
                 </Button>
               ) : null}
@@ -496,7 +498,7 @@ export const TodayRunPage = () => {
         <RunWaypointPanel
           key={selectedRun.runId}
           runId={selectedRun.runId}
-          onClose={() => setWaypointOpen(false)}
+          onClose={() => setWaypointRunId(null)}
           onChanged={() => {
             void loadRoute(selectedRun.runId, selectedRun.runStatus);
             refreshAll(true);

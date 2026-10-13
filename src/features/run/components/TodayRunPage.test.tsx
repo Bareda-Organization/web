@@ -1361,6 +1361,27 @@ describe("TodayRunPage — 경유 지점 진입(A-15)", () => {
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
+  it("패널을 연 채 다른 회차로 바꾸면 패널이 닫혀 있다", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...baseDashboard,
+      runs: [
+        { ...baseDashboard.runs[0], runId: "7", runStatus: "confirmed" },
+        { ...baseDashboard.runs[0], runId: "8", busNo: "3호차", runStatus: "confirmed" },
+      ],
+    });
+    mockGetRunRoster.mockResolvedValue(baseRoster);
+    mockRunIdParam = "7";
+    const { rerender } = render(<TodayRunPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "경유 지점" }));
+    expect(await screen.findByRole("region", { name: "경유 지점" })).toBeInTheDocument();
+
+    mockRunIdParam = "8";
+    rerender(<TodayRunPage />);
+
+    await waitFor(() => expect(screen.queryByRole("region", { name: "경유 지점" })).not.toBeInTheDocument());
+  });
+
   it("확정 전(idle) 회차는 단추 대신 이유 한 줄", async () => {
     mockGetDashboard.mockResolvedValue(withStatus("idle"));
     mockGetRunRoster.mockResolvedValue(baseRoster);
