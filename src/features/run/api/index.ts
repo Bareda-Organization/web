@@ -6,3 +6,4 @@ export { searchStudents } from "./studentSearch";
 export { postTransfer, deleteTransfer } from "./transfer";
 export { patchRunAssignment } from "./assignment";
 export { getManagers } from "./managers";
+export { postWaypoint, deleteWaypoint } from "./waypoints";
