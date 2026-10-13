@@ -11,6 +11,7 @@ describe("describeWaypointFailure", () => {
     ["RUN_CANCELED", 409, "취소"],
     ["PREVIEW_STALE", 409, "다시 미리보기"],
     ["ADDRESS_VERIFICATION_FAILED", 422, "주소"],
+    ["ADDRESS_VERIFICATION_UNAVAILABLE", 503, "주소 확인 서비스"],
     ["RUN_NOT_FOUND", 404, "찾을 수 없"],
     ["VALIDATION_FAILED", 422, "확인"],
     ["RUN_NOT_CONFIRMED", 409, "확정"],

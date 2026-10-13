@@ -26,6 +26,8 @@ export const describeWaypointFailure = (cause: unknown): WaypointFailure => {
       return plain("그 사이 명단이나 승하차지가 바뀌어 미리보기가 낡았어요 — 다시 미리보기를 눌러 확인해 주세요", { redoPreview: true });
     case "ADDRESS_VERIFICATION_FAILED":
       return plain("주소를 확인하지 못했어요. 주소를 다시 검색해서 골라 주세요");
+    case "ADDRESS_VERIFICATION_UNAVAILABLE":
+      return plain("주소 확인 서비스에 잠시 연결할 수 없어요 — 잠시 뒤 다시 시도해 주세요");
     case "RUN_NOT_FOUND":
       return plain("이 회차를 찾을 수 없어요. 오늘 운행 목록에서 다시 골라 주세요");
     case "VALIDATION_FAILED":
