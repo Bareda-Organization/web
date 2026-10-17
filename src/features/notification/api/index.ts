@@ -4,51 +4,29 @@ import type {
   NotificationListItemResponseTypes,
   NotificationListQueryTypes,
   NotificationListResponseTypes,
-  NotificationType,
 } from "../types";
 
-type RawNotificationItem = {
-  notification_id?: string | number;
-  sent_at: string;
-  bus_no: string | null;
-  recipient_name: string;
-  recipient_role: string;
-  type: NotificationType;
-  body: string;
-  acked: boolean;
-  // 묶음 항목(group=true, Ruling 813) — 묶지 않은 응답에는 없다. 묶음 항목은 acked · recipient_* 대신 이 값들을 준다.
-  group_key?: string;
-  recipient_count?: number;
-  acked_count?: number;
-  recipients?: { recipient_name: string; recipient_role: string }[];
+// 일반 항목은 notificationId·recipientName·recipientRole·acked 를 주고, 묶음 항목(group=true, Ruling 813)은 대신
+// groupKey·recipientCount·ackedCount·recipients 를 준다 — 한 화면 타입으로 합친다. 서버 id 는 숫자.
+type WireNotificationItem = Omit<
+  NotificationListItemResponseTypes,
+  "notificationId" | "recipientName" | "recipientRole" | "acked"
+> & {
+  notificationId?: string | number;
+  groupKey?: string;
+  recipientName?: string;
+  recipientRole?: string;
+  acked?: boolean;
 };
 
-type RawNotificationListResponse = {
-  items: RawNotificationItem[];
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-  unacked_count: number;
-};
-
-const toItem = (raw: RawNotificationItem): NotificationListItemResponseTypes => ({
-  // 묶음 항목(group=true)에는 notification_id 가 없다 — group_key 가 그 묶음의 식별자다(§5.17).
-  notificationId: raw.group_key ?? asIdString(raw.notification_id),
-  sentAt: raw.sent_at,
-  busNo: raw.bus_no,
-  recipientName: raw.recipient_name ?? raw.recipients?.[0]?.recipient_name ?? "",
-  recipientRole: raw.recipient_role ?? raw.recipients?.[0]?.recipient_role ?? "",
-  type: raw.type,
-  body: raw.body,
-  acked: raw.acked ?? (raw.recipient_count !== undefined && raw.acked_count === raw.recipient_count),
-  ...(raw.recipient_count !== undefined
-    ? {
-        recipientCount: raw.recipient_count,
-        ackedCount: raw.acked_count ?? 0,
-        recipients: (raw.recipients ?? []).map((r) => ({ recipientName: r.recipient_name, recipientRole: r.recipient_role })),
-      }
-    : {}),
+const toItem = ({ groupKey, ...raw }: WireNotificationItem): NotificationListItemResponseTypes => ({
+  ...raw,
+  // 묶음 항목(group=true)에는 notificationId 가 없다 — groupKey 가 그 묶음의 식별자다(§5.17).
+  notificationId: groupKey ?? asIdString(raw.notificationId),
+  recipientName: raw.recipientName ?? raw.recipients?.[0]?.recipientName ?? "",
+  recipientRole: raw.recipientRole ?? raw.recipients?.[0]?.recipientRole ?? "",
+  acked: raw.acked ?? (raw.recipientCount !== undefined && raw.ackedCount === raw.recipientCount),
+  ...(raw.recipientCount !== undefined ? { ackedCount: raw.ackedCount ?? 0, recipients: raw.recipients ?? [] } : {}),
 });
 
 // "수신자 확인됨" 탭 건수(M-W4) — 같은 필터에서 `acked=true` 로 좁힌 총 건수만 읽는다(size 1).
@@ -64,16 +42,9 @@ export const getNotifications = async (
   size = 20,
   filters: NotificationListQueryTypes = {},
 ): Promise<NotificationListResponseTypes> => {
-  const raw = await apiFetch<RawNotificationListResponse>("/staff/notifications", {
+  const raw = await apiFetch<Omit<NotificationListResponseTypes, "items"> & { items: WireNotificationItem[] }>("/staff/notifications", {
     method: "GET",
     query: { page, size, type: filters.type, date: filters.date, acked: filters.acked, recipient_role: filters.recipientRole, group: filters.group },
   });
-  return {
-    items: raw.items.map(toItem),
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-    unackedCount: raw.unacked_count,
-  };
+  return { ...raw, items: raw.items.map(toItem) };
 };

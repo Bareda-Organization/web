@@ -1,37 +1,17 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
   SignupDecideRequestTypes,
   SignupDecideResponseTypes,
   SignupRequestItemResponseTypes,
   SignupRequestsResponseTypes,
-  SignupRole,
 } from "../types";
 
-type RawSignupRequestItem = {
-  request_id: string | number;
-  name: string;
-  role: SignupRole;
-  phone: string;
-  requested_at: string;
-};
+type WireSignupRequestItem = WithId<SignupRequestItemResponseTypes, "requestId">;
 
-type RawSignupRequestsResponse = {
-  items: RawSignupRequestItem[];
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-  pending_count: number;
-};
-
-const toItem = (raw: RawSignupRequestItem): SignupRequestItemResponseTypes => ({
-  requestId: asIdString(raw.request_id),
-  name: raw.name,
-  role: raw.role,
-  phone: raw.phone,
-  requestedAt: raw.requested_at,
-});
+// 서버 id 는 숫자 — 화면 타입은 문자열
+const toItem = (raw: WireSignupRequestItem): SignupRequestItemResponseTypes => ({ ...raw, requestId: asIdString(raw.requestId) });
 
 // GET /staff/signup-requests (§5.1, A-02) — status 기본값은 pending. role=staff 는
 // 관리자(§6.5) 몫이라 이 목록에 나오지 않는다.
@@ -41,18 +21,11 @@ export const getSignupRequests = async (
   page = 0,
   size = 20,
 ): Promise<SignupRequestsResponseTypes> => {
-  const raw = await apiFetch<RawSignupRequestsResponse>("/staff/signup-requests", {
-    method: "GET",
-    query: { status, page, size },
-  });
-  return {
-    items: raw.items.map(toItem),
-    pendingCount: raw.pending_count,
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-  };
+  const raw = await apiFetch<Omit<SignupRequestsResponseTypes, "items"> & { items: WireSignupRequestItem[] }>(
+    "/staff/signup-requests",
+    { method: "GET", query: { status, page, size } },
+  );
+  return { ...raw, items: raw.items.map(toItem) };
 };
 
 // 기사·동승자 가입 요청만의 대기 건수 — 매니저 관리 화면의 "가입 승인 대기 N건"(Ruling 846 ①).
@@ -60,16 +33,11 @@ export const getSignupRequests = async (
 // (new URL 이 경로의 쿼리를 읽고, apiFetch 가 붙이는 status·page·size 는 그 뒤에 더해진다).
 // 서버가 아직 `role` 을 무시하면 전체 역할의 건수가 온다 — 값이 틀릴 뿐 화면이 깨지지는 않는다.
 export const getManagerSignupPendingCount = async (): Promise<number> => {
-  const raw = await apiFetch<RawSignupRequestsResponse>("/staff/signup-requests?role=driver&role=escort", {
+  const raw = await apiFetch<{ totalCount: number }>("/staff/signup-requests?role=driver&role=escort", {
     method: "GET",
     query: { status: "pending", page: 0, size: 1 },
   });
-  return raw.total_count;
-};
-
-type RawSignupDecideResponse = {
-  account_status: "active" | "rejected";
-  decided_at: string;
+  return raw.totalCount;
 };
 
 // POST /staff/signup-requests/{id}/decide (§5.2, A-02).
@@ -94,9 +62,8 @@ export const decideSignupRequest = async (
     body.link = link;
   }
 
-  const raw = await apiFetch<RawSignupDecideResponse>(`/staff/signup-requests/${requestId}/decide`, {
+  return apiFetch<SignupDecideResponseTypes>(`/staff/signup-requests/${requestId}/decide`, {
     method: "POST",
     body,
   });
-  return { accountStatus: raw.account_status, decidedAt: raw.decided_at };
 };
