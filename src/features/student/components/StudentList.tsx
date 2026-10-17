@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useState } from "react";
 import { AlertBanner, Button, Card, EmptyState, FilterBar, FilterGroup, PageHeader, Pagination, RosterTable, SearchField, Select, Skeleton, SkeletonGroup, StatStrip, StatusChip, Tabs } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
-import { useSavedNotice } from "@/shared/hooks";
+import { usePagedList, useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { getStudents } from "../api";
-import type { StudentListFilter, StudentListItemResponseTypes, StudentListSummaryTypes } from "../types";
+import type { StudentListFilter, StudentListItemResponseTypes } from "../types";
 import { StudentForm } from "./StudentForm";
 import { StudentWithdrawDialog } from "./StudentWithdrawDialog";
 import { StyledStudentFooter, StyledStudentLayout, StyledSubText } from "./StudentList.styled";
@@ -16,74 +15,38 @@ const PAGE_SIZE = 20;
 
 // §5.11 GET /staff/students?q=(STU-01, A-10) — 학생 관리 목록. 행 클릭으로 수정,
 // 별도 버튼으로 퇴원(soft delete) 처리. 타 학원 학생은 404 로 존재 자체를 감춘다
-// (§1.11 표는 이 화면을 다루지 않음 — Ruling 163, 확인 근거는 보고서 §2).
+// (§1.11 표는 이 화면을 다루지 않음 — Ruling 163).
 export const StudentList = () => {
-  const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
   // 탭("" 재원 · guardian_unlinked 보호자 미연결 · address_missing 주소 미등록) · 반 필터 — 서버 쿼리(Ruling 815)로 간다.
   const [filter, setFilter] = useState<"" | StudentListFilter>("");
   const [className, setClassName] = useState("");
-  const [summary, setSummary] = useState<StudentListSummaryTypes | null>(null);
   // 반 선택지 — 본 적 있는 반 이름을 쌓는다(서버가 반 목록을 따로 주지 않는다).
   const [classNames, setClassNames] = useState<string[]>([]);
-  const [items, setItems] = useState<StudentListItemResponseTypes[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [withdrawing, setWithdrawing] = useState<StudentListItemResponseTypes | undefined>(undefined);
 
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
-  const requestSeq = useRef(0);
-
-  const load = useCallback(async (nextPage: number, query: string, nextFilter: "" | StudentListFilter, nextClassName: string) => {
-    const seq = ++requestSeq.current;
-    setLoading(true);
-    try {
-      const data = await getStudents(nextPage, PAGE_SIZE, query || undefined, { className: nextClassName || undefined, filter: nextFilter || undefined });
-      if (seq !== requestSeq.current) return;
-      setItems(data.items);
-      if (data.summary) setSummary(data.summary);
+  // 검색어·탭·반이 바뀌면 0쪽부터 다시 읽는다(usePagedList 의 resetKey).
+  const { items, data, totalCount, hasNext, page, setPage, loading, error, reload } = usePagedList(
+    async (targetPage) => {
+      const result = await getStudents(targetPage, PAGE_SIZE, q || undefined, { className: className || undefined, filter: filter || undefined });
       setClassNames((known) => {
         const seen = new Set(known);
-        data.items.forEach((item) => item.className && seen.add(item.className));
+        result.items.forEach((item) => item.className && seen.add(item.className));
         return seen.size === known.length ? known : [...seen].sort();
       });
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setError(null);
-    } catch (cause) {
-      if (seq !== requestSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "학생 목록을 불러오지 못했습니다");
-      setItems([]);
-    } finally {
-      if (seq === requestSeq.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await load(page, q, filter, className);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  // 검색어·탭·반이 바뀌면 0쪽부터 다시 읽는다. 0쪽이 아니면 쪽이 바뀌며 위 effect 가 새 조건으로 조회한다 — 여기서도 부르면 같은 요청이 두 번 나간다.
+      return result;
+    },
+    { resetKey: JSON.stringify([q, filter, className]), errorMessage: "학생 목록을 불러오지 못했습니다" },
+  );
+  // 지표는 학원 전체 값이라 쿼리·쪽과 무관하다 — 마지막으로 받은 응답의 summary.
+  const summary = data?.summary ?? null;
   const handleConditionChange = (next: { q?: string; filter?: "" | StudentListFilter; className?: string }) => {
-    const nextQ = next.q ?? q;
-    const nextFilter = next.filter ?? filter;
-    const nextClassName = next.className ?? className;
-    setQ(nextQ);
-    setFilter(nextFilter);
-    setClassName(nextClassName);
-    if (page !== 0) {
-      setPage(0);
-      return;
-    }
-    load(0, nextQ, nextFilter, nextClassName);
+    setQ(next.q ?? q);
+    setFilter(next.filter ?? filter);
+    setClassName(next.className ?? className);
   };
   const handleSearch = (value: string) => handleConditionChange({ q: value });
 
@@ -93,7 +56,7 @@ export const StudentList = () => {
     setEditingId(undefined);
     setCreating(false);
     setWithdrawing(undefined);
-    load(page, q, filter, className);
+    reload();
   };
 
   const columns: RosterColumn<StudentListItemResponseTypes>[] = [
@@ -206,7 +169,7 @@ export const StudentList = () => {
             tone="bad"
             title="학생 목록을 불러오지 못했습니다"
             action={
-              <Button icon="refresh-cw" onClick={() => load(page, q, filter, className)}>
+              <Button icon="refresh-cw" onClick={reload}>
                 다시 시도
               </Button>
             }
@@ -250,7 +213,7 @@ export const StudentList = () => {
           {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
           <Card flush aria-busy={loading}>
-            <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, filter, className)}
+            <RosterTable hasError={Boolean(error)} onRetry={reload}
               emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : filter || className ? "조건에 맞는 학생이 없습니다" : "등록된 학생이 없습니다"}
               emptyAction={q || filter || className ? undefined : { label: "학생 등록", onClick: () => setCreating(true) }}
               highlightedKey={highlightedKey}

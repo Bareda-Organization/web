@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountPasswordResetDialog } from "@/features/auth";
-import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, FilterBar, FilterGroup, Icon, PageHeader, Pagination, RosterTable, SearchField, SegmentedControl, StatStrip, StatusChip, Tabs } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
-import { useSavedNotice } from "@/shared/hooks";
+import { usePagedList, useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { getManagers } from "../api";
-import type { ManagerListFilters } from "../api";
 import type { ManagerCountsTypes, ManagerItemResponseTypes, ManagerRole } from "../types";
 import { assignmentsOn, formatMonthDay, formatWorkHours, openDriverCandidates, summarizeManagers, worksOn } from "../lib/managerBoard";
 import { ManagerDeleteDialog } from "./ManagerDeleteDialog";
@@ -52,54 +50,41 @@ const todayLines = (manager: ManagerItemResponseTypes, today: string): string[] 
 // 없어 수정은 이 목록의 행 데이터를 그대로 옆 패널에 채운다.
 export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: ManagerListProps) => {
   const [today] = useState(() => todayInSeoul());
-  const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"" | ManagerRole>("");
   const [assigned, setAssigned] = useState<AssignedFilter>("");
   const [linked, setLinked] = useState<LinkedFilter>("");
-  const [items, setItems] = useState<ManagerItemResponseTypes[]>([]);
   const [all, setAll] = useState<ManagerItemResponseTypes[]>([]);
-  const [counts, setCounts] = useState<ManagerCountsTypes | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [allCounts, setAllCounts] = useState<ManagerCountsTypes | null>(null);
   const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<ManagerItemResponseTypes | undefined>(undefined);
   const [resetting, setResetting] = useState<ManagerItemResponseTypes | undefined>(undefined);
 
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 탭·필터를 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다.
-  const requestSeq = useRef(0);
-
-  const load = useCallback(async (nextPage: number, query: string, nextRole: "" | ManagerRole, nextAssigned: AssignedFilter, nextLinked: LinkedFilter) => {
-    const seq = ++requestSeq.current;
-    setLoading(true);
-    const filters: ManagerListFilters = { role: nextRole || undefined, assignedToday: toBoolean(nextAssigned), linked: toBoolean(nextLinked) };
-    try {
-      const data = await getManagers(nextPage, PAGE_SIZE, query || undefined, filters);
-      if (seq !== requestSeq.current) return;
-      setItems(data.items);
-      if (data.counts) setCounts(data.counts);
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setError(null);
-    } catch (cause) {
-      if (seq !== requestSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "매니저 목록을 불러오지 못했습니다");
-      setItems([]);
-    } finally {
-      if (seq === requestSeq.current) setLoading(false);
-    }
-  }, []);
+  const {
+    items,
+    data,
+    totalCount,
+    hasNext,
+    page,
+    setPage,
+    loading,
+    error,
+    reload,
+  } = usePagedList(
+    (targetPage) =>
+      getManagers(targetPage, PAGE_SIZE, q || undefined, { role: role || undefined, assignedToday: toBoolean(assigned), linked: toBoolean(linked) }),
+    { resetKey: JSON.stringify([q, role, assigned, linked]), errorMessage: "매니저 목록을 불러오지 못했습니다" },
+  );
+  const counts = data?.counts ?? allCounts;
 
   // 지표 · 역할 탭 건수 · 기사 미배치 후보 — 조건 없이 전량을 따로 읽는다(보조 정보라 실패해도 목록은 그대로).
   const loadAll = useCallback(async () => {
     try {
-      const data = await getManagers(0, SUMMARY_SIZE);
-      setAll(data.items);
-      if (data.counts) setCounts(data.counts);
+      const everyone = await getManagers(0, SUMMARY_SIZE);
+      setAll(everyone.items);
+      if (everyone.counts) setAllCounts(everyone.counts);
     } catch {
       // 지표 칸이 비어 보일 뿐 — 목록 오류는 목록이 따로 보인다.
     }
@@ -107,32 +92,16 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
 
   useEffect(() => {
     (async () => {
-      await load(page, q, role, assigned, linked);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  useEffect(() => {
-    (async () => {
       await loadAll();
     })();
   }, [loadAll]);
 
-  // 검색어·탭·오늘 배치·계정 연결 필터가 바뀌면 0쪽부터 다시 읽는다. 0쪽이 아니면 쪽이 바뀌며 위 effect 가 새 조건으로 조회한다.
+  // 검색어·탭·오늘 배치·계정 연결 필터가 바뀌면 0쪽부터 다시 읽는다(usePagedList 의 resetKey).
   const handleConditionChange = (next: { q?: string; role?: "" | ManagerRole; assigned?: AssignedFilter; linked?: LinkedFilter }) => {
-    const nextQ = next.q ?? q;
-    const nextRole = next.role ?? role;
-    const nextAssigned = next.assigned ?? assigned;
-    const nextLinked = next.linked ?? linked;
-    setQ(nextQ);
-    setRole(nextRole);
-    setAssigned(nextAssigned);
-    setLinked(nextLinked);
-    if (page !== 0) {
-      setPage(0);
-      return;
-    }
-    load(0, nextQ, nextRole, nextAssigned, nextLinked);
+    setQ(next.q ?? q);
+    setRole(next.role ?? role);
+    setAssigned(next.assigned ?? assigned);
+    setLinked(next.linked ?? linked);
   };
 
   // savedManagerId — 등록·수정한 매니저의 id(삭제는 없다). 그 행을 잠깐 강조한다.
@@ -141,7 +110,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
     setEditingId(undefined);
     setCreating(false);
     setDeleting(undefined);
-    load(page, q, role, assigned, linked);
+    reload();
     loadAll();
   };
 
@@ -189,7 +158,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
       },
     },
     {
-      // B1 #8 — 앱에서 가입 신청해 승인을 받으면 이 기록에 계정이 연결된다. 그 전에는 앱에 들어올 수 없다.
+      // 앱에서 가입 신청해 승인을 받으면 이 기록에 계정이 연결된다. 그 전에는 앱에 들어올 수 없다.
       key: "accountId",
       label: "앱 계정",
       render: (row) =>
@@ -363,7 +332,7 @@ export const ManagerList = ({ unassignedRuns = null, pendingSignupCount }: Manag
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card flush aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(page, q, role, assigned, linked)}
+        <RosterTable hasError={Boolean(error)} onRetry={reload}
           emptyMessage={q ? `'${q}' 검색 결과가 없습니다` : filtered ? "조건에 맞는 매니저가 없습니다" : "등록된 매니저가 없습니다"}
           emptyAction={filtered ? undefined : { label: "매니저 등록", onClick: () => setCreating(true) }}
           highlightedKey={highlightedKey}
