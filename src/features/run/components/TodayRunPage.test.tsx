@@ -964,6 +964,26 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls);
     });
 
+    // R57 W-7(K4) — 화면 값보다 오래된 위치(`received_at`)는 버린다.
+    it("R57 W-7: 화면 값보다 오래된 position 방송은 버스 마커를 되돌리지 않는다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      render(<TodayRunPage />);
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
+
+      act(() =>
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+      );
+      await waitFor(() =>
+        expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
+      );
+
+      act(() =>
+        capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-10-10T08:03:00+09:00", current_stop_name: "정문", eta: null })),
+      );
+      expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] }));
+      expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.1 })] }));
+    });
+
     it("다른 회차의 방송은 회차 목록만 다시 읽고 이 회차의 명단은 읽지 않는다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);

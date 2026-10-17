@@ -232,6 +232,49 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore);
   });
 
+  // R57 W-2 — 관제 채널은 전 학원 위치를 방송한다. 지금 보는 학원 목록에 없는 회차의 위치는 화면을 바꾸지 않으므로 다시 그리지도 않는다
+  // (새 배열을 돌려주면 위치 방송마다 지도·표 전체가 다시 그려졌다). 그리기 횟수는 지도 목(`mockMapSurface`) 호출 수로 센다.
+  it("R57 W-2: 목록에 없는 회차의 position 이벤트는 화면을 다시 그리지 않는다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    const rendersBefore = mockMapSurface.mock.calls.length;
+    act(() => {
+      capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:01Z" }, "999"));
+    });
+    expect(mockMapSurface.mock.calls.length).toBe(rendersBefore);
+
+    // 대조 — 목록에 있는 회차의 위치는 화면을 바꾸므로 같은 계수기가 올라간다(계수기가 그리기를 실제로 센다는 증거).
+    act(() => {
+      capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:01Z" }, "1"));
+    });
+    await screen.findByText("위치 수신 09:00");
+    expect(mockMapSurface.mock.calls.length).toBeGreaterThan(rendersBefore);
+  });
+
+  // R57 W-7(K4) — 화면에 있는 값보다 오래된 위치(`received_at`)는 버린다. 순서 보장이 없는 경로(재접속 직후 REST 스냅샷 · 두 연결 겹침)에서
+  // 늦게 온 옛 좌표가 새 좌표를 덮어 버스가 뒤로 점프하던 것을 막는다.
+  it("R57 W-7: 화면 값보다 오래된 position 이벤트는 무시하고, 같거나 새로우면 반영한다", async () => {
+    render(<MonitoringPage />);
+    await screen.findByText("위치 확인 대기");
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:05:00Z" }));
+    });
+    await screen.findByText("위치 수신 09:05");
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-09-13T00:01:00Z" }));
+    });
+    expect(screen.getByText("위치 수신 09:05")).toBeInTheDocument();
+    expect(screen.queryByText("위치 수신 09:01")).not.toBeInTheDocument();
+
+    act(() => {
+      capturedOnEnvelope?.(envelope("position", { lat: 37.6, lng: 127.2, received_at: "2026-09-13T00:06:00Z" }));
+    });
+    await screen.findByText("위치 수신 09:06");
+  });
+
   it.each(["stop_arrived", "rider_changed", "run_started", "run_ended"] as const)(
     "%s 이벤트는 선택된 학원의 회차 목록을 재조회한다",
     async (event) => {

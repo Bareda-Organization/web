@@ -5,6 +5,7 @@ import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { ApiError } from "@/shared/lib/http";
 import {
   adminLiveDestination,
+  isStalePosition,
   parseWsEmergencyRaisedPayload,
   parseWsEmergencyCanceledPayload,
   parseWsPositionPayload,
@@ -318,13 +319,14 @@ export const MonitoringPage = () => {
       switch (envelope.event) {
         case "position": {
           const payload = parseWsPositionPayload(envelope.payload);
-          setRuns((prev) =>
-            prev.map((run) =>
-              String(run.runId) === envelope.runId
-                ? { ...run, position: { lat: payload.lat, lng: payload.lng, receivedAt: payload.receivedAt } }
-                : run,
-            ),
-          );
+          // 지금 보는 학원 목록에 없는 회차(전 학원 방송)와 화면 값보다 오래된 위치는 같은 배열을 돌려준다 — 새 배열은 다시 그리기를 부른다(R57 W-2 · W-7).
+          setRuns((prev) => {
+            const target = prev.find((run) => String(run.runId) === envelope.runId);
+            if (target === undefined || isStalePosition(target.position?.receivedAt, payload.receivedAt)) return prev;
+            return prev.map((run) =>
+              run === target ? { ...run, position: { lat: payload.lat, lng: payload.lng, receivedAt: payload.receivedAt } } : run,
+            );
+          });
           return;
         }
         case "stop_arrived":

@@ -7,6 +7,7 @@ import { useAuthSession } from "@/features/auth";
 import { ApiError } from "@/shared/lib/http";
 import {
   academyLiveDestination,
+  isStalePosition,
   parseWsApprovalRequestedPayload,
   parseWsPositionPayload,
   type WebSocketEnvelope,
@@ -289,17 +290,20 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       switch (envelope.event) {
         case "position": {
           const payload = parseWsPositionPayload(envelope.payload);
-          setLiveRuns((prev) =>
-            prev.map((run) =>
-              String(run.runId) === envelope.runId
+          // 목록에 없는 회차와 화면 값보다 오래된 위치는 같은 배열을 돌려준다 — 새 배열은 다시 그리기를 부른다(R57 W-2 · W-7).
+          setLiveRuns((prev) => {
+            const target = prev.find((run) => String(run.runId) === envelope.runId);
+            if (target === undefined || isStalePosition(target.position?.recordedAt, payload.receivedAt)) return prev;
+            return prev.map((run) =>
+              run === target
                 ? {
                     ...run,
                     position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt },
                     currentStop: payload.currentStopName ?? run.currentStop,
                   }
                 : run,
-            ),
-          );
+            );
+          });
           return;
         }
         // 잇단 이벤트는 짧게 묶어 한 번만 읽는다(R46-FIXRT L4 — MonitoringPage 와 같다).

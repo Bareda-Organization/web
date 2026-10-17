@@ -491,6 +491,29 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBeforeEvent);
   });
 
+  // R57 W-7(K4) — 화면 값보다 오래된 위치(`received_at`)는 버린다.
+  it("R57 W-7: 화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
+    render(<DashboardPage />);
+    await screen.findByText("1호차 · 등원");
+
+    act(() => {
+      capturedOnEnvelope?.(
+        envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:05:00Z", current_stop_name: "3번 정류장", eta: null }),
+      );
+    });
+    expect(await screen.findByText("현재 3번 정류장 → 다음 후문")).toBeInTheDocument();
+
+    act(() => {
+      capturedOnEnvelope?.(
+        envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-09-13T00:01:00Z", current_stop_name: "1번 정류장", eta: null }),
+      );
+    });
+    expect(screen.getByText("현재 3번 정류장 → 다음 후문")).toBeInTheDocument();
+    expect(screen.queryByText("현재 1번 정류장 → 다음 후문")).not.toBeInTheDocument();
+  });
+
   it.each(["stop_arrived", "rider_changed", "run_started", "run_ended"] as const)(
     "%s 이벤트는 payload 를 직접 반영하지 않고 실시간 목록을 재조회한다",
     async (eventType) => {

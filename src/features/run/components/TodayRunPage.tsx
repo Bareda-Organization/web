@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/lib/http";
 import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { academyLiveDestination, parseWsPositionPayload, type WebSocketEnvelope } from "@/shared/lib/ws";
+import { academyLiveDestination, isStalePosition, parseWsPositionPayload, type WebSocketEnvelope } from "@/shared/lib/ws";
 import { useAuthSession } from "@/features/auth";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, StatusPill } from "@/shared/ui";
 import { formatHeaderDate } from "@/shared/lib/format/dateTime";
@@ -384,7 +384,8 @@ export const TodayRunPage = () => {
           const payload = parseWsPositionPayload(envelope.payload);
           setLiveRun((prev) =>
             // 회차를 막 바꿔 새 회차의 위치 응답이 오기 전에는 prev 가 앞 회차 값이다 — 같은 회차일 때만 좌표를 바꾼다.
-            prev && prev.runId === envelope.runId
+            // 화면 값보다 오래된 위치는 버린다(R57 W-7).
+            prev && prev.runId === envelope.runId && !isStalePosition(prev.position?.recordedAt, payload.receivedAt)
               ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
               : prev,
           );
