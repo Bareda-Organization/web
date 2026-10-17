@@ -550,7 +550,14 @@ export class AcademyRealtimeClient {
       seen.add(key);
     }
     const parsed = parseWebSocketEnvelope(JSON.parse(body) as unknown);
-    for (const listener of [...entry.listeners]) listener.onEnvelope(parsed);
+    // 수신자 하나가 던져도 같은 방송을 받을 다른 수신자는 막지 않는다 — 구독을 나눠 쓰므로(R57 W-1) 한 화면의 오류가 다른 화면의 수신을 끊으면 안 된다(fix1 F2).
+    for (const listener of [...entry.listeners]) {
+      try {
+        listener.onEnvelope(parsed);
+      } catch (failure) {
+        this.onDebugMessage(`[AcademyRealtimeClient] 수신자 오류(${entry.destination}): ${String(failure)}`);
+      }
+    }
   }
 
   private clearReconnectTimer(): void {

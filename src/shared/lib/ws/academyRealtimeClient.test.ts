@@ -542,6 +542,25 @@ describe("AcademyRealtimeClient", () => {
       expect(kept).toHaveBeenCalledTimes(1);
     });
 
+    // R57 fix1 F2 — 한 STOMP 구독을 여럿이 나눠 받으므로 한 수신자가 던져도 같은 방송을 받을 다른 수신자는 막히지 않는다.
+    it("F2: 첫 수신자가 던져도 같은 방송을 두 번째 수신자가 받고, 오류는 디버그 훅으로 알린다", () => {
+      const { factory, handles } = createFakeClientFactory();
+      const onDebugMessage = vi.fn();
+      const client = new AcademyRealtimeClient({ url: "ws://x", createClient: factory, readAccessToken: () => null, onDebugMessage });
+      client.connect();
+      handles[0].connected = true;
+      handles[0].config.onConnect({ headers: {}, body: "" });
+      const second = vi.fn();
+      client.subscribe(destination, () => {
+        throw new Error("화면 쪽 오류");
+      });
+      client.subscribe(destination, second);
+
+      expect(() => handles[0].emit(destination, runStarted)).not.toThrow();
+      expect(second).toHaveBeenCalledTimes(1);
+      expect(onDebugMessage).toHaveBeenCalledWith(expect.stringContaining("화면 쪽 오류"));
+    });
+
     it("목적지가 다르면 각각 구독한다", () => {
       const { client, handle } = connectedClient();
       client.subscribe(destination, () => {});
