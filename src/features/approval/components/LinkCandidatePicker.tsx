@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { AlertBanner, OptionList, OptionListItem, SearchField, StatusChip } from "@/shared/ui";
 import type { LinkCandidateTypes } from "../types";
 import { StyledCandidateLabel, StyledCandidateList } from "./LinkCandidatePicker.styled";
@@ -24,7 +24,7 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
   const [candidates, setCandidates] = useState<LinkCandidateTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 늦게 온 옛 검색 결과가 새 후보 목록을 덮지 않게 한다(F02-04).
+  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 늦게 온 옛 검색 결과가 새 후보 목록을 덮지 않게 한다.
   const requestSeq = useRef(0);
 
   const load = useCallback(
@@ -39,7 +39,7 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
       } catch (cause) {
         if (seq !== requestSeq.current) return -1;
         setCandidates([]);
-        setError(cause instanceof ApiError ? cause.message : "목록을 불러오지 못했습니다");
+        setError(describeApiError(cause, "목록을 불러오지 못했습니다"));
         return -1;
       }
     },

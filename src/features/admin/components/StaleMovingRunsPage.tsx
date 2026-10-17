@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSavedNotice } from "@/shared/hooks";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import type { RosterColumn } from "@/shared/types";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatStrip, StatusChip } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
@@ -20,7 +20,7 @@ const STALE_MOVING_RUN_LIMIT = 200;
 
 // §6.16·§6.17 끝나지 않은 이동 중 회차(Ruling 724). `StaleMovingRun` 경보가 세는 회차를 메인 관리자가 학원에 확인한 뒤 닫는다.
 // 목록은 서버가 운행일 오름차순으로 준다 — 오래된 회차부터 처리하고, 처리한 행은 다시 불러온 목록에서 사라진다.
-// R48 시안: 지표 3칸 · 처리 순서 안내 · 행마다 [학원에 전화](Ruling 808) → [강제 종료] 순서.
+// 지표 3칸 · 처리 순서 안내 · 행마다 [학원에 전화](Ruling 808) → [강제 종료] 순서.
 export const StaleMovingRunsPage = () => {
   const [runs, setRuns] = useState<StaleMovingRunItemResponseTypes[]>([]);
   const [target, setTarget] = useState<StaleMovingRunItemResponseTypes | null>(null);
@@ -34,7 +34,7 @@ export const StaleMovingRunsPage = () => {
       setRuns((await getStaleMovingRuns()).items);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "끝나지 않은 회차 목록을 불러오지 못했습니다");
+      setError(describeApiError(cause, "끝나지 않은 회차 목록을 불러오지 못했습니다"));
     } finally {
       setLoading(false);
     }

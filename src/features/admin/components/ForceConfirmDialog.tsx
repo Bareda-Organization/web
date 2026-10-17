@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { ApiError } from "@/shared/lib/http";
@@ -22,13 +23,18 @@ type ForceConfirmDialogProps = {
 // §6.14 강제 확정 사유는 최대 200자(Ruling 790). 서버도 같은 길이로 422 를 낸다.
 const REASON_MAX_LENGTH = 200;
 
+const FAILURE_BY_CODE: Record<string, string> = {
+  RUN_NOT_IDLE: "이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.",
+  RUN_NOT_DUE: "아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.",
+  RUN_CANCELED: "임시 취소된 회차라 강제 확정할 수 없습니다.",
+};
+
 // §6.14, BRIEF-a1.md §4.1 — "확인 단계와 그 결과 표시가 이 화면의 본체". 되돌릴 수 없는
 // 동작이라 (1) 사유 입력 없이는 실행 단추를 켜지 않고(꺼진 단추 아래에 켜지는 조건을 적는다 — U-05) (2) 성공한 뒤에는 폼으로
 // 되돌아가지 못하게 결과 화면으로 고정한다 — 실수로 두 번 누르는 경로 자체를 없앤다.
 export const ForceConfirmDialog = ({ run, academyName, onClose, onDone }: ForceConfirmDialogProps) => {
   const [reason, setReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run: execute } = useAction();
   const [result, setResult] = useState<ForceConfirmResponseTypes | null>(null);
 
   const reasonIsBlank = reason.trim().length === 0;
@@ -38,24 +44,13 @@ export const ForceConfirmDialog = ({ run, academyName, onClose, onDone }: ForceC
     if (reasonIsBlank) {
       return;
     }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const data = await forceConfirmRun(run.runId, reason.trim());
-      setResult(data);
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "RUN_NOT_IDLE") {
-        setError("이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.");
-      } else if (cause instanceof ApiError && cause.code === "RUN_NOT_DUE") {
-        setError("아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.");
-      } else if (cause instanceof ApiError && cause.code === "RUN_CANCELED") {
-        setError("임시 취소된 회차라 강제 확정할 수 없습니다.");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "강제 확정에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await execute(
+      async () => {
+        setResult(await forceConfirmRun(run.runId, reason.trim()));
+      },
+      "강제 확정에 실패했습니다",
+      (cause) => (cause instanceof ApiError ? FAILURE_BY_CODE[cause.code] : undefined),
+    );
   };
 
   if (result) {

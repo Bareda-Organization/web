@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { useProtectedImageUrl } from "@/shared/hooks";
 import { AlertBanner, BoardingStatusChip, Button, Dialog } from "@/shared/ui";
 import { getRunRoster } from "../api";
@@ -39,7 +39,7 @@ const StudentAvatar = ({ name, photoUrl }: { name: string; photoUrl: string | nu
 
 // §6.9 GET /admin/runs/{runId}/roster. 관리자는 마스킹 없는 연락처를 그대로 본다(§1.12) —
 // 관계자 화면과 달리 이 화면은 "학원을 넘나드는 조회" 라 노출 범위를 넓힐 근거가 다르다.
-// R48 시안: 승하차지별 묶음 · 학생 사진 · 학생 / 학부모 연락처 열(보호자가 없으면 –). 상태 막대와 건수는 Ruling 844 로 뺐다.
+// 승하차지별 묶음 · 학생 사진 · 학생 / 학부모 연락처 열(보호자가 없으면 –). 상태 막대와 건수는 Ruling 844 로 뺐다.
 export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterDialogProps) => {
   const [roster, setRoster] = useState<RunRosterResponseTypes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export const RunRosterDialog = ({ runId, busNo, direction, onClose }: RunRosterD
         }
       } catch (cause) {
         if (!cancelled) {
-          setError(cause instanceof ApiError ? cause.message : "명단을 불러오지 못했습니다");
+          setError(describeApiError(cause, "명단을 불러오지 못했습니다"));
         }
       } finally {
         if (!cancelled) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { ApiError, describeApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Dialog, Drawer, Input, StatusChip, Switch, Textarea, useToast } from "@/shared/ui";
 import { DefinitionList, LinkButton } from "@/shared/ui/display";
 import { createAcademy, getAcademy, updateAcademy } from "../api";
@@ -53,7 +53,7 @@ const saveErrorMessage = (cause: unknown): string => {
 // Ruling 450 — 주소가 없으면 그 학원의 회차 확정이 전부 ACADEMY_COORDINATES_MISSING 으로 실패해 등록·수정 때 막는다.
 const ADDRESS_REQUIRED_MESSAGE = "주소를 입력해 주세요. 주소가 없으면 이 학원의 운행 회차를 확정할 수 없습니다";
 
-// §6.2 학원 등록 · §6.3 학원 수정 (O-01). 등록은 대화상자, 수정은 목록을 두고 보는 옆 패널이다(R48 시안 `academies--create` · `--detail`).
+// §6.2 학원 등록 · §6.3 학원 수정 (O-01). 등록은 대화상자, 수정은 목록을 두고 보는 옆 패널이다.
 // 필드 구성이 거의 같아(§6.3 은 code 만 제외) 한 컴포넌트가 두 모양을 그린다 — 화면을 둘로 쪼개면 등록 직후 검색에 뜨는지(§4.4) 확인할 자리가 늘어난다.
 export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: AcademyFormDialogProps) => {
   const isEditMode = academyId != null;
@@ -88,7 +88,7 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
         setMemo(data.memo ?? "");
         setStatus(data.status);
       } catch (cause) {
-        setError(cause instanceof ApiError ? cause.message : "학원 정보를 불러오지 못했습니다");
+        setError(describeApiError(cause, "학원 정보를 불러오지 못했습니다"));
       } finally {
         setLoadingDetail(false);
       }

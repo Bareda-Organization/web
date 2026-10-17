@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Drawer, Input, RunStatusChip, Select } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -52,38 +53,29 @@ export const ManagerForm = ({ manager, onClose, onDone, onDelete, today = todayI
   const [phone, setPhone] = useState(manager?.phone ?? "");
   const [role, setRole] = useState<ManagerRole>(manager?.role ?? "driver");
   const [workHours, setWorkHours] = useState<WorkHours>(manager?.workHours ?? {});
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
 
   const canSubmit = name.trim().length > 0 && phone.trim().length > 0 && !hasInvalidWorkHours(workHours);
   const assignedRunCount = manager?.assignedRunCount ?? 0;
   const locked = assignedRunCount > 0;
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const request = { name: name.trim(), phone: phone.trim(), role, workHours };
-      if (manager) {
-        await updateManager(manager.id, request);
-        onDone(manager.id);
-      } else {
-        const created = await createManager(request);
-        onDone(created.id);
-      }
-    } catch (cause) {
-      // W8 — §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling 339`).
-      // 서버 문구가 삭제 전용이라(`ErrorCode.java`) 수정 맥락에 맞게 바꿔 보여준다
-      // (`ManagerDeleteDialog.tsx` 와 같은 판단).
-      if (cause instanceof ApiError && cause.code === "MANAGER_ASSIGNED") {
-        setError("배치 중인 매니저는 역할을 바꿀 수 없습니다 — 배치를 먼저 해제");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "매니저 저장에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const handleSubmit = () =>
+    run(
+      async () => {
+        const request = { name: name.trim(), phone: phone.trim(), role, workHours };
+        if (manager) {
+          await updateManager(manager.id, request);
+          onDone(manager.id);
+        } else {
+          const created = await createManager(request);
+          onDone(created.id);
+        }
+      },
+      "매니저 저장에 실패했습니다",
+      // §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling 339`).
+      // 서버 문구가 삭제 전용이라(`ErrorCode.java`) 수정 맥락에 맞게 바꿔 보여준다.
+      (cause) => (cause instanceof ApiError && cause.code === "MANAGER_ASSIGNED" ? "배치 중인 매니저는 역할을 바꿀 수 없습니다 — 배치를 먼저 해제" : undefined),
+    );
 
   const nameAndPhone = manager ? (
     <StyledPanelGrid>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getBuses } from "@/features/bus";
 import type { BusItemResponseTypes } from "@/features/bus";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { WEEKDAY_LABEL } from "@/shared/lib/format/weekdayBatch";
 import { AlertBanner, Button, Card, FilterBar, FilterGroup, Icon, PageHeader, RosterTable, SegmentedControl, StatStrip, StatusChip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
@@ -70,7 +70,7 @@ export const RouteList = () => {
       setTruncated(data.hasNext);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "노선 편성 목록을 불러오지 못했습니다");
+      setError(describeApiError(cause, "노선 편성 목록을 불러오지 못했습니다"));
       setRoutes([]);
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export const RouteList = () => {
     { key: "weekday", label: "요일", render: (row) => WEEKDAY_LABEL[row.weekday] },
     { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     { key: "name", label: "편성 이름", render: (row) => row.name ?? "-" },
-    // B1 #10 — 정차지를 아직 안 넣은 빈 편성(0곳)을 목록에서 가른다.
+    // 정차지를 아직 안 넣은 빈 편성(0곳)을 목록에서 가른다.
     { key: "stopCount", label: "정차지 수", render: (row) => `${row.stopCount}곳` },
     {
       key: "active",
@@ -266,7 +266,7 @@ export const RouteList = () => {
           initial={creating}
           existing={routes}
           onClose={() => setCreating(undefined)}
-          // 저장하면 만든 편성의 상세로 이어 간다 — 정차지를 넣는 것이 다음 일이다(B1 #10).
+          // 저장하면 만든 편성의 상세로 이어 간다 — 정차지를 넣는 것이 다음 일이다.
           onDone={({ id }) => {
             setCreating(undefined);
             router.push(`/route/${id}`);

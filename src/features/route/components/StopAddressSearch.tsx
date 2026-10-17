@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { Icon } from "@/shared/ui";
 import { suggestStops } from "../api";
 import type { StopSuggestionTypes } from "../types";
@@ -25,7 +25,7 @@ type StopAddressSearchProps = {
 };
 
 /**
- * 주소 자동완성(2026-09-23 사용자 지시 — 주소를 끝까지 치지 않아도 비슷한 주소를 알려 달라).
+ * 주소 자동완성— 주소를 끝까지 치지 않아도 비슷한 주소를 알려 준다.
  *
  * <p>입력을 멈추면 후보를 부르고, 목록은 마우스로도 키보드(↑↓·Enter·Esc)로도 고른다. 늦게 온 응답이
  * 새 입력의 결과를 덮지 않게 요청마다 번호를 매겨 마지막 것만 받는다.
@@ -63,7 +63,7 @@ export const StopAddressSearch = ({ onPick }: StopAddressSearchProps) => {
         if (seq !== requestSeq.current) return;
         setItems([]);
         setStatus("error");
-        setError(cause instanceof ApiError ? cause.message : "주소 후보를 불러오지 못했습니다");
+        setError(describeApiError(cause, "주소 후보를 불러오지 못했습니다"));
       }
     }, SUGGEST_DELAY_MS);
     return () => clearTimeout(timer);

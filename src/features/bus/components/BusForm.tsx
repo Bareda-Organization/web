@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Dialog, Input, Switch } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { createBus, updateBus } from "../api";
@@ -25,8 +25,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   const [plateNo, setPlateNo] = useState(bus?.plateNo ?? "");
   const [capacity, setCapacity] = useState(bus ? String(bus.capacity) : "");
   const [operable, setOperable] = useState(bus?.operable ?? true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const [warnings, setWarnings] = useState<string[]>([]);
 
   const canSubmit = busNo.trim().length > 0 && plateNo.trim().length > 0 && Number(capacity) > 0;
@@ -35,15 +34,14 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
   const capacityHint =
     Number(capacity) > 0 ? `탑승 가능 인원 ${nextStudentSeats} = 정원 ${capacity} − 기사 1 − 동승자 1${bus ? ` (저장 전 ${bus.studentCapacity}명)` : ""}` : "정원에서 기사 1명 · 동승자 1명을 뺀 값이 학생 탑승 가능 인원입니다";
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+  // 409 DUPLICATE_BUS_NO · 409 CAPACITY_EXCEEDED 는 서버 문구를 그대로 보인다 —
+  // "정원 초과" 를 "등록 실패" 로 뭉뚱그리면 다음 행동(정원을 늘릴지 배정을 줄일지)을 알 수 없다.
+  const handleSubmit = () =>
+    run(async () => {
       const request = { busNo: busNo.trim(), plateNo: plateNo.trim(), capacity: Number(capacity), operable };
       if (bus) {
-        // W5 — 정원 축소로 기배정 인원이 넘치는 회차가 있으면 저장은 이미 됐고
-        // warnings[] 만 실려 온다(§5.12 BR-116). ManagerAssignmentDialog.tsx 와
-        // 같은 판단 — 되돌릴 수 없는 저장 뒤라 재제출 없이 확인만 받는다.
+        // 정원 축소로 기배정 인원이 넘치는 회차가 있으면 저장은 이미 됐고
+        // warnings[] 만 실려 온다(§5.12 BR-116). 되돌릴 수 없는 저장 뒤라 재제출 없이 확인만 받는다.
         const result = await updateBus(bus.id, request);
         if (result.warnings.length > 0) {
           setWarnings(
@@ -59,14 +57,7 @@ export const BusForm = ({ bus, onClose, onDone }: BusFormProps) => {
         const created = await createBus(request);
         onDone(created.id);
       }
-    } catch (cause) {
-      // 409 DUPLICATE_BUS_NO · 409 CAPACITY_EXCEEDED 는 화면이 그 경계를 그대로 말한다 —
-      // "정원 초과" 를 "등록 실패" 로 뭉뚱그리면 다음 행동(정원을 늘릴지 배정을 줄일지)을 알 수 없다.
-      setError(cause instanceof ApiError ? cause.message : "차량 저장에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    }, "차량 저장에 실패했습니다");
 
   return (
     <Dialog

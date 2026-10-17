@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
+import { ApiError, describeApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl } from "@/shared/ui";
 import { StopAddressSearch } from "@/features/route";
 import { FREE_TEXT_PRIVACY_NOTICE } from "@/shared/lib/freeTextNotice";
@@ -15,8 +16,10 @@ type Mode = "existing" | "new";
 const NOTE_MAX_LENGTH = 200;
 
 // §5.7 에러 코드별 문구 — 영문 코드·서버 원문은 화면에 내지 않는다(StudentTransferDialog 와 같은 방침).
+const FORCED_ADD_FALLBACK = "승하차지 추가에 실패했습니다. 잠시 뒤 다시 시도해 주세요";
+
 const forcedAddErrorMessage = (cause: unknown): string => {
-  if (!(cause instanceof ApiError)) return "승하차지 추가에 실패했습니다. 잠시 뒤 다시 시도해 주세요";
+  if (!(cause instanceof ApiError)) return FORCED_ADD_FALLBACK;
   switch (cause.code) {
     case "CHANGE_WINDOW_CLOSED":
       return "출발 30분 전이 지나 추가할 수 없습니다";
@@ -45,7 +48,7 @@ type ForcedAddDialogProps = {
 // 배타적이라(§5.7) 라디오로 갈라 한쪽만 서버에 보낸다.
 export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialogProps) => {
   const [mode, setMode] = useState<Mode>("existing");
-  // F01-07 — 기존 학생은 내부 ID 를 입력받지 않고 이름으로 찾아 고른다.
+  // 기존 학생은 내부 ID 를 입력받지 않고 이름으로 찾아 고른다.
   const [studentQuery, setStudentQuery] = useState("");
   const [candidates, setCandidates] = useState<StudentSearchItemTypes[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -54,8 +57,7 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, setError, run } = useAction();
 
   const reset = () => {
     setMode("existing");
@@ -66,7 +68,6 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
     setAddress("");
     setNote("");
     setConfirming(false);
-    setSubmitting(false);
     setError(null);
   };
 
@@ -86,30 +87,28 @@ export const ForcedAddDialog = ({ runId, open, onClose, onDone }: ForcedAddDialo
       setCandidates(await searchStudents(studentQuery.trim()));
     } catch (cause) {
       setCandidates(null);
-      setError(cause instanceof ApiError ? cause.message : "학생을 검색하지 못했습니다");
+      setError(describeApiError(cause, "학생을 검색하지 못했습니다"));
     } finally {
       setSearching(false);
     }
   };
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await postForcedAdd(runId, {
-        studentId: mode === "existing" ? selectedStudent?.studentId : undefined,
-        newStudentName: mode === "new" ? newStudentName.trim() : undefined,
-        address: address.trim(),
-        note: note.trim() || undefined,
-      });
-      reset();
-      onDone();
-    } catch (cause) {
-      setError(forcedAddErrorMessage(cause));
-      setConfirming(false);
-    } finally {
-      setSubmitting(false);
-    }
+    const ok = await run(
+      async () => {
+        await postForcedAdd(runId, {
+          studentId: mode === "existing" ? selectedStudent?.studentId : undefined,
+          newStudentName: mode === "new" ? newStudentName.trim() : undefined,
+          address: address.trim(),
+          note: note.trim() || undefined,
+        });
+        reset();
+        onDone();
+      },
+      FORCED_ADD_FALLBACK,
+      forcedAddErrorMessage,
+    );
+    if (!ok) setConfirming(false);
   };
 
   if (!open) return null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Dialog, StatusChip } from "@/shared/ui";
 import { resetAccountPassword } from "../api";
 import type { AccountPasswordResetResponseTypes } from "../types";
@@ -21,20 +21,13 @@ type AccountPasswordResetDialogProps = {
 // 비밀번호를 되찾는 유일한 경로다. 임시 비밀번호는 이 창에서 한 번만 보이고 다시 조회할 수 없다.
 // 확인 대화상자(Ruling 828 D5) — 초기화하면 무슨 일이 생기는지(첫 로그인 변경 · 기존 비밀번호 즉시 사용 불가)를 실행 전에 보인다.
 export const AccountPasswordResetDialog = ({ accountId, name, roleLabel, phone, onClose }: AccountPasswordResetDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const [result, setResult] = useState<AccountPasswordResetResponseTypes | null>(null);
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+    await run(async () => {
       setResult(await resetAccountPassword(accountId));
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "비밀번호 초기화에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
+    }, "비밀번호 초기화에 실패했습니다");
   };
 
   const who = roleLabel ? `${name} ${roleLabel}` : name;

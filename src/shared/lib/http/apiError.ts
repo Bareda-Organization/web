@@ -28,6 +28,9 @@ export class ApiError extends Error {
   }
 }
 
+// 화면에 보일 실패 문구 — 서버가 준 에러 봉투 메시지가 있으면 그것, 없으면(네트워크 단절 등) 호출한 화면의 대체 문구.
+export const describeApiError = (cause: unknown, fallback: string): string => (cause instanceof ApiError ? cause.message : fallback);
+
 // 네트워크 자체가 끊긴 경우(서버 응답을 아예 못 받음) — §1.9 의
 // "타임아웃·5xx 는 처리되지 않았습니다" 판정에서 5xx 와 같은 갈래로 다룬다.
 export class NetworkError extends Error {

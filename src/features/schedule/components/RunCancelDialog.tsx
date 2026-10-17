@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { AlertBanner, Button, Dialog, StatusChip } from "@/shared/ui";
 import { cancelRun } from "../api";
@@ -25,21 +24,13 @@ const ROLE_LABEL = { driver: "기사", escort: "동승자" } as const;
 // emergency·route 와 같은 전례) — ApiError.message 그대로 보여준다.
 // 확인 대화상자(S-09) — 취소하면 무엇이 바뀌고 무엇이 그대로인지를 실행 전에 보인다.
 export const RunCancelDialog = ({ runId, run, onCancel, onCanceled }: RunCancelDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run: execute } = useAction();
 
-  const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+  const handleConfirm = () =>
+    execute(async () => {
       await cancelRun(runId);
       onCanceled();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "회차 취소에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    }, "회차 취소에 실패했습니다");
 
   const label = run ? `${formatClockTime(run.departTime)} · ${run.busNo} ${DIRECTION_LABEL[run.direction]}` : undefined;
 

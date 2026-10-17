@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { timetableRange } from "@/shared/lib/timetable/timetable";
 import { AlertBanner, Badge, Button, Card, Input, RosterTable, RunStatusChip, StatusChip } from "@/shared/ui";
 import { TimetableBar } from "@/shared/ui/display";
@@ -53,7 +53,7 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
       setItems(data.items);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "일일 회차를 불러오지 못했습니다");
+      setError(describeApiError(cause, "일일 회차를 불러오지 못했습니다"));
       setItems([]);
     } finally {
       setLoading(false);
@@ -106,7 +106,7 @@ export const RunDayList = ({ adding: addingProp, onAddingChange }: RunDayListPro
         ) : (
           <>
             <RunStatusChip status={row.status} />
-            {/* W4 — 확정이 계속 실패하는 회차를 목록에서 바로 알아본다(`API_SPEC §5.10` `consecutive_failures`, BR-047). 0(성공)이면 표시하지 않는다. */}
+            {/* 확정이 계속 실패하는 회차를 목록에서 바로 알아본다(`API_SPEC §5.10` `consecutive_failures`, BR-047). 0(성공)이면 표시하지 않는다. */}
             {row.consecutiveFailures > 0 ? <StatusChip tone="bad" marker={false}>확정 {row.consecutiveFailures}회 연속 실패</StatusChip> : null}
           </>
         ),

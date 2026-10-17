@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, StatusChip } from "@/shared/ui";
 import { deleteManager } from "../api";
@@ -17,26 +17,18 @@ const ROLE_LABEL = { driver: "기사", escort: "동승자" } as const;
 // 지우려 할 때다: 회차에 배치된 매니저를 지우면 409 MANAGER_ASSIGNED 가 온다.
 // 목록의 배치 중 회차 수(`assigned_run_count`)로 먼저 막고 이유를 보이되, 서버가 막으면 그 경계를 그대로 안내한다.
 export const ManagerDeleteDialog = ({ manager, onClose, onDone }: ManagerDeleteDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const assigned = manager.assignedRunCount;
 
-  const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await deleteManager(manager.id);
-      onDone();
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "MANAGER_ASSIGNED") {
-        setError("현재 배치된 회차가 있어 삭제할 수 없습니다. 배치를 먼저 해제해 주세요.");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "매니저 삭제에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const handleConfirm = () =>
+    run(
+      async () => {
+        await deleteManager(manager.id);
+        onDone();
+      },
+      "매니저 삭제에 실패했습니다",
+      (cause) => (cause instanceof ApiError && cause.code === "MANAGER_ASSIGNED" ? "현재 배치된 회차가 있어 삭제할 수 없습니다. 배치를 먼저 해제해 주세요." : undefined),
+    );
 
   return (
     <Dialog

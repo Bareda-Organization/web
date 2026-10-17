@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePolling } from "@/shared/hooks";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { getDashboard } from "../api/dashboard";
 import type { DashboardDays, DashboardResponseTypes } from "../types/dashboard";
 import { dashboardQuery } from "./dashboardView";
@@ -40,7 +40,7 @@ export const useDashboard = (days: DashboardDays, academy: string) => {
         return true;
       } catch (cause) {
         if (requestId !== requestRef.current) return true;
-        setError({ key, message: cause instanceof ApiError ? cause.message : FALLBACK_ERROR });
+        setError({ key, message: describeApiError(cause, FALLBACK_ERROR) });
         return false;
       } finally {
         if (requestId === requestRef.current) setLoading(false);

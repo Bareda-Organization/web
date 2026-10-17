@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Card, Dialog, StatusChip, Textarea } from "@/shared/ui";
 import { DefinitionList, LinkButton } from "@/shared/ui/display";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
@@ -26,39 +26,26 @@ type MemberApprovalDecidePanelProps = {
 export const MemberApprovalDecidePanel = ({ request, onDone }: MemberApprovalDecidePanelProps) => {
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const isQuotaFull = isStaffQuotaFull(request.academyStaffCount);
   const staff = request.currentStaff;
   const accountsHref = `/member-accounts?academy=${request.academy.id}`;
 
   const handleAccept = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+    await run(async () => {
       await decideStaffSignupRequest(request.requestId, { accept: true });
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "승인 처리에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
+    }, "승인 처리에 실패했습니다");
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) return;
-    setSubmitting(true);
-    setError(null);
-    try {
+    const ok = await run(async () => {
       await decideStaffSignupRequest(request.requestId, { accept: false, rejectReason: rejectReason.trim() });
       setRejecting(false);
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "거절 처리에 실패했습니다");
-      setRejecting(false);
-    } finally {
-      setSubmitting(false);
-    }
+    }, "거절 처리에 실패했습니다");
+    if (!ok) setRejecting(false);
   };
 
   return (
