@@ -51,10 +51,11 @@ const DEDUP_TAIL_MS = 5_000;
 
 // `subscribe()` 가 받은 구독 한 건 — 갈아타기가 같은 구독을 새 연결에 다시 걸 수 있게 클라이언트가 직접 들고 있는다.
 // `handles` 는 이 구독이 걸려 있는 연결(갈아타는 동안만 둘)과 그 연결에서 받은 해제 핸들이다.
+// 같은 목적지는 구독 한 건을 나눠 쓴다(R57 W-1) — `listeners` 가 그 목적지를 구독한 호출부 전부다.
 type ActiveSubscription = {
   id: number;
   destination: string;
-  onEnvelope: (envelope: WebSocketEnvelope) => void;
+  listeners: Set<{ onEnvelope: (envelope: WebSocketEnvelope) => void }>;
   handles: Map<StompClientLike, StompSubscriptionLike>;
 };
 
@@ -192,16 +193,26 @@ export class AcademyRealtimeClient {
         `연결되지 않은 상태에서 subscribe(${destination}) 를 호출했다 — connected 상태가 된 뒤에 구독하라.`,
       );
     }
-    this.pendingDestinations.add(destination);
-    const entry: ActiveSubscription = { id: (this.subscriptionSeq += 1), destination, onEnvelope, handles: new Map() };
-    this.subscriptions.add(entry);
-    this.attachSubscription(client, entry);
-    // 갈아타는 중이고 새 연결이 이미 열렸으면 새 연결에도 건다 — 안 그러면 옛 연결을 닫는 순간 이 구독이 사라진다.
-    const standbyClient = this.standby?.client;
-    if (standbyClient?.connected) this.attachSubscription(standbyClient, entry);
+    const listener = { onEnvelope };
+    // 같은 목적지를 이미 구독 중이면 서버에는 다시 SUBSCRIBE 하지 않고 받는 쪽만 늘린다(R57 W-1) — 학원 채널은 승인 대기 · 비상 알림 ·
+    // 화면이 각자 구독해 SUBSCRIBE 가 3번 나갔고, 서버는 같은 방송을 구독 수만큼 복제해 보냈다.
+    const existing = [...this.subscriptions].find((candidate) => candidate.destination === destination);
+    const entry: ActiveSubscription =
+      existing ?? { id: (this.subscriptionSeq += 1), destination, listeners: new Set(), handles: new Map() };
+    entry.listeners.add(listener);
+    if (existing === undefined) {
+      this.pendingDestinations.add(destination);
+      this.subscriptions.add(entry);
+      this.attachSubscription(client, entry);
+      // 갈아타는 중이고 새 연결이 이미 열렸으면 새 연결에도 건다 — 안 그러면 옛 연결을 닫는 순간 이 구독이 사라진다.
+      const standbyClient = this.standby?.client;
+      if (standbyClient?.connected) this.attachSubscription(standbyClient, entry);
+    }
     return () => {
-      this.subscriptions.delete(entry);
-      this.pendingDestinations.delete(destination);
+      // 마지막 구독자가 떠날 때만 서버 구독을 푼다. 이미 푼 구독의 해제 함수를 다시 불러도 아무 일도 없다.
+      if (!entry.listeners.delete(listener) || entry.listeners.size > 0) return;
+      // 새 연결이 구독을 비운 뒤(`doConnect`)에 옛 해제 함수가 불려도 새 연결의 같은 목적지 표식을 지우지 않는다.
+      if (this.subscriptions.delete(entry)) this.pendingDestinations.delete(destination);
       for (const [owner, handle] of entry.handles) {
         // 소켓이 이미 닫혔으면 stompjs 의 unsubscribe() 가 `_checkConnection()` 에서
         // TypeError 를 던진다 — 재연결로 상태가 바뀔 때 effect 정리 단계가 이 함수를
@@ -483,7 +494,8 @@ export class AcademyRealtimeClient {
       if (seen.has(key)) return;
       seen.add(key);
     }
-    entry.onEnvelope(parseWebSocketEnvelope(JSON.parse(body) as unknown));
+    const parsed = parseWebSocketEnvelope(JSON.parse(body) as unknown);
+    for (const listener of [...entry.listeners]) listener.onEnvelope(parsed);
   }
 
   private clearReconnectTimer(): void {

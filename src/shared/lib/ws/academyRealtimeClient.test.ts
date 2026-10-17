@@ -487,4 +487,66 @@ describe("AcademyRealtimeClient", () => {
       vi.useRealTimers();
     }
   });
+
+  // R57 W-1 — 학원 토픽 훅 3개(승인 대기 · 비상 알림 · 화면)가 같은 목적지를 각자 구독해도 서버로 가는 SUBSCRIBE 는 1번이다.
+  describe("W-1: 같은 목적지 구독 공유", () => {
+    const connectedClient = () => {
+      const { factory, handles } = createFakeClientFactory();
+      const client = new AcademyRealtimeClient({ url: "ws://x", createClient: factory, readAccessToken: () => null });
+      client.connect();
+      handles[0].connected = true;
+      handles[0].config.onConnect({ headers: {}, body: "" });
+      return { client, handle: handles[0] };
+    };
+    const destination = "/topic/academy/1/live";
+    const runStarted = { event: "run_started", run_id: 7, occurred_at: "t", payload: {} };
+
+    it("같은 목적지를 3번 구독해도 STOMP SUBSCRIBE 는 1번이고 방송은 3곳 모두 받는다", () => {
+      const { client, handle } = connectedClient();
+      const listeners = [vi.fn(), vi.fn(), vi.fn()];
+      for (const listener of listeners) client.subscribe(destination, listener);
+
+      expect(handle.subscribedDestinations).toEqual([destination]);
+      handle.emit(destination, runStarted);
+      for (const listener of listeners) expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("마지막 구독자가 해제할 때 UNSUBSCRIBE 1번 — 앞선 해제는 남은 구독자의 수신을 끊지 않는다", () => {
+      const { client, handle } = connectedClient();
+      const [first, second, third] = [vi.fn(), vi.fn(), vi.fn()];
+      const offFirst = client.subscribe(destination, first);
+      const offSecond = client.subscribe(destination, second);
+      const offThird = client.subscribe(destination, third);
+
+      offFirst();
+      offSecond();
+      handle.emit(destination, runStarted);
+      expect(first).not.toHaveBeenCalled();
+      expect(second).not.toHaveBeenCalled();
+      expect(third).toHaveBeenCalledTimes(1);
+
+      offThird();
+      // 가짜 STOMP 는 구독 해제가 실제로 불려야 목적지 콜백을 지운다 — 지워졌으면 emit 이 던진다.
+      expect(() => handle.emit(destination, runStarted)).toThrow("구독하지 않은 목적지");
+    });
+
+    it("같은 구독자가 해제 함수를 두 번 불러도 다른 구독자의 구독은 그대로다", () => {
+      const { client, handle } = connectedClient();
+      const kept = vi.fn();
+      const offGone = client.subscribe(destination, vi.fn());
+      client.subscribe(destination, kept);
+
+      offGone();
+      offGone();
+      handle.emit(destination, runStarted);
+      expect(kept).toHaveBeenCalledTimes(1);
+    });
+
+    it("목적지가 다르면 각각 구독한다", () => {
+      const { client, handle } = connectedClient();
+      client.subscribe(destination, () => {});
+      client.subscribe("/topic/admin/live", () => {});
+      expect(handle.subscribedDestinations).toEqual([destination, "/topic/admin/live"]);
+    });
+  });
 });
