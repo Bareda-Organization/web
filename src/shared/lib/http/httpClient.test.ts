@@ -100,6 +100,12 @@ describe("apiFetch — 응답 시간 제한", () => {
   });
 
   it("GET 은 15초 안에 응답이 없으면 NetworkError 로 끊긴다", async () => {
+    // 내장 `AbortSignal.timeout` 은 가짜 시계를 타지 않아, 같은 일을 가짜 타이머로 하는 대역을 끼운다.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), ms);
+      return controller.signal;
+    });
     vi.stubGlobal("fetch", hangingFetch());
     const result = apiFetch("/staff/dashboard").then(
       () => "응답",
@@ -114,6 +120,8 @@ describe("apiFetch — 응답 시간 제한", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(await result).toBeInstanceOf(NetworkError);
+    expect(timeoutSpy).toHaveBeenCalledWith(15_000);
+    timeoutSpy.mockRestore();
   });
 
   it("쓰기(POST)는 시간 제한으로 끊지 않는다 — 서버가 이미 처리를 시작했을 수 있다", async () => {
