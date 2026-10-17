@@ -18,10 +18,10 @@ import { requireRealBackendApiBaseUrl, requireRealBackendWsUrl } from "@/shared/
 // 30초를 기다리는 이유 — 시험 실행 첫머리의 `POST /dev/reset`(`vitest.globalSetup.ts`)이 회차를 전부 `idle` 로 되돌려
 // 시뮬레이터가 다시 출발시킬 때까지 몇 초 걸린다.
 //
-// 시험은 세 가지를 본다 — ①연결은 언제나 1개다(STOMP 클라이언트를 한 번만 만든다) ②갱신마다 상태가 `reconnecting` → `connected` 로
-// 한 번씩 오가고 `disconnected` · `forbidden` 으로 가지 않는다 ③다시 접속한 뒤 호출부가 구독을 새로 걸면(`useRealtimeChannel` 과 같은
-// 동작) 방송이 이어지고 같은 방송이 두 번 오지 않는다. 끊긴 사이 놓친 방송은 화면이 REST 로 한 번 메우므로(`API_SPEC §7.2`) 공백은
-// 재접속에 걸린 시간만큼 허용한다.
+// 시험은 세 가지를 본다 — ①연결은 언제나 1개다(STOMP 클라이언트를 한 번만 만든다) ②갱신하는 동안 연결 상태는 `connected` 를 벗어나지 않는다
+// (재접속 안내를 띄우지 않는다) ③갱신으로 다시 접속할 때마다 접속 세대 번호가 오르고, 호출부가 구독을 새로 걸면(`useRealtimeChannel` 과
+// 같은 동작) 방송이 이어지며 같은 방송이 두 번 오지 않는다. 다시 접속하는 사이 놓친 방송은 화면이 REST 로 한 번 메우므로(`API_SPEC §7.2`)
+// 공백은 재접속에 걸린 시간만큼 허용한다.
 //
 // 방송 공백은 방송이 있어야 잰다. 시뮬레이터 방송은 2초 틱 묶음이라 그것만으로는 공백 측정이 거칠어, **시험이 방송을 스스로 일으킨다**:
 // 그 운행 중 회차의 기사로 로그인해 그 회차의 현재 위치를 0.4초마다 다시 올린다(`POST /runs/{id}/position` · 같은 좌표라 새 상태·
@@ -139,7 +139,7 @@ const startOwnBroadcasts = (target: OwnBroadcastTarget) => {
 
 describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 닫고 다시 열기", () => {
   it(
-    "토큰 수명 120초 서버에서 갱신을 겪고도 연결은 1개 · 상태는 reconnecting → connected 만 · 구독을 새로 걸면 방송이 이어지고 중복 없음",
+    "토큰 수명 120초 서버에서 갱신을 겪고도 연결은 1개 · 상태는 connected 를 벗어나지 않음 · 구독을 새로 걸면 방송이 이어지고 중복 없음",
     async ({ skip }) => {
       if (!backendReachable) skip();
       const first = await loginAs("staffA");
@@ -172,10 +172,10 @@ describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 
       const startedAt = Date.now();
       const arrivals: { at: number; key: string }[] = [];
       let unsubscribe: (() => void) | null = null;
-      // `useRealtimeChannel` 와 같은 동작 — connected 가 될 때마다 구독을 새로 건다. 끊김 뒤 다시 붙은 횟수도 센다(화면 REST 재조회 1회에 해당).
-      const states: WsConnectionState[] = [];
-      let reconnectedCount = 0;
-      let hadOutage = false;
+      // `useRealtimeChannel` 와 같은 동작 — 접속 세대 번호가 바뀔 때마다(첫 접속 · 갱신 · 끊김 뒤 재접속) 구독을 새로 건다.
+      const statesAfterFirstConnected: WsConnectionState[] = [];
+      let epochSeen = -1;
+      let renewalsObserved = 0;
       const subscribeNow = () => {
         unsubscribe?.();
         unsubscribe = client.subscribe(academyLiveDestination("1"), (envelope) => {
@@ -186,16 +186,14 @@ describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 
         const timer = setTimeout(() => reject(new Error("연결 시간 초과")), 10_000);
         client.onConnectionStateChange(() => {
           const state = client.getSnapshot();
-          if (state === "connected") {
-            subscribeNow();
-            if (hadOutage) reconnectedCount += 1;
-            hadOutage = false;
-            clearTimeout(timer);
-            resolve();
-          } else if (state === "reconnecting") {
-            hadOutage = true;
-          }
-          if (states.length > 0 || state !== "connecting") states.push(state);
+          const isFirstConnection = epochSeen === -1;
+          if (!isFirstConnection) statesAfterFirstConnected.push(state);
+          if (state !== "connected" || client.getEpoch() === epochSeen) return;
+          if (!isFirstConnection) renewalsObserved += 1;
+          epochSeen = client.getEpoch();
+          subscribeNow();
+          clearTimeout(timer);
+          resolve();
         });
       });
       client.connect();
@@ -204,7 +202,7 @@ describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 
       const stopOwnBroadcasts = startOwnBroadcasts(target);
       await new Promise((resolve) => setTimeout(resolve, OBSERVE_MS));
       const ownBroadcasts = await stopOwnBroadcasts();
-      const observedStates = [...states];
+      const observedStates = [...statesAfterFirstConnected];
       client.disconnect();
 
       const gaps = arrivals.slice(1).map((arrival, i) => arrival.at - arrivals[i].at);
@@ -217,7 +215,7 @@ describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 
           ttlSeconds: first.ttlSeconds,
           clientsCreated,
           statesAfterFirstConnected: observedStates,
-          reconnectedCount,
+          renewalsObserved,
           arrivals: arrivals.length,
           maxGapMs: maxGap,
           duplicatesDelivered: duplicates,
@@ -228,9 +226,8 @@ describe("실서버 — 접근 토큰 만료 전 재발급 뒤 연결 하나를 
 
       // 토큰 수명 120초 · 관측 140초 — 60초째와 새 토큰 수명이 같다면 120초째, 두 번 닫고 다시 연다.
       expect(clientsCreated).toBe(1);
-      expect(reconnectedCount).toBeGreaterThanOrEqual(1);
-      expect(observedStates.filter((state) => state !== "reconnecting" && state !== "connected" && state !== "disconnected")).toEqual([]);
-      expect(observedStates.slice(0, -1)).not.toContain("disconnected");
+      expect(renewalsObserved).toBeGreaterThanOrEqual(1);
+      expect(observedStates.every((state) => state === "connected")).toBe(true);
       expect(maxGap).toBeLessThan(MAX_GAP_MS);
       expect(lastArrival).toBeGreaterThan(first.ttlSeconds * 1000 + 5_000);
       expect(duplicates, `시험의 위치 올리기 성공 ${ownBroadcasts.posted}건 · 실패 ${ownBroadcasts.failed}건`).toBe(0);

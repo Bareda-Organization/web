@@ -12,6 +12,7 @@ type FakeHandle = {
   deactivateCalls: number;
   connected: boolean;
   subscribedDestinations: string[];
+  unsubscribeCalls: number;
   attempt: () => Promise<Record<string, string>>;
   open: () => void;
   emit: (destination: string, body: unknown) => void;
@@ -27,6 +28,7 @@ const createFakeClientFactory = () => {
       deactivateCalls: 0,
       connected: false,
       subscribedDestinations: [],
+      unsubscribeCalls: 0,
       attempt: () => config.getConnectHeaders(),
       open: () => {
         handle.connected = true;
@@ -55,6 +57,7 @@ const createFakeClientFactory = () => {
           unsubscribe: () => {
             // @stomp/stompjs 7.x — 연결이 없으면 구독 해제가 던진다(`_checkConnection`).
             if (!handle.connected) throw new TypeError("There is no underlying STOMP connection");
+            handle.unsubscribeCalls += 1;
             callbacksByDestination.delete(destination);
           },
         };
@@ -579,7 +582,7 @@ describe("AcademyRealtimeClient — 토큰 갱신은 연결 하나를 닫고 다
   };
 
   it("만료 60초 전에 재발급하고 같은 클라이언트를 닫았다 다시 연다 — 두 번째 연결은 만들지 않는다", async () => {
-    const { client, handles, refreshAccessToken, states } = await connectedWithShortToken();
+    const { client, handles, refreshAccessToken } = await connectedWithShortToken();
 
     await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS - 1);
     expect(refreshAccessToken).not.toHaveBeenCalled();
@@ -590,7 +593,77 @@ describe("AcademyRealtimeClient — 토큰 갱신은 연결 하나를 닫고 다
     expect(handles).toHaveLength(1);
     expect(handles[0].deactivateCalls).toBe(1);
     expect(handles[0].activateCalls).toBe(2);
+  });
+
+  // 계획된 갱신은 재접속 안내 띠를 띄우지 않는다 — `Ruling 901` 이 받아들이는 것은 방송 공백 1~2초이지 눈에 보이는 재접속 상태가 아니다.
+  it("갱신하는 동안 연결 상태는 connected 를 벗어나지 않는다 — 재접속 안내(reconnecting)를 거치지 않는다", async () => {
+    const { client, handles, states } = await connectedWithShortToken();
+
+    await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS);
+    expect(client.getSnapshot()).toBe("connected");
+    await handles[0].attempt();
+    handles[0].open();
+
+    expect(states).not.toContain("reconnecting");
+    expect(client.getSnapshot()).toBe("connected");
+  });
+
+  // 상태가 그대로 connected 라 호출부는 상태 변화로 다시 접속을 알 수 없다 — 접속 세대 번호가 올라가고 리스너가 불린다.
+  it("다시 접속이 끝나면 접속 세대 번호가 오르고 리스너에 알린다 — 호출부가 구독을 새로 걸고 화면을 한 번 다시 읽는 신호", async () => {
+    const { client, handles } = await connectedWithShortToken();
+    const epochBefore = client.getEpoch();
+    const notifications: number[] = [];
+    client.onConnectionStateChange(() => notifications.push(client.getEpoch()));
+
+    await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS);
+    expect(client.getEpoch()).toBe(epochBefore);
+    handles[0].open();
+
+    expect(client.getEpoch()).toBe(epochBefore + 1);
+    expect(notifications).toEqual([epochBefore + 1]);
+  });
+
+  // 레이스 (a): 옛 소켓의 닫힘 콜백이 `deactivate()` 가 끝난 뒤에 도착해도 끊김 처리(재발급 · 세션 만료 · 재접속 안내)를 타지 않는다.
+  it("닫기가 끝난 뒤에 늦게 도착한 옛 소켓의 닫힘은 끊김으로 처리하지 않는다", async () => {
+    const { client, handles, refreshAccessToken, onSessionExpired, states } = await connectedWithShortToken();
+    await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS);
+    await vi.advanceTimersByTimeAsync(0);
+
+    handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+    handles[0].config.onWebSocketClose({ code: 1000 });
+
+    expect(client.getSnapshot()).toBe("connected");
+    expect(states).not.toContain("reconnecting");
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  // 레이스 (b): 갱신하는 동안 `connect()`(= 브라우저 online · 탭 복귀가 부른다)가 두 번째 접속을 만들지 않는다.
+  it("갱신하는 동안 connect() 를 불러도 아무 일도 없다 — 두 번째 접속을 만들지 않는다", async () => {
+    const { client, handles } = await connectedWithShortToken();
+    await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS);
+    const activateBefore = handles[0].activateCalls;
+    const deactivateBefore = handles[0].deactivateCalls;
+
+    client.connect();
+
+    expect(handles).toHaveLength(1);
+    expect(handles[0].activateCalls).toBe(activateBefore);
+    expect(handles[0].deactivateCalls).toBe(deactivateBefore);
+  });
+
+  it("다시 접속이 평소 재접속보다 오래 걸리면 reconnecting 으로 내려가 평소 경로를 탄다", async () => {
+    const { client, handles, states } = await connectedWithShortToken();
+    await vi.advanceTimersByTimeAsync(120_000 - LEAD_MS);
+    expect(client.getSnapshot()).toBe("connected");
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(client.getSnapshot()).toBe("reconnecting");
     expect(states).toEqual(["reconnecting"]);
+    // 이제부터의 닫힘은 평범한 끊김이다.
+    handles[0].config.onWebSocketClose({ code: 1006 });
+    expect(client.getSnapshot()).toBe("reconnecting");
   });
 
   it("다시 접속하는 시도는 재발급한 새 토큰을 싣고, 연결되면 다음 갱신을 새 토큰의 만료 기준으로 예약한다", async () => {
@@ -600,7 +673,7 @@ describe("AcademyRealtimeClient — 토큰 갱신은 연결 하나를 닫고 다
     await expect(handles[0].attempt()).resolves.toEqual({ Authorization: `Bearer ${renewed}` });
     handles[0].open();
     expect(client.getSnapshot()).toBe("connected");
-    expect(states).toEqual(["reconnecting", "connected"]);
+    expect(states).toEqual(["connected"]);
 
     // 새 토큰은 처음 토큰보다 900초 더 오래 간다 — 시작 후 960초(= 1020 - 60)가 되기 전에는 재발급이 다시 나가지 않는다(지금은 60초째).
     await vi.advanceTimersByTimeAsync(900_000 - 1);
@@ -616,6 +689,8 @@ describe("AcademyRealtimeClient — 토큰 갱신은 연결 하나를 닫고 다
 
     expect(() => unsubscribe()).not.toThrow();
     handles[0].open();
+    // 옛 세션의 구독 해제는 새 접속에 UNSUBSCRIBE 를 보내지 않는다.
+    expect(handles[0].unsubscribeCalls).toBe(0);
     client.subscribe("/topic/academy/1/live", () => {});
     expect(handles[0].subscribedDestinations).toEqual(["/topic/academy/1/live", "/topic/academy/1/live"]);
   });
@@ -627,7 +702,7 @@ describe("AcademyRealtimeClient — 토큰 갱신은 연결 하나를 닫고 다
     // 닫기가 끝나는 순간 stompjs 가 부르는 닫힘 콜백.
     handles[0].config.onWebSocketClose({ code: 1000 });
 
-    expect(client.getSnapshot()).toBe("reconnecting");
+    expect(client.getSnapshot()).toBe("connected");
     expect(refreshAccessToken).toHaveBeenCalledTimes(1);
     expect(onSessionExpired).not.toHaveBeenCalled();
   });

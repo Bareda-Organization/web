@@ -13,7 +13,10 @@ type FakeInstance = {
   subscribeCalls: Array<{ destination: string }>;
   unsubscribeCalls: number;
   state: WsConnectionState;
+  epoch: number;
   emitState: (next: WsConnectionState) => void;
+  // 상태는 그대로 두고 접속 세대 번호만 올려 알린다 — 계획된 토큰 갱신(`Ruling 901`)이 다시 접속하는 모습.
+  emitReconnectSameState: () => void;
 };
 
 let instances: FakeInstance[] = [];
@@ -30,8 +33,15 @@ vi.mock("../lib/ws", () => {
         subscribeCalls: [],
         unsubscribeCalls: 0,
         state: "disconnected",
+        epoch: 0,
         emitState: (next) => {
+          // 실제 클라이언트는 접속에 성공할 때마다 번호를 한 번 올린다 — 이미 connected 인데 같은 알림이 또 오면 새 접속이 아니다.
+          if (next === "connected" && this.instance.state !== "connected") this.instance.epoch += 1;
           this.instance.state = next;
+          for (const listener of this.listeners) listener();
+        },
+        emitReconnectSameState: () => {
+          this.instance.epoch += 1;
           for (const listener of this.listeners) listener();
         },
       };
@@ -48,6 +58,10 @@ vi.mock("../lib/ws", () => {
 
     getSnapshot(): WsConnectionState {
       return this.instance.state;
+    }
+
+    getEpoch(): number {
+      return this.instance.epoch;
     }
 
     onConnectionStateChange(listener: () => void): () => void {
@@ -223,18 +237,34 @@ describe("useRealtimeChannel", () => {
       expect(onReconnected).not.toHaveBeenCalled();
     });
 
-    // `Ruling 901` — 만료 60초 전 재발급 뒤 클라이언트가 연결을 닫고 다시 여는 동안 상태는 connected → reconnecting → connected 로 간다.
-    it("토큰 갱신으로 연결을 닫고 다시 열면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다", () => {
+    // `Ruling 901` — 계획된 토큰 갱신은 연결 상태가 connected 로 그대로인 채 접속 세대 번호만 오른다(재접속 안내를 띄우지 않으려는 것).
+    // 호출부는 번호가 바뀌면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다.
+    it("토큰 갱신으로 같은 connected 상태에서 접속 세대가 바뀌면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다", () => {
       const onReconnected = vi.fn();
       renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
       act(() => instances[0].emitState("connected"));
       expect(instances[0].subscribeCalls).toHaveLength(1);
+      expect(onReconnected).not.toHaveBeenCalled();
 
-      act(() => instances[0].emitState("reconnecting"));
+      act(() => instances[0].emitReconnectSameState());
+
       expect(instances[0].unsubscribeCalls).toBe(1);
-      act(() => instances[0].emitState("connected"));
       expect(instances[0].subscribeCalls).toHaveLength(2);
       expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+
+    // 레이스 (b): 갱신으로 다시 접속하는 동안(상태는 connected) 브라우저 online · 탭 복귀가 `connect()` 를 부르면 두 번째 접속이 생긴다.
+    it("갱신하는 동안(connected 유지) online · 탭 복귀가 connect() 를 부르지 않는다", () => {
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+      act(() => instances[0].emitState("connected"));
+      act(() => instances[0].emitReconnectSameState());
+
+      act(() => {
+        window.dispatchEvent(new Event("online"));
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      expect(instances[0].connectCalls).toBe(1);
     });
 
     it("한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {

@@ -40,6 +40,9 @@ const CLOSE_SUBSCRIPTION_FORBIDDEN = 4403;
 const RENEW_LEAD_MS = 60_000;
 // 만료가 이미 임박했거나 수명이 짧은 토큰이어도 재발급을 이 간격보다 촘촘히 반복하지 않는다.
 const RENEW_MIN_DELAY_MS = 5_000;
+// 계획된 갱신 중에는 연결 상태를 `connected` 로 두어 재접속 안내를 띄우지 않는다(`Ruling 901` 이 받아들이는 것은 방송 공백 1~2초). 다시 접속이 이 시간
+// 안에 끝나지 않으면 평소 재접속과 같은 `reconnecting` 으로 내려가 안내를 띄운다.
+const RENEW_GRACE_MS = 5_000;
 
 // `subscribe()` 가 받은 구독 한 건 — 같은 목적지는 구독 한 건을 나눠 쓰고 `listeners` 가 그 목적지를 구독한 호출부 전부다.
 type ActiveSubscription = {
@@ -47,6 +50,8 @@ type ActiveSubscription = {
   listeners: Set<{ onEnvelope: (envelope: WebSocketEnvelope) => void }>;
   client: StompClientLike;
   handle: StompSubscriptionLike;
+  // 소켓이 닫혀 이 구독이 서버에서 사라졌다 — 해제 함수가 새 접속에 UNSUBSCRIBE 를 보내지 않게 한다.
+  stale: boolean;
 };
 
 // 재발급이 거절됐는가 — 401 만 refresh 토큰이 무효라는 뜻이다. 망 오류 · 5xx · 시간 초과는 일시적일 수 있어 세션 만료로 보지 않는다(`Ruling 905`).
@@ -88,8 +93,13 @@ export class AcademyRealtimeClient {
   // 지금 걸려 있는 구독 — 새 연결은 구독을 이어받지 않으므로 소켓이 닫힐 때 비운다.
   private readonly subscriptions = new Set<ActiveSubscription>();
   private renewTimer: ReturnType<typeof setTimeout> | null = null;
-  // 재발급 뒤 연결을 닫고 다시 여는 동안 참 — 그 닫힘을 끊김으로 오인하지 않는다.
+  // 재발급 뒤 연결을 닫고 다시 여는 계획된 갱신 중 참 — 이 동안 상태는 `connected` 로 두고, 옛 소켓의 닫힘을 끊김으로 오인하지 않으며, `connect()` 를 받지 않는다.
   private renewing = false;
+  // 갱신으로 닫은 옛 소켓의 닫힘 콜백을 아직 못 받았다 — 첫 닫힘 하나만 무시한다. `deactivate()` 가 끝난 뒤 늦게 와도 끊김으로 처리하지 않는다.
+  private awaitingOldClose = false;
+  private renewGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  // 접속에 성공할 때마다 오른다 — 갱신은 상태가 `connected` 로 그대로라 호출부가 상태 변화로 다시 접속을 알 수 없어, 이 번호의 변화로 알린다.
+  private epoch = 0;
 
   constructor(options: AcademyRealtimeClientOptions) {
     this.url = options.url;
@@ -103,6 +113,9 @@ export class AcademyRealtimeClient {
   // `useSyncExternalStore` 의 `getSnapshot` 자리에 그대로 넘길 수 있게 화살표 필드로 둔다 — 메서드를 훅에 넘기면 `this` 바인딩이 갈릴 수 있다.
   getSnapshot = (): WsConnectionState => this.state;
 
+  // 접속 세대 번호 — 상태가 같은 `connected` 여도 새 접속이면 달라진다(구독을 새로 걸고 화면을 한 번 다시 읽을 때를 안다).
+  getEpoch = (): number => this.epoch;
+
   onConnectionStateChange = (listener: ConnectionStateListener): (() => void) => {
     this.listeners.add(listener);
     return () => {
@@ -113,7 +126,7 @@ export class AcademyRealtimeClient {
   // 연결을 시작한다. 연결 중 · 연결됨이면 무시한다 — 호출부가 상태를 확인한 뒤 부르는 사이 상태가 바뀌어도 살아 있는 연결을 버리지 않는다.
   // `forbidden` · 재접속 대기(`reconnecting`)에서 부르면 대기를 건너뛰고 지금 다시 붙는다.
   connect(): void {
-    if (this.state === "connecting" || this.state === "connected") return;
+    if (this.renewing || this.state === "connecting" || this.state === "connected") return;
     this.manuallyDisconnected = false;
     this.tokenExpired = false;
     this.unauthorized = false;
@@ -139,6 +152,7 @@ export class AcademyRealtimeClient {
   disconnect(): void {
     this.manuallyDisconnected = true;
     this.clearRenewTimer();
+    this.endRenewal();
     this.dropSubscriptions();
     // 서버가 소켓을 이미 닫은 뒤의 deactivate() 는 죽은 소켓에 쓰다 예외가 날 수 있다 — 끊으려던 연결이니 무시한다.
     this.client?.deactivate().catch(() => {});
@@ -164,6 +178,7 @@ export class AcademyRealtimeClient {
         listeners: new Set(),
         client,
         handle: client.subscribe(destination, (message) => this.deliver(created, message.body)),
+        stale: false,
       };
       this.subscriptions.add(created);
       entry = created;
@@ -176,7 +191,7 @@ export class AcademyRealtimeClient {
       this.subscriptions.delete(shared);
       // 소켓이 이미 닫혔으면 stompjs 의 unsubscribe() 가 TypeError 를 던진다 — 재접속으로 상태가 바뀔 때 effect 정리 단계가 이 함수를
       // 부르므로 던지면 화면이 오류 경계로 떨어진다. 연결이 없으면 서버 쪽 구독도 이미 사라졌다.
-      if (shared.client.connected) shared.handle.unsubscribe();
+      if (!shared.stale && shared.client.connected) shared.handle.unsubscribe();
     };
   }
 
@@ -190,6 +205,8 @@ export class AcademyRealtimeClient {
 
   private handleConnected(): void {
     this.refreshedAfterUnauthorized = false;
+    this.endRenewal();
+    this.epoch += 1;
     this.setState("connected");
     if (this.connectedToken !== null) this.scheduleRenewal(this.connectedToken);
   }
@@ -209,7 +226,14 @@ export class AcademyRealtimeClient {
 
   // 소켓이 닫혔다(첫 접속 실패 포함). 멈출 경우가 아니면 stompjs 가 이 콜백 직후 다음 접속을 예약한다.
   private handleClosed(closeCode?: number): void {
-    if (this.renewing) return;
+    if (this.renewing) {
+      // 갱신으로 닫은 옛 소켓의 닫힘은 한 번만 무시한다. 그 뒤의 닫힘은 새 접속 시도의 실패라 평소 재접속 경로로 넘긴다.
+      if (this.awaitingOldClose) {
+        this.awaitingOldClose = false;
+        return;
+      }
+      this.endRenewal();
+    }
     this.clearRenewTimer();
     this.dropSubscriptions();
 
@@ -291,16 +315,29 @@ export class AcademyRealtimeClient {
     // 재발급을 기다리는 사이 연결이 끊겼거나 닫혔으면 건드리지 않는다.
     if (this.manuallyDisconnected || this.client !== client || this.state !== "connected") return;
     this.renewing = true;
+    this.awaitingOldClose = true;
     this.dropSubscriptions();
-    this.setState("reconnecting");
+    this.renewGraceTimer = setTimeout(() => {
+      if (!this.renewing) return;
+      this.endRenewal();
+      this.setState("reconnecting");
+    }, RENEW_GRACE_MS);
     try {
       await client.deactivate();
     } catch {
       // 이미 닫힌 연결일 수 있다 — 닫으려던 것이니 무시한다.
     }
-    this.renewing = false;
-    if (this.manuallyDisconnected || this.client !== client) return;
+    if (!this.renewing || this.manuallyDisconnected || this.client !== client) return;
     client.activate();
+  }
+
+  private endRenewal(): void {
+    this.renewing = false;
+    this.awaitingOldClose = false;
+    if (this.renewGraceTimer !== null) {
+      clearTimeout(this.renewGraceTimer);
+      this.renewGraceTimer = null;
+    }
   }
 
   private clearRenewTimer(): void {
@@ -312,6 +349,7 @@ export class AcademyRealtimeClient {
 
   // 새 소켓은 이전 세션의 구독을 이어받지 않는다 — 호출부의 해제 함수는 소켓이 닫혔는지 보고 서버 해제를 건너뛴다.
   private dropSubscriptions(): void {
+    for (const entry of this.subscriptions) entry.stale = true;
     this.subscriptions.clear();
   }
 
