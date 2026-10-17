@@ -245,6 +245,9 @@ describe("auth api — 실서버 계약", () => {
     skip,
   }) => {
     if (!backendReachable) skip();
+    // 가입은 미인증 엔드포인트인데, 앞선 reapplySignup 시험이 store 에 남긴 rejected 토큰이 실리면 계정 게이트가
+    // 이 요청 자체를 403 AUTH_REJECTED 로 막는다 — login() · 반려 계정 시험과 같은 이유로 비운다.
+    setAccessToken(null);
     const blockSuffix = Date.now().toString().slice(-8);
     const blockLoginId = `f5w2b${blockSuffix}`;
     await signup({
