@@ -1,6 +1,6 @@
 // features/admin 이 다루는 타입 전부 — API_SPEC §6 전체(8 화면). snake_case ↔ camelCase
-// 변환은 다른 기능과 같은 관례로 api/*.ts 호출부 경계에서 한 번만 한다.
-// 메인 관리자는 학원 경계를 넘는 유일한 역할이라(BRIEF-a1.md §2) 목록 타입마다
+// 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
+// 메인 관리자는 학원 경계를 넘는 유일한 역할이라목록 타입마다
 // 소속 학원을 드러내는 필드를 둔다 — 관계자 화면 타입을 그대로 복사하면 이 축이 빠진다.
 
 // ── §6.1~§6.3 학원 목록 · 등록 · 수정 (O-01) ──────────────────────────────
@@ -14,7 +14,7 @@ export type AcademySummaryResponseTypes = {
   staffCount: number;
   userCount: number;
   status: AcademyStatus;
-  // R48 Ruling 806 — 서버가 아직 안 주면(백엔드 병합 전) 없다. 없을 때는 칩·표시를 내지 않는다.
+  // Ruling 806 — 서버가 아직 안 주면(백엔드 병합 전) 없다. 없을 때는 칩·표시를 내지 않는다.
   hasAddress?: boolean;
   pendingSignupCount?: number;
 };
@@ -143,7 +143,7 @@ export type StaffAccountsResponseTypes = {
 };
 
 // §6.7 PATCH /admin/staff-accounts/{id}. 세 동작(정보 수정 · 비밀번호 초기화 · 재직 상태)이
-// 한 요청에 섞일 수 있으나, 화면은 명확성을 위해 한 번에 하나만 보낸다(판단 근거, 보고서 §1).
+// 한 요청에 섞일 수 있으나, 화면은 명확성을 위해 한 번에 하나만 보낸다.
 export type UpdateStaffAccountRequestTypes = {
   name?: string;
   phone?: string;
@@ -195,12 +195,12 @@ export type RunLiveItemResponseTypes = {
   estDepartTime: string;
   stops: LiveStopResponseTypes[];
   destinationEta: string | null;
-  // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다 — R16, Ruling 315.
+  // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다 — Ruling 315.
   driver: LiveContactResponseTypes | null;
   escort: LiveContactResponseTypes | null;
   // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`).
   consecutiveFailures: number;
-  // R48 Ruling 805 — `moving` 이 아니면 null · `finished` 가 아니면 finished_at 이 null. 서버가 안 주면 없다.
+  // Ruling 805 — `moving` 이 아니면 null · `finished` 가 아니면 finished_at 이 null. 서버가 안 주면 없다.
   delayMinutes?: number | null;
   finishedAt?: string | null;
 };
@@ -209,7 +209,7 @@ export type AcademyRunsLiveResponseTypes = {
   runs: RunLiveItemResponseTypes[];
 };
 
-// §6.9 승하차지별 학생 리스트 — stops[] → students[] 중첩 (2026-09-12 curl 로 실제
+// §6.9 승하차지별 학생 리스트 — stops[] → students[] 중첩 (curl 로 실제
 // 응답 형태 확인, 문서 그대로였다 — run/roster.ts 의 배열-직접-반환 편차와 다르다).
 export type RosterBoardStatus = "boarded" | "alighted" | "absent" | "no_show" | "waiting";
 
@@ -267,11 +267,8 @@ export type UnblockAccountResponseTypes = {
 };
 
 // ── §6.11 비상 알림 이력 (O-07) ───────────────────────────────────────────
-// A1 수정 라운드(조건 ③) — 이전 값(VEHICLE_FAULT · MEDICAL · ACCIDENT · OTHER)은 정본과
-// 대조하지 않고 적어 둔 것이었다. API_SPEC §5.16·§2306 이 정의하는 값은 소문자 스네이크
-// 케이스 4종(accident · vehicle_fault · student_emergency · etc)이다. 당시 백엔드가
-// 대문자 Java enum 이름을 그대로 내려 정본과 어긋나 있던 것은 서버 직렬화 정정(BE-R1
-// 목표 3)으로 해소돼, 대소문자 흡수용 `(string & {})` 를 걷어냈다.
+// API_SPEC §5.16·§2306 이 정의하는 값은 소문자 스네이크 케이스 4종(accident · vehicle_fault · student_emergency · etc)이다.
+// 서버가 이 값을 그대로 내리므로 대소문자 흡수용 `(string & {})` 는 두지 않는다.
 export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc";
 
 export type EmergencyAcademyRefResponseTypes = {
@@ -293,10 +290,8 @@ export type EmergencyPositionResponseTypes = {
   recordedAt: string | null;
 } | null;
 
-// 실제 응답(2026-09-12 curl 재확인)은 최상위가 §5.16 문서의 `items` 가 아니라
-// `emergencies` 다 — 이 부분은 정본과 실제로 어긋난다. 반대로 `unacked_count` 는
-// 문서에 없는 것이 아니라 §5.16 이 이미 명시한 필드다(이전 코멘트의 오기, A1 수정
-// 라운드에서 §5.16 을 직접 대조해 정정) — 목록 헤더에 "미확인 N건" 으로 쓴다.
+// 실제 응답(curl 확인)은 최상위가 §5.16 문서의 `items` 가 아니라 `emergencies` 다 — 이 부분은 정본과 실제로 어긋난다.
+// `unacked_count` 는 §5.16 이 명시한 필드이고 목록 헤더에 "미확인 N건" 으로 쓴다.
 export type EmergencyItemResponseTypes = {
   emergencyId: string;
   academy: EmergencyAcademyRefResponseTypes;
@@ -310,7 +305,7 @@ export type EmergencyItemResponseTypes = {
   riderCount: number;
   contacts: EmergencyPersonResponseTypes[];
   raisedAt: string;
-  // 단말이 누른 시각(참고값 · R47 Ruling 744) — 서버가 항상 채우지만 없어도 견딘다.
+  // 단말이 누른 시각(참고값 · Ruling 744) — 서버가 항상 채우지만 없어도 견딘다.
   occurredAt?: string | null;
   staffAcked: boolean;
   ackedAt: string | null;
@@ -351,7 +346,7 @@ export type AuditAction = "read" | "update" | "delete";
 
 export type AuditLogItemResponseTypes = {
   actor: string;
-  // R48 Ruling 809 — 행위자 계정의 현재 이름(계정이 없으면 null) · 감사 행 detail.action(없으면 null) · 접속 IP. 서버가 안 주면 없다.
+  // Ruling 809 — 행위자 계정의 현재 이름(계정이 없으면 null) · 감사 행 detail.action(없으면 null) · 접속 IP. 서버가 안 주면 없다.
   actorName?: string | null;
   detailAction?: string | null;
   ip?: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { ApiError, describeApiError } from "@/shared/lib/http";
 import { usePolling } from "@/shared/hooks";
 import { AlertBanner, Badge, Button, Card, EmptyState, Input, PageHeader, RosterTable, StatusChip, Tabs } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -32,8 +32,8 @@ const EMERGENCY_POLL_INTERVAL_MS = 5000;
 const DIRECTION_LABEL: Record<string, string> = { to_academy: "등원", from_academy: "하원" };
 
 // §5.16 GET·POST /staff/emergencies(EXC-04, A-16) — 비상 알림 목록·확인. 실시간 수신 팝업은
-// `(staff)` 레이아웃의 EmergencyAlertProvider 가 맡고(R32-W5), 이 화면은 5초마다 목록을 다시 불러온다.
-// 행을 열면 발신자·배치 인력 연락처·위치가 있는 상세 대화상자가 뜬다(R32-W6).
+// `(staff)` 레이아웃의 EmergencyAlertProvider 가 맡고, 이 화면은 5초마다 목록을 다시 불러온다.
+// 행을 열면 발신자·배치 인력 연락처·위치가 있는 상세 대화상자가 뜬다.
 export const EmergencyList = () => {
   const [status, setStatus] = useState<EmergencyStatus>("open");
   const [date, setDate] = useState("");
@@ -49,7 +49,7 @@ export const EmergencyList = () => {
   const [history, setHistory] = useState<EmergencyItemResponseTypes[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // 요청 번호 — 필터를 바꾸기 전에 나간 요청의 늦은 응답이 새 필터의 목록을 덮지 않게 최신 요청만 반영한다(F01-05).
+  // 요청 번호 — 필터를 바꾸기 전에 나간 요청의 늦은 응답이 새 필터의 목록을 덮지 않게 최신 요청만 반영한다.
   const requestSeq = useRef(0);
 
   // 돌려주는 값은 폴링용 성공 여부다 — 실패하면 `usePolling` 이 간격을 늘린다. 늦은 응답은 실패가 아니다.
@@ -76,8 +76,8 @@ export const EmergencyList = () => {
       return true;
     } catch (cause) {
       if (mine !== requestSeq.current) return true;
-      setError(cause instanceof ApiError ? cause.message : "비상 알림 목록을 불러오지 못했습니다");
-      // F01-08 — 주기 갱신이 한 번 실패했다고 보이던 미확인 건을 지우면 "없다" 로 읽힌다. 오류 배너만 띄운다.
+      setError(describeApiError(cause, "비상 알림 목록을 불러오지 못했습니다"));
+      // 주기 갱신이 한 번 실패했다고 보이던 미확인 건을 지우면 "없다" 로 읽힌다. 오류 배너만 띄운다.
       if (!silent) setItems([]);
       return false;
     } finally {
@@ -108,7 +108,7 @@ export const EmergencyList = () => {
         await load(status, date);
         setCanceledNotice(true);
       } else {
-        setError(cause instanceof ApiError ? cause.message : "확인 처리에 실패했습니다");
+        setError(describeApiError(cause, "확인 처리에 실패했습니다"));
       }
     } finally {
       setAckingId(null);

@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getManagers } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.13 MGR-01 — snake_case ↔ camelCase 변환 경계. work_hours 는 null 가능 필드라
 // 값이 있을 때·없을 때 둘 다 통과해야 한다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("manager api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -76,7 +74,7 @@ describe("manager api — snake_case ↔ camelCase 변환", () => {
     expect(result.counts).toBeNull();
   });
 
-  // R50 S9 — §5.13 MGR-01 `linked`(boolean) — 계정 연결 여부 필터. false 도 값이라 쿼리에 실려야 한다.
+  // §5.13 MGR-01 `linked`(boolean) — 계정 연결 여부 필터. false 도 값이라 쿼리에 실려야 한다.
   it("계정 연결 여부(linked)를 쿼리로 보낸다 — false 도 빠지지 않는다", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       mockJsonResponse(200, { success: true, data: { items: [], page: 0, size: 20, total_count: 0, has_next: false } }),

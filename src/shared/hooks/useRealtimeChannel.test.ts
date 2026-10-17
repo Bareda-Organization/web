@@ -13,7 +13,10 @@ type FakeInstance = {
   subscribeCalls: Array<{ destination: string }>;
   unsubscribeCalls: number;
   state: WsConnectionState;
+  epoch: number;
   emitState: (next: WsConnectionState) => void;
+  // 상태는 그대로 두고 접속 세대 번호만 올려 알린다 — 계획된 토큰 갱신(`Ruling 901`)이 다시 접속하는 모습.
+  emitReconnectSameState: () => void;
 };
 
 let instances: FakeInstance[] = [];
@@ -30,8 +33,15 @@ vi.mock("../lib/ws", () => {
         subscribeCalls: [],
         unsubscribeCalls: 0,
         state: "disconnected",
+        epoch: 0,
         emitState: (next) => {
+          // 실제 클라이언트는 접속에 성공할 때마다 번호를 한 번 올린다 — 이미 connected 인데 같은 알림이 또 오면 새 접속이 아니다.
+          if (next === "connected" && this.instance.state !== "connected") this.instance.epoch += 1;
           this.instance.state = next;
+          for (const listener of this.listeners) listener();
+        },
+        emitReconnectSameState: () => {
+          this.instance.epoch += 1;
           for (const listener of this.listeners) listener();
         },
       };
@@ -48,6 +58,10 @@ vi.mock("../lib/ws", () => {
 
     getSnapshot(): WsConnectionState {
       return this.instance.state;
+    }
+
+    getEpoch(): number {
+      return this.instance.epoch;
     }
 
     onConnectionStateChange(listener: () => void): () => void {
@@ -135,7 +149,7 @@ describe("useRealtimeChannel", () => {
     expect(instances[0].subscribeCalls).toEqual([{ destination: "/topic/admin/live" }]);
   });
 
-  // R57 W-4 — 세션이 아직 없어 학원 id 가 빈 문자열이면 `academyLiveDestination("")` 이 빈 목적지를 준다. 그 목적지로는 구독하지 않고
+  // 세션이 아직 없어 학원 id 가 빈 문자열이면 `academyLiveDestination("")` 이 빈 목적지를 준다. 그 목적지로는 구독하지 않고
   // (서버에 `/topic/academy//live` SUBSCRIBE 가 나가 4403 으로 연결이 닫히던 것을 막는다), 값이 생기면 그때 구독한다.
   it("W-4: 빈 destination 으로는 구독하지 않고, 값이 생기면 구독한다", () => {
     const { rerender } = renderHook(({ destination }: { destination: string }) => useRealtimeChannel(destination, () => {}), {
@@ -168,37 +182,8 @@ describe("useRealtimeChannel", () => {
     ]);
   });
 
-  it("F04-07: gaveUp 으로 굳은 연결은 reconnect() 로 다시 열 수 있다", () => {
-    const { result } = renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
-    act(() => {
-      instances[0].emitState("gaveUp");
-    });
-    expect(instances[0].connectCalls).toBe(1);
-
-    act(() => {
-      result.current.reconnect();
-    });
-    expect(instances[0].connectCalls).toBe(2);
-  });
-
-  it("F04-07: 브라우저가 다시 온라인이 되면 gaveUp 연결을 저절로 다시 연다(연결 중이던 상태는 건드리지 않는다)", () => {
-    renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
-    act(() => {
-      window.dispatchEvent(new Event("online"));
-    });
-    expect(instances[0].connectCalls).toBe(1);
-
-    act(() => {
-      instances[0].emitState("gaveUp");
-    });
-    act(() => {
-      window.dispatchEvent(new Event("online"));
-    });
-    expect(instances[0].connectCalls).toBe(2);
-  });
-
-  // R46-FIXRT S-5 — 기본 재연결 정책은 포기하지 않아 끊긴 연결은 계속 `reconnecting` 이다. 브라우저가 다시 온라인이
-  // 되거나 탭이 다시 보일 때 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 붙는다.
+  // 재접속은 포기하지 않아 끊긴 연결은 계속 `reconnecting` 이다. 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때
+  // 다음 대기(최대 30초)를 기다리지 않고 바로 다시 붙는다.
   it("브라우저가 다시 온라인이 되면 재연결 대기 중인 연결을 바로 다시 붙인다", () => {
     renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
     act(() => {
@@ -228,7 +213,7 @@ describe("useRealtimeChannel", () => {
     });
     expect(instances[0].connectCalls).toBe(2);
   });
-  // R46-FIXCONN C-1 ③·C-6 — 끊겼다 다시 붙으면 끊긴 사이 놓친 방송을 REST 로 한 번 메운다(API_SPEC §7 재연결 동기화).
+  // 끊겼다 다시 붙으면 끊긴 사이 놓친 방송을 REST 로 한 번 메운다(API_SPEC §7 재연결 동기화).
   // 실제 클라이언트는 재연결 대기가 끝나면 `connecting` 을 거쳐 `connected` 가 되므로 그 순서로 시험한다.
   describe("재연결 직후 콜백(onReconnected)", () => {
     it("끊김(reconnecting) 뒤 connecting 을 거쳐 connected 가 되면 한 번만 부른다", () => {
@@ -252,10 +237,40 @@ describe("useRealtimeChannel", () => {
       expect(onReconnected).not.toHaveBeenCalled();
     });
 
-    it("재연결 포기(gaveUp) 뒤 다시 붙어도 부르고, 한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {
+    // `Ruling 901` — 계획된 토큰 갱신은 연결 상태가 connected 로 그대로인 채 접속 세대 번호만 오른다(재접속 안내를 띄우지 않으려는 것).
+    // 호출부는 번호가 바뀌면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다.
+    it("토큰 갱신으로 같은 connected 상태에서 접속 세대가 바뀌면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다", () => {
       const onReconnected = vi.fn();
       renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
-      act(() => instances[0].emitState("gaveUp"));
+      act(() => instances[0].emitState("connected"));
+      expect(instances[0].subscribeCalls).toHaveLength(1);
+      expect(onReconnected).not.toHaveBeenCalled();
+
+      act(() => instances[0].emitReconnectSameState());
+
+      expect(instances[0].unsubscribeCalls).toBe(1);
+      expect(instances[0].subscribeCalls).toHaveLength(2);
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+
+    // 레이스 (b): 갱신으로 다시 접속하는 동안(상태는 connected) 브라우저 online · 탭 복귀가 `connect()` 를 부르면 두 번째 접속이 생긴다.
+    it("갱신하는 동안(connected 유지) online · 탭 복귀가 connect() 를 부르지 않는다", () => {
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
+      act(() => instances[0].emitState("connected"));
+      act(() => instances[0].emitReconnectSameState());
+
+      act(() => {
+        window.dispatchEvent(new Event("online"));
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      expect(instances[0].connectCalls).toBe(1);
+    });
+
+    it("한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("reconnecting"));
       act(() => instances[0].emitState("connecting"));
       act(() => instances[0].emitState("connected"));
       expect(onReconnected).toHaveBeenCalledTimes(1);
@@ -284,7 +299,7 @@ describe("useRealtimeChannel", () => {
       expect(onReconnected).toHaveBeenCalledTimes(1);
     });
   });
-  // R46-FIXCONN C-12 — 연결 상태만 읽는 화면(레이아웃의 연결 띠)도 같은 공유 연결을 쓴다. 구독은 걸지 않는다.
+  // 연결 상태만 읽는 화면(레이아웃의 연결 띠)도 같은 공유 연결을 쓴다. 구독은 걸지 않는다.
   describe("useRealtimeConnection (연결 상태만 읽기)", () => {
     it("목적지를 구독하지 않고 공유 연결의 상태를 돌려준다", () => {
       const { result } = renderHook(() => useRealtimeConnection());

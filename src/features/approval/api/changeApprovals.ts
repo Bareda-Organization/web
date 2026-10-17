@@ -1,188 +1,89 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
+  ChangeApprovalAffectedStudentResponseTypes,
   ChangeApprovalDecideRequestTypes,
   ChangeApprovalDecideResponseTypes,
   ChangeApprovalDetailResponseTypes,
-  ChangeApprovalSource,
   ChangeApprovalSummaryResponseTypes,
   ChangeApprovalsResponseTypes,
-  RouteStopPreviewResponseTypes,
+  RoutePreviewResponseTypes,
   RouteStopRefResponseTypes,
 } from "../types";
 
-type RawChangeApprovalSummary = {
-  approval_id: string | number;
-  source: ChangeApprovalSource;
-  student_name: string;
-  run_id: string | number;
-  bus_no: string;
-  direction: "to_academy" | "from_academy";
-  deadline_at: string;
-  stop_name: string;
-  remaining_riders: number;
-  will_remove_stop: boolean;
-  requested_at: string;
-};
+type WireChangeApprovalSummary = WithId<ChangeApprovalSummaryResponseTypes, "approvalId" | "runId">;
 
-type RawChangeApprovalsResponse = {
-  items: RawChangeApprovalSummary[];
-  pending_count: number;
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-};
-
-const toSummary = (raw: RawChangeApprovalSummary): ChangeApprovalSummaryResponseTypes => ({
-  approvalId: asIdString(raw.approval_id),
-  source: raw.source,
-  studentName: raw.student_name,
-  runId: asIdString(raw.run_id),
-  busNo: raw.bus_no,
-  direction: raw.direction,
-  deadlineAt: raw.deadline_at,
-  stopName: raw.stop_name,
-  remainingRiders: raw.remaining_riders,
-  willRemoveStop: raw.will_remove_stop,
-  requestedAt: raw.requested_at,
+// 서버 id 는 숫자 — 화면 타입은 문자열
+const toSummary = (raw: WireChangeApprovalSummary): ChangeApprovalSummaryResponseTypes => ({
+  ...raw,
+  approvalId: asIdString(raw.approvalId),
+  runId: asIdString(raw.runId),
 });
 
 // GET /staff/approvals (§5.5 목록, A-05) — 요약만 준다. `status` 기본값은 pending,
 // `page`·`size` 는 §1.8 공통 페이징(Ruling 358, 기본 0·20).
-// rejected·auto_rejected 조회가 500 을 내던 결함은 병합 `ab51f8f` 로 해소됐다(Ruling 264,
-// 2026-09-12 이 좌석이 8081 에서 재확인) — §9.6 4종을 전부 화면 필터로 연다.
+// §9.6 4종(pending·approved·rejected·auto_rejected)을 전부 화면 필터로 연다(Ruling 264).
 export const getChangeApprovals = async (
   status?: string,
   page = 0,
   size = 20,
 ): Promise<ChangeApprovalsResponseTypes> => {
-  const raw = await apiFetch<RawChangeApprovalsResponse>("/staff/approvals", {
-    method: "GET",
-    query: { status, page, size },
-  });
-  return {
-    items: raw.items.map(toSummary),
-    pendingCount: raw.pending_count,
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
+  const raw = await apiFetch<Omit<ChangeApprovalsResponseTypes, "items"> & { items: WireChangeApprovalSummary[] }>(
+    "/staff/approvals",
+    { method: "GET", query: { status, page, size } },
+  );
+  return { ...raw, items: raw.items.map(toSummary) };
+};
+
+type WireRouteStopRef = WithId<RouteStopRefResponseTypes, "stopId">;
+
+// 상세 중 서버가 아직 안 주거나 null 일 수 있는 필드(Ruling 812) — 아래에서 기본값으로 메운다.
+type OptionalDetailKeys = "status" | "decidedAt" | "decidedByName" | "driverName" | "escortName" | "departTime";
+
+type WireChangeApprovalDetail = Omit<
+  WithId<ChangeApprovalDetailResponseTypes, "approvalId" | "runId">,
+  OptionalDetailKeys | "routePreview" | "affectedStudents"
+> &
+  Partial<Pick<ChangeApprovalDetailResponseTypes, OptionalDetailKeys>> & {
+    routePreview:
+      | (Omit<RoutePreviewResponseTypes, "reordered" | "removed"> & {
+          reordered: WireRouteStopRef[];
+          removed: WireRouteStopRef[];
+        })
+      | null;
+    affectedStudents: WithId<ChangeApprovalAffectedStudentResponseTypes, "studentId">[];
   };
-};
 
-// R21-A 추가 지시 ② — lat·lng 를 더했다(지도 마커용, 경유 지점만 가리키는 항목은 null).
-type RawRouteStop = {
-  seq: number;
-  stop_name: string;
-  eta: string;
-  lat: number | null;
-  lng: number | null;
-};
-
-const toRouteStop = (raw: RawRouteStop): RouteStopPreviewResponseTypes => ({
-  seq: raw.seq,
-  stopName: raw.stop_name,
-  eta: raw.eta,
-  lat: raw.lat,
-  lng: raw.lng,
-});
-
-// R21-A 추가 지시 ② — `reordered`·`removed` 는 처음부터 객체였다(타입이 실제 모양과
-// 어긋나 있었다, 아래 `RawRouteStopRef` 참고. 지금까지 화면이 이 필드를 쓴 적이
-// 없어 드러나지 않았다).
-type RawRouteStopRef = { stop_id: string | number; stop_name: string | null; lat: number | null; lng: number | null };
-
-const toRouteStopRef = (raw: RawRouteStopRef): RouteStopRefResponseTypes => ({
-  stopId: asIdString(raw.stop_id),
-  stopName: raw.stop_name,
-  lat: raw.lat,
-  lng: raw.lng,
-});
-
-type RawRoutePathPoint = { lat: number; lng: number };
-
-type RawChangeApprovalDetail = RawChangeApprovalSummary & {
-  // Ruling 812 — 아직 안 주는 서버를 견디려고 선택 필드로 둔다.
-  status?: "pending" | "approved" | "rejected" | "auto_rejected";
-  decided_at?: string | null;
-  decided_by_name?: string | null;
-  driver_name?: string | null;
-  escort_name?: string | null;
-  // `R20-B` 목표 3 — `r20-a` 가 아직 병합 전이라 백엔드가 이 키 자체를 안 줄 수 있다
-  // (`undefined`). optional 로 받아 두고 아래에서 `null` 로 흡수한다.
-  depart_time?: string | null;
-  route_preview: {
-    stops_before: RawRouteStop[];
-    stops_after: RawRouteStop[];
-    reordered: RawRouteStopRef[];
-    removed: RawRouteStopRef[];
-    road_path_before: RawRoutePathPoint[];
-    road_path_after: RawRoutePathPoint[];
-  } | null;
-  est_time_before: string | null;
-  est_time_after: string | null;
-  est_distance_before: number | null;
-  est_distance_after: number | null;
-  est_duration_before: number | null;
-  est_duration_after: number | null;
-  affected_students: { student_id: string | number; name: string }[];
-  capacity: { student_capacity: number; assigned: number };
-  preview_token: string | null;
-  preview_stale: boolean;
-};
+// 서버 id 는 숫자 — 화면 타입은 문자열
+const toRouteStopRef = (raw: WireRouteStopRef): RouteStopRefResponseTypes => ({ ...raw, stopId: asIdString(raw.stopId) });
 
 // GET /staff/approvals/{id} (§5.5 상세, A-05) — 대기 건은 조회 시점에 재최적화를 정확히
 // 1회 실행하지만, 이미 결정된 건(approved·rejected·auto_rejected)은 재최적화를 하지 않고
 // `route_preview`·`est_time_*`·`est_distance_*`·`preview_token` 을 전부 null 로 돌려준다
 // (백엔드 `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`).
-// 이 null 을 그대로 뚫고 지나가 `stops_before` 접근에서 TypeError 로 죽던 결함을
-// 2026-09-14 F5-W1 실서버 계약 시험(approval_id=2)이 잡아 여기서 null 을 명시적으로 다룬다.
+// routePreview 가 null 인 건은 화면이 그대로 받는다.
 //
-// 이 학원 시드 데이터는 대기 건에 한해 고정 노선이 없어 422 ROUTE_NOT_CONFIGURED_FOR_RUN 가
-// 나는데, 이 코드는 apiErrorCodes.ts 정본 목록에도 API_SPEC §5.5 에도 없다
-// (2026-09-12 확인 — 백엔드 ErrorCode.java:203 에는 실재, HTTP 422). 정본 목록을
-// 임의로 늘리지 말라는 그 파일의 지시를 존중해 여기서 코드를 추가하지 않고,
+// 대기 건의 고정 노선이 없으면 422 ROUTE_NOT_CONFIGURED_FOR_RUN 가 나는데, 이 코드는 apiErrorCodes.ts 정본 목록에도
+// API_SPEC §5.5 에도 없다(백엔드 ErrorCode.java 에는 실재, HTTP 422). 정본 목록을 임의로 늘리지 않으려
 // 화면은 ApiError.message 를 그대로 보여주는 방식으로 이 간극을 흡수한다.
 export const getChangeApprovalDetail = async (approvalId: string): Promise<ChangeApprovalDetailResponseTypes> => {
-  const raw = await apiFetch<RawChangeApprovalDetail>(`/staff/approvals/${approvalId}`, { method: "GET" });
+  const raw = await apiFetch<WireChangeApprovalDetail>(`/staff/approvals/${approvalId}`, { method: "GET" });
   return {
+    ...raw,
     ...toSummary(raw),
-    routePreview: raw.route_preview
-      ? {
-          stopsBefore: raw.route_preview.stops_before.map(toRouteStop),
-          stopsAfter: raw.route_preview.stops_after.map(toRouteStop),
-          reordered: raw.route_preview.reordered.map(toRouteStopRef),
-          removed: raw.route_preview.removed.map(toRouteStopRef),
-          roadPathBefore: raw.route_preview.road_path_before,
-          roadPathAfter: raw.route_preview.road_path_after,
-        }
+    routePreview: raw.routePreview
+      ? { ...raw.routePreview, reordered: raw.routePreview.reordered.map(toRouteStopRef), removed: raw.routePreview.removed.map(toRouteStopRef) }
       : null,
+    // 서버가 안 주면 pending · null (Ruling 812)
     status: raw.status ?? "pending",
-    decidedAt: raw.decided_at ?? null,
-    decidedByName: raw.decided_by_name ?? null,
-    driverName: raw.driver_name ?? null,
-    escortName: raw.escort_name ?? null,
-    departTime: raw.depart_time ?? null,
-    estTimeBefore: raw.est_time_before,
-    estTimeAfter: raw.est_time_after,
-    estDistanceBefore: raw.est_distance_before,
-    estDistanceAfter: raw.est_distance_after,
-    estDurationBefore: raw.est_duration_before,
-    estDurationAfter: raw.est_duration_after,
-    affectedStudents: raw.affected_students.map((s) => ({ studentId: asIdString(s.student_id), name: s.name })),
-    capacity: { studentCapacity: raw.capacity.student_capacity, assigned: raw.capacity.assigned },
-    previewToken: raw.preview_token,
-    previewStale: raw.preview_stale,
+    decidedAt: raw.decidedAt ?? null,
+    decidedByName: raw.decidedByName ?? null,
+    driverName: raw.driverName ?? null,
+    escortName: raw.escortName ?? null,
+    departTime: raw.departTime ?? null,
+    affectedStudents: raw.affectedStudents.map((s) => ({ ...s, studentId: asIdString(s.studentId) })),
   };
-};
-
-type RawChangeApprovalDecideResponse = {
-  status: "approved" | "rejected" | "auto_rejected";
-  stop_removed: boolean;
-  route_version: number;
-  decided_by: string;
-  decided_at: string;
 };
 
 // POST /staff/approvals/{id}/decide (§5.6, A-05).
@@ -201,15 +102,8 @@ export const decideChangeApproval = async (
     body.preview_token = payload.previewToken;
   }
 
-  const raw = await apiFetch<RawChangeApprovalDecideResponse>(`/staff/approvals/${approvalId}/decide`, {
+  return apiFetch<ChangeApprovalDecideResponseTypes>(`/staff/approvals/${approvalId}/decide`, {
     method: "POST",
     body,
   });
-  return {
-    status: raw.status,
-    stopRemoved: raw.stop_removed,
-    routeVersion: raw.route_version,
-    decidedBy: raw.decided_by,
-    decidedAt: raw.decided_at,
-  };
 };

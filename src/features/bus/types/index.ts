@@ -1,8 +1,8 @@
 // features/bus 가 다루는 타입 전부 — 차량 관리(§5.12, BUS-01~04, A-11).
-// snake_case ↔ camelCase 변환은 approval/run 과 같은 관례로 api/*.ts 호출부 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 //
 // ⚠ §5.12 절 본문에는 목록 응답의 필드가 명시돼 있지 않다(요청 필드 표만 있음).
-// 2026-09-12 curl 로 실측한 결과 목록·응답 모두 기본키가 `bus_id` 가 아니라 `id`(숫자)다.
+// curl 실측 — 목록·응답 모두 기본키가 `bus_id` 가 아니라 `id`(숫자)다.
 
 export type BusItemResponseTypes = {
   id: string;

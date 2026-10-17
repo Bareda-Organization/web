@@ -2,17 +2,13 @@ import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { TransferRequestTypes, TransferResponseTypes } from "../types";
 
-type RawTransferResponse = {
-  transfer_id: string | number;
-  student_id: string | number;
-  from_run_id: string | number;
-  to_run_id: string | number;
-  stop_id: string | number | null;
-  status: "staged";
-  impact: {
-    from: { rider_count_before: number; rider_count_after: number };
-    to: { rider_count_before: number; rider_count_after: number; capacity: number };
-  };
+// 서버 id 는 숫자 — 화면 타입은 문자열. stopId 는 null 일 수 있다.
+type WireTransfer = Omit<TransferResponseTypes, "transferId" | "studentId" | "fromRunId" | "toRunId" | "stopId"> & {
+  transferId: string | number;
+  studentId: string | number;
+  fromRunId: string | number;
+  toRunId: string | number;
+  stopId: string | number | null;
 };
 
 // POST /staff/students/{studentId}/transfer (§5.8, A-07) — 대기 저장이다(확정 배치가 반영).
@@ -29,25 +25,17 @@ export const postTransfer = async (
   if (payload.stopId !== undefined) body.stop_id = payload.stopId;
   if (payload.address !== undefined) body.address = payload.address;
 
-  const raw = await apiFetch<RawTransferResponse>(`/staff/students/${studentId}/transfer`, {
+  const raw = await apiFetch<WireTransfer>(`/staff/students/${studentId}/transfer`, {
     method: "POST",
     body,
   });
   return {
-    transferId: asIdString(raw.transfer_id),
-    studentId: asIdString(raw.student_id),
-    fromRunId: asIdString(raw.from_run_id),
-    toRunId: asIdString(raw.to_run_id),
-    stopId: raw.stop_id == null ? null : asIdString(raw.stop_id),
-    status: raw.status,
-    impact: {
-      from: { riderCountBefore: raw.impact.from.rider_count_before, riderCountAfter: raw.impact.from.rider_count_after },
-      to: {
-        riderCountBefore: raw.impact.to.rider_count_before,
-        riderCountAfter: raw.impact.to.rider_count_after,
-        capacity: raw.impact.to.capacity,
-      },
-    },
+    ...raw,
+    transferId: asIdString(raw.transferId),
+    studentId: asIdString(raw.studentId),
+    fromRunId: asIdString(raw.fromRunId),
+    toRunId: asIdString(raw.toRunId),
+    stopId: raw.stopId == null ? null : asIdString(raw.stopId),
   };
 };
 

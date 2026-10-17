@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Dialog, useToast } from "@/shared/ui";
 import { DefinitionList } from "@/shared/ui/display";
 import { formatRole } from "@/shared/lib/format/roleLabel";
@@ -52,22 +51,16 @@ const afterNotice = (account: BlockedAccountItemResponseTypes) => {
 // 그 맥락을 확인 단계에서 한 번 더 보여준 뒤 명시적으로 확정하게 한다.
 export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfirmDialogProps) => {
   const toast = useToast();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const time = eventTimeCell(account.blockedAt);
   const notice = afterNotice(account);
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+    await run(async () => {
       await unblockAccount(account.accountId);
       toast.show({ title: `${account.name} 계정의 로그인 차단을 해제했습니다`, detail: notice.toast, durationMs: 6000 });
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "차단 해제에 실패했습니다");
-      setSubmitting(false);
-    }
+    }, "차단 해제에 실패했습니다");
   };
 
   return (

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError } from "@/shared/lib/http";
+import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTable, StatusChip, Tabs } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getChangeApprovals } from "../api";
@@ -29,49 +29,12 @@ const PAGE_SIZE = 20;
 export const ChangeApprovalList = () => {
   const router = useRouter();
   const [status, setStatus] = useState("pending");
-  const [page, setPage] = useState(0);
-  const [items, setItems] = useState<ChangeApprovalSummaryResponseTypes[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
-  const requestSeq = useRef(0);
-
-  const loadApprovals = useCallback(async (nextStatus: string, nextPage: number) => {
-    const seq = ++requestSeq.current;
-    setLoading(true);
-    try {
-      const data = await getChangeApprovals(nextStatus, nextPage, PAGE_SIZE);
-      if (seq !== requestSeq.current) return;
-      setItems(data.items);
-      setPendingCount(data.pendingCount);
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setError(null);
-    } catch (cause) {
-      if (seq !== requestSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "구간 변경 목록을 불러오지 못했습니다");
-      setItems([]);
-    } finally {
-      if (seq === requestSeq.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await loadApprovals(status, page);
-    })();
-  }, [status, page, loadApprovals]);
-
-  // 상태 필터를 바꾸면 0 페이지로 되돌린다 — 옛 필터의 마지막 페이지가 새 필터에서는
-  // 범위 밖일 수 있다(선례 NotificationList#handleFilterChange 와 같은 근거).
-  const handleStatusChange = (nextStatus: string) => {
-    setStatus(nextStatus);
-    setPage(0);
-  };
+  // 상태 탭을 바꾸면 0쪽부터 다시 읽는다(usePagedList 의 resetKey) — 옛 탭의 마지막 쪽이 새 탭에서는 범위 밖일 수 있다.
+  const { items, data, totalCount, hasNext, page, setPage, loading, error, reload } = usePagedList(
+    (targetPage) => getChangeApprovals(status, targetPage, PAGE_SIZE),
+    { resetKey: status, errorMessage: "구간 변경 목록을 불러오지 못했습니다" },
+  );
+  const pendingCount = data?.pendingCount ?? 0;
 
   const now = useNowEverySecond();
 
@@ -105,9 +68,9 @@ export const ChangeApprovalList = () => {
       ),
     },
     { key: "remainingRiders", label: "잔여 인원", align: "right", render: (row) => `${row.remainingRiders}명` },
-    // 상세 화면과 같은 형식 함수를 쓴다 — 목록만 풀 ISO 로 남아 있었다(2026-09-19 실측).
+    // 상세 화면과 같은 형식 함수를 쓴다.
     { key: "deadlineAt", label: "처리 기한", render: (row) => formatClockTime(row.deadlineAt) },
-    // 기한을 넘기면 자동 거절되어 학부모에게 실패 통지가 나간다 — 처리 대기 목록에서는 남은 시간을 함께 보여 준다(B1 #5).
+    // 기한을 넘기면 자동 거절되어 학부모에게 실패 통지가 나간다 — 처리 대기 목록에서는 남은 시간을 함께 보여 준다.
     ...(status === "pending"
       ? [
           {
@@ -166,7 +129,7 @@ export const ChangeApprovalList = () => {
           { value: "auto_rejected", label: "자동 거절" },
         ]}
         value={status}
-        onChange={handleStatusChange}
+        onChange={setStatus}
       />
 
       <Card flush aria-busy={loading}>
@@ -175,7 +138,7 @@ export const ChangeApprovalList = () => {
         ) : (
           <RosterTable
             hasError={Boolean(error)}
-            onRetry={() => loadApprovals(status, page)}
+            onRetry={reload}
             columns={columns}
             loading={loading}
             rows={items}

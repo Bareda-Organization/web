@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BusOptionsNotice, useBusOptions } from "@/features/bus";
 import { runPerWeekday, WEEKDAY_LABEL, WEEKDAY_OPTIONS } from "@/shared/lib/format/weekdayBatch";
 import type { WeekdayOutcome } from "@/shared/lib/format/weekdayBatch";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select, Switch, WeekdayPicker } from "@/shared/ui";
 import { createRoute, updateRoute } from "../api";
@@ -17,7 +18,7 @@ type RouteFormProps = {
   onClose: () => void;
   // 등록이면 만든 편성의 id 를 넘긴다(목록이 상세로 이어 주는 데 쓴다). 수정이면 그 편성의 id.
   onDone: (saved: { id: string }) => void;
-  // 등록에서 요일을 둘 이상 골라 저장했을 때(B1 #7) — 일부만 저장됐어도 닫을 때 부른다. 목록이 다시 읽는 데 쓴다.
+  // 등록에서 요일을 둘 이상 골라 저장했을 때 — 일부만 저장됐어도 닫을 때 부른다. 목록이 다시 읽는 데 쓴다.
   onBatchDone?: () => void;
   /** 요일표의 빈 칸을 눌러 열었을 때의 시작 값 */
   initial?: { busId?: string; weekday?: Weekday; direction?: RunDirection };
@@ -41,8 +42,7 @@ export const RouteForm = ({ route, onClose, onDone, onBatchDone, initial, existi
   const [direction, setDirection] = useState<RunDirection>(route?.direction ?? initial?.direction ?? "to_academy");
   const [name, setName] = useState(route?.name ?? "");
   const [active, setActive] = useState(route?.active ?? true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, setError, run } = useAction();
 
   const busOptions = useBusOptions(route ? { id: route.busId, busNo: route.busNo } : undefined);
   // 등록 폼은 목록의 첫 차량이 기본 선택이다.
@@ -75,26 +75,20 @@ export const RouteForm = ({ route, onClose, onDone, onBatchDone, initial, existi
 
   const handleSubmit = async () => {
     if (busId === undefined) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      // PATCH 는 키가 없으면 그대로 둔다 — 지운 이름은 빈 문자열로 보내야 서버 값이 지워진다(원래 이름이 있던 수정에서만).
-      const request = { busId, direction, name: name.trim() || (route?.name ? "" : undefined), active };
-      if (route) {
-        const saved = await updateRoute(route.id, { ...request, weekday });
-        onDone({ id: saved.id });
-      } else {
-        await handleCreateWeekdays(request);
-      }
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "DUPLICATE_ROUTE") {
-        setError(DUPLICATE_ROUTE_MESSAGE);
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "편성 저장에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(
+      async () => {
+        // PATCH 는 키가 없으면 그대로 둔다 — 지운 이름은 빈 문자열로 보내야 서버 값이 지워진다(원래 이름이 있던 수정에서만).
+        const request = { busId, direction, name: name.trim() || (route?.name ? "" : undefined), active };
+        if (route) {
+          const saved = await updateRoute(route.id, { ...request, weekday });
+          onDone({ id: saved.id });
+        } else {
+          await handleCreateWeekdays(request);
+        }
+      },
+      "편성 저장에 실패했습니다",
+      (cause) => (cause instanceof ApiError && cause.code === "DUPLICATE_ROUTE" ? DUPLICATE_ROUTE_MESSAGE : undefined),
+    );
   };
 
   return (

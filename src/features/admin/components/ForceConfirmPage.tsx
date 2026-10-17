@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -21,7 +21,7 @@ const isDue = (run: RunLiveItemResponseTypes, nowMs: number): boolean => new Dat
 const directionText = (run: RunLiveItemResponseTypes) => (run.direction === "to_academy" ? "등원" : "하원");
 
 // §6.14 회차 강제 확정(UF-O-07 — 기능 ID 는 없다, `FEATURE_SPEC §6.2`). 확정이 계속 실패한 회차를 골라내는 화면이라 idle 상태 회차만 대상으로 둔다.
-// R48 시안: 학원 칩(확정 실패 수 · 비활성 표시) · 대상 / 대기 두 묶음 · 확정 예정 전에는 꺼진 단추 "HH:mm 부터 가능"(U-03).
+// 학원 칩(확정 실패 수 · 비활성 표시) · 대상 / 대기 두 묶음 · 확정 예정 전에는 꺼진 단추 "HH:mm 부터 가능"(U-03).
 export const ForceConfirmPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
   const [attention, setAttention] = useState<RunAttentionItemTypes[]>([]);
@@ -57,7 +57,7 @@ export const ForceConfirmPage = () => {
         }
       } catch (cause) {
         if (!cancelled) {
-          setError(cause instanceof ApiError ? cause.message : "학원 목록을 불러오지 못했습니다");
+          setError(describeApiError(cause, "학원 목록을 불러오지 못했습니다"));
         }
       } finally {
         if (!cancelled) {
@@ -77,7 +77,7 @@ export const ForceConfirmPage = () => {
     };
   }, []);
 
-  // F03-09 — 학원을 바꾼 뒤 옛 학원의 늦은 응답이 목록을 덮으면 다른 학원 회차에 "강제 확정" 을 누를 수 있다.
+  // 학원을 바꾼 뒤 옛 학원의 늦은 응답이 목록을 덮으면 다른 학원 회차에 "강제 확정" 을 누를 수 있다.
   // 요청이 겹치면 마지막에 보낸 요청의 응답만 반영한다.
   const runsRequestRef = useRef(0);
   const loadRuns = useCallback(async (id: string) => {
@@ -93,7 +93,7 @@ export const ForceConfirmPage = () => {
       setError(null);
     } catch (cause) {
       if (requestId !== runsRequestRef.current) return;
-      setError(cause instanceof ApiError ? cause.message : "회차 목록을 불러오지 못했습니다");
+      setError(describeApiError(cause, "회차 목록을 불러오지 못했습니다"));
     } finally {
       if (requestId === runsRequestRef.current) setLoadingRuns(false);
     }
@@ -146,7 +146,7 @@ export const ForceConfirmPage = () => {
       ),
     },
     {
-      // W4 — 확정이 계속 실패하는 회차를 이 목록에서 바로 알아본다(`API_SPEC §6.8` `consecutive_failures`, BR-047 · `UF-O-07`). 0(성공)이면 "시도 전".
+      // 확정이 계속 실패하는 회차를 이 목록에서 바로 알아본다(`API_SPEC §6.8` `consecutive_failures`, BR-047 · `UF-O-07`). 0(성공)이면 "시도 전".
       key: "consecutiveFailures",
       label: "확정 시도",
       render: (row) =>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, OptionList, OptionListItem, SearchField, StatusChip } from "@/shared/ui";
+import { describeApiError } from "@/shared/lib/http";
+import { AlertBanner, SearchField, StatusChip } from "@/shared/ui";
 import type { LinkCandidateTypes } from "../types";
-import { StyledCandidateLabel, StyledCandidateList } from "./LinkCandidatePicker.styled";
+import { StyledCandidateLabel, StyledCandidateList, StyledOptionList, StyledOptionListItem } from "./LinkCandidatePicker.styled";
 
 type LinkCandidatePickerProps = {
   /** 이름 검색으로 후보를 가져온다 — 검색어가 없으면 처음 몇 명을 보여준다. */
@@ -24,7 +24,7 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
   const [candidates, setCandidates] = useState<LinkCandidateTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 늦게 온 옛 검색 결과가 새 후보 목록을 덮지 않게 한다(F02-04).
+  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 늦게 온 옛 검색 결과가 새 후보 목록을 덮지 않게 한다.
   const requestSeq = useRef(0);
 
   const load = useCallback(
@@ -39,7 +39,7 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
       } catch (cause) {
         if (seq !== requestSeq.current) return -1;
         setCandidates([]);
-        setError(cause instanceof ApiError ? cause.message : "목록을 불러오지 못했습니다");
+        setError(describeApiError(cause, "목록을 불러오지 못했습니다"));
         return -1;
       }
     },
@@ -71,12 +71,12 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
       <StyledCandidateList>
         {candidates.length === 0 && !error ? <p>검색 결과가 없습니다</p> : null}
         {candidates.length > 0 ? (
-          <OptionList>
+          <StyledOptionList>
             {candidates.map((candidate) => {
               const disabled = candidate.disabledReason !== undefined;
               const picked = selectedIds.includes(candidate.id);
               return (
-                <OptionListItem key={candidate.id} picked={picked}>
+                <StyledOptionListItem key={candidate.id} $picked={picked} aria-current={picked ? "true" : undefined}>
                   <StyledCandidateLabel $disabled={disabled}>
                     <input
                       type={multiple ? "checkbox" : "radio"}
@@ -92,10 +92,10 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
                     {/* 연결할 수 없는 사유를 같은 줄에 보인다 — 눌러 본 뒤 409 ALREADY_LINKED 를 받지 않게 한다. */}
                     {disabled ? <StatusChip tone="off" marker={false}>{candidate.disabledReason}</StatusChip> : <StatusChip tone="ok" marker={false} quiet>연결 가능</StatusChip>}
                   </StyledCandidateLabel>
-                </OptionListItem>
+                </StyledOptionListItem>
               );
             })}
-          </OptionList>
+          </StyledOptionList>
         ) : null}
       </StyledCandidateList>
     </>

@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getReports, handleReport } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.20 EXC-02·03 — snake_case ↔ camelCase 변환 경계. 상세 조회(GET /staff/reports/{id})는
-// 목록 항목과 필드가 같아 화면이 부르지 않으므로 웹 함수를 두지 않는다(R46-WEB A#16).
+// 목록 항목과 필드가 같아 화면이 부르지 않으므로 웹 함수를 두지 않는다.
 // studentName 이 null 인 경계값과 채워진 경우를 각각 검사한다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("report api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

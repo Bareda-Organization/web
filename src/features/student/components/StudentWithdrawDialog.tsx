@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Dialog, StatusChip } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { deleteStudent, getWithdrawalPreview } from "../api";
@@ -22,8 +22,7 @@ const runLabel = (run: WithdrawalPreviewRunTypes) => `${run.busNo} ${DIRECTION_L
 // "삭제" 가 아니라 "퇴원" 이라는 실제 의미로 확인을 받는다. 확인 창은 퇴원이 오늘 · 내일 운행에 미치는 영향을 먼저 보인다
 // (GET …/withdrawal-preview, Ruling 815) — 되돌릴 수 없어 영향 판단 근거가 필요하다.
 export const StudentWithdrawDialog = ({ student, onClose, onDone }: StudentWithdrawDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   // 미리보기는 보조 정보라 못 받아도 퇴원 확인은 그대로 된다(옛 서버 · 일시 오류) — 그때는 고정 문구만 보인다.
   const [preview, setPreview] = useState<WithdrawalPreviewResponseTypes | null>(null);
 
@@ -40,16 +39,10 @@ export const StudentWithdrawDialog = ({ student, onClose, onDone }: StudentWithd
   }, [student.studentId]);
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+    await run(async () => {
       await deleteStudent(student.studentId);
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "퇴원 처리에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
+    }, "퇴원 처리에 실패했습니다");
   };
 
   const tomorrowStops = preview ? [...new Set(preview.tomorrowRuns.map((run) => run.stopName).filter(Boolean))] : [];

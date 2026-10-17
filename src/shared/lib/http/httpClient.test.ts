@@ -2,17 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, apiFetchBlob } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
 import { ApiError, NetworkError } from "./apiError";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // 보고서 4항이 지목한 두 번째 공백 — httpClient → authGate 이벤트 전달.
 // 403 AUTH_PENDING·AUTH_REJECTED 는 대기 화면 재판정을 깨워야 하고, 같은 403 이라도
 // 다른 코드(FORBIDDEN 등)는 깨우면 안 된다 — "조용히 no-op" 이 되는 결함을 여기서 잡는다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  }) as Response;
-
 describe("apiFetch — 계정 상태 게이트 이벤트 전달", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -85,7 +79,7 @@ describe("apiFetchBlob", () => {
   });
 });
 
-// R46-FIXCONN C-8 — 서버가 연결은 받고 응답을 안 주면 브라우저가 포기할 때까지(수 분) 그 조회가 매달려 폴링이 멈춘다.
+// 서버가 연결은 받고 응답을 안 주면 브라우저가 포기할 때까지(수 분) 그 조회가 매달려 폴링이 멈춘다.
 // GET 은 응답 헤더를 15초 안에 못 받으면 끊어 실패로 알린다(폴링의 실패 백오프가 이어받는다). 쓰기(POST·PATCH)는 서버가 이미 처리를
 // 시작했을 수 있어 끊지 않는다.
 describe("apiFetch — 응답 시간 제한", () => {
@@ -106,6 +100,12 @@ describe("apiFetch — 응답 시간 제한", () => {
   });
 
   it("GET 은 15초 안에 응답이 없으면 NetworkError 로 끊긴다", async () => {
+    // 내장 `AbortSignal.timeout` 은 가짜 시계를 타지 않아, 같은 일을 가짜 타이머로 하는 대역을 끼운다.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), ms);
+      return controller.signal;
+    });
     vi.stubGlobal("fetch", hangingFetch());
     const result = apiFetch("/staff/dashboard").then(
       () => "응답",
@@ -120,6 +120,8 @@ describe("apiFetch — 응답 시간 제한", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(await result).toBeInstanceOf(NetworkError);
+    expect(timeoutSpy).toHaveBeenCalledWith(15_000);
+    timeoutSpy.mockRestore();
   });
 
   it("쓰기(POST)는 시간 제한으로 끊지 않는다 — 서버가 이미 처리를 시작했을 수 있다", async () => {

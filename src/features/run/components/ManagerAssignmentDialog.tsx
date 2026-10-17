@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
+import { ApiError, describeApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Select } from "@/shared/ui";
 import { getManagers, patchRunAssignment } from "../api";
 import { MANAGER_CANDIDATE_LIMIT } from "../api/managers";
@@ -27,8 +28,7 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
   const [driversTruncated, setDriversTruncated] = useState(false);
   const [escortsTruncated, setEscortsTruncated] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { pending: submitting, error, setError, run } = useAction();
 
   // 기사·동승자를 따로 조회하고 한쪽이 실패해도 받은 쪽은 보여 준다(기사만 바꾸려는데 동승자 조회 실패로 화면 전체가 비면 일을 못 한다).
   // 실패한 쪽은 목록과 "일부만 보입니다" 표시를 함께 비운다 — 다시 열었을 때 이전 열림의 값이 남지 않게.
@@ -45,10 +45,10 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
       .filter(({ result }) => result.status === "rejected")
       .map(({ label, result }) => {
         const cause = (result as PromiseRejectedResult).reason;
-        return cause instanceof ApiError ? cause.message : `${label} 후보를 불러오지 못했습니다`;
+        return describeApiError(cause, `${label} 후보를 불러오지 못했습니다`);
       });
     setError(failures.length > 0 ? failures.join(" · ") : null);
-  }, []);
+  }, [setError]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +59,7 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
 
   if (!open) return null;
 
-  // F01-06 — 부모가 이 대화상자를 항상 마운트해 두므로 어떤 경로로 닫혀도(취소·경고 확인·저장 성공)
+  // 부모가 이 대화상자를 항상 마운트해 두므로 어떤 경로로 닫혀도(취소·경고 확인·저장 성공)
   // 상태를 비워야 다시 열 때 이전 경고 화면·선택값이 남지 않는다.
   const resetState = () => {
     setDriverManagerId("");
@@ -81,29 +81,22 @@ export const ManagerAssignmentDialog = ({ runId, open, onClose, onDone }: Manage
   // ⚠ warnings[] 가 와도 요청 자체는 이미 200 으로 성공해 배치가 반영된 뒤다
   // (run/api/assignment.ts 주석) — 그래서 재제출 버튼을 두지 않고, 경고는 "이미
   // 적용됐다"는 사실과 함께 확인만 받고 닫는다.
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await patchRunAssignment(runId, {
-        driverManagerId: driverManagerId || undefined,
-        escortManagerId: escortManagerId || undefined,
-      });
-      if (result.warnings.length > 0) {
-        setWarnings(result.warnings.map((w) => w.message));
-      } else {
-        handleDone();
-      }
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "RUN_CANCELED") {
-        setError("임시 취소된 회차라 배치를 바꿀 수 없습니다");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "배치 변경에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const handleSubmit = () =>
+    run(
+      async () => {
+        const result = await patchRunAssignment(runId, {
+          driverManagerId: driverManagerId || undefined,
+          escortManagerId: escortManagerId || undefined,
+        });
+        if (result.warnings.length > 0) {
+          setWarnings(result.warnings.map((w) => w.message));
+        } else {
+          handleDone();
+        }
+      },
+      "배치 변경에 실패했습니다",
+      (cause) => (cause instanceof ApiError && cause.code === "RUN_CANCELED" ? "임시 취소된 회차라 배치를 바꿀 수 없습니다" : undefined),
+    );
 
   return (
     <Dialog

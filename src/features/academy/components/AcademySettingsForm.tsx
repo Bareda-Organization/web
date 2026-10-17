@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
+import { describeApiError } from "@/shared/lib/http";
 import { useLeaveWarning } from "@/shared/lib/navigation/useLeaveWarning";
 import { AlertBanner, Button, Card, Input, PageHeader, Timeline, useToast } from "@/shared/ui";
 import { getAcademySettings, updateAcademySettings } from "../api";
@@ -43,8 +44,7 @@ export const AcademySettingsForm = () => {
   const [academy, setAcademy] = useState<AcademyInfoTypes | null>(null);
   const [policy, setPolicy] = useState<AcademyPolicyTypes | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: saving, error, setError, run } = useAction();
   const { markSaved } = useLeaveWarning(value, !loading, "저장하지 않은 학원 설정 변경이 사라집니다. 이 화면을 떠날까요?");
   const { show } = useToast();
 
@@ -58,33 +58,26 @@ export const AcademySettingsForm = () => {
         setPolicy(settings.policy);
         setError(null);
       } catch (cause) {
-        setError(cause instanceof ApiError ? cause.message : "학원 설정을 불러오지 못했습니다");
+        setError(describeApiError(cause, "학원 설정을 불러오지 못했습니다"));
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [setError]);
 
   const minutes = Number(value);
   const isEmpty = value.trim() === "";
   const isOutOfRange = !isEmpty && (!Number.isInteger(minutes) || minutes < MIN_MINUTES || minutes > MAX_MINUTES);
   const isChanged = savedMinutes !== null && !isEmpty && minutes !== savedMinutes;
 
-  const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    try {
+  const handleSave = () =>
+    run(async () => {
       const updated = await updateAcademySettings({ noShowWaitMinutes: minutes });
       setValue(String(updated.noShowWaitMinutes));
       setSavedMinutes(updated.noShowWaitMinutes);
       markSaved(String(updated.noShowWaitMinutes));
       show({ title: "학원 설정을 저장했습니다", detail: `미승차 대기 ${updated.noShowWaitMinutes}분 — 저장 뒤 새로 시작되는 미승차부터 적용됩니다. 이미 진행 중인 카운트다운은 그대로입니다` });
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "학원 설정 저장에 실패했습니다");
-    } finally {
-      setSaving(false);
-    }
-  };
+    }, "학원 설정 저장에 실패했습니다");
 
   if (loading) return <p>불러오는 중...</p>;
 

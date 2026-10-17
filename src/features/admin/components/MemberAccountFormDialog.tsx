@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Drawer, Input } from "@/shared/ui";
 import { updateStaffAccount } from "../api";
 import type { StaffAccountItemResponseTypes } from "../types";
@@ -20,7 +20,7 @@ type MemberAccountFormDialogProps = {
 
 // §6.7 PATCH /admin/staff-accounts/{id} (O-02). 세 동작(정보 수정 · 비밀번호 초기화 ·
 // 재직 상태 전환)을 단추 3개로 분리했다 — 한 폼에 섞으면 "이름만 고치려 했는데
-// 비밀번호도 같이 바뀌었다" 는 사고가 나기 쉽다(판단 근거, 보고서 §1). R48 시안 `member-accounts--detail` 의 옆 패널이다.
+// 비밀번호도 같이 바뀌었다" 는 사고가 나기 쉽다.
 export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAccountFormDialogProps) => {
   const [name, setName] = useState(account.name);
   const [phone, setPhone] = useState(account.phone);
@@ -52,7 +52,7 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
       setRefreshedAfterAction(true);
       setNotice(DONE_NOTICE);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "정보 수정에 실패했습니다");
+      setError(describeApiError(cause, "정보 수정에 실패했습니다"));
     } finally {
       setSubmitting(null);
     }
@@ -68,7 +68,7 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
       setTemporaryPassword(result.temporaryPassword ?? null);
       setNotice(DONE_NOTICE);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "비밀번호 초기화에 실패했습니다");
+      setError(describeApiError(cause, "비밀번호 초기화에 실패했습니다"));
     } finally {
       setSubmitting(null);
     }
@@ -87,7 +87,7 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
       setRefreshedAfterAction(true);
       setNotice(DONE_NOTICE);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "재직 상태 변경에 실패했습니다");
+      setError(describeApiError(cause, "재직 상태 변경에 실패했습니다"));
     } finally {
       setSubmitting(null);
     }

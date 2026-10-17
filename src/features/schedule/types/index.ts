@@ -1,5 +1,5 @@
 // features/schedule 가 다루는 타입 전부 — 운행 스케줄 · 일일 회차(§5.10, SCH-01~03, A-09).
-// snake_case ↔ camelCase 변환은 다른 기능과 같은 관례로 api/*.ts 호출부 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 //
 // direction·weekday 는 features/run 에도 같은 성격의 값이 있으나(§2 확신 없는 지점 —
 // 다른 목록은 그쪽을 참조하지 않고 각자 로컬로 둔다, emergency.direction 과 같은 전례),

@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getRunAttention } from "./runAttention";
-
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 describe("getRunAttention — GET /admin/runs/attention (§6.15)", () => {
   afterEach(() => vi.unstubAllGlobals());

@@ -4,7 +4,7 @@ import { EmergencyAlertsPage } from "./EmergencyAlertsPage";
 import { getEmergencies } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
-// A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 비상 알림 이력 조회 실패
+// 이 화면도 실패 갈래 검사가 없었다. 비상 알림 이력 조회 실패
 // 시 오류 문구가 뜨는지를 본다. §1.9 가 요구하는 "타임아웃·5xx 는 처리되지 않았습니다"
 // 명시와 직접 관련된 화면이라(비상 알림은 지연 인지 자체가 위험) 다른 화면보다 우선순위가
 // 높다.
@@ -14,7 +14,7 @@ vi.mock("../api", () => ({
 vi.mock("@/features/map", () => ({ MapSurface: () => <div data-testid="map" /> }));
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeConnection: () => ({ connectionState: "connected", reconnect: vi.fn() }),
+  useRealtimeConnection: () => ({ connectionState: "connected" }),
 }));
 
 const mockGetEmergencies = vi.mocked(getEmergencies);
@@ -32,7 +32,7 @@ describe("EmergencyAlertsPage — 목록 조회 실패", () => {
   });
 });
 
-// R47 Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발신 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
+// Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발신 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
 describe("EmergencyAlertsPage — 단말 기록 시각 병기", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -114,7 +114,7 @@ describe("EmergencyAlertsPage — 200건 상한 안내", () => {
   });
 });
 
-// R48 시안 `emergency-alerts` — 상태 탭 건수 · 미확인 띠 · 오른쪽 상시 칸 · 미확인 0 이면 초록 안내 띠.
+// 상태 탭 건수 · 미확인 띠 · 오른쪽 상시 칸 · 미확인 0 이면 초록 안내 띠.
 describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -158,7 +158,7 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     expect(screen.getByRole("link", { name: "전체 관제에서 보기" })).toHaveAttribute("href", "/monitoring");
   });
 
-  // R52 M10 · §6.11 — 학원이 대표 연락처를 등록하지 않으면 contact 는 null 이다. 띠의 [학원에 전화] 가 `tel:null` 이 되면 안 된다.
+  // §6.11 — 학원이 대표 연락처를 등록하지 않으면 contact 는 null 이다. 띠의 [학원에 전화] 가 `tel:null` 이 되면 안 된다.
   it("미확인 비상의 학원 연락처가 null 이면 띠에 [학원에 전화] 를 두지 않고 미등록이라고 적는다", async () => {
     byStatus([emergency("1", { academy: { id: "1", name: "학원1", contact: null } })], [], []);
     render(<EmergencyAlertsPage />);
@@ -170,7 +170,7 @@ describe("EmergencyAlertsPage — 탭 · 띠 · 상시 칸", () => {
     expect(screen.getAllByText(/연락처 미등록/).length).toBeGreaterThan(0);
   });
 
-  // R50 M7 — "1분 미만째" 는 문장이 안 된다. 1분이 안 됐으면 '째' 없이 '1분 미만' 만 적는다.
+  // "1분 미만째" 는 문장이 안 된다. 1분이 안 됐으면 '째' 없이 '1분 미만' 만 적는다.
   it("접수 1분이 안 된 미확인 비상은 '1분 미만째' 가 아니라 '1분 미만' 으로 적는다", async () => {
     byStatus([emergency("1", { elapsedSinceRaised: 30 })], [], []);
     render(<EmergencyAlertsPage />);

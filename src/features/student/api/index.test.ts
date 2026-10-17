@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deleteStudentPhoto, getStudentDetail, getStudents } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.11 STU-01 — snake_case ↔ camelCase 변환 경계. student_id 는 문자열 PK 라
 // 다른 관리 화면(숫자 id)과 타입이 다르다는 점을 이 테스트가 함께 고정한다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("student api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -96,7 +94,7 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
   });
 });
 
-// R56 K2 · Ruling 894③ — DELETE /staff/students/{id}/photo → 204(본문 없음). 사진이 이미 없어도 204 라 멱등이다.
+// Ruling 894③ — DELETE /staff/students/{id}/photo → 204(본문 없음). 사진이 이미 없어도 204 라 멱등이다.
 describe("student api — deleteStudentPhoto", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

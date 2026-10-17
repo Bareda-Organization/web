@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, SegmentedControl, Select } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -23,8 +24,10 @@ export type StudentTransferDialogProps = {
 };
 
 // §5.8 에러 코드별 문구 — 영문 코드·서버 원문은 화면에 내지 않는다. 정원 초과는 현재 인원·정원을 병기한다.
+const TRANSFER_FALLBACK = "이동을 저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요";
+
 const transferErrorMessage = (cause: unknown): string => {
-  if (!(cause instanceof ApiError)) return "이동을 저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요";
+  if (!(cause instanceof ApiError)) return TRANSFER_FALLBACK;
   switch (cause.code) {
     case "CHANGE_WINDOW_CLOSED":
       return "출발 30분 전이 지나 이미 확정된 회차가 있어 옮길 수 없습니다";
@@ -57,9 +60,8 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
   const [stopId, setStopId] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // C00-02 — 도착 회차의 승하차지 목록이 비는 이유(고정 노선 없음 · 조회 실패). 말없이 비면 고장으로 읽힌다.
+  const { pending: submitting, error, run: execute } = useAction();
+  // 도착 회차의 승하차지 목록이 비는 이유(고정 노선 없음 · 조회 실패). 말없이 비면 고장으로 읽힌다.
   const [stopsNotice, setStopsNotice] = useState<string | null>(null);
   const [result, setResult] = useState<TransferResponseTypes | null>(null);
 
@@ -99,23 +101,21 @@ export const StudentTransferDialog = ({ student, fromRun, candidateRuns, onClose
   const canSubmit = toRunId !== "" && (mode === "stop" ? stopId !== "" : address.trim().length > 0);
 
   const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      setResult(
-        await postTransfer(student.studentId, {
-          fromRunId: fromRun.runId,
-          toRunId,
-          stopId: mode === "stop" ? stopId : undefined,
-          address: mode === "address" ? address.trim() : undefined,
-          note: note.trim() || undefined,
-        }),
-      );
-    } catch (cause) {
-      setError(transferErrorMessage(cause));
-    } finally {
-      setSubmitting(false);
-    }
+    await execute(
+      async () => {
+        setResult(
+          await postTransfer(student.studentId, {
+            fromRunId: fromRun.runId,
+            toRunId,
+            stopId: mode === "stop" ? stopId : undefined,
+            address: mode === "address" ? address.trim() : undefined,
+            note: note.trim() || undefined,
+          }),
+        );
+      },
+      TRANSFER_FALLBACK,
+      transferErrorMessage,
+    );
   };
 
   if (result) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog } from "@/shared/ui";
 import { deleteTransfer } from "../api";
@@ -15,8 +15,10 @@ type TransferCancelDialogProps = {
 };
 
 // §5.8.1 에러 코드별 문구 — 영문 코드·서버 원문은 화면에 내지 않는다.
+const CANCEL_FALLBACK = "이동을 취소하지 못했습니다. 잠시 뒤 다시 시도해 주세요";
+
 const cancelErrorMessage = (cause: unknown): string => {
-  if (!(cause instanceof ApiError)) return "이동을 취소하지 못했습니다. 잠시 뒤 다시 시도해 주세요";
+  if (!(cause instanceof ApiError)) return CANCEL_FALLBACK;
   switch (cause.code) {
     case "CHANGE_WINDOW_CLOSED":
       return "이미 확정된 회차가 있어 이동을 취소할 수 없습니다";
@@ -30,19 +32,17 @@ const cancelErrorMessage = (cause: unknown): string => {
 // §5.8.1 DELETE /staff/transfers/{transferId}(A-07, Ruling 369) — 저장해 둔 이동 대기를 확정 전에 되돌린다.
 // 되돌리면 학생은 원래 버스 명단으로 돌아오고 도착 버스 예정 명단에서 빠지므로 확인 단계를 한 번 거친다.
 export const TransferCancelDialog = ({ student, onClose, onDone }: TransferCancelDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await deleteTransfer(student.transferId);
-      onDone();
-    } catch (cause) {
-      setError(cancelErrorMessage(cause));
-      setSubmitting(false);
-    }
+    await run(
+      async () => {
+        await deleteTransfer(student.transferId);
+        onDone();
+      },
+      CANCEL_FALLBACK,
+      cancelErrorMessage,
+    );
   };
 
   return (

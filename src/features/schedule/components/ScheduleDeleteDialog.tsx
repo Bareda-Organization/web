@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useAction } from "@/shared/hooks";
 import { AlertBanner, Button, Dialog } from "@/shared/ui";
 import { deleteSchedule } from "../api";
 
@@ -15,21 +14,13 @@ type ScheduleDeleteDialogProps = {
 // 지워지지 않고(ERD FK SET NULL) 과거·확정된 운행 기록이 남는다. 다만 Ruling 366 ② 로 삭제 전에
 // 내일 이후 · idle · 미취소 회차는 취소 표시되므로 확인창이 그 결과를 알린다(오늘 회차는 그대로).
 export const ScheduleDeleteDialog = ({ scheduleId, onCancel, onDeleted }: ScheduleDeleteDialogProps) => {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
 
-  const handleConfirm = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+  const handleConfirm = () =>
+    run(async () => {
       await deleteSchedule(scheduleId);
       onDeleted();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "스케줄 삭제에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    }, "스케줄 삭제에 실패했습니다");
 
   return (
     <Dialog

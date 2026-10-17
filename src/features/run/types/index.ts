@@ -1,6 +1,6 @@
 // features/run 이 다루는 타입 전부 — API 응답은 `OOOResponseTypes` (`CONVENTIONS_REACT.md`).
 // 서버는 snake_case(§1.1)를 쓰지만 이 파일의 타입은 앱 내부 관례대로 camelCase 다 —
-// snake_case ↔ camelCase 변환은 `api/*.ts` 호출부가 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 
 export type RunStatus = "idle" | "confirmed" | "moving" | "finished";
 
@@ -28,11 +28,11 @@ export type DashboardRunResponseTypes = {
   busNo: string;
   direction: "to_academy" | "from_academy";
   departTime: string;
-  // R21-B — 실제 출발·종료(도착) 시각. `departTime`(예정)과 구별해서 쓴다. 출발·종료
+  // 실제 출발·종료(도착) 시각. `departTime`(예정)과 구별해서 쓴다. 출발·종료
   // 전이면 서버가 null 로 채운다(§5.3 API_SPEC 갱신분).
   startedAt: string | null;
   finishedAt: string | null;
-  // R21-B2 — 예정 도착(depart_time + est_duration_min). 회차에 소요 시간 추정치가 없으면
+  // 예정 도착(depart_time + est_duration_min). 회차에 소요 시간 추정치가 없으면
   // null — "-" 로 비워 표시한다.
   estArrivalTime: string | null;
   driverName: string | null;
@@ -74,7 +74,7 @@ export type RunLivePositionResponseTypes = {
   lng: number;
   recordedAt: string;
   // 마지막으로 반영한 WebSocket 방송의 `received_at`(서버 시각) — REST 스냅샷의 `recordedAt` 은 기기 시각이라 서로 견주면 안 된다.
-  // 방송이 오래된 값인지는 이 값과만 견준다(R57 fix1 F1). REST 스냅샷으로 위치를 바꾸면 없어진다.
+  // 방송이 오래된 값인지는 이 값과만 견준다. REST 스냅샷으로 위치를 바꾸면 없어진다.
   wsReceivedAt?: string;
 } | null;
 

@@ -1,74 +1,39 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
+  ManagerAssignmentTypes,
   ManagerItemResponseTypes,
   ManagerListResponseTypes,
   ManagerUpsertRequestTypes,
-  WorkHours,
 } from "../types";
 
-type RawManager = {
-  id: string | number;
-  name: string;
-  phone: string;
-  role: "driver" | "escort";
-  work_hours: WorkHours | null;
-  account_id: string | null;
-  // Ruling 817 — 목록 응답에만(아직 안 주는 서버를 견디려고 선택 필드).
-  assigned_run_count?: number;
-  assignments?: {
-    run_id: string | number;
-    service_date: string;
-    bus_no: string;
-    direction: "to_academy" | "from_academy";
-    depart_time: string;
-    status: "idle" | "confirmed" | "moving" | "finished";
-  }[];
+// Ruling 817 — assignedRunCount·assignments 는 목록 응답에만 오고(아직 안 주는 서버도 있다), id 는 숫자로 온다.
+type WireManager = Omit<WithId<ManagerItemResponseTypes, "id">, "assignedRunCount" | "assignments"> & {
+  assignedRunCount?: number;
+  assignments?: WithId<ManagerAssignmentTypes, "runId">[];
 };
 
-type RawManagerListResponse = {
-  items: RawManager[];
-  counts?: { assigned_today: number; unassigned_today: number };
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-};
-
-const toManager = (raw: RawManager): ManagerItemResponseTypes => ({
+const toManager = (raw: WireManager): ManagerItemResponseTypes => ({
+  ...raw,
   id: asIdString(raw.id),
-  name: raw.name,
-  phone: raw.phone,
-  role: raw.role,
-  workHours: raw.work_hours,
-  accountId: raw.account_id,
-  assignedRunCount: raw.assigned_run_count ?? 0,
-  assignments: (raw.assignments ?? []).map((a) => ({
-    runId: asIdString(a.run_id),
-    serviceDate: a.service_date,
-    busNo: a.bus_no,
-    direction: a.direction,
-    departTime: a.depart_time,
-    status: a.status,
-  })),
+  assignedRunCount: raw.assignedRunCount ?? 0,
+  assignments: (raw.assignments ?? []).map((a) => ({ ...a, runId: asIdString(a.runId) })),
 });
 
 export type ManagerListFilters = { role?: "driver" | "escort"; assignedToday?: boolean; linked?: boolean };
 
 // GET /staff/managers?q=&role=&linked=&assigned_today= (§5.13, MGR-01) — §1.8 페이징 목록 화면 전부가 이 규약을 탄다.
 export const getManagers = async (page: number, size = 20, q?: string, filters: ManagerListFilters = {}): Promise<ManagerListResponseTypes> => {
-  const raw = await apiFetch<RawManagerListResponse>("/staff/managers", {
-    method: "GET",
-    query: { page, size, q: q || undefined, role: filters.role, linked: filters.linked, assigned_today: filters.assignedToday },
-  });
-  return {
-    items: raw.items.map(toManager),
-    counts: raw.counts ? { assignedToday: raw.counts.assigned_today, unassignedToday: raw.counts.unassigned_today } : null,
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-  };
+  const raw = await apiFetch<Omit<ManagerListResponseTypes, "items" | "counts"> & { items: WireManager[]; counts?: ManagerListResponseTypes["counts"] }>(
+    "/staff/managers",
+    {
+      method: "GET",
+      query: { page, size, q: q || undefined, role: filters.role, linked: filters.linked, assigned_today: filters.assignedToday },
+    },
+  );
+  // counts 는 서버가 안 주면 null
+  return { ...raw, items: raw.items.map(toManager), counts: raw.counts ?? null };
 };
 
 const toRawUpsert = (request: ManagerUpsertRequestTypes) => ({
@@ -80,7 +45,7 @@ const toRawUpsert = (request: ManagerUpsertRequestTypes) => ({
 
 // POST /staff/managers (MGR-02) — 등록.
 export const createManager = async (request: ManagerUpsertRequestTypes): Promise<ManagerItemResponseTypes> => {
-  const raw = await apiFetch<RawManager>("/staff/managers", { method: "POST", body: toRawUpsert(request) });
+  const raw = await apiFetch<WireManager>("/staff/managers", { method: "POST", body: toRawUpsert(request) });
   return toManager(raw);
 };
 
@@ -89,7 +54,7 @@ export const updateManager = async (
   id: string,
   request: ManagerUpsertRequestTypes,
 ): Promise<ManagerItemResponseTypes> => {
-  const raw = await apiFetch<RawManager>(`/staff/managers/${id}`, { method: "PATCH", body: toRawUpsert(request) });
+  const raw = await apiFetch<WireManager>(`/staff/managers/${id}`, { method: "PATCH", body: toRawUpsert(request) });
   return toManager(raw);
 };
 

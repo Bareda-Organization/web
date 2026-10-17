@@ -9,11 +9,8 @@ import {
   getSignupStatus,
   login,
   reapplySignup,
-  recoverAccount,
-  registerDevice,
   searchAcademies,
   signup,
-  unregisterDevice,
 } from "./index";
 
 // (auth) 3화면(login·signup·signup-status) + 화면 없는 §2 나머지 엔드포인트를
@@ -35,7 +32,7 @@ beforeAll(async () => {
 // 저장·재전송하는 refresh_token 쿠키에 의존한다(`httpClient.ts` 의
 // `credentials:"include"` 주석 — §1.2.1). Node/undici 의 `fetch()` 는 별도 호출
 // 사이에 쿠키를 들고 있지 않아, 프로덕션 `logout()`/`refresh()` 를 그대로 부르면
-// 유효한 액세스 토큰이 있어도 401 TOKEN_EXPIRED 로 실패한다(2026-09-14 curl 로
+// 유효한 액세스 토큰이 있어도 401 TOKEN_EXPIRED 로 실패한다(curl 로
 // sysadmin 계정에서도 동일 재현 — 계정 상태와 무관한 시험 환경의 한계다).
 // 이 파일 전용으로 raw fetch 로 로그인해 Set-Cookie 를 직접 캡처하고, 이후
 // 요청에 Cookie 헤더로 되먹인다 — 공용 헬퍼(`rawRestLogin.ts`)와 프로덕션
@@ -96,7 +93,7 @@ describe("auth api — 실서버 계약", () => {
     const result = await login(throwawayLoginId, "password");
 
     expect(result.status).toBe("pending");
-    // R46-FUFEAT ① — 임시 비밀번호 강제 변경 표식(§2.5)은 항상 값이 있다(초기화한 적 없는 계정은 false).
+    // 임시 비밀번호 강제 변경 표식(§2.5)은 항상 값이 있다(초기화한 적 없는 계정은 false).
     expect(result.mustChangePassword).toBe(false);
     pendingAccessToken = result.accessToken;
   });
@@ -121,23 +118,6 @@ describe("auth api — 실서버 계약", () => {
     expect(me.loginId).toBe(throwawayLoginId);
     expect(me.status).toBe("pending");
     expect(me.mustChangePassword).toBe(false); // §2.10 — 항상 값이 있다(Ruling 540)
-  });
-
-  it("registerDevice·unregisterDevice 는 pending 계정에서도 허용된다 — pending 허용 목록 안(§1.4·§2.11)", async ({
-    skip,
-  }) => {
-    if (!backendReachable) skip();
-    setAccessToken(pendingAccessToken);
-    const pushToken = `f5w2-push-${suffix}`;
-
-    const registered = await registerDevice({
-      token: pushToken,
-      platform: "web",
-      deviceId: `f5w2-device-${suffix}`,
-    });
-    expect(registered.deviceId).toBeTruthy();
-
-    await expect(unregisterDevice(pushToken)).resolves.toBeUndefined();
   });
 
   it("changePassword 는 pending 허용 목록 밖이라 403 AUTH_PENDING 으로 거부된다(§1.4·§2.8·§8)", async ({
@@ -228,28 +208,6 @@ describe("auth api — 실서버 계약", () => {
     expect(result.status).toBe("pending");
   });
 
-  // LC — `Ruling 329`(2026-09-25 백엔드 전체 검사) 로 계약이 바뀌었다: SMS 연동
-  // 전까지 이 엔드포인트는 요청 내용과 무관하게 항상 503 RECOVERY_UNAVAILABLE 을
-  // 낸다(`recover.ts` 주석 · `backend/report/review-2026-09-25/FIX-LCHECK.md`).
-  // 옛 "접수 성공" 기대는 그 이전 계약이다 — 지금 서버로 돌리면 이 시험이 실패한다.
-  it("recoverAccount 는 SMS 연동 전까지 503 RECOVERY_UNAVAILABLE 로 거부된다(§2.9 · Ruling 329)", async ({
-    skip,
-  }) => {
-    if (!backendReachable) skip();
-    // login() 과 같은 이유 — 이 호출도 미인증 엔드포인트인데, 앞선 changePassword·
-    // reapplySignup 시험이 store 에 남긴 rejected 토큰이 그대로 실리면 계정 게이트가
-    // 이 요청 자체를 403 AUTH_REJECTED 로 막는다(실측 — 판단 근거, 보고서 §2).
-    setAccessToken(null);
-
-    await expect(recoverAccount({ type: "login_id", phone: throwawayPhone })).rejects.toSatisfy((error: unknown) => {
-      expect(error).toBeInstanceOf(ApiError);
-      const apiError = error as ApiError;
-      expect(apiError.status).toBe(503);
-      expect(apiError.code).toBe("RECOVERY_UNAVAILABLE");
-      return true;
-    });
-  });
-
   it("refresh 는 refresh_token 쿠키를 실으면 새 액세스 토큰을 돌려준다(raw fetch, §2.6)", async ({ skip }) => {
     if (!backendReachable) skip();
     const { cookie } = await rawLoginWithCookie(throwawayLoginId);
@@ -278,7 +236,7 @@ describe("auth api — 실서버 계약", () => {
     expect(logoutResponse.status).toBe(204);
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) — 2026-09-14 Ruling 282(로그인 실패 차단) 수정이
+  // AUTH_ACCOUNT_BLOCKED— Ruling 282(로그인 실패 차단) 수정이
   // 병합되어 사양(§1.4) 그대로 재현된다. 실패 1~4회는 401 INVALID_CREDENTIALS 와 함께
   // remaining_attempts 가 4·3·2·1 로 줄고, 5회째부터는 계정이 차단돼 403
   // AUTH_ACCOUNT_BLOCKED 를 반환한다 — 그 뒤 올바른 비밀번호로 시도해도 이미
@@ -309,7 +267,7 @@ describe("auth api — 실서버 계약", () => {
       };
       expect(response.status).toBe(401);
       expect(json.error?.code).toBe("INVALID_CREDENTIALS");
-      // 실측(2026-09-14, BE-A 병합 후): 실패 1~4회는 remaining_attempts 가 4·3·2·1 로 줄어든다.
+      // 실측: 실패 1~4회는 remaining_attempts 가 4·3·2·1 로 줄어든다.
       expect(json.error?.details?.remaining_attempts).toBe(5 - attempt);
     }
 

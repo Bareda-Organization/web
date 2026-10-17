@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Card, Dialog, StatusChip, Textarea } from "@/shared/ui";
+import { useAction } from "@/shared/hooks";
+import { AlertBanner, Button, Card, RejectReasonDialog, StatusChip } from "@/shared/ui";
 import { DefinitionList, LinkButton } from "@/shared/ui/display";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { decideStaffSignupRequest } from "../api";
@@ -12,7 +12,6 @@ import { withObject } from "../lib/korean";
 import { isStaffQuotaFull } from "../lib/staffQuota";
 import { waitingDays } from "../lib/waitingDays";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
-import { StyledDialogForm } from "./AcademyFormDialog.styled";
 import { StyledAcademyDot, StyledPanelActions, StyledPanelBody, StyledPanelHeader, StyledPanelNote, StyledStaffSub, StyledSteps } from "./MemberApprovalsPage.styled";
 
 type MemberApprovalDecidePanelProps = {
@@ -26,39 +25,26 @@ type MemberApprovalDecidePanelProps = {
 export const MemberApprovalDecidePanel = ({ request, onDone }: MemberApprovalDecidePanelProps) => {
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
   const isQuotaFull = isStaffQuotaFull(request.academyStaffCount);
   const staff = request.currentStaff;
   const accountsHref = `/member-accounts?academy=${request.academy.id}`;
 
   const handleAccept = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
+    await run(async () => {
       await decideStaffSignupRequest(request.requestId, { accept: true });
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "승인 처리에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
+    }, "승인 처리에 실패했습니다");
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) return;
-    setSubmitting(true);
-    setError(null);
-    try {
+    const ok = await run(async () => {
       await decideStaffSignupRequest(request.requestId, { accept: false, rejectReason: rejectReason.trim() });
       setRejecting(false);
       onDone();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "거절 처리에 실패했습니다");
-      setRejecting(false);
-    } finally {
-      setSubmitting(false);
-    }
+    }, "거절 처리에 실패했습니다");
+    if (!ok) setRejecting(false);
   };
 
   return (
@@ -133,38 +119,24 @@ export const MemberApprovalDecidePanel = ({ request, onDone }: MemberApprovalDec
         {error ? <AlertBanner tone="missed" title={error} /> : null}
       </StyledPanelBody>
 
-      {rejecting ? (
-        <Dialog
-          title={`${request.name} 가입 요청 거절`}
-          showClose
-          onClose={() => setRejecting(false)}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setRejecting(false)} disabled={submitting}>
-                뒤로
-              </Button>
-              <Button variant="danger" onClick={handleReject} disabled={submitting || !rejectReason.trim()}>
-                {submitting ? "처리 중..." : "가입 거절"}
-              </Button>
-            </>
-          }
-          actionHint={!rejectReason.trim() ? "거절 사유를 입력하면 [가입 거절] 버튼이 켜집니다" : undefined}
-        >
-          <StyledDialogForm>
-            <p style={{ margin: 0 }}>
-              {request.academy.name} · {request.phone} · 거절하면 신청자에게 사유가 안내됩니다.
-            </p>
-            <Textarea
-              label="거절 사유"
-              required
-              placeholder="예: 신청자 정보가 학원 기록과 일치하지 않음"
-              hint="신청자에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
-              value={rejectReason}
-              onChange={(event) => setRejectReason(event.target.value)}
-            />
-          </StyledDialogForm>
-        </Dialog>
-      ) : null}
+      <RejectReasonDialog
+        open={rejecting}
+        title={`${request.name} 가입 요청 거절`}
+        confirmLabel="가입 거절"
+        intro={
+          <p style={{ margin: 0 }}>
+            {request.academy.name} · {request.phone} · 거절하면 신청자에게 사유가 안내됩니다.
+          </p>
+        }
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
+        placeholder="예: 신청자 정보가 학원 기록과 일치하지 않음"
+        fieldHint="신청자에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
+        emptyHint="거절 사유를 입력하면 [가입 거절] 버튼이 켜집니다"
+        submitting={submitting}
+        onConfirm={handleReject}
+        onClose={() => setRejecting(false)}
+      />
     </Card>
   );
 };

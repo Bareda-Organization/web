@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAckedNotificationCount, getNotifications } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.17 NTF-10·11 — snake_case ↔ camelCase 변환 경계. 조회 전용 화면이라 변환
 // 함수가 toItem 하나뿐이라 다른 기능처럼 두 함수를 대조하는 기법은 적용 대상이
 // 아니다(§2 확신 없는 지점) — 대신 busNo 가 null 인 경계값과 필터 쿼리 전달을
 // 각각 검사해 커버리지를 나눈다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("notification api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

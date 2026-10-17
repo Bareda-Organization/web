@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, Drawer, FilterBar, FilterGroup, Input, PageHeader, RosterTable, SegmentedControl, Select, StatStrip, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem, StatusChipTone } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
@@ -26,9 +26,8 @@ const DAY_MS = 86_400_000;
 
 // §5.20 GET /staff/reports(EXC-02·03, M-14) — 예외 보고 조회 전용 목록. 페이징
 // 없음(types/index.ts 주석에 실측 근거 — shared/types/index.ts 의 §1.8 주석은
-// 리포트도 공통 페이징을 쓴다고 적었으나, 실측은 반대였다. 보고서 §2 확신
-// 없는 지점). 상세 화면은 목록 항목과 필드 구성이 같아(실측 확인) 따로
-// 두지 않는다(판단 근거, 보고서 §1).
+// 리포트도 공통 페이징을 쓴다고 적었으나, 실측은 반대다). 상세 화면은 목록 항목과 필드 구성이 같아(실측 확인) 따로
+// 두지 않는다.
 export const ReportList = () => {
   const [type, setType] = useState("");
   const [date, setDate] = useState("");
@@ -37,7 +36,7 @@ export const ReportList = () => {
   const [handled, setHandled] = useState("");
   const [counts, setCounts] = useState<{ handled: number; unhandled: number } | null>(null);
   // 종류별 건수 — 종류를 고르지 않은 조회에서만 새로 센다(고르면 다른 종류의 건수를 모른다).
-  // 센 조건(날짜 · 회차 · 처리)을 함께 기억해, 그 조건이 바뀐 뒤에는 낡은 건수를 쓰지 않는다(R53 A5).
+  // 센 조건(날짜 · 회차 · 처리)을 함께 기억해, 그 조건이 바뀐 뒤에는 낡은 건수를 쓰지 않는다.
   const [typeCountsState, setTypeCountsState] = useState<{ key: string; counts: Record<ReportType, number> } | null>(null);
   const countsKey = `${date}|${runId}|${handled}`;
   const typeCounts = typeCountsState?.key === countsKey ? typeCountsState.counts : null;
@@ -54,7 +53,7 @@ export const ReportList = () => {
   const [error, setError] = useState<string | null>(null);
   // [다시 시도] — 조회 조건은 그대로 두고 같은 조회를 한 번 더 낸다.
   const [retryCount, setRetryCount] = useState(0);
-  // 요청 번호 — 조건을 바꾸기 전에 나간 요청의 늦은 응답이 새 조건의 목록을 덮지 않게 한다(F01-05).
+  // 요청 번호 — 조건을 바꾸기 전에 나간 요청의 늦은 응답이 새 조건의 목록을 덮지 않게 한다.
   const requestSeq = useRef(0);
 
   useEffect(() => {
@@ -106,7 +105,7 @@ export const ReportList = () => {
         setError(null);
       } catch (cause) {
         if (mine !== requestSeq.current) return;
-        setError(cause instanceof ApiError ? cause.message : "운행 리포트를 불러오지 못했습니다");
+        setError(describeApiError(cause, "운행 리포트를 불러오지 못했습니다"));
         setItems([]);
       } finally {
         if (mine === requestSeq.current) setLoading(false);
@@ -132,7 +131,7 @@ export const ReportList = () => {
       setSelected(updated);
       show({ title: "처리 완료로 표시했습니다", detail: `${TYPE_LABEL[item.type]} · ${item.busNo}` });
     } catch (cause) {
-      setMarkError(cause instanceof ApiError ? cause.message : "처리 표시에 실패했습니다");
+      setMarkError(describeApiError(cause, "처리 표시에 실패했습니다"));
     } finally {
       setMarking(false);
     }

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
 import { ApiError, NetworkError } from "./apiError";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // 게이트 리뷰 Important 1건 — TOKEN_EXPIRED → refreshAccessToken() → 재요청 경로.
 // 이 경로는 앱의 모든 API 호출이 거치는 공통 관문이라, 재발급 성공인데 session-expired 를
@@ -9,13 +10,6 @@ import { ApiError, NetworkError } from "./apiError";
 vi.mock("./refreshClient", () => ({
   refreshAccessToken: vi.fn(),
 }));
-
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  }) as Response;
 
 describe("apiFetch — TOKEN_EXPIRED 재발급 경로", () => {
   afterEach(() => {

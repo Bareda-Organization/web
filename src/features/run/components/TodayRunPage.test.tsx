@@ -8,6 +8,7 @@ import { deleteTransfer, getDashboard, getRunRoster, getRunsLive } from "../api"
 import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseTypes } from "../types";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
+import { envelope } from "@/shared/testing/wsEnvelope";
 
 // §5.4 는 runId 쿼리가 없으면 첫 회차로 리다이렉트해 명단을 불러오는 것이 진입점의
 // 핵심 동작이다. absent 는 매니저 앱과 반대로 계속 결측(missed) 로 보여야 한다는
@@ -35,7 +36,7 @@ vi.mock("../api", () => ({
   deleteWaypoint: vi.fn(),
 }));
 
-// R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
+// §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
 vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
   StopAddressSearch: () => null,
@@ -52,29 +53,22 @@ vi.mock("@/features/auth", () => ({
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let capturedOnReconnected: (() => void) | undefined;
 let mockConnectionState: WsConnectionState = "disconnected";
-vi.mock("@/shared/hooks", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+// `useLiveRefresh` 가 채널 훅을 `./useRealtimeChannel` 에서 직접 가져오므로 그 모듈을 가짜로 바꾼다.
+vi.mock("@/shared/hooks/useRealtimeChannel", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks/useRealtimeChannel")>()),
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     capturedOnEnvelope = onEnvelope;
     capturedOnReconnected = onReconnected;
-    return { connectionState: mockConnectionState, reconnect: vi.fn() };
+    return { connectionState: mockConnectionState };
   },
 }));
-const envelope = (event: WebSocketEnvelope["event"], payload: Record<string, unknown>, runId = "7"): WebSocketEnvelope => ({
-  event,
-  eventWireValue: event ?? undefined,
-  runId,
-  occurredAt: "2026-10-10T00:00:00Z",
-  payload,
-});
-
 // 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
 // `MapSurface` 자체를 목으로 바꿔 TodayRunPage 가 계산한 markers·camera 값이 그 컴포넌트에
 // 무엇으로 전달되는지만 검증한다 — SDK 렌더링이 아니라 "이 화면의 계산 로직"의 검증이다.
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
-// R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
+// `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
 // 쓴다(순수 함수, SDK 무관). `MapSurface` 만 목으로 바꾼다.
 vi.mock("@/features/map", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/map")>();
@@ -90,7 +84,7 @@ const mockGetRunsLive = vi.mocked(getRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
 const mockDeleteTransfer = vi.mocked(deleteTransfer);
 
-// R15-T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
+// T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
 // "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
 beforeEach(() => {
   mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
@@ -176,7 +170,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
   });
 
   // `FEATURE_SPEC C-02` — `absent`(미등원)와 `no_show`(미승차)는 **반드시 구분**한다.
-  // ⚠ 2026-09-21 에 앱 2종과 웹 2곳을 고치면서 이 화면만 "결석"·"미탑승" 으로 남아 있었다.
+  // ⚠ 앱 2종과 웹의 다른 화면도 같은 용어를 쓴다 — "결석"·"미탑승" 으로 적지 않는다.
   it("미등원 학생은 사양 용어(미등원)로 표시된다 — 결석이 아니다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);
@@ -186,7 +180,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(screen.queryByText("결석")).not.toBeInTheDocument();
   });
 
-  // R34-W2 — 오늘 회차가 하나도 없으면 명단을 부를 일이 없다. 불러오는 중 표시가 그대로 남으면 안 된다.
+  // 오늘 회차가 하나도 없으면 명단을 부를 일이 없다. 불러오는 중 표시가 그대로 남으면 안 된다.
   it("오늘 회차가 없으면 불러오는 중 문구가 남지 않고 빈 목록 문구로 바뀐다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [] });
     render(<TodayRunPage />);
@@ -196,7 +190,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(mockGetRunRoster).not.toHaveBeenCalled();
   });
 
-  // R34-W1 — A-07 수동 조정은 확정 전(①구간, idle) 회차에서만 진입한다(UF-M-04).
+  // A-07 수동 조정은 확정 전(①구간, idle) 회차에서만 진입한다(UF-M-04).
   describe("다른 버스로 이동(A-07)", () => {
     const idleRun = (runId: string, busNo: string, direction: "to_academy" | "from_academy", runStatus: "idle" | "confirmed" | "moving") => ({
       ...baseDashboard.runs[0],
@@ -268,7 +262,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       expect(screen.queryByRole("button", { name: /다른 버스로/ })).not.toBeInTheDocument();
     });
 
-    // R36-FE FE1 — 이동 대기(§5.8 staged)로 들어온 행에만 [이동 취소](§5.8.1, Ruling 369).
+    // 이동 대기(§5.8 staged)로 들어온 행에만 [이동 취소](§5.8.1, Ruling 369).
     describe("이동 취소(§5.8.1)", () => {
       const idleDashboard = () => dashboardOf([idleRun("7", "2호차", "to_academy", "idle")]);
       const stagedRow: RosterItemResponseTypes = {
@@ -306,7 +300,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
 
       // C00-05 — 취소하면 학생은 출발 회차 예정 명단에서 빠져 있던 것이 되돌아온다. "그대로 남는다" 는
       // 옮겨진 적이 없는 것처럼 읽혀 결과를 흐린다.
-      // R37-IT — [이동 취소] 는 도착 회차 명단의 행에 붙는다. 그 화면의 호차(2호차)는 도착 버스이고
+      // [이동 취소] 는 도착 회차 명단의 행에 붙는다. 그 화면의 호차(2호차)는 도착 버스이고
       // 학생이 돌아갈 출발 버스가 아니다 — 명단 응답에는 출발 호차가 없으니 호차를 적지 않는다.
       it("확인 문구가 학생이 원래 버스 명단으로 돌아간다고 말하되 지금 화면의 호차를 원래 버스로 적지 않는다", async () => {
         mockRunIdParam = "7";
@@ -357,7 +351,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     });
   });
 
-  // R36-FE FE5 — 예정 명단에서 승하차지가 정해지지 않은 학생은 `stop_name` 이 null 로 온다.
+  // 예정 명단에서 승하차지가 정해지지 않은 학생은 `stop_name` 이 null 로 온다.
   it("stopName 이 null 인 행은 승하차지 미지정으로 보이고 화면이 죽지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], stopName: null }]);
@@ -376,7 +370,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     await waitFor(() => expect(screen.getByText("명단 서버 오류")).toBeInTheDocument());
   });
 
-  // R21-B 목표 2·3·4 — DashboardPage.test.tsx 와 같은 이유로 `container.textContent`
+  // DashboardPage.test.tsx 와 같은 이유로 `container.textContent`
   // 포함 여부로 본다(판단 근거, 보고서 §1). 명단 표 행마다 같은 회차 값이 반복되므로 한
   // 번만 나오는지까지는 보지 않고 "떴는가"만 본다.
   it("명단 표와 사이드 카드 모두 출발·도착 시각을 예정·실제로 구별해 보여준다", async () => {
@@ -400,7 +394,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(screen.getByText("도착")).toBeInTheDocument();
   });
 
-  // R21-B2 목표 1·2 — DashboardPage.test.tsx 와 같은 이유로 est_arrival_time 이 "예정"
+  // DashboardPage.test.tsx 와 같은 이유로 est_arrival_time 이 "예정"
   // 도착으로 뜨는지 본다.
   it("도착 컬럼이 est_arrival_time 을 예정 도착으로 보여준다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -411,7 +405,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(container.textContent).toContain("예정 08:35:00");
   });
 
-  // 사용자 지시(2026-09-22) — "현재 위치" 카드 하단에 도착 예정 시각도 보이게.
+  // "현재 위치" 카드 하단에 도착 예정 시각도 보이게.
   // 출발 시각 바로 아래에 같은 형식으로 둔다.
   it("현재 위치 카드가 출발 시각과 함께 도착 예정 시각을 보여준다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -425,7 +419,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
   });
 });
 
-// 사용자 지시(2026-09-22) — 명단을 승하차지별로 묶어 접고 펼 수 있게. 한 회차에
+// 명단을 승하차지별로 묶어 접고 펼 수 있게. 한 회차에
 // 승하차지가 10곳이면 학생 행이 그만큼 이어져 어느 자리 학생인지 눈으로 좇기 어렵다.
 describe("TodayRunPage — 명단을 승하차지별로 묶는다", () => {
   const twoStopRoster: RosterItemResponseTypes[] = [
@@ -501,11 +495,11 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
     await waitFor(() =>
       expect(mockMapSurface).toHaveBeenCalledWith(
         expect.objectContaining({
-          // R21-A 목표 1~3 — 이 화면은 항상 회차 하나가 선택돼 있어 selected 는 항상 true.
+          // 이 화면은 항상 회차 하나가 선택돼 있어 selected 는 항상 true.
           markers: [
             { id: "7", lat: 37.55, lng: 127.01, kind: "bus", selected: true, busNo: "2호차", direction: "to_academy" },
           ],
-          // R18-B2 목표 2 — 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
+          // 세 화면이 같은 확대 수준(16)을 쓴다. 이 화면은 항상 회차
           // 하나가 선택돼 있어(토글 없음) 마커가 있으면 곧 "선택된 버스" 다.
           camera: { lat: 37.55, lng: 127.01, zoom: SELECTED_BUS_MAP_ZOOM },
         }),
@@ -552,7 +546,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
   });
 });
 
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3·4·5 — 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
+// 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
 // 회차의 §5.19 노선을 지도에 그린다.
 describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", () => {
   const fourStatusDashboard: DashboardResponseTypes = {
@@ -615,7 +609,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     });
     render(<TodayRunPage />);
 
-    // runId 9(4호차)는 runStatus:"moving" — R20-C 목표 3, kind 가 상태를 따라간다.
+    // runId 9(4호차)는 runStatus:"moving" — kind 가 상태를 따라간다.
     // `selectedRun` 이 runs 로딩 전엔 null 이라 loadRoute 이펙트가 두 번 걸린다
     // (idle 기본값 → 실제 상태) — waitFor 로 최종 렌더를 기다린다.
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
@@ -639,7 +633,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     );
   });
 
-  // R18-B2 목표 2 — MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태. runId 9(4호차)
+  // MonitoringPage.tsx·DashboardPage.tsx 와 같은 형태. runId 9(4호차)
   // 는 runStatus:"moving"(확정 이후)이라 좌표 0개는 "확정됐지만 없음"(데이터 결손)이다.
   it("경로 좌표가 0개면 확정됐지만 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
     mockRunIdParam = "9";
@@ -684,7 +678,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     expect(await screen.findByText(/예정 경로 — 확정 시 달라질 수 있음/)).toBeInTheDocument();
   });
 
-  // R20-C 목표 1 — 버스를 골라도 지도만 움직이고 카드는 그대로였다(사용자 지적).
+  // 버스를 골라도 지도만 움직이고 카드는 그대로였다.
   it("현재 화면에 뜬 회차의 카드에 aria-pressed=true 가 붙는다", async () => {
     mockRunIdParam = "9";
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
@@ -699,7 +693,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
     expect(other).toHaveAttribute("aria-pressed", "false");
   });
 
-  // R20-C 목표 2 — 확정·대기 태그가 같은 색이었다(사용자 지적). 상태-색 매핑이
+  // 확정·대기 태그가 같은 색이었다. 상태-색 매핑이
   // 고정(C-09)이라 class 로 구분을 확인한다(Emotion 은 $status 가 다르면 다른 클래스).
   it("확정과 대기는 서로 다른 태그 색(class)을 쓴다", async () => {
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
@@ -716,7 +710,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
   });
 });
 
-// R24 — 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 "현재 위치" 아래에
+// 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 "현재 위치" 아래에
 // 나온다(사용자 지시). 명단은 승하차지를 이름 문자열로만 싣기 때문에, 지도 마커 id
 // (`stop-{stopId}`) → 노선 응답의 정차지 이름 → 명단의 `stopName` 순으로 이어야 한다.
 describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(R24)", () => {
@@ -893,7 +887,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     expect(mockGetDashboard.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  // R52 · Ruling 873 — 운행 상세(MON-03)는 오늘 현황과 같은 학원 채널 구독으로 갱신한다. 연결돼 있으면 7초 폴링이 없고,
+  // Ruling 873 — 운행 상세(MON-03)는 오늘 현황과 같은 학원 채널 구독으로 갱신한다. 연결돼 있으면 7초 폴링이 없고,
   // 방송이 없는 값(지연 · 확정 전환 · 노선 확인)만 안전망 조회(30초)로 남는다. 연결이 끊기면 7초 조회로 돌아간다.
   describe("실시간 구독(Ruling 873)", () => {
     const liveRun7 = (lat: number, lng: number): RunsLiveResponseTypes => ({
@@ -942,7 +936,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       await screen.findByText("대기");
 
       mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], status: "boarded" }]);
-      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {}, "7")));
       await vi.advanceTimersByTimeAsync(300);
 
       expect(await screen.findByText("탑승 완료")).toBeInTheDocument();
@@ -955,7 +949,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const liveCalls = mockGetRunsLive.mock.calls.length;
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
 
       await waitFor(() =>
@@ -964,27 +958,27 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls);
     });
 
-    // R57 W-7(K4) — 화면 값보다 오래된 위치(`received_at`)는 버린다.
+    // 화면 값보다 오래된 위치(`received_at`)는 버린다.
     it("R57 W-7: 화면 값보다 오래된 position 방송은 버스 마커를 되돌리지 않는다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
       await waitFor(() =>
         expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
       );
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-10-10T08:03:00+09:00", current_stop_name: "정문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-10-10T08:03:00+09:00", current_stop_name: "정문", eta: null }, "7")),
       );
       expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] }));
       expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.1 })] }));
     });
 
-    // R57 fix1 F1 — REST 스냅샷 `recorded_at`(기기 시각)과 방송 `received_at`(서버 시각)은 다른 시계다. 기기 시계가 3분 앞서도 첫 방송은 반영된다.
+    // REST 스냅샷 `recorded_at`(기기 시각)과 방송 `received_at`(서버 시각)은 다른 시계다. 기기 시계가 3분 앞서도 첫 방송은 반영된다.
     it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 마커를 옮긴다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       mockGetRunsLive.mockResolvedValue({
@@ -994,7 +988,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:05:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:05:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
       await waitFor(() =>
         expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
@@ -1073,9 +1067,9 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const dashboardCalls = mockGetDashboard.mock.calls.length;
 
       act(() => {
-        capturedOnEnvelope?.(envelope("rider_changed", {}));
-        capturedOnEnvelope?.(envelope("rider_changed", {}));
-        capturedOnEnvelope?.(envelope("run_started", {}));
+        capturedOnEnvelope?.(envelope("rider_changed", {}, "7"));
+        capturedOnEnvelope?.(envelope("rider_changed", {}, "7"));
+        capturedOnEnvelope?.(envelope("run_started", {}, "7"));
       });
       await vi.advanceTimersByTimeAsync(600);
 
@@ -1090,7 +1084,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const dashboardCalls = mockGetDashboard.mock.calls.length;
       const rosterCalls = mockGetRunRoster.mock.calls.length;
 
-      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {}, "7")));
       unmount();
       await vi.advanceTimersByTimeAsync(600);
 
@@ -1173,7 +1167,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
   });
 });
 
-// R50 S6 · S3 — 명단 비고 열(A-04 · RST-03)을 그리고, 사양 근거가 없던 이름 검색 · 승하차지 필터는 없다(Ruling 844).
+// 명단 비고 열(A-04 · RST-03)을 그리고, 사양 근거가 없던 이름 검색 · 승하차지 필터는 없다(Ruling 844).
 describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () => {
   afterEach(() => {
     mockRunIdParam = null;
@@ -1197,7 +1191,7 @@ describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () =
     expect(within(withoutNote).getAllByRole("cell")[noteColumn]).toBeEmptyDOMElement();
   });
 
-  // R50 S4 — 회차 정보 카드의 전화번호 복사 버튼과 "확정까지 N분" 은 사양 근거가 없어 지웠다. 번호 표시 · tel: 링크는 남는다.
+  // 회차 정보 카드의 전화번호 복사 버튼과 "확정까지 N분" 은 사양 근거가 없어 지웠다. 번호 표시 · tel: 링크는 남는다.
   it("회차 정보 카드는 전화번호를 tel 링크로만 보이고 복사 버튼 · 확정까지 남은 분이 없다", async () => {
     mockRunIdParam = "7";
     const departAt = new Date(Date.now() + 60 * 60_000).toISOString();
@@ -1319,7 +1313,7 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     { ...baseRoster[0], studentId: "5", name: "이아안", status: "no_show", guardianPhone: "010-0000-1183" },
   ];
 
-  // R50 S15 — 미승차 대기 시간은 학원마다 1~30분(A-17)이다. 띠에 "3분" 을 박아 두면 다른 값을 쓰는 학원에서 사실과 다르다.
+  // 미승차 대기 시간은 학원마다 1~30분(A-17)이다. 띠에 "3분" 을 박아 두면 다른 값을 쓰는 학원에서 사실과 다르다.
   it("미승차 띠의 카운트다운 문구는 대기 시간을 3분으로 단정하지 않는다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
     mockGetRunRoster.mockResolvedValue(noShowRoster);
@@ -1331,7 +1325,7 @@ describe("TodayRunPage — 미승차 띠 · 매니저 연락처 · 타 학원 �
     expect(alert).not.toHaveTextContent("3분");
   });
 
-  // R52 M8 · Ruling 854 — 학부모 알림은 표시 즉시가 아니라 기사가 그 승하차지를 출발할 때 나간다(오조작 흡수).
+  // Ruling 854 — 학부모 알림은 표시 즉시가 아니라 기사가 그 승하차지를 출발할 때 나간다(오조작 흡수).
   it("미승차 띠가 학부모 알림을 이미 보낸 것처럼 적지 않고 기사가 출발할 때 나간다고 적는다", async () => {
     mockGetDashboard.mockResolvedValue({ ...baseDashboard, runs: [noShowRun] });
     mockGetRunRoster.mockResolvedValue(noShowRoster);

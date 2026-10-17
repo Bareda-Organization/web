@@ -2,13 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Button, Dialog, StatusChip, Textarea, useToast } from "@/shared/ui";
+import { AlertBanner, Button, RejectReasonDialog, StatusChip, useToast } from "@/shared/ui";
 import { formatDateTime } from "@/shared/lib/format/dateTime";
 import { decideSignupRequest, searchManagerCandidates, searchStudentCandidates } from "../api";
 import { SIGNUP_ROLE_LABEL } from "../lib/signupRoleLabel";
 import type { SignupRequestItemResponseTypes } from "../types";
 import { LinkCandidatePicker } from "./LinkCandidatePicker";
-import { StyledDialogForm, StyledPanel, StyledPanelActions, StyledPanelHead, StyledPanelList, StyledPanelSection } from "./SignupApprovalPage.styled";
+import { StyledPanel, StyledPanelActions, StyledPanelHead, StyledPanelList, StyledPanelSection } from "./SignupApprovalPage.styled";
 
 type SignupDecidePanelProps = {
   request: SignupRequestItemResponseTypes;
@@ -27,7 +27,7 @@ const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role 
 
 // §5.2 409 ALREADY_LINKED — 고른 학생·매니저가 이미 다른 계정과 연결됐거나(학부모는 이미 연결된 자녀) 해서 거절된 경우.
 // 영문 코드·서버 원문은 화면에 내지 않고, 역할에 맞게 다시 고를 방향을 알려 준다. 계정은 pending 그대로다.
-// 예전 목록이라 거절된 경우(다른 관계자가 먼저 처리했거나 요청이 없음)와 차단된 계정은 서버 원문 대신 한국어로 알린다(F02-06).
+// 오래된 목록이라 거절된 경우(다른 관계자가 먼저 처리했거나 요청이 없음)와 차단된 계정은 서버 원문 대신 한국어로 알린다(F02-06).
 const STALE_REQUEST_CODES = ["APPROVAL_ALREADY_DECIDED", "SIGNUP_REQUEST_NOT_FOUND"];
 const STALE_REQUEST_MESSAGE = "이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다";
 const BLOCKED_TARGET_MESSAGE = "승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다";
@@ -46,9 +46,9 @@ const acceptErrorMessage = (cause: unknown, role: SignupRequestItemResponseTypes
 
 // §5.2 POST /staff/signup-requests/{id}/decide(A-02). 수락 시 계정↔레코드 연결이
 // 필수라(§5.2, 누락하면 422 LINK_REQUIRED) role 에 따라 studentIds 또는 managerId 를
-// 받는다. 학생·매니저는 ID 를 직접 입력받지 않고 이름 검색 목록에서 고른다(R32-W3) —
-// 목록 화면에 ID 가 보이지 않아 직접 입력으로는 사실상 승인이 불가능했다.
-// R48 — 목록 오른쪽에 붙박이로 둔 처리 패널이다. 대화상자는 뒤의 목록을 가려 요청마다 닫고 다시 열어야 했다.
+// 받는다. 학생·매니저는 ID 를 직접 입력받지 않고 이름 검색 목록에서 고른다 —
+// 목록 화면에 ID 가 보이지 않아 직접 입력으로는 승인이 불가능하다.
+// 목록 오른쪽에 붙박이로 둔 처리 패널이다(대화상자는 뒤의 목록을 가린다).
 // 승인은 한 번에(되돌림 없는 확인 단계 없음 — 연결 후보를 고르는 것이 확인이다), 거절만 사유를 받는 대화상자(U-13)로 뺀다.
 export const SignupDecidePanel = ({ request, onDone, waited }: SignupDecidePanelProps) => {
   const [studentIds, setStudentIds] = useState<string[]>([]);
@@ -191,38 +191,25 @@ export const SignupDecidePanel = ({ request, onDone, waited }: SignupDecidePanel
         )}
       </StyledPanelActions>
 
-      <Dialog
+      <RejectReasonDialog
         open={rejectOpen}
         title={`${request.name} 가입 요청 거절`}
-        showClose
-        onClose={() => setRejectOpen(false)}
-        actionHint={rejectReason.trim() ? undefined : "사유를 입력하면 [가입 거절] 버튼이 켜집니다. 거절하면 되돌릴 수 없습니다."}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setRejectOpen(false)} disabled={submitting}>
-              뒤로
-            </Button>
-            <Button variant="danger" onClick={handleReject} disabled={submitting || !rejectReason.trim()}>
-              {submitting ? "처리 중..." : "가입 거절"}
-            </Button>
-          </>
-        }
-      >
-        <StyledDialogForm>
+        confirmLabel="가입 거절"
+        intro={
           <p>
             {request.name} · {SIGNUP_ROLE_LABEL[request.role]} · {request.phone} · 거절하면 신청자에게 사유가 안내됩니다.
           </p>
-          <Textarea
-            label="거절 사유"
-            required
-            maxLength={200}
-            placeholder="예: 학원 기록에 없는 이름입니다"
-            hint="신청자에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
-            value={rejectReason}
-            onChange={(event) => setRejectReason(event.target.value)}
-          />
-        </StyledDialogForm>
-      </Dialog>
+        }
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
+        maxLength={200}
+        placeholder="예: 학원 기록에 없는 이름입니다"
+        fieldHint="신청자에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
+        emptyHint="사유를 입력하면 [가입 거절] 버튼이 켜집니다. 거절하면 되돌릴 수 없습니다."
+        submitting={submitting}
+        onConfirm={handleReject}
+        onClose={() => setRejectOpen(false)}
+      />
     </StyledPanel>
   );
 };

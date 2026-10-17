@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { useMemo, useState } from "react";
+import { usePagedList } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTable, StatusChip, Tabs } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getSignupRequests } from "../api";
@@ -27,55 +27,33 @@ const NEXT_STEP: Record<SignupRequestItemResponseTypes["role"], string> = {
 };
 
 // §5.1 GET /staff/signup-requests(A-02) · §5.2 POST .../decide(A-02) — 가입 승인
-// 화면(UF-M-01). 이 라운드에는 본보기 디자인 킷이 없어 새로 그린다.
+// 화면(UF-M-01).
 export const SignupApprovalPage = () => {
   const [status, setStatus] = useState("pending");
-  const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [requests, setRequests] = useState<SignupRequestItemResponseTypes[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const { refresh: refreshPending } = useApprovalPending();
 
-  // 요청마다 번호를 매겨 마지막 요청의 응답만 화면에 반영한다 — 필터·쪽을 빠르게 바꿀 때 늦게 온 옛 응답이 새 목록을 덮지 않게 한다(F02-04).
-  const requestSeq = useRef(0);
-
-  const loadRequests = useCallback(async (nextStatus: string, nextPage: number) => {
-    const seq = ++requestSeq.current;
-    setLoading(true);
-    try {
-      const data = await getSignupRequests(nextStatus, nextPage, PAGE_SIZE);
-      if (seq !== requestSeq.current) return;
-      setRequests(data.items);
+  // 상태 탭을 바꾸면 0쪽부터 다시 읽는다(usePagedList 의 resetKey) — 옛 탭의 마지막 쪽이 새 탭에서는 범위 밖일 수 있다.
+  const {
+    items: requests,
+    data,
+    totalCount,
+    hasNext,
+    page,
+    setPage,
+    loading,
+    error,
+    reload,
+  } = usePagedList(
+    async (targetPage) => {
+      const result = await getSignupRequests(status, targetPage, PAGE_SIZE);
       setNowMs(Date.now());
-      setPendingCount(data.pendingCount);
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setError(null);
-    } catch (cause) {
-      if (seq !== requestSeq.current) return;
-      setError(cause instanceof ApiError ? cause.message : "가입 요청 목록을 불러오지 못했습니다");
-      setRequests([]);
-    } finally {
-      if (seq === requestSeq.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await loadRequests(status, page);
-    })();
-  }, [status, page, loadRequests]);
-
-  // 상태 필터를 바꾸면 0 페이지로 되돌린다 — 옛 필터의 마지막 페이지가 새 필터에서는 범위 밖일 수 있다.
-  const handleStatusChange = (nextStatus: string) => {
-    setStatus(nextStatus);
-    setPage(0);
-  };
+      return result;
+    },
+    { resetKey: status, errorMessage: "가입 요청 목록을 불러오지 못했습니다" },
+  );
+  const pendingCount = data?.pendingCount ?? 0;
 
   // 오래 기다린 순(§5.1 정렬 — 서버 기본이 requested_at 오름차순이지만 화면도 한 번 더 보장한다).
   const sorted = useMemo(
@@ -151,7 +129,7 @@ export const SignupApprovalPage = () => {
           { value: "rejected", label: "거절됨" },
         ]}
         value={status}
-        onChange={handleStatusChange}
+        onChange={setStatus}
       />
 
       <StyledSignupBoard>
@@ -161,7 +139,7 @@ export const SignupApprovalPage = () => {
           ) : (
             <RosterTable
               hasError={Boolean(error)}
-              onRetry={() => loadRequests(status, page)}
+              onRetry={reload}
               columns={columns}
               loading={loading}
               rows={sorted}
@@ -183,7 +161,7 @@ export const SignupApprovalPage = () => {
             waited={formatElapsed(selected.requestedAt, nowMs)}
             onDone={() => {
               setSelectedId(null);
-              loadRequests(status, page);
+              reload();
               void refreshPending();
             }}
           />

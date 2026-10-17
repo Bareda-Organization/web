@@ -4,7 +4,7 @@ import { css } from "@emotion/react";
 export type ListRowTone = "bad" | "warn" | "info" | "ok";
 export type TimelineTone = "end" | "ok" | "bad";
 
-// 목록 행 · 피드 · 항목 목록 · 타임라인 — 시안 kit 8절. 긴급도는 왼쪽 색 막대가 아니라 앞쪽 모양(◆ 위험 · ▲ 주의 · ⓘ 정보 · ● 이상 없음)으로 말한다.
+// 목록 행 · 타임라인 — 시안 kit 8절. 긴급도는 왼쪽 색 막대가 아니라 앞쪽 모양(◆ 위험 · ▲ 주의 · ⓘ 정보 · ● 이상 없음)으로 말한다.
 
 export const StyledListRows = styled.ul`
   display: grid;
@@ -84,57 +84,6 @@ export const StyledListRowSide = styled.div<{ $isCount: boolean }>`
           font-variant-numeric: tabular-nums;
         `
       : null}
-`;
-
-export const StyledFeed = styled.ul`
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--fs-sm);
-
-  & > li {
-    display: grid;
-    grid-template-columns: 48px 1fr;
-    gap: var(--s2);
-    padding: var(--s2) 0;
-    border-bottom: 1px solid var(--border-subtle);
-    line-height: 1.45;
-  }
-
-  & > li:last-of-type {
-    border-bottom: 0;
-  }
-`;
-
-export const StyledFeedTime = styled.span`
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-`;
-
-// 후보 목록 — 카드 안의 카드로 읽히던 흰 상자 대신 위아래 선만 둔다.
-export const StyledOptionList = styled.ul`
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-
-  & > li + li {
-    border-top: 1px solid var(--border-subtle);
-  }
-`;
-
-// 선택된 항목은 3px 왼쪽 막대 대신 연한 면 + 안쪽 둘레선
-export const StyledOptionListItem = styled.li<{ $picked: boolean }>`
-  padding: 10px var(--s3);
-  ${({ $picked }) =>
-    $picked
-      ? css`
-          background: var(--selected-bg);
-          box-shadow: inset 0 0 0 1.5px var(--selected-edge);
-        `
-      : null}
-
 `;
 
 const dot: Record<TimelineTone, ReturnType<typeof css>> = {

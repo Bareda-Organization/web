@@ -1,70 +1,23 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
   AckEmergencyResponseTypes,
   EmergencyItemResponseTypes,
   EmergencyListQueryTypes,
   EmergencyListResponseTypes,
-  EmergencyPersonTypes,
-  EmergencyPositionTypes,
-  EmergencyType,
 } from "../types";
 
-type RawEmergencyItem = {
-  emergency_id: string | number;
-  type: EmergencyType;
-  memo: string | null;
-  raised_by: { name: string | null; role: "driver" | "escort"; phone: string | null };
-  run_id: string | number;
-  bus_no: string;
-  direction: "to_academy" | "from_academy";
-  position: { lat: number | null; lng: number | null; recorded_at: string | null };
-  rider_count: number;
-  contacts: { name: string; role: "driver" | "escort"; phone: string }[];
-  raised_at: string;
-  occurred_at?: string | null;
-  acked_at: string | null;
-  canceled_at: string | null;
-  acked: boolean;
-  acked_by: { name: string; memo: string | null } | null;
+// 서버 id 는 숫자 — 화면 타입은 문자열. occurredAt 은 안 오면 null 로 메운다.
+type WireEmergencyItem = Omit<WithId<EmergencyItemResponseTypes, "emergencyId" | "runId">, "occurredAt"> & {
+  occurredAt?: string | null;
 };
 
-// BE-R1 목표 2 이전에는 실측 봉투가 `items[]` 가 아니라 `emergencies[]` 였다. 서버가 §5.16 대로
-// `items` 를 내려보내게 고쳐져 이 어댑터도 함께 맞춘다.
-type RawEmergencyListResponse = {
-  items: RawEmergencyItem[];
-  unacked_count: number;
-};
-
-const toPerson = (raw: RawEmergencyItem["raised_by"]): EmergencyPersonTypes => ({
-  name: raw.name,
-  role: raw.role,
-  phone: raw.phone,
-});
-
-const toPosition = (raw: RawEmergencyItem["position"]): EmergencyPositionTypes => ({
-  lat: raw.lat,
-  lng: raw.lng,
-  recordedAt: raw.recorded_at,
-});
-
-const toItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => ({
-  emergencyId: asIdString(raw.emergency_id),
-  type: raw.type,
-  memo: raw.memo,
-  raisedBy: toPerson(raw.raised_by),
-  runId: asIdString(raw.run_id),
-  busNo: raw.bus_no,
-  direction: raw.direction,
-  position: toPosition(raw.position),
-  riderCount: raw.rider_count,
-  contacts: raw.contacts.map(toPerson),
-  raisedAt: raw.raised_at,
-  occurredAt: raw.occurred_at ?? null,
-  ackedAt: raw.acked_at,
-  canceledAt: raw.canceled_at,
-  acked: raw.acked,
-  ackedBy: raw.acked_by,
+const toItem = (raw: WireEmergencyItem): EmergencyItemResponseTypes => ({
+  ...raw,
+  emergencyId: asIdString(raw.emergencyId),
+  runId: asIdString(raw.runId),
+  occurredAt: raw.occurredAt ?? null,
 });
 
 // GET /staff/emergencies(§5.16, EXC-04, A-16) — 페이징 없음(page·size·total_count·
@@ -72,22 +25,19 @@ const toItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => ({
 export const getEmergencies = async (
   filters: EmergencyListQueryTypes = {},
 ): Promise<EmergencyListResponseTypes> => {
-  const raw = await apiFetch<RawEmergencyListResponse>("/staff/emergencies", {
+  const raw = await apiFetch<Omit<EmergencyListResponseTypes, "items"> & { items: WireEmergencyItem[] }>("/staff/emergencies", {
     method: "GET",
     query: { status: filters.status, date: filters.date },
   });
-  return {
-    items: raw.items.map(toItem),
-    unackedCount: raw.unacked_count,
-  };
+  return { ...raw, items: raw.items.map(toItem) };
 };
 
 // POST /staff/emergencies/{id}/ack — 이미 확인된 건은 409 ALREADY_ACKED. 조치 메모(선택, 200자 이하 · Ruling 541)가
 // 있을 때만 본문 `{memo}` 를 보낸다 — 본문 없는 확인도 그대로 동작한다.
 export const ackEmergency = async (emergencyId: string, memo?: string): Promise<AckEmergencyResponseTypes> => {
-  const raw = await apiFetch<{ emergency_id: string | number; acked_at: string }>(
+  const raw = await apiFetch<WithId<AckEmergencyResponseTypes, "emergencyId">>(
     `/staff/emergencies/${emergencyId}/ack`,
     memo ? { method: "POST", body: { memo } } : { method: "POST" },
   );
-  return { emergencyId: asIdString(raw.emergency_id), ackedAt: raw.acked_at };
+  return { ...raw, emergencyId: asIdString(raw.emergencyId) };
 };

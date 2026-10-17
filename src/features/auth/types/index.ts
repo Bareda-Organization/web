@@ -1,6 +1,6 @@
 // features/auth 가 다루는 타입 전부 — API 응답은 `OOOResponseTypes` (`CONVENTIONS_REACT.md`).
 // 서버는 snake_case(§1.1)를 쓰지만 이 파일의 타입은 앱 내부 관례대로 camelCase 다 —
-// snake_case ↔ camelCase 변환은 `api/*.ts` 호출부가 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 
 export type AccountRole = "parent" | "student" | "driver" | "escort" | "staff" | "system_admin";
 
@@ -82,26 +82,6 @@ export type MeResponseTypes = {
 export type ChangePasswordRequestTypes = {
   currentPassword: string;
   newPassword: string;
-};
-
-export type RecoverAccountRequestTypes = {
-  type: "login_id" | "password";
-  phone: string;
-  verificationCode?: string;
-};
-
-export type DevicePlatform = "android" | "ios" | "web";
-
-export type DeviceRegisterRequestTypes = {
-  token: string;
-  platform: DevicePlatform;
-  deviceId: string;
-  appVersion?: string;
-};
-
-export type DeviceRegisterResponseTypes = {
-  deviceId: string;
-  registeredAt: string;
 };
 
 // AuthSessionProvider 가 들고 있는 세션 스냅샷. 로그인·새로고침 재발급·`/me` 조회가

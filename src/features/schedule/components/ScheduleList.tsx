@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBuses } from "@/features/bus";
 import type { BusItemResponseTypes } from "@/features/bus";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { todayInSeoul } from "@/shared/lib/format/dateTime";
 import { AlertBanner, Button, Card, FilterBar, FilterGroup, Icon, RosterTable, SegmentedControl, StatStrip, StatusChip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
@@ -48,7 +48,7 @@ type ScheduleListProps = {
 
 // §5.10 GET /staff/schedules(SCH-01, A-09 · `size=500` 으로 전량) — 정규 스케줄 요일표 · 목록 보기 · 등록·수정·삭제.
 // 상세 GET 이 사양에 없어(bus 관리와 같은 형태) 수정은 이 목록의 행 데이터를 그대로
-// 옆 패널에 채운다(판단 근거, 보고서 §1).
+// 옆 패널에 채운다.
 export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: ScheduleListProps = {}) => {
   const [items, setItems] = useState<ScheduleItemResponseTypes[]>([]);
   const [buses, setBuses] = useState<BusItemResponseTypes[]>([]);
@@ -84,7 +84,7 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
       setTruncated(data.hasNext);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "운행 스케줄을 불러오지 못했습니다");
+      setError(describeApiError(cause, "운행 스케줄을 불러오지 못했습니다"));
       setItems([]);
     } finally {
       setLoading(false);

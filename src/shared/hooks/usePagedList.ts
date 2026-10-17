@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "../lib/http";
+import { describeApiError } from "../lib/http";
 import { usePolling } from "./usePolling";
 
 export type PagedPage<T> = { items: T[]; totalCount: number; hasNext: boolean };
@@ -50,7 +50,7 @@ export const usePagedList = <R extends PagedPage<unknown>>(fetchPage: (page: num
         return true;
       } catch (cause) {
         if (requestId !== requestRef.current) return true;
-        setError(cause instanceof ApiError ? cause.message : errorMessage);
+        setError(describeApiError(cause, errorMessage));
         return false;
       } finally {
         if (requestId === requestRef.current) setLoading(false);

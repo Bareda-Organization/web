@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BusOptionsNotice, useBusOptions } from "@/features/bus";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input, Select } from "@/shared/ui";
 import { createRun } from "../api";
@@ -27,8 +28,7 @@ export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) =>
   const [originName, setOriginName] = useState("");
   const [destinationName, setDestinationName] = useState("");
   const [estDurationMin, setEstDurationMin] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, run } = useAction();
 
   const busOptions = useBusOptions();
   // 목록의 첫 차량이 기본 선택이다.
@@ -43,28 +43,22 @@ export const RunAddForm = ({ serviceDate, onClose, onDone }: RunAddFormProps) =>
 
   const handleSubmit = async () => {
     if (busId === undefined) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await createRun({
-        busId,
-        serviceDate,
-        direction,
-        departTime,
-        originName: originName.trim(),
-        destinationName: destinationName.trim(),
-        estDurationMin: estDurationMin === "" ? undefined : Number(estDurationMin),
-      });
-      onDone();
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "DUPLICATE_RUN") {
-        setError("같은 차량·날짜·방향·출발 시각의 회차가 이미 있습니다.");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "임시 회차 추가에 실패했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(
+      async () => {
+        await createRun({
+          busId,
+          serviceDate,
+          direction,
+          departTime,
+          originName: originName.trim(),
+          destinationName: destinationName.trim(),
+          estDurationMin: estDurationMin === "" ? undefined : Number(estDurationMin),
+        });
+        onDone();
+      },
+      "임시 회차 추가에 실패했습니다",
+      (cause) => (cause instanceof ApiError && cause.code === "DUPLICATE_RUN" ? "같은 차량·날짜·방향·출발 시각의 회차가 이미 있습니다." : undefined),
+    );
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAction } from "@/shared/hooks";
 import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input } from "@/shared/ui";
 import { changePassword } from "../api";
@@ -28,9 +29,8 @@ export const PasswordChangeDialog = ({ onClose, forced = false }: PasswordChange
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [changed, setChanged] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { pending: submitting, error, setError, run } = useAction();
 
   const handleRelogin = () => {
     logout().catch((cause: unknown) => console.warn("로그아웃 요청 실패 — 이 기기에서만 로그아웃했다", cause));
@@ -42,20 +42,14 @@ export const PasswordChangeDialog = ({ onClose, forced = false }: PasswordChange
       setError(invalid);
       return;
     }
-    setSubmitting(true);
-    setError(null);
-    try {
-      await changePassword({ currentPassword, newPassword });
-      setChanged(true);
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "INVALID_CREDENTIALS") {
-        setError("현재 비밀번호가 맞지 않습니다.");
-      } else {
-        setError(cause instanceof ApiError ? cause.message : "비밀번호를 바꾸지 못했습니다");
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(
+      async () => {
+        await changePassword({ currentPassword, newPassword });
+        setChanged(true);
+      },
+      "비밀번호를 바꾸지 못했습니다",
+      (cause) => (cause instanceof ApiError && cause.code === "INVALID_CREDENTIALS" ? "현재 비밀번호가 맞지 않습니다." : undefined),
+    );
   };
 
   return (
@@ -122,7 +116,7 @@ export const PasswordChangeDialog = ({ onClose, forced = false }: PasswordChange
 
 /**
  * 본인 비밀번호 변경(AUTH-07, §2.8) — 관계자·메인 관리자 헤더. 관리자가 초기화해 준 임시 비밀번호(§5.22)를
- * 받은 본인이 직접 바꾸는 유일한 길이다(2026-10-01 R46-WEBF, Ruling 491).
+ * 받은 본인이 직접 바꾸는 유일한 길이다(Ruling 491).
  */
 export const PasswordChangeButton = () => {
   const [open, setOpen] = useState(false);

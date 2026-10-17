@@ -84,7 +84,7 @@ function connectStomp(token: string): StompConnection {
 
   const client = createStompClient({
     brokerURL: WS_BASE_URL,
-    connectHeaders: { Authorization: `Bearer ${token}` },
+    getConnectHeaders: async () => ({ Authorization: `Bearer ${token}` }),
     onConnect: () => resolveConnected(),
     onStompError: (frame) => resolveErrorFrame(frame),
     onWebSocketClose: () => rejectConnected(new Error("CONNECT 이전에 WebSocket 이 닫힘")),

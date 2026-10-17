@@ -106,9 +106,3 @@ export const StyledPanelActions = styled.div`
   justify-content: flex-end;
   gap: 8px;
 `;
-
-export const StyledDialogForm = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;

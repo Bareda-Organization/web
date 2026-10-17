@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deleteWaypoint, postWaypoint } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.15 — 미리보기(apply=false) → 배포(apply=true + preview_token) 두 단계. 배포 요청이 토큰을 빼먹으면 서버가 409 PREVIEW_STALE 이다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 const rawPreview = {
   success: true,
   data: {

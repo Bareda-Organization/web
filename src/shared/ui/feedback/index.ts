@@ -15,3 +15,6 @@ export type { SkeletonProps, SkeletonVariant } from "./Skeleton";
 
 export { ToastProvider, useToast } from "./Toast";
 export type { ToastInput } from "./Toast";
+
+export { RejectReasonDialog } from "./RejectReasonDialog";
+export type { RejectReasonDialogProps } from "./RejectReasonDialog";

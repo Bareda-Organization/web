@@ -14,7 +14,7 @@ vi.mock("@/shared/hooks", async (importOriginal) => ({
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     emitEnvelope = onEnvelope;
     emitReconnected = onReconnected ?? (() => {});
-    return { connectionState: "connected", reconnect: vi.fn() };
+    return { connectionState: "connected" };
   },
 }));
 
@@ -93,7 +93,7 @@ describe("ApprovalPendingProvider", () => {
     expect(screen.getByText(/가입 2 · 구간 1/)).toBeInTheDocument();
   });
 
-  // R46-FIXCONN C-6 — 연결이 끊긴 사이 놓친 승인 요청 통지는 30초 폴링을 기다리지 않고 재연결 직후 한 번 메운다.
+  // 연결이 끊긴 사이 놓친 승인 요청 통지는 30초 폴링을 기다리지 않고 재연결 직후 한 번 메운다.
   it("연결이 끊겼다 돌아오면 폴링 주기를 기다리지 않고 바로 다시 센다", async () => {
     mockSignups.mockResolvedValue(signupPage(0));
     mockChanges.mockResolvedValue(changePage(0, []));

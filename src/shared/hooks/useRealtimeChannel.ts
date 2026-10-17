@@ -38,9 +38,6 @@ const releaseClient = (): void => {
 
 export type UseRealtimeChannelResult = {
   connectionState: WsConnectionState;
-  // 재연결을 포기(`gaveUp`)한 연결을 사용자가 다시 여는 창구 — 화면의 "다시 연결" 버튼용. 기본 재연결
-  // 정책은 포기하지 않아 운영에서는 거의 쓰이지 않는다.
-  reconnect: () => void;
 };
 
 // `destination` 을 구독하고 봉투가 올 때마다 `onEnvelope` 를 부른다.
@@ -56,10 +53,10 @@ export type UseRealtimeChannelResult = {
 // 애초에 실행되지 않아 SSR 안전성 문제가 없고, "첫 effect 가 clientRef 를
 // 채운 뒤에 두 번째 effect가 그 값을 읽는다"는 effect 호출 순서 하나에만
 // 기대면 되어 `useSyncExternalStore` 의 `subscribe`/`getSnapshot` 재호출
-// 타이밍을 따로 신경 쓸 필요가 없다(판단 근거, 보고서 §1).
+// 타이밍을 따로 신경 쓸 필요가 없다.
 //
-// `onReconnected` 는 끊겼다(`reconnecting`·`gaveUp`) 다시 붙는(`connected`) 순간 한 번 불린다 — 끊긴 사이의 방송은 되찾을 길이
-// 없으므로 화면이 REST 로 한 번 메운다(`API_SPEC §7.2` 재연결 직후 보충, R46-FIXCONN C-6). 클라이언트는 재연결 대기가 끝나면
+// `onReconnected` 는 끊겼다(`reconnecting`) 다시 붙는(`connected`) 순간 한 번 불린다 — 끊긴 사이의 방송은 되찾을 길이
+// 없으므로 화면이 REST 로 한 번 메운다(`API_SPEC §7.2` 재연결 직후 보충). 클라이언트는 재연결 대기가 끝나면
 // `connecting` 을 거쳐 `connected` 가 되므로 "직전 상태" 가 아니라 "끊김을 겪었는가" 로 판정한다.
 export const useRealtimeChannel = (
   destination: string,
@@ -67,6 +64,8 @@ export const useRealtimeChannel = (
   onReconnected?: () => void,
 ): UseRealtimeChannelResult => {
   const [connectionState, setConnectionState] = useState<WsConnectionState>("disconnected");
+  // 접속 세대 번호 — 토큰 갱신(`Ruling 901`)은 연결 상태를 `connected` 로 둔 채 다시 접속하므로, 구독을 새로 거는 시점은 상태가 아니라 이 번호로 안다.
+  const [epoch, setEpoch] = useState(0);
   const clientRef = useRef<AcademyRealtimeClient | null>(null);
   // 최신 콜백을 항상 반영하되, 이 값이 바뀌었다고 구독을 다시 걸지 않는다 —
   // 화면이 렌더될 때마다 새 함수 참조를 넘겨도(인라인 화살표 함수 등) 매번
@@ -76,7 +75,7 @@ export const useRealtimeChannel = (
   // 렌더 중 ref 를 직접 쓰지 않는다(`react-hooks/refs`) — 대신 매 렌더 뒤에 도는
   // effect 로 옮긴다. 이 값은 아래 두 번째 effect 가 만드는 구독 콜백(WebSocket
   // 메시지 수신 시에만, 비동기로 호출됨) 안에서만 읽으므로, 같은 커밋의 effect
-  // 들이 전부 끝난 뒤에 갱신돼도 동작이 달라지지 않는다(판단 근거, 보고서 §1).
+  // 들이 전부 끝난 뒤에 갱신돼도 동작이 달라지지 않는다.
   useEffect(() => {
     onEnvelopeRef.current = onEnvelope;
     onReconnectedRef.current = onReconnected;
@@ -89,30 +88,37 @@ export const useRealtimeChannel = (
     // (`react-hooks/set-state-in-effect`)를 여기서는 따를 수 없다 — 위 주석이
     // 설명하듯 SSR 안전성 때문에 일부러 `useSyncExternalStore` 를 쓰지 않는
     // 설계이고, 이 줄이 하는 일이 바로 "외부 저장소(WebSocket 클라이언트)의
-    // 지금 상태를 최초 동기화"라 미룰 대상이 없다(보고서 §1).
+    // 지금 상태를 최초 동기화"라 미룰 대상이 없다.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 최초 연결 상태 동기화, 위 주석 참고
     setConnectionState(client.getSnapshot());
-    let hadOutage = client.getSnapshot() === "reconnecting" || client.getSnapshot() === "gaveUp";
+    setEpoch(client.getEpoch());
+    let hadOutage = client.getSnapshot() === "reconnecting";
+    let seenEpoch = client.getEpoch();
+    let wasConnected = client.getSnapshot() === "connected";
     const unsubscribeState = client.onConnectionStateChange(() => {
       const next = client.getSnapshot();
-      if (next === "reconnecting" || next === "gaveUp") {
+      const nextEpoch = client.getEpoch();
+      if (next === "reconnecting") {
         hadOutage = true;
       } else if (next === "connected") {
-        if (hadOutage) onReconnectedRef.current?.();
+        // 끊겼다 다시 붙었거나(`hadOutage`), 상태는 그대로인 채 새 접속이 된(계획된 토큰 갱신 — 번호가 바뀜) 경우 화면이 REST 로 한 번 메운다.
+        if (hadOutage || (wasConnected && nextEpoch !== seenEpoch)) onReconnectedRef.current?.();
         hadOutage = false;
+        wasConnected = true;
       } else if (next !== "connecting") {
         hadOutage = false;
+        wasConnected = false;
       }
+      seenEpoch = nextEpoch;
       setConnectionState(next);
+      setEpoch(nextEpoch);
     });
-    // 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때, 끊겨 재연결 대기 중(`reconnecting`)이거나
-    // 포기한(`gaveUp`) 연결을 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 연다. 기본 재연결 정책은
-    // 포기하지 않아(R46-FIXRT S-5) 운영에서는 `reconnecting` 이 이 경로를 탄다. 연결 중·연결된 연결은
-    // 건드리지 않는다.
+    // 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때, 끊겨 재연결 대기 중(`reconnecting`)인 연결을
+    // 다음 대기(최대 30초)를 기다리지 않고 바로 다시 연다. 연결 중·연결된 연결은 건드리지 않는다.
     const reopenIfStalled = () => {
       if (document.visibilityState === "hidden") return;
       const state = client.getSnapshot();
-      if (state === "gaveUp" || state === "reconnecting") client.connect();
+      if (state === "reconnecting") client.connect();
     };
     window.addEventListener("online", reopenIfStalled);
     document.addEventListener("visibilitychange", reopenIfStalled);
@@ -126,21 +132,19 @@ export const useRealtimeChannel = (
   }, []);
 
   useEffect(() => {
-    // 빈 목적지(세션 전 학원 id — `academyLiveDestination("")`)는 구독하지 않는다(R57 W-4).
+    // 빈 목적지(세션 전 학원 id — `academyLiveDestination("")`)는 구독하지 않는다.
     if (connectionState !== "connected" || destination === "") return;
     const client = clientRef.current;
     if (client === null) return;
     const unsubscribe = client.subscribe(destination, (envelope) => onEnvelopeRef.current(envelope));
     return unsubscribe;
-  }, [connectionState, destination]);
+  }, [connectionState, destination, epoch]);
 
-  const reconnect = () => clientRef.current?.connect();
-
-  return { connectionState, reconnect };
+  return { connectionState };
 };
 
 // 연결 상태만 읽는 훅 — 목적지를 구독하지 않고 공유 연결의 상태만 돌려준다. 레이아웃의 연결 띠처럼 방송 내용은 필요 없고 끊김만
-// 알리면 되는 화면이 쓴다(R46-FIXCONN C-12). 연결은 `useRealtimeChannel` 과 같은 참조 계수를 쓰므로 마지막 사용자가 떠나야 닫힌다.
+// 알리면 되는 화면이 쓴다. 연결은 `useRealtimeChannel` 과 같은 참조 계수를 쓰므로 마지막 사용자가 떠나야 닫힌다.
 export const useRealtimeConnection = (): UseRealtimeChannelResult => {
   const [connectionState, setConnectionState] = useState<WsConnectionState>("disconnected");
   const clientRef = useRef<AcademyRealtimeClient | null>(null);
@@ -159,7 +163,5 @@ export const useRealtimeConnection = (): UseRealtimeChannelResult => {
     };
   }, []);
 
-  const reconnect = () => clientRef.current?.connect();
-
-  return { connectionState, reconnect };
+  return { connectionState };
 };

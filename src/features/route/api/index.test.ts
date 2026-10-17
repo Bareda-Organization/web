@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAllStops, getRouteDetail, getRoutePath, getRoutes, getRunRoute, getStops, saveRouteStops, suggestStops, updateStop } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.9 RTE-01·09 · §5.15 RTE-10 — snake_case ↔ camelCase 변환 경계. toListItem 의
 // name 필드와 toStop 의 name 필드는 서로 다른 raw 타입(노선 이름 vs 정차지 이름)이지만
 // 같은 문자열 형태(`name: raw.name,`)라 두 테스트가 실제로 다른 변환 함수를 검사하는지
 // 대조할 수 있다(student/api 에서 쓴 것과 같은 기법).
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("route api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -67,7 +65,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.busNo).toBe("1호차");
   });
 
-  // 2026-09-23 — 저장은 한 요청이다. 새 항목은 stop_id 를 null 로 보내야 서버가 새로 만든다 —
+  // 저장은 한 요청이다. 새 항목은 stop_id 를 null 로 보내야 서버가 새로 만든다 —
   // 키를 빼거나 0 을 보내면 "없는 승하차지" 로 읽혀 422 가 난다.
   it("saveRouteStops 는 목록 순서 그대로 snake_case 로 보내고 새 항목의 stop_id 는 null 이다", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
@@ -113,7 +111,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     ]);
   });
 
-  // R15-T2 목표 4 — road_path 좌표 배열과 fallback_used 를 camelCase 로 바꾼다. 좌표
+  // road_path 좌표 배열과 fallback_used 를 camelCase 로 바꾼다. 좌표
   // 순서가 뒤집히면(경도·위도 자리 교환) 지도가 바다 위로 가므로 첫·끝 값을 각각 본다.
   it("getRunRoute 는 road_path·fallback_used 를 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
@@ -158,7 +156,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.fallbackUsed).toBe(true);
   });
 
-  // R39 Ruling 400 — 경유 지점은 다른 필드가 승하차지와 같은 모양이라 `is_waypoint` 로만 가른다.
+  // Ruling 400 — 경유 지점은 다른 필드가 승하차지와 같은 모양이라 `is_waypoint` 로만 가른다.
   // 미경유(`change=skipped`)도 함께 읽는다. 둘 다 없는 응답(고정 노선 등)은 false·null 이다.
   it("getRunRoute 는 stops[].is_waypoint·change 를 읽고, 없으면 false·null 로 둔다", async () => {
     vi.stubGlobal(
@@ -188,7 +186,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     ]);
   });
 
-  // R56 K1(Ruling 893) — 경유 행의 `waypoint_id` 가 삭제 경로의 id 다. 승하차지 행에는 값이 없어 null 이다.
+  // Ruling 893 — 경유 행의 `waypoint_id` 가 삭제 경로의 id 다. 승하차지 행에는 값이 없어 null 이다.
   it("getRunRoute 는 stops[].waypoint_id 를 waypointId 로 읽고, 없으면 null 로 둔다", async () => {
     vi.stubGlobal(
       "fetch",
@@ -217,7 +215,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     ]);
   });
 
-  // R19 목표 1 — stops[] 도 다른 정차지 조회(getRouteDetail)와 같은 규칙(stop_id→stopId)
+  // stops[] 도 다른 정차지 조회(getRouteDetail)와 같은 규칙(stop_id→stopId)
   // 으로 camelCase 로 바꾼다. id 값 자체를 대조해 "몇 개인가" 가 아니라 "어느 정차지인가"
   // 를 확인한다(phase-goal-loop — 개수만 세는 단언은 범위 조건을 못 잡는다).
   it("getRunRoute 는 stops[] 를 정차지 마커용으로 camelCase 로 바꾼다", async () => {
@@ -242,7 +240,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
     expect(result.stops).toEqual([{ stopId: "3", seq: 1, name: "그린빌라 입구", lat: 37.5685, lng: 126.98, isDestination: false, isWaypoint: false, waypointId: null, change: null }]);
   });
 
-  // R27-B — GET /staff/routes/{id}/path. getRunRoute 와 같은 road_path·fallback_used·
+  // GET /staff/routes/{id}/path. getRunRoute 와 같은 road_path·fallback_used·
   // stops 변환을 쓰되(§5.19 와 같은 raw 모양) confirmed 필드가 없는 것까지 함께 본다.
   it("getRoutePath 는 road_path·fallback_used·stops 를 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(

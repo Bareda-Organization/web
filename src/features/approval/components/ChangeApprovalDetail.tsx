@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, StatStrip, StatusChip, Textarea, useToast } from "@/shared/ui";
+import { describeApiError } from "@/shared/lib/http";
+import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, RejectReasonDialog, StatStrip, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -34,9 +34,9 @@ type ChangeApprovalDetailProps = {
   approvalId: string;
 };
 
-// `R20-B2` 목표 1(사용자 지적) — 실제 응답은 이 값을 풀 ISO(초·밀리초·날짜 포함)로 준다
+// 실제 응답은 이 값을 풀 ISO(초·밀리초·날짜 포함)로 준다
 // (같은 날 같은 회차의 정차지 시각이라 시:분이면 충분하다). 타입은 `string` 이지만 실측상
-// 결정 전 정류장은 `null` 로 오기도 해(백엔드 계약과 타입이 어긋난 지점, 보고서 §2) —
+// 결정 전 정류장은 `null` 로 오기도 해(백엔드 계약과 타입이 어긋난 지점) —
 // `formatClockTime` 에 그대로 넘기면 `Date(null)` 이 자정으로 파싱돼 없는 값을 있는
 // 것처럼 보여준다. 값이 없을 때는 "-" 로 명시한다.
 const renderStop = (stop: RouteStopPreviewResponseTypes) => (
@@ -48,7 +48,7 @@ const renderStop = (stop: RouteStopPreviewResponseTypes) => (
   </StyledRouteStopRow>
 );
 
-// `R20-B` 목표 2·3·4(조율자 결정) — "변경 전 / 변경 후" 묶음에 시간 값은 이 3개만 낸다:
+// "변경 전 / 변경 후" 묶음에 시간 값은 이 3개만 낸다:
 // 전체 소요시간(분) · 출발시간 · 도착시간. 옛 est_time_before/after(이 학생 개인 도착시각)는
 // 기준이 두 갈래로 갈리는 표를 만들어 뺐다 — 소요시간은 이미 "노선 전체(출발지→마지막
 // 정차지)" 기준(Ruling 318)인데 도착시각만 "이 학생 정류장" 기준이면 관리자가 "37분
@@ -63,7 +63,7 @@ const DISTANCE_MISSING_REASON = "- (거리 정보가 없습니다)";
 const DEPART_TIME_MISSING_REASON = "- (출발 시각 정보가 아직 없습니다)";
 const ARRIVAL_TIME_MISSING_REASON = "- (출발 또는 소요 정보가 없어 계산할 수 없습니다)";
 
-// 전체 소요시간 — "변경 전" 열은 값만, "변경 후" 열은 증감 부호를 덧붙인다(목표 4, 증감 유지).
+// 전체 소요시간 — "변경 전" 열은 값만, "변경 후" 열은 증감 부호를 덧붙인다(증감 유지).
 const formatTotalDuration = (minutes: number | null, deltaBase?: number | null): string => {
   if (minutes === null) return DURATION_MISSING_REASON;
   if (deltaBase === undefined || deltaBase === null) return `${minutes}분`;
@@ -81,8 +81,7 @@ const formatDistance = (km: number | null, deltaBase?: number | null): string =>
 };
 
 // 출발시간 — 재최적화가 출발 시각 자체를 옮기지 않으므로 전/후 두 열에 같은 값이 들어간다
-// (조율자 결정 — "변경해도 출발 시각은 그대로"가 관리자에게 유용한 정보다). `R20-B2`
-// 목표 2 — 값만 같으면 사람은 버그로 읽는다(사용자 신고). 렌더 쪽에서 "전후 동일"
+// ("변경해도 출발 시각은 그대로"가 관리자에게 유용한 정보다). 값만 같으면 사람은 버그로 읽는다. 렌더 쪽에서 "전후 동일"
 // 배지를 나란히 붙여 의도된 동일값임을 밝힌다(아래 return 문).
 const formatDepartTime = (departTime: string | null): string =>
   departTime === null ? DEPART_TIME_MISSING_REASON : formatClockTime(departTime);
@@ -108,7 +107,7 @@ const cameraForPath = (path: RoutePathPointResponseTypes[]): MapCamera => {
   return { lat: sum.lat / path.length, lng: sum.lng / path.length, zoom: DEFAULT_MAP_CAMERA.zoom };
 };
 
-// R21-A 추가 지시 ② — "변한 승하차지"(삭제·순서 변경)의 stopName 집합. stops_before·
+// "변한 승하차지"(삭제·순서 변경)의 stopName 집합. stops_before·
 // stops_after 는 stopId 를 안 실어(§5.5 계약 — 이름만으로 충분하다는 기존 판단)
 // 이름으로 맞춘다 — 이 화면이 이미 정차지 표(renderStop)에서 쓰는 것과 같은 키다.
 const changedStopNamesOf = (reordered: RouteStopRefResponseTypes[], removed: RouteStopRefResponseTypes[]): Set<string> =>
@@ -116,9 +115,9 @@ const changedStopNamesOf = (reordered: RouteStopRefResponseTypes[], removed: Rou
     [...reordered, ...removed].map((ref) => ref.stopName).filter((name): name is string => name != null),
   );
 
-// R21-A 추가 지시 ② — 정차지를 지도 마커로 바꾼다. 좌표가 없는 항목(경유 지점만
+// 정차지를 지도 마커로 바꾼다. 좌표가 없는 항목(경유 지점만
 // 가리키는 자리)은 건너뛴다 — 억지로 좌표를 맞추면 삭제된 승하차지가 조용히
-// 빠진 지도가 나간다(조율자 지시).
+// 빠진 지도가 나간다.
 const stopsToMarkers = (stops: RouteStopPreviewResponseTypes[], changedNames: Set<string>): MapMarker[] =>
   stops
     .filter((stop) => stop.lat != null && stop.lng != null)
@@ -132,7 +131,7 @@ const stopsToMarkers = (stops: RouteStopPreviewResponseTypes[], changedNames: Se
     }));
 
 // 도로 좌표가 비어도(옛 확정 노선 버전) 정차지 마커는 있을 수 있다 — 그때는 정차지
-// 평균 좌표로 카메라를 잡는다(R21-A §4 와 같은 판단, features/map 의 anchorForSelection
+// 평균 좌표로 카메라를 잡는다(features/map 의 anchorForSelection
 // 과 같은 이유 — 화면이 SDK 를 몰라야 하므로 여기서 직접 평균만 낸다).
 const cameraForPathOrMarkers = (path: RoutePathPointResponseTypes[], markers: MapMarker[]): MapCamera => {
   if (path.length > 0) return cameraForPath(path);
@@ -179,7 +178,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       setDetail(data);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "구간 변경 상세를 불러오지 못했습니다");
+      setError(describeApiError(cause, "구간 변경 상세를 불러오지 못했습니다"));
       setDetail(null);
     } finally {
       setLoading(false);
@@ -204,7 +203,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
-      // 예전 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
+      // 오래된 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
       const failure = toDecideFailure(cause, "승인 처리에 실패했습니다");
       setDecideError(failure.message);
       if (failure.shouldReload) loadDetail();
@@ -258,15 +257,14 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
   }
 
   // 이미 결정된 건(approved·rejected·auto_rejected)은 백엔드가 재최적화를 하지 않고
-  // routePreview·previewToken 등을 전부 null 로 돌려준다(api/changeApprovals.ts 주석 —
-  // 2026-09-14 F5-W1 실서버 계약 시험에서 처음 드러난 계약). routePreview 유무로
+  // routePreview·previewToken 등을 전부 null 로 돌려준다(api/changeApprovals.ts 주석). routePreview 유무로
   // "이미 결정됐는가"를 판정해 노선 비교·승인/거절 조작을 감춘다.
   const isAlreadyDecided = detail.routePreview === null;
   const remaining = formatRemaining(new Date(detail.deadlineAt).getTime(), now);
   // 서버는 처리 기한에 대기 건을 자동 거절한다(Ruling 306, API_SPEC §9.6) — 기한이 지난 대기 건은
   // 눌러도 소용이 없어 조작을 끈다. `now` 가 1초마다 갱신돼 화면을 열어 둔 채 넘겨도 바뀐다.
   const isExpired = !isAlreadyDecided && remaining === null;
-  // 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 가입 승인·거절처럼 확인 단계를 한 번 둔다(F02-14).
+  // 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 가입 승인·거절처럼 확인 단계를 한 번 둔다.
   const removedStopCount = detail.routePreview?.removed.length ?? 0;
   const approveConfirmText =
     removedStopCount > 0 ? `이 변경을 승인합니다 (삭제 예정 승하차지 ${removedStopCount}곳)` : "이 변경을 승인합니다";
@@ -420,7 +418,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
 
       {detail.routePreview ? (
         <Card>
-          {/* `R20-B` 목표 2·3·4(조율자 결정) — 전/후를 나란히 두 열로 나눠 무엇이 달라지는지
+          {/* 전/후를 나란히 두 열로 나눠 무엇이 달라지는지
               바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간, 거리는 예상 거리(S7)를 낸다. */}
           <p>소요 시간</p>
           <StyledRouteGrid>
@@ -490,8 +488,8 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
 
       {detail.routePreview ? (
         <Card>
-          {/* `R18-C` 목표 4(Ruling 319) — 전후 경로를 좌우 두 지도로 나란히. 한 지도에 겹치지 않는다.
-              R21-A 추가 지시 ② — 승하차지도 마커로 찍고, 삭제·순서 변경된 것은 흰 테두리로 강조한다. */}
+          {/* 전후 경로를 좌우 두 지도로 나란히. 한 지도에 겹치지 않는다.
+              승하차지도 마커로 찍고, 삭제·순서 변경된 것은 흰 테두리로 강조한다. */}
           <p>경로 지도</p>
           <StyledRouteGrid>
             <StyledRouteColumn>
@@ -518,7 +516,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         </Card>
       ) : null}
 
-      {/* 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 영향을 한 번 더 보여 주는 확인 대화상자(U-04 · F02-14). */}
+      {/* 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다 — 영향을 한 번 더 보여 주는 확인 대화상자(U-04). */}
       <Dialog
         open={canDecide && mode === "approve"}
         title={`${detail.studentName} 구간 변경 승인`}
@@ -538,25 +536,20 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         <p>{approveConfirmText}</p>
         <p>승인하면 노선을 다시 확정해 {crew || "기사·동승자"}에게 재배포하고 학부모에게 알립니다. 되돌릴 수 없습니다.</p>
       </Dialog>
-      <Dialog
+      <RejectReasonDialog
         open={canDecide && mode === "reject"}
         title={`${detail.studentName} 구간 변경 거절`}
-        showClose
+        confirmLabel="구간 변경 거절"
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
+        maxLength={200}
+        fieldHint="학부모에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
+        emptyHint="사유를 입력하면 [구간 변경 거절] 버튼이 켜집니다."
+        submitting={submitting}
+        confirmDisabled={isExpired}
+        onConfirm={handleReject}
         onClose={() => setMode(null)}
-        actionHint={rejectReason.trim() ? undefined : "사유를 입력하면 [구간 변경 거절] 버튼이 켜집니다."}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
-              뒤로
-            </Button>
-            <Button variant="danger" onClick={handleReject} disabled={submitting || isExpired || !rejectReason.trim()}>
-              {submitting ? "처리 중..." : "구간 변경 거절"}
-            </Button>
-          </>
-        }
-      >
-        <Textarea label="거절 사유" required maxLength={200} hint="학부모에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
-      </Dialog>
+      />
     </StyledDetailLayout>
   );
 };

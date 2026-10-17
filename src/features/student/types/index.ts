@@ -1,7 +1,7 @@
 // features/student 가 다루는 타입 전부 — 학생 관리(§5.11, STU-01~08, A-10).
-// snake_case ↔ camelCase 변환은 api/*.ts 호출부 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 //
-// ⚠ 2026-09-12 curl 실측 — 목록 응답의 student_id 는 문자열("2")이다(다른 기능의
+// ⚠ curl 실측 — 목록 응답의 student_id 는 문자열("2")이다(다른 기능의
 // id 는 전부 숫자). §5.11 자체는 목록 항목의 타입을 명시하지 않아 실측값을 따른다.
 
 export type StudentGender = "male" | "female";
@@ -60,7 +60,7 @@ export type StudentListResponseTypes = {
 };
 
 // GET /staff/students/{id} 상세 — ⚠ 관계자가 입력하지 않는 두 값(보호자 연락처·
-// 승하차 주소, §5.11)은 이 상세 응답이 자체 실측(2026-09-12)으로는 승하차 주소가
+// 승하차 주소, §5.11)은 이 상세 응답이 자체 실측으로는 승하차 주소가
 // 아예 안 실리고 guardian_phone 만 조회 전용으로 함께 온다.
 export type StudentDetailResponseTypes = {
   studentId: string;

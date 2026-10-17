@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEmergencies } from "./emergencies";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
-// §6.11 — occurred_at 은 단말이 누른 시각(참고값)이다. 서버가 항상 채우지만 어댑터는 없는 응답도 null 로 견딘다(R47 Ruling 744).
+// §6.11 — occurred_at 은 단말이 누른 시각(참고값)이다. 서버가 항상 채우지만 어댑터는 없는 응답도 null 로 견딘다(Ruling 744).
 describe("admin emergencies api — occurred_at 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -62,7 +60,7 @@ describe("admin emergencies api — occurred_at 변환", () => {
     expect((await getEmergencies("open")).counts).toBeUndefined();
   });
 
-  // R53 t5 A2 — 위치 기록이 없을 때 서버는 position 을 null 이 아니라 {lat:null, lng:null, recorded_at:null} 객체로 준다(§5.16).
+  // 위치 기록이 없을 때 서버는 position 을 null 이 아니라 {lat:null, lng:null, recorded_at:null} 객체로 준다(§5.16).
   // 그대로 통과시키면 미니 지도에 null 좌표가 그려지고 "null, null" 이 표시된다 → position 자체를 null 로 바꾼다.
   it("position 이 좌표 null 객체면 position 을 null 로 옮긴다", async () => {
     vi.stubGlobal(

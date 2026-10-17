@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Card, FilterBar, FilterGroup, PageHeader, Pagination, RosterTable, RunStatusChip, SegmentedControl, StatStrip, StatusChip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
-import { useSavedNotice } from "@/shared/hooks";
+import { usePagedList, useSavedNotice } from "@/shared/hooks";
 import type { RosterColumn } from "@/shared/types";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { getBuses } from "../api";
@@ -48,47 +47,23 @@ const restingNote = (summary: ReturnType<typeof summarizeBuses>): string => {
 };
 
 // §5.12 GET /staff/buses(BUS-01, A-11) — 차량 관리 목록. 상세 GET 이 사양에 없어
-// 수정은 이 목록의 행 데이터를 그대로 폼에 채운다(§2 판단 근거 참조).
+// 수정은 이 목록의 행 데이터를 그대로 폼에 채운다.
 export const BusList = ({ unassignedRuns = null }: BusListProps) => {
-  const [page, setPage] = useState(0);
-  const [items, setItems] = useState<BusItemResponseTypes[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<BusStatusFilter>("");
   const { notice, highlightedKey, showNotice } = useSavedNotice();
   const [editing, setEditing] = useState<BusItemResponseTypes | undefined>(undefined);
   const [creating, setCreating] = useState(false);
 
-  const load = useCallback(async (nextPage: number) => {
-    setLoading(true);
-    try {
-      const data = await getBuses(nextPage, PAGE_SIZE);
-      setItems(data.items);
-      setTotalCount(data.totalCount);
-      setHasNext(data.hasNext);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "차량 목록을 불러오지 못했습니다");
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await load(page);
-    })();
-  }, [page, load]);
+  const { items, totalCount, hasNext, page, setPage, loading, error, reload } = usePagedList((targetPage) => getBuses(targetPage, PAGE_SIZE), {
+    errorMessage: "차량 목록을 불러오지 못했습니다",
+  });
 
   // savedBusId — 등록·수정한 차량의 id. 그 행을 잠깐 강조한다.
   const handleDone = (savedBusId?: string) => {
     showNotice("변경 사항을 반영했습니다", savedBusId);
     setEditing(undefined);
     setCreating(false);
-    load(page);
+    reload();
   };
 
   // ponytail: 지표는 지금 보는 쪽(20대)의 합이다 — 보유 차량 수만 서버 총건수. 차량이 한 쪽을 넘기면 전량 조회로 올린다.
@@ -246,7 +221,7 @@ export const BusList = ({ unassignedRuns = null }: BusListProps) => {
       {notice ? <AlertBanner tone="boarded" title={notice} role="status" /> : null}
 
       <Card flush aria-busy={loading}>
-        <RosterTable hasError={Boolean(error)} onRetry={() => load(page)} emptyMessage={status ? "조건에 맞는 차량이 없습니다" : "등록된 차량이 없습니다"}
+        <RosterTable hasError={Boolean(error)} onRetry={reload} emptyMessage={status ? "조건에 맞는 차량이 없습니다" : "등록된 차량이 없습니다"}
           emptyAction={status ? undefined : { label: "차량 등록", onClick: () => setCreating(true) }}
           highlightedKey={highlightedKey} columns={columns} loading={loading} rows={shown} getRowKey={(row) => row.id} onRowClick={setEditing} />
         <StyledBusFooter>

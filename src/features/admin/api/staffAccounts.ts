@@ -8,39 +8,19 @@ import type {
   UpdateStaffAccountRequestTypes,
   UpdateStaffAccountResponseTypes,
 } from "../types";
+import type { WithId } from "@/shared/lib/http/wireId";
 
-type RawStaffAccountItem = {
-  account_id: string | number;
-  name: string;
-  login_id: string;
-  phone: string;
-  academy_name: string;
-  // §6.6(Ruling 807) — 서버가 아직 안 주면 없다.
-  academy_id?: string | number;
-  academy_pending_signup_count?: number;
-  last_login_at: string | null;
-  status: StaffAccountStatus;
+// academyId 는 서버가 아직 안 주면 없다(§6.6, Ruling 807).
+type WireStaffAccountItem = Omit<StaffAccountItemResponseTypes, "accountId" | "academyId"> & {
+  accountId: string | number;
+  academyId?: string | number;
 };
 
-type RawStaffAccountsResponse = {
-  counts?: { active: number; inactive: number } | null;
-  items: RawStaffAccountItem[];
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-};
-
-const toStaffAccountItem = (raw: RawStaffAccountItem): StaffAccountItemResponseTypes => ({
-  accountId: asIdString(raw.account_id),
-  name: raw.name,
-  loginId: raw.login_id,
-  phone: raw.phone,
-  academyName: raw.academy_name,
-  academyId: raw.academy_id === undefined ? undefined : asIdString(raw.academy_id),
-  academyPendingSignupCount: raw.academy_pending_signup_count,
-  lastLoginAt: raw.last_login_at,
-  status: raw.status,
+// 서버 id 는 숫자 — 화면 타입은 문자열 (academyId 는 있을 때만)
+const toStaffAccountItem = (raw: WireStaffAccountItem): StaffAccountItemResponseTypes => ({
+  ...raw,
+  accountId: asIdString(raw.accountId),
+  academyId: raw.academyId === undefined ? undefined : asIdString(raw.academyId),
 });
 
 /** §6.6 쿼리(Ruling 807) — 학원 · 이름/아이디 검색 · 재직 상태. 안 주면 전부. */
@@ -48,29 +28,21 @@ export type StaffAccountFilter = { academyId?: string; q?: string; status?: Staf
 
 // GET /admin/staff-accounts (§6.6, O-02).
 export const getStaffAccounts = async (paging: PagingRequest = {}, filter: StaffAccountFilter = {}): Promise<StaffAccountsResponseTypes> => {
-  const raw = await apiFetch<RawStaffAccountsResponse>("/admin/staff-accounts", {
+  const raw = await apiFetch<Omit<StaffAccountsResponseTypes, "items"> & { items: WireStaffAccountItem[] }>("/admin/staff-accounts", {
     method: "GET",
     query: { academy_id: filter.academyId || undefined, q: filter.q || undefined, status: filter.status, page: paging.page, size: paging.size },
   });
-  return {
-    counts: raw.counts ?? null,
-    items: raw.items.map(toStaffAccountItem),
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-  };
+  // counts 는 서버가 안 주면 null
+  return { ...raw, counts: raw.counts ?? null, items: raw.items.map(toStaffAccountItem) };
 };
 
-type RawUpdateStaffAccountResponse = { account_id: string | number; temporary_password?: string };
-
 // PATCH /admin/staff-accounts/{id} (§6.7, O-02). status=inactive 는 재직 상태만 바꾸며
-// 계정 로그인 자체를 막는다 — 화면에서 "재직 해제" 문구로 안내한다(판단 근거, 보고서 §1).
+// 계정 로그인 자체를 막는다 — 화면에서 "재직 해제" 문구로 안내한다.
 export const updateStaffAccount = async (
   accountId: string,
   payload: UpdateStaffAccountRequestTypes,
 ): Promise<UpdateStaffAccountResponseTypes> => {
-  const raw = await apiFetch<RawUpdateStaffAccountResponse>(`/admin/staff-accounts/${accountId}`, {
+  const raw = await apiFetch<WithId<UpdateStaffAccountResponseTypes, "accountId">>(`/admin/staff-accounts/${accountId}`, {
     method: "PATCH",
     body: {
       name: payload.name,
@@ -80,5 +52,6 @@ export const updateStaffAccount = async (
       status: payload.status,
     },
   });
-  return { accountId: asIdString(raw.account_id), temporaryPassword: raw.temporary_password };
+  // 서버 id 는 숫자 — 화면 타입은 문자열
+  return { ...raw, accountId: asIdString(raw.accountId) };
 };

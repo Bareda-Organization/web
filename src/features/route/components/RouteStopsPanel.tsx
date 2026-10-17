@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/shared/lib/http";
+import { ApiError, describeApiError } from "@/shared/lib/http";
 import { setLeaveWarning } from "@/shared/lib/navigation/leaveGuard";
 import { AlertBanner, Badge, Button, EmptyState, IconButton } from "@/shared/ui";
 import { getRouteDetail, optimizeRoute, saveRouteStops } from "../api";
@@ -72,7 +72,7 @@ const countChanges = (stops: EditableStop[], saved: EditableStop[]): number => {
 };
 
 /**
- * 고정 노선의 승하차지 편성(2026-09-23 사용자 지시) — 목록은 왼쪽 좁은 칸, 지도는 오른쪽(지시 1).
+ * 고정 노선의 승하차지 편성— 목록은 왼쪽 좁은 칸, 지도는 오른쪽.
  *
  * <p><b>저장 버튼을 누르기 전까지 서버는 아무것도 모른다</b>(지시 7). 추가·수정·삭제·순서는 이 화면의 목록만
  * 바꾸고, 저장이 `PUT /staff/routes/{id}/stops` 한 요청으로 보낸다 — 하나라도 거부되면 서버는 아무것도 안
@@ -96,7 +96,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
   // 드래그로 순서 바꾸기 — 라이브러리 없이 HTML5 드래그만 쓴다. 위·아래 버튼은 키보드 사용자를 위해 둔다.
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [nextKey, setNextKey] = useState(0);
-  // 최적화에서 자리를 지킬 줄(2026-09-23 사용자 지시 — 특정 순서·시점·종점 고정). 저장 대상이 아니라 최적화
+  // 최적화에서 자리를 지킬 줄(특정 순서·시점·종점 고정). 저장 대상이 아니라 최적화
   // 조건이라 변경 건수에 넣지 않는다. 줄 이름표(`stop-{id}`)로 들고 있어 순서를 바꿔도 따라간다.
   const [pinnedKeys, setPinnedKeys] = useState<Set<string>>(new Set());
 
@@ -119,7 +119,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
         setError(null);
       } catch (cause) {
         setLoadFailed(true);
-        setError(cause instanceof ApiError ? cause.message : "승하차지를 불러오지 못했습니다");
+        setError(describeApiError(cause, "승하차지를 불러오지 못했습니다"));
       } finally {
         setLoading(false);
       }
@@ -226,13 +226,13 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
       adopt(detail.stops);
     } catch (cause) {
       // 편집한 목록은 그대로 둔다 — 고쳐서 다시 저장할 수 있어야 한다(서버는 아무것도 안 바꿨다).
-      // W9 — §5.9 운행 중인 회차가 서는 승하차지의 좌표 수정은 403
+      // §5.9 운행 중인 회차가 서는 승하차지의 좌표 수정은 403
       // CHANGE_WINDOW_CLOSED(`Ruling 338`). 서버 문구는 거부 이유가 안 드러나
       // 이 화면 전용 문구로 바꾼다.
       if (cause instanceof ApiError && cause.code === "CHANGE_WINDOW_CLOSED") {
         setError("운행 중인 회차가 서는 승하차지라 위치를 바꿀 수 없습니다 — 운행이 끝난 뒤 다시");
       } else {
-        setError(cause instanceof ApiError ? cause.message : "저장하지 못했습니다");
+        setError(describeApiError(cause, "저장하지 못했습니다"));
       }
     } finally {
       setSaving(false);
@@ -246,7 +246,7 @@ export const RouteStopsPanel = ({ routeId, direction }: RouteStopsPanelProps) =>
       adopt((await optimizeRoute(routeId, pinnedStopIds)).stops);
       setConfirmingOptimize(false);
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "최적화에 실패했습니다");
+      setError(describeApiError(cause, "최적화에 실패했습니다"));
     } finally {
       setOptimizing(false);
     }

@@ -1,15 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WsConnectionState } from "../../lib/ws";
 import { RealtimeConnectionStrip } from "./RealtimeConnectionStrip";
 
 let mockConnectionState: WsConnectionState = "connected";
-const mockReconnect = vi.fn();
 vi.mock("../../hooks", () => ({
-  useRealtimeConnection: () => ({ connectionState: mockConnectionState, reconnect: mockReconnect }),
+  useRealtimeConnection: () => ({ connectionState: mockConnectionState }),
 }));
 
-// R46-FIXCONN C-12 — 비상·승인 화면처럼 연결 상태를 안 읽던 화면에서도 끊김이 보이게 레이아웃에 한 번만 둔다.
+// 비상·승인 화면처럼 연결 상태를 안 읽던 화면에서도 끊김이 보이게 레이아웃에 한 번만 둔다.
 describe("RealtimeConnectionStrip", () => {
   afterEach(() => {
     mockConnectionState = "connected";
@@ -30,21 +29,11 @@ describe("RealtimeConnectionStrip", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("재연결 대기 중이면 재연결 안내를 보인다(다시 연결 버튼은 없다)", () => {
+  it("재연결 대기 중이면 재연결 안내를 보인다", () => {
     mockConnectionState = "reconnecting";
     render(<RealtimeConnectionStrip />);
 
     expect(screen.getByText("재연결 시도 중")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "다시 연결" })).not.toBeInTheDocument();
-  });
-
-  it("재연결을 포기했으면 끊김 안내와 [다시 연결] 을 보이고, 누르면 다시 연다", () => {
-    mockConnectionState = "gaveUp";
-    render(<RealtimeConnectionStrip />);
-
-    expect(screen.getByText("실시간 연결 끊김")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "다시 연결" }));
-    expect(mockReconnect).toHaveBeenCalledTimes(1);
   });
 
   // 화면 확인에서 발견 — 비상 알림 띠는 좌우 24px 여백을 두는데 연결 띠만 가장자리까지 붙어 띠 두 개의 폭이 어긋났다.
@@ -58,11 +47,10 @@ describe("RealtimeConnectionStrip", () => {
     expect(getComputedStyle(wrapper as Element).paddingRight).toBe("24px");
   });
 
-  it("권한이 없으면 권한 없음 안내만 보이고 [다시 연결] 은 없다 — 다시 해도 거절된다", () => {
+  it("권한이 없으면 권한 없음 안내만 보인다 — 다시 해도 거절된다", () => {
     mockConnectionState = "forbidden";
     render(<RealtimeConnectionStrip />);
 
     expect(screen.getByText("실시간 조회 권한 없음")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "다시 연결" })).not.toBeInTheDocument();
   });
 });

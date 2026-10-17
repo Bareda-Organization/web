@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapSurface } from "@/features/map";
 import type { MapCamera, MapMarker, MapPolyline } from "@/features/map";
-import { ApiError } from "@/shared/lib/http";
+import { describeApiError } from "@/shared/lib/http";
 import { AlertBanner } from "@/shared/ui";
 import { getRoutePath } from "../api";
 import type { RoutePathResponseTypes, RunDirection } from "../types";
@@ -43,7 +43,7 @@ const cameraFor = (points: Point[]): MapCamera => {
 };
 
 /**
- * 시점·종점(2026-09-23 사용자 지시 8 — 다른 지도처럼 여기에도). 방향 규칙은 Ruling 190 이다: 등원은
+ * 시점·종점. 방향 규칙은 Ruling 190 이다: 등원은
  * 첫 승차지 → 학원, 하원은 학원 → 마지막 하차지.
  *
  * <p>정차지 쪽 끝은 <b>저장 전 목록</b>에서, 학원 쪽 끝은 저장된 도로 경로의 끝에서 가져온다 — 학원
@@ -82,7 +82,7 @@ export const RouteMapPanel = ({
         setPath(await getRoutePath(routeId));
         setError(null);
       } catch (cause) {
-        setError(cause instanceof ApiError ? cause.message : "경로를 불러오지 못했습니다");
+        setError(describeApiError(cause, "경로를 불러오지 못했습니다"));
       }
     })();
   }, [routeId, refreshKey]);

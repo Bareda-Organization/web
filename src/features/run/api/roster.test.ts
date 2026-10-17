@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getRunRoster } from "./index";
-
-const mockJsonResponse = (body: unknown): Response =>
-  ({ ok: true, status: 200, json: async () => body }) as Response;
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 const rawRow = {
   student_id: 1,
@@ -25,7 +23,7 @@ describe("run api — getRunRoster", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        mockJsonResponse({ success: true, data: [{ ...rawRow, change: "added", transfer_id: 31 }, rawRow] }),
+        mockJsonResponse(200, { success: true, data: [{ ...rawRow, change: "added", transfer_id: 31 }, rawRow] }),
       ),
     );
 
@@ -38,7 +36,7 @@ describe("run api — getRunRoster", () => {
   it("stop_name 이 null 이면 stopName 도 null 로 그대로 둔다", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(mockJsonResponse({ success: true, data: [{ ...rawRow, stop_name: null }] })),
+      vi.fn().mockResolvedValue(mockJsonResponse(200, { success: true, data: [{ ...rawRow, stop_name: null }] })),
     );
 
     const [row] = await getRunRoster("7");
