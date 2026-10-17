@@ -143,7 +143,7 @@ export type StaffAccountsResponseTypes = {
 };
 
 // §6.7 PATCH /admin/staff-accounts/{id}. 세 동작(정보 수정 · 비밀번호 초기화 · 재직 상태)이
-// 한 요청에 섞일 수 있으나, 화면은 명확성을 위해 한 번에 하나만 보낸다(판단 근거, 보고서 §1).
+// 한 요청에 섞일 수 있으나, 화면은 명확성을 위해 한 번에 하나만 보낸다.
 export type UpdateStaffAccountRequestTypes = {
   name?: string;
   phone?: string;
@@ -209,7 +209,7 @@ export type AcademyRunsLiveResponseTypes = {
   runs: RunLiveItemResponseTypes[];
 };
 
-// §6.9 승하차지별 학생 리스트 — stops[] → students[] 중첩 (2026-09-12 curl 로 실제
+// §6.9 승하차지별 학생 리스트 — stops[] → students[] 중첩 (curl 로 실제
 // 응답 형태 확인, 문서 그대로였다 — run/roster.ts 의 배열-직접-반환 편차와 다르다).
 export type RosterBoardStatus = "boarded" | "alighted" | "absent" | "no_show" | "waiting";
 
@@ -293,7 +293,7 @@ export type EmergencyPositionResponseTypes = {
   recordedAt: string | null;
 } | null;
 
-// 실제 응답(2026-09-12 curl 재확인)은 최상위가 §5.16 문서의 `items` 가 아니라
+// 실제 응답(curl 재확인)은 최상위가 §5.16 문서의 `items` 가 아니라
 // `emergencies` 다 — 이 부분은 정본과 실제로 어긋난다. 반대로 `unacked_count` 는
 // 문서에 없는 것이 아니라 §5.16 이 이미 명시한 필드다(이전 코멘트의 오기, A1 수정
 // 라운드에서 §5.16 을 직접 대조해 정정) — 목록 헤더에 "미확인 N건" 으로 쓴다.

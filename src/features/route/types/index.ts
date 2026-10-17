@@ -16,7 +16,7 @@ export type RouteStop = {
   isDestination?: boolean;
   // R39 Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
   isWaypoint?: boolean;
-  // R56 K1 — §5.19 `waypoint_id`(경유 행만 값). `DELETE /staff/runs/{runId}/waypoints/{waypointId}` 의 경로 값이다.
+  // §5.19 `waypoint_id`(경유 행만 값). `DELETE /staff/runs/{runId}/waypoints/{waypointId}` 의 경로 값이다.
   waypointId?: string | null;
   // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
   change?: "added" | "skipped" | null;
@@ -93,7 +93,7 @@ export type RoutePathResponseTypes = {
   computedAt?: string | null;
 };
 
-// §5.9 주소 검색(2026-09-22) — **아직 아무것도 만들지 않은** 후보 한 지점.
+// §5.9 주소 검색 — **아직 아무것도 만들지 않은** 후보 한 지점.
 export type StopSuggestionTypes = {
   // 장소 이름 검색(NAVER API HUB 지역 검색)으로 찾은 후보면 그 이름. 주소 후보면 없다.
   placeName?: string;
@@ -112,7 +112,7 @@ export type NearbyStopTypes = {
   distanceM: number;
 };
 
-// PUT /staff/routes/{id}/stops 한 항목(2026-09-23) — `stopId` 가 없으면 새로 만든다. 배열 순서가 정차 순서다.
+// PUT /staff/routes/{id}/stops 한 항목— `stopId` 가 없으면 새로 만든다. 배열 순서가 정차 순서다.
 export type RouteStopSaveItemTypes = {
   stopId?: string;
   name: string;

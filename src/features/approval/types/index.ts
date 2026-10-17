@@ -127,7 +127,7 @@ export type ChangeApprovalAffectedStudentResponseTypes = {
 // 전부 null 일 수 있다 — 이미 결정된 건(approved·rejected·auto_rejected)의 상세 조회는
 // 재최적화를 하지 않는다(백엔드
 // `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`,
-// 2026-09-14 F5-W1 실서버 계약 시험(approval_id=2, approved)에서도 그대로 재현 —
+// 실서버 계약 시험(approval_id=2, approved)에서도 그대로 재현 —
 // 이 널 처리가 없어 `TypeError: Cannot read properties of null (reading 'stops_before')`
 // 로 죽던 결함을 그 시험이 잡았다). `affectedStudents` 는 이 경우에도 빈 배열이라 null 이 아니다.
 export type ChangeApprovalDetailResponseTypes = ChangeApprovalSummaryResponseTypes & {

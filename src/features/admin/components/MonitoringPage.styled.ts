@@ -28,7 +28,7 @@ export const StyledFallbackNotice = styled.p`
 `;
 
 // R20-C 목표 5 — 근사 경로 안내를 지도 위로 올린다. 예전엔 지도 아래 작은 글자라
-// 못 보고 "길이 아닌 곳을 지난다"로 오인했다(사용자 지적) — `StyledMapSurface`
+// 못 보고 "길이 아닌 곳을 지난다"로 오인했다— `StyledMapSurface`
 // 안(`position: relative`)에 겹쳐서 항상 눈에 들어오게 한다.
 export const StyledMapOverlayNotice = styled.p`
   position: absolute;

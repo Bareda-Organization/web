@@ -60,7 +60,7 @@ export type StudentListResponseTypes = {
 };
 
 // GET /staff/students/{id} 상세 — ⚠ 관계자가 입력하지 않는 두 값(보호자 연락처·
-// 승하차 주소, §5.11)은 이 상세 응답이 자체 실측(2026-09-12)으로는 승하차 주소가
+// 승하차 주소, §5.11)은 이 상세 응답이 자체 실측으로는 승하차 주소가
 // 아예 안 실리고 guardian_phone 만 조회 전용으로 함께 온다.
 export type StudentDetailResponseTypes = {
   studentId: string;

@@ -12,7 +12,7 @@ import { asIdString } from "./asIdString";
 // DashboardPage · MonitoringPage 모두 지연·경과 시간을 서버가 계산해 준 필드로
 // 표시하고, 화면에 노출하는 시각은 있는 그대로(포맷 없이) 보여주거나 아예
 // 쓰지 않는다. 필요해지면 그 소비 지점에서 `new Date(value)` 로 파싱하면 되고,
-// 여기서 미리 파싱해 실패 가능성만 늘릴 이유가 없다(판단 근거, 보고서 §1).
+// 여기서 미리 파싱해 실패 가능성만 늘릴 이유가 없다.
 //
 // `emergency_acked` 는 여기 없다 — `wsEventType.ts` 와 같은 이유(Ruling 277,
 // 매니저 채널 전용)로 이 앱은 그 payload 를 소비하지 않는다.
