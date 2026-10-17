@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEmergencies } from "./emergencies";
-
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §6.11 — occurred_at 은 단말이 누른 시각(참고값)이다. 서버가 항상 채우지만 어댑터는 없는 응답도 null 로 견딘다(R47 Ruling 744).
 describe("admin emergencies api — occurred_at 변환", () => {

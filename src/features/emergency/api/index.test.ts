@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ackEmergency, getEmergencies } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.16 EXC-04 — snake_case ↔ camelCase 변환 경계. toItem 의 emergencyId 필드와
 // ackEmergency 응답 조립부의 emergencyId 필드는 서로 다른 자리(하나는 목록 변환
 // 함수, 하나는 단건 확인 응답 조립)에 있는 같은 형태의 문자열이라 한쪽만 깨뜨려
 // 대조할 수 있다(student/api 에서 쓴 것과 같은 기법).
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("emergency api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

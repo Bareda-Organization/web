@@ -8,6 +8,7 @@ import type { MapSurfaceProps } from "@/features/map";
 import type { RunLiveItemResponseTypes } from "../types";
 import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
+import { envelope } from "@/shared/testing/wsEnvelope";
 
 // R18-B 목표 2 — `MapSurface` 를 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
 // 컴포넌트에 무엇으로 전달되는지만 검증한다(SDK 렌더링이 아니라 화면의 계산
@@ -90,18 +91,6 @@ const baseLiveRun: RunLiveItemResponseTypes = {
   escort: { name: "박매니저", phone: "010" },
   consecutiveFailures: 0,
 };
-
-const envelope = (
-  event: WebSocketEnvelope["event"],
-  payload: Record<string, unknown>,
-  runId = "1",
-): WebSocketEnvelope => ({
-  event,
-  eventWireValue: event ?? undefined,
-  runId,
-  occurredAt: "2026-09-13T00:00:00Z",
-  payload,
-});
 
 describe("MonitoringPage — 학원 목록 조회 실패", () => {
   afterEach(() => {

@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSchedule, getRuns, getSchedules } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.10 SCH-01~03 — snake_case ↔ camelCase 변환 경계. toSchedule 과 toRun 은
 // 서로 다른 함수지만 둘 다 `originName: raw.origin_name,` 형태를 가진다 —
 // 한쪽만 깨뜨려 두 테스트가 실제로 다른 변환 함수를 검사하는지 대조할 수 있다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 describe("schedule api — snake_case ↔ camelCase 변환", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

@@ -8,6 +8,7 @@ import { deleteTransfer, getDashboard, getRunRoster, getRunsLive } from "../api"
 import { getRunRoute } from "@/features/route";
 import type { DashboardResponseTypes, RosterItemResponseTypes, RunsLiveResponseTypes } from "../types";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
+import { envelope } from "@/shared/testing/wsEnvelope";
 
 // §5.4 는 runId 쿼리가 없으면 첫 회차로 리다이렉트해 명단을 불러오는 것이 진입점의
 // 핵심 동작이다. absent 는 매니저 앱과 반대로 계속 결측(missed) 로 보여야 한다는
@@ -60,14 +61,6 @@ vi.mock("@/shared/hooks", async (importOriginal) => ({
     return { connectionState: mockConnectionState, reconnect: vi.fn() };
   },
 }));
-const envelope = (event: WebSocketEnvelope["event"], payload: Record<string, unknown>, runId = "7"): WebSocketEnvelope => ({
-  event,
-  eventWireValue: event ?? undefined,
-  runId,
-  occurredAt: "2026-10-10T00:00:00Z",
-  payload,
-});
-
 // 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
@@ -942,7 +935,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       await screen.findByText("대기");
 
       mockGetRunRoster.mockResolvedValue([{ ...baseRoster[0], status: "boarded" }]);
-      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {}, "7")));
       await vi.advanceTimersByTimeAsync(300);
 
       expect(await screen.findByText("탑승 완료")).toBeInTheDocument();
@@ -955,7 +948,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const liveCalls = mockGetRunsLive.mock.calls.length;
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
 
       await waitFor(() =>
@@ -971,14 +964,14 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:06:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
       await waitFor(() =>
         expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
       );
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-10-10T08:03:00+09:00", current_stop_name: "정문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.1, lng: 127.1, received_at: "2026-10-10T08:03:00+09:00", current_stop_name: "정문", eta: null }, "7")),
       );
       expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] }));
       expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.1 })] }));
@@ -994,7 +987,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
 
       act(() =>
-        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:05:00+09:00", current_stop_name: "후문", eta: null })),
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:05:00+09:00", current_stop_name: "후문", eta: null }, "7")),
       );
       await waitFor(() =>
         expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
@@ -1073,9 +1066,9 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const dashboardCalls = mockGetDashboard.mock.calls.length;
 
       act(() => {
-        capturedOnEnvelope?.(envelope("rider_changed", {}));
-        capturedOnEnvelope?.(envelope("rider_changed", {}));
-        capturedOnEnvelope?.(envelope("run_started", {}));
+        capturedOnEnvelope?.(envelope("rider_changed", {}, "7"));
+        capturedOnEnvelope?.(envelope("rider_changed", {}, "7"));
+        capturedOnEnvelope?.(envelope("run_started", {}, "7"));
       });
       await vi.advanceTimersByTimeAsync(600);
 
@@ -1090,7 +1083,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       const dashboardCalls = mockGetDashboard.mock.calls.length;
       const rosterCalls = mockGetRunRoster.mock.calls.length;
 
-      act(() => capturedOnEnvelope?.(envelope("rider_changed", {})));
+      act(() => capturedOnEnvelope?.(envelope("rider_changed", {}, "7")));
       unmount();
       await vi.advanceTimersByTimeAsync(600);
 

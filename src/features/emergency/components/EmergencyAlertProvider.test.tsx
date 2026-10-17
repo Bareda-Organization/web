@@ -5,6 +5,7 @@ import type { WebSocketEnvelope } from "@/shared/lib/ws";
 import { createStableRouter } from "@/shared/testing/stableRouter";
 import { ackEmergency, getEmergencies } from "../api";
 import { EmergencyAlertProvider, EmergencyAlertStrip, useEmergencyUnackedCount } from "./EmergencyAlertProvider";
+import { envelope } from "@/shared/testing/wsEnvelope";
 
 vi.mock("@/features/auth", () => ({
   useAuthSession: () => ({ session: { academy: { id: "7", name: "바래다" } } }),
@@ -27,9 +28,6 @@ vi.mock("../api", () => ({ getEmergencies: vi.fn(), ackEmergency: vi.fn() }));
 
 const mockGet = vi.mocked(getEmergencies);
 const mockAck = vi.mocked(ackEmergency);
-
-const envelope = (event: string, payload: Record<string, unknown>): WebSocketEnvelope =>
-  ({ event, runId: "1", payload }) as unknown as WebSocketEnvelope;
 
 const RAISED = {
   emergency_id: 9,

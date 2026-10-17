@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { searchManagerCandidates, searchStudentCandidates } from "./linkCandidates";
-
-const jsonResponse = (body: unknown): Response =>
-  ({ ok: true, status: 200, json: async () => ({ success: true, data: body }) }) as Response;
+import { jsonResponse } from "@/shared/testing/httpResponse";
 
 const manager = (id: number, role: string, accountId: number | null) => ({
   id,

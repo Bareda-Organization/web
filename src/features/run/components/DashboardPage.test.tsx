@@ -10,6 +10,7 @@ import { SELECTED_BUS_MAP_ZOOM } from "@/features/map";
 import type { MapSurfaceProps } from "@/features/map";
 import { formatClockTimeWithSeconds } from "@/shared/lib/format/clockTime";
 import type { DashboardResponseTypes, RunLiveItemResponseTypes, RunsLiveResponseTypes } from "../types";
+import { envelope } from "@/shared/testing/wsEnvelope";
 
 const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
 const mockRouter = createStableRouter({ push: mockPush });
@@ -88,18 +89,6 @@ const baseLiveRun: RunLiveItemResponseTypes = {
   escortName: null,
   lastSeenAt: null,
 };
-
-const envelope = (
-  event: WebSocketEnvelope["event"],
-  payload: Record<string, unknown>,
-  runId = "1",
-): WebSocketEnvelope => ({
-  event,
-  eventWireValue: event ?? undefined,
-  runId,
-  occurredAt: "2026-09-13T00:00:00Z",
-  payload,
-});
 
 const baseDashboard: DashboardResponseTypes = {
   metrics: { movingBuses: 3, boarded: 42, noShow: 1, absent: 2, unassignedManagers: 0 },

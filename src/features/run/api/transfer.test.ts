@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deleteTransfer, postTransfer } from "./index";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // §5.8 — stop_id·address 는 배타적이라 값이 있는 쪽만 본문에 실려야 한다(둘 다 실으면 서버가 422).
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
-
 const rawStaged = {
   success: true,
   data: {

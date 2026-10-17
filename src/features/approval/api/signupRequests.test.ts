@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getManagerSignupPendingCount } from "./signupRequests";
-
-const jsonResponse = (body: unknown): Response =>
-  ({ ok: true, status: 200, json: async () => ({ success: true, data: body }) }) as Response;
+import { jsonResponse } from "@/shared/testing/httpResponse";
 
 // R50 S13 · Ruling 846 ① — 매니저 관리의 "가입 승인 대기 N건" 은 기사·동승자 요청만 센다. §5.1 `role` 은 반복 키다.
 describe("getManagerSignupPendingCount — 기사·동승자 가입 대기 건수", () => {

@@ -2,17 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, apiFetchBlob } from "./httpClient";
 import { registerAuthGateListener } from "./authGate";
 import { ApiError, NetworkError } from "./apiError";
+import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
 // 보고서 4항이 지목한 두 번째 공백 — httpClient → authGate 이벤트 전달.
 // 403 AUTH_PENDING·AUTH_REJECTED 는 대기 화면 재판정을 깨워야 하고, 같은 403 이라도
 // 다른 코드(FORBIDDEN 등)는 깨우면 안 된다 — "조용히 no-op" 이 되는 결함을 여기서 잡는다.
-const mockJsonResponse = (status: number, body: unknown): Response =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  }) as Response;
-
 describe("apiFetch — 계정 상태 게이트 이벤트 전달", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
