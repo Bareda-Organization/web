@@ -6,7 +6,7 @@ import type {
   BlockedAccountsResponseTypes,
   UnblockAccountResponseTypes,
 } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 type WireBlockedAccountItem = WithId<BlockedAccountItemResponseTypes, "accountId">;
 

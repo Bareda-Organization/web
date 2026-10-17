@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { AcademyRunsLiveResponseTypes, RunLiveItemResponseTypes } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // 서버가 아직 안 주면 없는 칸(delayMinutes · finishedAt, Ruling 805)과 id 숫자를 받는 서버 모양.
 type WireRunLiveItem = Omit<RunLiveItemResponseTypes, "runId" | "stops"> & {

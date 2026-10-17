@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { ForceFinishResponseTypes, StaleMovingRunItemResponseTypes, StaleMovingRunListResponseTypes } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // GET /admin/runs/stale-moving (§6.16) — `StaleMovingRun` 경보가 세는 회차(운행일이 어제보다 이른 미취소 이동 중 회차)와 같다. 운행일 오름차순.
 export const getStaleMovingRuns = async (): Promise<StaleMovingRunListResponseTypes> => {

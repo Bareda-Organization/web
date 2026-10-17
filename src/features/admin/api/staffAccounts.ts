@@ -8,7 +8,7 @@ import type {
   UpdateStaffAccountRequestTypes,
   UpdateStaffAccountResponseTypes,
 } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // academyId 는 서버가 아직 안 주면 없다(§6.6, Ruling 807).
 type WireStaffAccountItem = Omit<StaffAccountItemResponseTypes, "accountId" | "academyId"> & {

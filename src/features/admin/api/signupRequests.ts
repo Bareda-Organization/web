@@ -8,7 +8,7 @@ import type {
   StaffSignupRequestItemResponseTypes,
   StaffSignupRequestsResponseTypes,
 } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 type WireSignupRequestItem = Omit<WithId<StaffSignupRequestItemResponseTypes, "requestId">, "academy"> & {
   academy: WithId<StaffSignupAcademyRefResponseTypes, "id">;

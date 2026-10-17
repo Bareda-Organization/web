@@ -11,7 +11,7 @@ import type {
   DashboardSignupBlockedResponseTypes,
   DashboardTodayRunResponseTypes,
 } from "../types/dashboard";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // 서버가 아직 키를 안 보내는 새 필드(백엔드 병합 전)가 있어 배열 · 수는 선택으로 받고 아래에서 빈 배열 · 0 으로 채운다.
 type WireAttention = {

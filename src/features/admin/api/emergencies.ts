@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { EmergenciesResponseTypes, EmergencyItemResponseTypes, EmergencyPositionResponseTypes } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // 서버는 위치 기록이 없으면 null 이 아니라 세 값이 모두 null 인 객체를 준다(§5.16 · Ruling 848 ③).
 type WirePosition = { lat: number | null; lng: number | null; recordedAt: string | null } | null;

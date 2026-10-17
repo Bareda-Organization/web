@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { ForceConfirmResponseTypes } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 // POST /admin/runs/{runId}/force-confirm (§6.14, UF-O-07). 되돌릴 수 없는 동작 —
 // reason 은 공백만으로 채울 수 없다(빈 문자열 검증은 호출부 화면에서 막는다).

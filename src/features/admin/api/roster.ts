@@ -1,7 +1,7 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
 import type { RosterStopResponseTypes, RosterStudentResponseTypes, RunRosterResponseTypes } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 type WireRosterStop = Omit<WithId<RosterStopResponseTypes, "stopId">, "students"> & {
   students: WithId<RosterStudentResponseTypes, "studentId">[];

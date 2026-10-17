@@ -8,7 +8,7 @@ import type {
   LoginHistoryItemResponseTypes,
   LoginHistoryResponseTypes,
 } from "../types";
-import type { WithId } from "./wireId";
+import type { WithId } from "@/shared/lib/http/wireId";
 
 type WireAuditLogItem = WithId<AuditLogItemResponseTypes, "targetId">;
 
