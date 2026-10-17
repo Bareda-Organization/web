@@ -549,4 +549,182 @@ describe("AcademyRealtimeClient", () => {
       expect(handle.subscribedDestinations).toEqual([destination, "/topic/admin/live"]);
     });
   });
+
+  // R57 W-5(K1) — 서버가 알리는 거절 사유별로 클라이언트의 다음 동작이 갈린다(`API_SPEC §7.2`).
+  describe("W-5: ERROR · 종료 코드별 재연결 규칙(K1)", () => {
+    const FIRST_STEP_MS = 100;
+    const setup = (overrides: { refreshAccessToken?: () => Promise<string> } = {}) => {
+      const { factory, handles } = createFakeClientFactory();
+      const onSessionExpired = vi.fn();
+      const refreshAccessToken = vi.fn(overrides.refreshAccessToken ?? (() => Promise.resolve("new-token")));
+      const client = new AcademyRealtimeClient({
+        url: "ws://x",
+        createClient: factory,
+        readAccessToken: () => "old-token",
+        refreshAccessToken,
+        onSessionExpired,
+        backoffPolicy: new WsBackoffPolicy({ initialDelayMs: FIRST_STEP_MS, multiplier: 2, maxDelayMs: 1000, jitterRatio: 0 }),
+      });
+      client.connect();
+      const connect = (handle: FakeClientHandle) => {
+        handle.connected = true;
+        handle.config.onConnect({ headers: {}, body: "" });
+      };
+      return { client, handles, onSessionExpired, refreshAccessToken, connect };
+    };
+
+    it("UNAUTHORIZED 는 재발급을 한 번 부르고 새 토큰으로 다시 붙는다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { handles, refreshAccessToken, onSessionExpired, connect } = setup();
+        connect(handles[0]);
+        handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[0].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+        expect(onSessionExpired).not.toHaveBeenCalled();
+        expect(handles).toHaveLength(2);
+        expect(handles[1].config.connectHeaders).toEqual({ Authorization: "Bearer new-token" });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("UNAUTHORIZED 뒤 재발급이 실패하면 세션 만료로 알리고 다시 붙지 않는다 — 30초 뒤에도 반복하지 않는다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, refreshAccessToken, onSessionExpired, connect } = setup({
+          refreshAccessToken: () => Promise.reject(new NetworkError(new TypeError("Failed to fetch"))),
+        });
+        connect(handles[0]);
+        handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[0].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(onSessionExpired).toHaveBeenCalledTimes(1);
+        expect(client.getSnapshot()).toBe("disconnected");
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(handles).toHaveLength(1);
+        expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+        expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("재발급한 토큰으로도 UNAUTHORIZED 면 재발급을 또 부르지 않고 세션 만료로 알린다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, refreshAccessToken, onSessionExpired } = setup();
+        handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[0].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(handles).toHaveLength(2);
+
+        handles[1].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[1].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+        expect(onSessionExpired).toHaveBeenCalledTimes(1);
+        expect(client.getSnapshot()).toBe("disconnected");
+        expect(handles).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("연결에 성공한 뒤의 UNAUTHORIZED 는 다시 한 번 재발급을 시도한다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { handles, refreshAccessToken, connect } = setup();
+        handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[0].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(0);
+        connect(handles[1]);
+
+        handles[1].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        handles[1].config.onWebSocketClose({});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+        expect(handles).toHaveLength(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("종료 코드 4403 은 ERROR 프레임이 없어도 forbidden 으로 멈추고 다시 붙지 않는다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, connect } = setup();
+        connect(handles[0]);
+        handles[0].config.onWebSocketClose({ code: 4403, reason: "SUBSCRIPTION_FORBIDDEN" });
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(client.getSnapshot()).toBe("forbidden");
+        expect(handles).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("종료 코드 4500 은 4403 처럼 멈추지 않고 첫 백오프 간격으로 다시 붙는다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, connect } = setup();
+        connect(handles[0]);
+        handles[0].config.onWebSocketClose({ code: 4500, reason: "SESSION_REVOKED" });
+
+        expect(client.getSnapshot()).toBe("reconnecting");
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS - 1);
+        expect(handles).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(handles).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("종료 코드 4500 은 앞선 실패로 쌓인 백오프 단계를 처음으로 되돌린다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { handles } = setup();
+        // 연결에 한 번도 성공하지 못한 채 두 번 끊겨 다음 대기가 3단계(400ms)가 된 상태.
+        handles[0].config.onWebSocketClose({ code: 1006 });
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS);
+        handles[1].config.onWebSocketClose({ code: 1006 });
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS * 2);
+        expect(handles).toHaveLength(3);
+
+        handles[2].config.onWebSocketClose({ code: 4500, reason: "SESSION_REVOKED" });
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS);
+        expect(handles).toHaveLength(4);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("종료 코드 1008(CONNECT 마감 초과)은 평범한 백오프로 다시 붙는다 — 세션 만료도 forbidden 도 아니다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, onSessionExpired, refreshAccessToken } = setup();
+        handles[0].config.onWebSocketClose({ code: 1008 });
+        expect(client.getSnapshot()).toBe("reconnecting");
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS);
+        expect(handles).toHaveLength(2);
+
+        handles[1].config.onWebSocketClose({ code: 1008 });
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS * 2 - 1);
+        expect(handles).toHaveLength(2);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(handles).toHaveLength(3);
+        expect(onSessionExpired).not.toHaveBeenCalled();
+        expect(refreshAccessToken).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

@@ -38,6 +38,12 @@ type ConnectionStateListener = () => void;
 // 남의 학원 채널을 구독했을 때 서버가 STOMP ERROR `message` 헤더에 싣는 코드.
 const SCOPE_VIOLATION_MESSAGE = "ACADEMY_SCOPE_VIOLATION";
 
+// 서버가 소켓을 닫을 때 싣는 종료 코드(`API_SPEC §7.2` · R57 K1). ERROR 프레임이 먼저 오지만 프레임을 놓쳐도 닫힘 코드로 같은 판정이 서게 한다.
+// 4403 구독 거부 — 다시 붙어도 같은 이유로 거절되니 멈춘다. 4500 세션 회수 — 계정이 채널 권한을 잃어 서버가 닫았으니 첫 백오프 단계로
+// 다시 붙어 구독을 새로 건다(여전히 금지된 채널은 서버가 4403 으로 거절한다). 그 밖의 코드(1008 CONNECT 마감 초과 포함)는 평범한 백오프다.
+const CLOSE_SUBSCRIPTION_FORBIDDEN = 4403;
+const CLOSE_SESSION_REVOKED = 4500;
+
 // 접근 토큰 만료 이 시간 전에 새 토큰으로 두 번째 연결을 열어 갈아탄다(R46-LATERRT C-14 · `API_SPEC §7.2`). 클라이언트 시계가 서버보다
 // 느리면 갈아타기가 만료 뒤로 밀리고, 그때는 기존 `TOKEN_EXPIRED` 재연결 경로가 받는다.
 const RENEW_LEAD_MS = 60_000;
@@ -109,6 +115,11 @@ export class AcademyRealtimeClient {
   // 백오프 대신 재발급 경로(`handleTokenExpired`)를 탄다(Dart `_tokenExpired`
   // 와 같은 사정 — 재발급·재연결은 소켓이 실제로 닫힌 뒤에 시작해야 한다).
   private tokenExpired = false;
+  // 이번 연결이 끊긴 원인이 ERROR `UNAUTHORIZED`(자격 증명 없음 · 무효)였는지 — `tokenExpired` 와 같은 순서 사정으로 닫힌 뒤에 처리한다.
+  private unauthorized = false;
+  // UNAUTHORIZED 로 재발급한 토큰으로 다시 붙은 뒤 `CONNECTED` 를 받기 전까지 참 — 이때 또 UNAUTHORIZED 면 같은 일을 되풀이하지 않고 세션 만료로
+  // 넘긴다("재발급은 한 번", K1 · W-5). 연결에 성공하면 내려가 다음 UNAUTHORIZED 는 다시 한 번 재발급한다.
+  private refreshedAfterUnauthorized = false;
 
   private state: WsConnectionState = "disconnected";
   // 이번 연결에서 구독했지만 아직 해제하지 않은 목적지 — STOMP ERROR 프레임은
@@ -163,6 +174,7 @@ export class AcademyRealtimeClient {
     if (this.state === "connecting" || this.state === "connected") return;
     this.manuallyDisconnected = false;
     this.forbidden = false;
+    this.refreshedAfterUnauthorized = false;
     this.reconnectAttempt = 0;
     this.clearReconnectTimer();
     this.doConnect();
@@ -274,6 +286,7 @@ export class AcademyRealtimeClient {
         }
         if (!isCurrent()) return;
         this.reconnectAttempt = 0;
+        this.refreshedAfterUnauthorized = false;
         this.setState("connected");
         if (token !== null) this.scheduleRenewal(token);
       },
@@ -281,9 +294,9 @@ export class AcademyRealtimeClient {
         if (isStandby()) failStandby(`STOMP ERROR ${frame.headers.message ?? ""}`);
         else if (isCurrent()) this.handleStompError(frame);
       },
-      onWebSocketClose: () => {
+      onWebSocketClose: (event) => {
         if (isStandby()) failStandby("연결 닫힘");
-        else if (isCurrent()) this.handleDisconnected();
+        else if (isCurrent()) this.handleDisconnected(event.code);
       },
       onWebSocketError: (event) => {
         this.onDebugMessage(`[AcademyRealtimeClient] WebSocket error: ${String(event)}`);
@@ -310,13 +323,18 @@ export class AcademyRealtimeClient {
     if (message === "TOKEN_EXPIRED") {
       this.tokenExpired = true;
     }
+    // 토큰이 없거나 무효(위조 · access 가 아닌 토큰)다 — 만료와 달리 같은 토큰으로 다시 붙어 봐야 같은 거절이다(`API_SPEC §1.11`).
+    if (message === "UNAUTHORIZED") {
+      this.unauthorized = true;
+    }
     this.onDebugMessage(`[AcademyRealtimeClient] STOMP ERROR: ${JSON.stringify(frame.headers)} ${frame.body}`);
   }
 
-  private handleDisconnected(): void {
+  private handleDisconnected(closeCode?: number): void {
     if (this.disconnectHandled) return;
     this.disconnectHandled = true;
     this.cancelRenewal();
+    if (closeCode === CLOSE_SUBSCRIPTION_FORBIDDEN) this.forbidden = true;
 
     if (this.manuallyDisconnected) {
       this.setState("disconnected");
@@ -338,6 +356,14 @@ export class AcademyRealtimeClient {
       return;
     }
 
+    if (this.unauthorized) {
+      this.unauthorized = false;
+      void this.handleUnauthorized();
+      return;
+    }
+
+    // 세션 회수는 오래 끈 연결이 아니라 방금 정상이던 연결이 닫힌 것이다 — 쌓인 실패 횟수와 무관하게 첫 단계(1초)로 다시 붙는다.
+    if (closeCode === CLOSE_SESSION_REVOKED) this.reconnectAttempt = 0;
     this.scheduleReconnect();
   }
 
@@ -380,6 +406,35 @@ export class AcademyRealtimeClient {
     if (this.manuallyDisconnected) return;
     this.reconnectAttempt = 0;
     this.doConnect(newToken);
+  }
+
+  // UNAUTHORIZED 로 끊긴 뒤의 처리 — 재발급을 **한 번** 시도해 새 토큰으로 다시 붙는다. 재발급이 실패하거나(원인이 401 이든 망 오류든),
+  // 재발급한 토큰으로도 UNAUTHORIZED 면 세션 만료로 넘기고 다시 붙지 않는다(R57 W-5 · M-6). 안 그러면 같은 거절이 백오프 간격(최대 30초)으로
+  // 끝없이 반복된다. 일시적 망 오류에 로그인으로 보내는 대가는 UNAUTHORIZED 가 드문 경로(토큰 부재 · 위조)라 감수한다.
+  private async handleUnauthorized(): Promise<void> {
+    if (this.refreshedAfterUnauthorized) {
+      this.expireSession();
+      return;
+    }
+    this.setState("reconnecting");
+    let newToken: string;
+    try {
+      newToken = await this.refreshAccessToken();
+    } catch (failure) {
+      this.onDebugMessage(`[AcademyRealtimeClient] UNAUTHORIZED 뒤 재발급 실패 — 세션 만료로 넘긴다: ${String(failure)}`);
+      if (!this.manuallyDisconnected) this.expireSession();
+      return;
+    }
+    // 재발급을 기다리는 사이 화면이 떠났으면 새 소켓을 열지 않는다([handleTokenExpired] 와 같은 사정).
+    if (this.manuallyDisconnected) return;
+    this.refreshedAfterUnauthorized = true;
+    this.reconnectAttempt = 0;
+    this.doConnect(newToken);
+  }
+
+  private expireSession(): void {
+    this.onSessionExpired();
+    this.setState("disconnected");
   }
 
   // 접근 토큰 만료 [RENEW_LEAD_MS] 전에 갈아타기를 예약한다. 만료 시각을 못 읽는 토큰이면 예약하지 않는다 — 그때는 기존
