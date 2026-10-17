@@ -36,7 +36,7 @@ export const ReportList = () => {
   const [handled, setHandled] = useState("");
   const [counts, setCounts] = useState<{ handled: number; unhandled: number } | null>(null);
   // 종류별 건수 — 종류를 고르지 않은 조회에서만 새로 센다(고르면 다른 종류의 건수를 모른다).
-  // 센 조건(날짜 · 회차 · 처리)을 함께 기억해, 그 조건이 바뀐 뒤에는 낡은 건수를 쓰지 않는다(R53 A5).
+  // 센 조건(날짜 · 회차 · 처리)을 함께 기억해, 그 조건이 바뀐 뒤에는 낡은 건수를 쓰지 않는다.
   const [typeCountsState, setTypeCountsState] = useState<{ key: string; counts: Record<ReportType, number> } | null>(null);
   const countsKey = `${date}|${runId}|${handled}`;
   const typeCounts = typeCountsState?.key === countsKey ? typeCountsState.counts : null;

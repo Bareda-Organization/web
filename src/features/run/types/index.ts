@@ -74,7 +74,7 @@ export type RunLivePositionResponseTypes = {
   lng: number;
   recordedAt: string;
   // 마지막으로 반영한 WebSocket 방송의 `received_at`(서버 시각) — REST 스냅샷의 `recordedAt` 은 기기 시각이라 서로 견주면 안 된다.
-  // 방송이 오래된 값인지는 이 값과만 견준다(R57 fix1 F1). REST 스냅샷으로 위치를 바꾸면 없어진다.
+  // 방송이 오래된 값인지는 이 값과만 견준다. REST 스냅샷으로 위치를 바꾸면 없어진다.
   wsReceivedAt?: string;
 } | null;
 

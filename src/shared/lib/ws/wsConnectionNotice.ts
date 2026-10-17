@@ -2,7 +2,7 @@ import type { WsConnectionState } from "./wsConnectionState";
 
 export type WsConnectionNotice = { title: string; body: string };
 
-// 같은 끊김을 화면마다 다른 문구로 알리던 것을 한 벌로 모은다(R46-FIXCONN C-12). 학부모·매니저 앱도 같은 제목을 쓴다
+// 같은 끊김을 화면마다 다른 문구로 알리던 것을 한 벌로 모은다. 학부모·매니저 앱도 같은 제목을 쓴다
 // (`baraeda_core` `WsConnectionNotice`) — 지원 문의 때 "무슨 문구가 떴나" 로 상태를 가를 수 있게. 문구를 바꾸면 양쪽을 같이 고친다.
 const RECONNECTING: WsConnectionNotice = {
   title: "재연결 시도 중",

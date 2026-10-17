@@ -67,7 +67,7 @@ export const createStompClient: StompClientFactory = (config) => {
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
     // 숨은 탭에서 `setInterval` 은 브라우저가 늦추므로(분당 1회 수준) 하트비트 송신이 서버 허용보다 드물게 나가 세션이 닫힌다.
-    // 워커의 타이머는 늦춰지지 않는다(R46-FIXCONN C-1 ③).
+    // 워커의 타이머는 늦춰지지 않는다.
     heartbeatStrategy: TickerStrategy.Worker,
     // 하트비트가 끊긴 소켓은 `close()` 의 종료 핸드셰이크를 기다리지 않고 버리고 바로 `onWebSocketClose`(코드 4001)를 낸다 —
     // 안 그러면 브라우저가 소켓을 닫기까지 수십 초가 더 걸려 재연결 예약이 그만큼 늦는다(C-3).
