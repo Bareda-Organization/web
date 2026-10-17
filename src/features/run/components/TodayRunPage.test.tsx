@@ -58,7 +58,7 @@ vi.mock("@/shared/hooks", async (importOriginal) => ({
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     capturedOnEnvelope = onEnvelope;
     capturedOnReconnected = onReconnected;
-    return { connectionState: mockConnectionState, reconnect: vi.fn() };
+    return { connectionState: mockConnectionState };
   },
 }));
 // 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`

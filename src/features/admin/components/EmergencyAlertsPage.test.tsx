@@ -14,7 +14,7 @@ vi.mock("../api", () => ({
 vi.mock("@/features/map", () => ({ MapSurface: () => <div data-testid="map" /> }));
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeConnection: () => ({ connectionState: "connected", reconnect: vi.fn() }),
+  useRealtimeConnection: () => ({ connectionState: "connected" }),
 }));
 
 const mockGetEmergencies = vi.mocked(getEmergencies);

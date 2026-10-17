@@ -38,9 +38,6 @@ const releaseClient = (): void => {
 
 export type UseRealtimeChannelResult = {
   connectionState: WsConnectionState;
-  // 재연결을 포기(`gaveUp`)한 연결을 사용자가 다시 여는 창구 — 화면의 "다시 연결" 버튼용. 기본 재연결
-  // 정책은 포기하지 않아 운영에서는 거의 쓰이지 않는다.
-  reconnect: () => void;
 };
 
 // `destination` 을 구독하고 봉투가 올 때마다 `onEnvelope` 를 부른다.
@@ -58,7 +55,7 @@ export type UseRealtimeChannelResult = {
 // 기대면 되어 `useSyncExternalStore` 의 `subscribe`/`getSnapshot` 재호출
 // 타이밍을 따로 신경 쓸 필요가 없다(판단 근거, 보고서 §1).
 //
-// `onReconnected` 는 끊겼다(`reconnecting`·`gaveUp`) 다시 붙는(`connected`) 순간 한 번 불린다 — 끊긴 사이의 방송은 되찾을 길이
+// `onReconnected` 는 끊겼다(`reconnecting`) 다시 붙는(`connected`) 순간 한 번 불린다 — 끊긴 사이의 방송은 되찾을 길이
 // 없으므로 화면이 REST 로 한 번 메운다(`API_SPEC §7.2` 재연결 직후 보충, R46-FIXCONN C-6). 클라이언트는 재연결 대기가 끝나면
 // `connecting` 을 거쳐 `connected` 가 되므로 "직전 상태" 가 아니라 "끊김을 겪었는가" 로 판정한다.
 export const useRealtimeChannel = (
@@ -92,10 +89,10 @@ export const useRealtimeChannel = (
     // 지금 상태를 최초 동기화"라 미룰 대상이 없다(보고서 §1).
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 최초 연결 상태 동기화, 위 주석 참고
     setConnectionState(client.getSnapshot());
-    let hadOutage = client.getSnapshot() === "reconnecting" || client.getSnapshot() === "gaveUp";
+    let hadOutage = client.getSnapshot() === "reconnecting";
     const unsubscribeState = client.onConnectionStateChange(() => {
       const next = client.getSnapshot();
-      if (next === "reconnecting" || next === "gaveUp") {
+      if (next === "reconnecting") {
         hadOutage = true;
       } else if (next === "connected") {
         if (hadOutage) onReconnectedRef.current?.();
@@ -105,14 +102,12 @@ export const useRealtimeChannel = (
       }
       setConnectionState(next);
     });
-    // 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때, 끊겨 재연결 대기 중(`reconnecting`)이거나
-    // 포기한(`gaveUp`) 연결을 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 연다. 기본 재연결 정책은
-    // 포기하지 않아(R46-FIXRT S-5) 운영에서는 `reconnecting` 이 이 경로를 탄다. 연결 중·연결된 연결은
-    // 건드리지 않는다.
+    // 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때, 끊겨 재연결 대기 중(`reconnecting`)인 연결을
+    // 다음 대기(최대 30초)를 기다리지 않고 바로 다시 연다. 연결 중·연결된 연결은 건드리지 않는다.
     const reopenIfStalled = () => {
       if (document.visibilityState === "hidden") return;
       const state = client.getSnapshot();
-      if (state === "gaveUp" || state === "reconnecting") client.connect();
+      if (state === "reconnecting") client.connect();
     };
     window.addEventListener("online", reopenIfStalled);
     document.addEventListener("visibilitychange", reopenIfStalled);
@@ -134,9 +129,7 @@ export const useRealtimeChannel = (
     return unsubscribe;
   }, [connectionState, destination]);
 
-  const reconnect = () => clientRef.current?.connect();
-
-  return { connectionState, reconnect };
+  return { connectionState };
 };
 
 // 연결 상태만 읽는 훅 — 목적지를 구독하지 않고 공유 연결의 상태만 돌려준다. 레이아웃의 연결 띠처럼 방송 내용은 필요 없고 끊김만
@@ -159,7 +152,5 @@ export const useRealtimeConnection = (): UseRealtimeChannelResult => {
     };
   }, []);
 
-  const reconnect = () => clientRef.current?.connect();
-
-  return { connectionState, reconnect };
+  return { connectionState };
 };

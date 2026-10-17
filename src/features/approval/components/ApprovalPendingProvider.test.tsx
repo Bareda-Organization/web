@@ -14,7 +14,7 @@ vi.mock("@/shared/hooks", async (importOriginal) => ({
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     emitEnvelope = onEnvelope;
     emitReconnected = onReconnected ?? (() => {});
-    return { connectionState: "connected", reconnect: vi.fn() };
+    return { connectionState: "connected" };
   },
 }));
 

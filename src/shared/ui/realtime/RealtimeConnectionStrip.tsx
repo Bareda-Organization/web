@@ -3,7 +3,6 @@
 import { useRealtimeConnection } from "../../hooks";
 import { getWsConnectionNotice } from "../../lib/ws";
 import styled from "@emotion/styled";
-import { Button } from "../core";
 import { ConnectionBand } from "./ConnectionBand";
 
 // 비상 알림 띠(`StyledEmergencyPopupStack`)와 같은 좌우 여백 — 둘이 위아래로 놓일 때 폭이 어긋나지 않게 한다.
@@ -15,24 +14,13 @@ const StyledRealtimeConnectionStrip = styled.div`
 // 레이아웃에 한 번만 둔다(R46-FIXCONN C-12). 문구는 `getWsConnectionNotice` 한 벌이고 학부모·매니저 앱과 제목이 같다.
 // 정상·연결 시도 중·직접 끊음에는 아무것도 그리지 않는다 — 화면을 처음 열 때 깜빡이지 않게.
 export const RealtimeConnectionStrip = () => {
-  const { connectionState, reconnect } = useRealtimeConnection();
+  const { connectionState } = useRealtimeConnection();
   const notice = getWsConnectionNotice(connectionState);
   if (notice === null) return null;
 
   return (
     <StyledRealtimeConnectionStrip data-realtime-strip>
-      <ConnectionBand
-        title={notice.title}
-        action={
-          connectionState === "gaveUp" ? (
-            <Button variant="secondary" size="sm" onClick={reconnect}>
-              다시 연결
-            </Button>
-          ) : undefined
-        }
-      >
-        {notice.body}
-      </ConnectionBand>
+      <ConnectionBand title={notice.title}>{notice.body}</ConnectionBand>
     </StyledRealtimeConnectionStrip>
   );
 };

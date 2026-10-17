@@ -2,8 +2,6 @@
 // (`shared/lib/http/index.ts` 와 같은 관례).
 export { asIdString } from "./asIdString";
 export type { WsConnectionState } from "./wsConnectionState";
-export { WsBackoffPolicy } from "./wsBackoffPolicy";
-export type { WsBackoffPolicyOptions } from "./wsBackoffPolicy";
 export { academyLiveDestination, adminLiveDestination } from "./wsChannel";
 export { isStalePosition } from "./positionFreshness";
 export { parseWsEventType } from "./wsEventType";

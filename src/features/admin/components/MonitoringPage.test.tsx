@@ -59,7 +59,7 @@ let capturedOnReconnected: (() => void) | undefined;
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
   capturedOnEnvelope = onEnvelope;
   capturedOnReconnected = onReconnected;
-  return { connectionState: mockConnectionState, reconnect: vi.fn() };
+  return { connectionState: mockConnectionState };
 });
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
@@ -380,15 +380,14 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
     vi.clearAllMocks();
   });
 
-  it.each(["gaveUp", "forbidden", "reconnecting"] as const)(
+  it.each(["forbidden", "reconnecting"] as const)(
     "%s 여도 EmptyState 는 그대로이고, 이 화면은 연결 배너를 따로 띄우지 않는다",
     async (state) => {
       mockConnectionState = state;
       render(<MonitoringPage />);
 
       expect(await screen.findByText("오늘 운행하는 회차가 없습니다")).toBeInTheDocument();
-      expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
-      expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
+            expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
       expect(screen.queryByText("재연결 시도 중")).not.toBeInTheDocument();
     },
   );
@@ -396,7 +395,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
   // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
   // 같은 조건으로 묶이지 않았음을 고정한다.
   it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 목록은 보이고 EmptyState 는 뜨지 않는다", async () => {
-    mockConnectionState = "gaveUp";
+    mockConnectionState = "reconnecting";
     mockGetAcademies.mockResolvedValue(baseAcademies.items);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<MonitoringPage />);

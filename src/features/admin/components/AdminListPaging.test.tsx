@@ -22,7 +22,7 @@ vi.mock("@/features/map", () => ({ MapSurface: () => null }));
 // 비상 알림 화면이 실시간 연결 상태를 읽는다(R48 머리말 "실시간 연결됨") — 시험에서 실제 WebSocket 을 열지 않게 연결 상태 훅만 목으로 바꾼다.
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
-  useRealtimeConnection: () => ({ connectionState: "connected", reconnect: vi.fn() }),
+  useRealtimeConnection: () => ({ connectionState: "connected" }),
 }));
 
 // F03-04 — 서버는 첫 쪽 20건만 준다. 목록 화면은 total_count 로 머리글을 쓰고 [다음] 으로 다음 쪽을 읽어야 한다.

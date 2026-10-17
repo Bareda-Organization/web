@@ -168,37 +168,8 @@ describe("useRealtimeChannel", () => {
     ]);
   });
 
-  it("F04-07: gaveUp 으로 굳은 연결은 reconnect() 로 다시 열 수 있다", () => {
-    const { result } = renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
-    act(() => {
-      instances[0].emitState("gaveUp");
-    });
-    expect(instances[0].connectCalls).toBe(1);
-
-    act(() => {
-      result.current.reconnect();
-    });
-    expect(instances[0].connectCalls).toBe(2);
-  });
-
-  it("F04-07: 브라우저가 다시 온라인이 되면 gaveUp 연결을 저절로 다시 연다(연결 중이던 상태는 건드리지 않는다)", () => {
-    renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
-    act(() => {
-      window.dispatchEvent(new Event("online"));
-    });
-    expect(instances[0].connectCalls).toBe(1);
-
-    act(() => {
-      instances[0].emitState("gaveUp");
-    });
-    act(() => {
-      window.dispatchEvent(new Event("online"));
-    });
-    expect(instances[0].connectCalls).toBe(2);
-  });
-
-  // R46-FIXRT S-5 — 기본 재연결 정책은 포기하지 않아 끊긴 연결은 계속 `reconnecting` 이다. 브라우저가 다시 온라인이
-  // 되거나 탭이 다시 보일 때 다음 타이머(최대 30초)를 기다리지 않고 바로 다시 붙는다.
+  // 재접속은 포기하지 않아 끊긴 연결은 계속 `reconnecting` 이다. 브라우저가 다시 온라인이 되거나 탭이 다시 보일 때
+  // 다음 대기(최대 30초)를 기다리지 않고 바로 다시 붙는다.
   it("브라우저가 다시 온라인이 되면 재연결 대기 중인 연결을 바로 다시 붙인다", () => {
     renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}));
     act(() => {
@@ -252,10 +223,24 @@ describe("useRealtimeChannel", () => {
       expect(onReconnected).not.toHaveBeenCalled();
     });
 
-    it("재연결 포기(gaveUp) 뒤 다시 붙어도 부르고, 한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {
+    // `Ruling 901` — 만료 60초 전 재발급 뒤 클라이언트가 연결을 닫고 다시 여는 동안 상태는 connected → reconnecting → connected 로 간다.
+    it("토큰 갱신으로 연결을 닫고 다시 열면 구독을 새로 걸고 화면 재조회 콜백을 한 번 부른다", () => {
       const onReconnected = vi.fn();
       renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
-      act(() => instances[0].emitState("gaveUp"));
+      act(() => instances[0].emitState("connected"));
+      expect(instances[0].subscribeCalls).toHaveLength(1);
+
+      act(() => instances[0].emitState("reconnecting"));
+      expect(instances[0].unsubscribeCalls).toBe(1);
+      act(() => instances[0].emitState("connected"));
+      expect(instances[0].subscribeCalls).toHaveLength(2);
+      expect(onReconnected).toHaveBeenCalledTimes(1);
+    });
+
+    it("한 번 부른 뒤 같은 연결에서 또 부르지 않는다", () => {
+      const onReconnected = vi.fn();
+      renderHook(() => useRealtimeChannel("/topic/admin/live", () => {}, onReconnected));
+      act(() => instances[0].emitState("reconnecting"));
       act(() => instances[0].emitState("connecting"));
       act(() => instances[0].emitState("connected"));
       expect(onReconnected).toHaveBeenCalledTimes(1);

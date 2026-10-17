@@ -54,7 +54,7 @@ let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let mockConnectionState: WsConnectionState = "connected";
 const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) => {
   capturedOnEnvelope = onEnvelope;
-  return { connectionState: mockConnectionState, reconnect: vi.fn() };
+  return { connectionState: mockConnectionState };
 });
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
@@ -601,7 +601,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
 
   const session = { accountId: "1", role: "staff", status: "active", academy: { id: "1", name: "테스트 학원" } };
 
-  it.each(["gaveUp", "forbidden", "reconnecting"] as const)(
+  it.each(["forbidden", "reconnecting"] as const)(
     "%s 여도 runs 가 비어 있으면 빈 목록 문구를 그대로 보여 주고, 이 화면은 연결 배너를 따로 띄우지 않는다",
     async (state) => {
       mockUseAuthSession.mockReturnValue({ session });
@@ -611,8 +611,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
       render(<DashboardPage />);
 
       expect(await screen.findByText("오늘 등록된 회차가 없습니다")).toBeInTheDocument();
-      expect(screen.queryByText("실시간 연결 끊김")).not.toBeInTheDocument();
-      expect(screen.queryByText("재연결 시도 중")).not.toBeInTheDocument();
+            expect(screen.queryByText("재연결 시도 중")).not.toBeInTheDocument();
       expect(screen.queryByText("실시간 조회 권한 없음")).not.toBeInTheDocument();
     },
   );
@@ -621,7 +620,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
   // 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 둘이 서로 무관함을 고정한다.
   it("목록에 항목이 있으면(runs 비어있지 않음) 연결이 끊겨도 목록이 보이고 빈 목록 문구는 뜨지 않는다", async () => {
     mockUseAuthSession.mockReturnValue({ session });
-    mockConnectionState = "gaveUp";
+    mockConnectionState = "reconnecting";
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<DashboardPage />);

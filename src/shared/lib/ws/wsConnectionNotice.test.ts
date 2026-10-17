@@ -10,13 +10,6 @@ describe("getWsConnectionNotice", () => {
     });
   });
 
-  it("재연결을 포기했으면 끊김 안내를 돌려준다", () => {
-    expect(getWsConnectionNotice("gaveUp")).toEqual({
-      title: "실시간 연결 끊김",
-      body: "실시간 갱신 연결이 끊어졌습니다. 새 소식이 늦게 보일 수 있습니다.",
-    });
-  });
-
   it("구독 권한이 없으면 권한 없음 안내를 돌려준다", () => {
     expect(getWsConnectionNotice("forbidden")).toEqual({
       title: "실시간 조회 권한 없음",
