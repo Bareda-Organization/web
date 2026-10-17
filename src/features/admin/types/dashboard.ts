@@ -1,4 +1,4 @@
-// §6.18 GET /admin/dashboard — 메인 관리자 첫 화면(Ruling 800 · 801)이 30초마다 한 번 읽는 집계. snake_case ↔ camelCase 는 api/dashboard.ts 한 곳에서 바꾼다.
+// §6.18 GET /admin/dashboard — 메인 관리자 첫 화면(Ruling 800 · 801)이 30초마다 한 번 읽는 집계. snake_case ↔ camelCase 는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 바꾼다.
 import type { RunStatus } from "./index";
 
 /** 기간 칩 — 오늘 · 7일 · 30일(`days` 쿼리 값). */

@@ -2,7 +2,7 @@
 
 // §5.16 표는 소문자 스네이크(`accident` 등)를 요구한다. 서버가 role·direction 은
 // 이미 소문자로 내리면서 type 만 대문자(`VEHICLE_FAULT`)로 냈던 사양-실제 불일치는
-// 서버 직렬화 정정(BE-R1 목표 3)으로 해소됐다.
+// 서버 직렬화 정정으로 해소됐다.
 export type EmergencyType = "accident" | "vehicle_fault" | "student_emergency" | "etc";
 
 export type EmergencyStatus = "open" | "acked" | "canceled";

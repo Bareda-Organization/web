@@ -1,8 +1,8 @@
 // features/approval 이 다루는 타입 전부 — 가입 승인(§5.1·§5.2) + 구간 변경 승인(§5.5·§5.6).
-// snake_case ↔ camelCase 변환은 run/types 와 같은 관례로 api/*.ts 호출부 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 //
 // ⚠ §5.5 사양 문면의 예시 JSON 은 approval_id·run_id 를 "apv_771"·"run_2026..." 같은
-// 문자열로 보이지만, 실제 백엔드(2026-09-12 curl 확인)는 이 앱의 다른 모든 id 와 같이
+// 문자열로 보이지만, 실제 백엔드(curl 확인)는 이 앱의 다른 모든 id 와 같이
 // 숫자를 준다 — 예시가 대표값이 아니라 문서 오기로 판단해 숫자로 구현한다.
 
 // §5.1 GET /staff/signup-requests — role=staff 는 관리자(§6.5) 몫이라 여기 나오지 않는다.

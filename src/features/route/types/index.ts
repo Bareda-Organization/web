@@ -1,7 +1,6 @@
 // features/route 가 다루는 타입 전부 — 고정 노선 편성 · 정차 순서 최적화(§5.9, RTE-01·09,
 // A-08) + 확정 노선 경유 지점 지정(§5.15, RTE-10, A-15 — 화면은 오늘 운행 상세의 [경유 지점] 패널 `features/run`, Ruling 893).
-// (지시서 화면 4 — "고정 노선 편성 · 정차 순서 최적화").
-// snake_case ↔ camelCase 변환은 api/*.ts 호출부 경계에서 한 번만 한다.
+// snake_case ↔ camelCase 변환은 응답을 읽는 `shared/lib/http` 의 `readEnvelope` 한 곳에서 한다(요청 본문은 api/*.ts 가 snake_case 로 만든다).
 
 export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type RunDirection = "to_academy" | "from_academy";
