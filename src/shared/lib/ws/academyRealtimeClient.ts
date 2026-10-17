@@ -174,6 +174,9 @@ export class AcademyRealtimeClient {
     if (this.state === "connecting" || this.state === "connected") return;
     this.manuallyDisconnected = false;
     this.forbidden = false;
+    // 옛 연결에서 받은 ERROR 표식이 새 연결의 끊김 처리를 가로채지 않게 지운다(R57 fix1 F3).
+    this.tokenExpired = false;
+    this.unauthorized = false;
     this.refreshedAfterUnauthorized = false;
     this.reconnectAttempt = 0;
     this.clearReconnectTimer();

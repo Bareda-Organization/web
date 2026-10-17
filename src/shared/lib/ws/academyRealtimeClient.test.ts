@@ -674,6 +674,29 @@ describe("AcademyRealtimeClient", () => {
       }
     });
 
+    // R57 fix1 F3 — ERROR 만 받고 닫힘 처리 전에 화면이 끊었다 다시 연 경우, 옛 연결의 UNAUTHORIZED 표식이 새 연결의 평범한 끊김을 가로채면 안 된다.
+    it("F3: UNAUTHORIZED 표식은 새 connect() 로 지워진다 — 이어진 평범한 끊김(1006)은 재발급 없이 백오프로 간다", async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, handles, refreshAccessToken, onSessionExpired } = setup();
+        handles[0].config.onStompError({ headers: { message: "UNAUTHORIZED" }, body: "" });
+        client.disconnect();
+        client.connect();
+        expect(handles).toHaveLength(2);
+
+        handles[1].config.onWebSocketClose({ code: 1006 });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(client.getSnapshot()).toBe("reconnecting");
+        expect(refreshAccessToken).not.toHaveBeenCalled();
+        expect(onSessionExpired).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(FIRST_STEP_MS);
+        expect(handles).toHaveLength(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("종료 코드 4403 은 ERROR 프레임이 없어도 forbidden 으로 멈추고 다시 붙지 않는다", async () => {
       vi.useFakeTimers();
       try {
