@@ -1,3 +1,4 @@
+import { envelope } from "@/shared/testing/wsEnvelope";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketEnvelope, WsConnectionState } from "../lib/ws";
@@ -14,14 +15,6 @@ vi.mock("./useRealtimeChannel", () => ({
     return { connectionState: mockConnectionState };
   },
 }));
-
-const envelope = (event: WebSocketEnvelope["event"], runId = "1"): WebSocketEnvelope => ({
-  event,
-  eventWireValue: event ?? undefined,
-  runId,
-  occurredAt: "2026-10-17T00:00:00Z",
-  payload: {},
-});
 
 const advance = async (ms: number) => {
   await act(async () => {
@@ -52,7 +45,7 @@ describe("useLiveRefresh", () => {
   it.each(["stop_arrived", "rider_changed", "run_started", "run_ended"] as const)("%s 방송은 300ms 뒤 refresh 를 한 번 부른다", async (event) => {
     const { refresh } = setup();
 
-    act(() => capturedOnEnvelope(envelope(event)));
+    act(() => capturedOnEnvelope(envelope(event, {})));
     await advance(299);
     expect(refresh).not.toHaveBeenCalled();
     await advance(1);
@@ -65,14 +58,14 @@ describe("useLiveRefresh", () => {
     const scopes = [false, true, false];
     const { refresh } = setup({ refreshScope: () => scopes.shift() ?? false });
 
-    act(() => capturedOnEnvelope(envelope("stop_arrived")));
+    act(() => capturedOnEnvelope(envelope("stop_arrived", {})));
     await advance(200);
-    act(() => capturedOnEnvelope(envelope("rider_changed")));
+    act(() => capturedOnEnvelope(envelope("rider_changed", {})));
     await advance(100); // 첫 이벤트부터 300ms
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledWith(true);
 
-    act(() => capturedOnEnvelope(envelope("stop_arrived")));
+    act(() => capturedOnEnvelope(envelope("stop_arrived", {})));
     await advance(300);
     expect(refresh).toHaveBeenCalledTimes(2);
     expect(refresh).toHaveBeenLastCalledWith(false);
@@ -81,7 +74,7 @@ describe("useLiveRefresh", () => {
   it("refreshScope 가 null 이면 갱신하지 않는다", async () => {
     const { refresh } = setup({ refreshScope: () => null });
 
-    act(() => capturedOnEnvelope(envelope("run_started")));
+    act(() => capturedOnEnvelope(envelope("run_started", {})));
     await advance(1000);
 
     expect(refresh).not.toHaveBeenCalled();
@@ -89,7 +82,7 @@ describe("useLiveRefresh", () => {
 
   it("갱신 4종이 아닌 방송은 onEnvelope 로 넘기고 refresh 를 부르지 않는다", async () => {
     const { refresh, onEnvelope } = setup();
-    const position = envelope("position");
+    const position = envelope("position", {});
 
     act(() => capturedOnEnvelope(position));
     await advance(1000);
@@ -133,7 +126,7 @@ describe("useLiveRefresh", () => {
   it("화면을 떠나면 예약해 둔 refresh 를 버린다", async () => {
     const { refresh, unmount } = setup();
 
-    act(() => capturedOnEnvelope(envelope("run_ended")));
+    act(() => capturedOnEnvelope(envelope("run_ended", {})));
     unmount();
     await advance(1000);
 
@@ -143,7 +136,7 @@ describe("useLiveRefresh", () => {
   it("cancelPendingRefresh 는 예약해 둔 refresh 를 버린다", async () => {
     const { refresh, result } = setup();
 
-    act(() => capturedOnEnvelope(envelope("run_ended")));
+    act(() => capturedOnEnvelope(envelope("run_ended", {})));
     act(() => result.current.cancelPendingRefresh());
     await advance(1000);
 
