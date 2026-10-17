@@ -27,7 +27,7 @@ const needsManagerLink = (role: SignupRequestItemResponseTypes["role"]) => role 
 
 // §5.2 409 ALREADY_LINKED — 고른 학생·매니저가 이미 다른 계정과 연결됐거나(학부모는 이미 연결된 자녀) 해서 거절된 경우.
 // 영문 코드·서버 원문은 화면에 내지 않고, 역할에 맞게 다시 고를 방향을 알려 준다. 계정은 pending 그대로다.
-// 예전 목록이라 거절된 경우(다른 관계자가 먼저 처리했거나 요청이 없음)와 차단된 계정은 서버 원문 대신 한국어로 알린다(F02-06).
+// 오래된 목록이라 거절된 경우(다른 관계자가 먼저 처리했거나 요청이 없음)와 차단된 계정은 서버 원문 대신 한국어로 알린다(F02-06).
 const STALE_REQUEST_CODES = ["APPROVAL_ALREADY_DECIDED", "SIGNUP_REQUEST_NOT_FOUND"];
 const STALE_REQUEST_MESSAGE = "이미 다른 관계자가 처리한 요청입니다 — 목록을 새로 불러옵니다";
 const BLOCKED_TARGET_MESSAGE = "승인 대상 계정이 차단된 상태입니다 — 차단을 먼저 해제해야 승인할 수 있습니다";

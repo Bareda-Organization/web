@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getManagers, MANAGER_CANDIDATE_LIMIT } from "./managers";
 import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
-// R52 M9 — 배치 변경 후보는 서버 기본 쪽 크기(20)에 걸려 앞 20명만 오던 것. 역할별로 상한(§1.8, 100)까지 받고 `has_next` 를 돌려준다.
+// 배치 변경 후보는 서버 기본 쪽 크기(20)에 걸려 앞 20명만 오던 것. 역할별로 상한(§1.8, 100)까지 받고 `has_next` 를 돌려준다.
 describe("run api — getManagers(배치 후보)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

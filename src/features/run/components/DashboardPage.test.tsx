@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => mockRouter,
 }));
 
-// R18-B2 목표 2 — `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
+// `MapSurface` 만 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
 // 컴포넌트에 무엇으로 전달되는지 확인한다. `cameraForSelectedBus`·
 // `buildRouteDisplayState` 는 실제 구현 그대로 둔다(순수 함수, SDK 무관).
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
@@ -30,7 +30,7 @@ vi.mock("@/features/map", async (importOriginal) => {
   };
 });
 
-// R15-T2 목표 4 — §5.19 를 부르는 클라이언트(getRunRoute)는 features/route 를 통해서만
+// §5.19 를 부르는 클라이언트(getRunRoute)는 features/route 를 통해서만
 // 온다. 이 화면 시험은 지도 SDK 자체를 검증하지 않으므로(TodayRunPage.test.tsx 와 같은
 // 한계) 클릭이 이 함수를 올바른 runId 로 부르는지, fallback 문구가 뜨는지만 본다.
 vi.mock("@/features/route", () => ({
@@ -146,7 +146,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
   });
 
-  // R52 · Ruling 874⑤ — 사양 근거 없는 정적 안내 문장은 두지 않는다(Ruling 844 기준). 하원 회차가 있어도 탑승 현황 카드에 집계 시점 각주가 없다.
+  // Ruling 874⑤ — 사양 근거 없는 정적 안내 문장은 두지 않는다(Ruling 844 기준). 하원 회차가 있어도 탑승 현황 카드에 집계 시점 각주가 없다.
   it("하원 회차가 있어도 '학원 출발 뒤부터 집계' 각주를 두지 않는다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -159,7 +159,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText(/학원 출발 뒤부터 집계/)).not.toBeInTheDocument();
   });
 
-  // R21-B 목표 1·3·4 — 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
+  // 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
   // 포함 여부로 본다(판단 근거, 보고서 §1).
   // A #3 — 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
@@ -176,7 +176,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByText("미확인")).toBeInTheDocument();
   });
 
-  // R52 A-9 — 사용자에게 보이는 말은 동승자로 통일한다(출발 임박 미확인 줄에도 "동승" 이 남아 있었다).
+  // 사용자에게 보이는 말은 동승자로 통일한다(출발 임박 미확인 줄에도 "동승" 이 남아 있었다).
   it("출발 임박 미확인 줄은 동승자를 '동승자' 로 부른다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-13T07:55:00Z"));
@@ -226,7 +226,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByRole("checkbox", { name: "운행 중·곧 출발만" })).not.toBeInTheDocument();
   });
 
-  // R52 haiku A-6 · sonnet A-15 / Ruling 887 ⑤ — 지표 보조 문장은 집계 기준을 말한다: 미등원에 구간 변경 승인분이 들어가고,
+  // Ruling 887 ⑤ — 지표 보조 문장은 집계 기준을 말한다: 미등원에 구간 변경 승인분이 들어가고,
   // 탑승 완료 비율은 값(전 회차)과 같은 범위로 계산한다 — 등원 회차만 세지 않는다.
   it("미등원·탑승 완료 지표의 보조 문장이 집계 기준을 적는다", async () => {
     mockGetDashboard.mockResolvedValue({
@@ -246,7 +246,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText(/등원 회차 기준/)).not.toBeInTheDocument();
   });
 
-  // R53 Ruling 879 — 회차 표의 건수는 탑승 완료 누계(boarded + alighted)다. 머리글과 보조 문장이 '현재 탑승' 으로 읽히지 않는다.
+  // Ruling 879 — 회차 표의 건수는 탑승 완료 누계(boarded + alighted)다. 머리글과 보조 문장이 '현재 탑승' 으로 읽히지 않는다.
   it("회차 표 머리글과 지표 보조 문장이 탑승 완료(하차 포함) 기준이다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
@@ -277,7 +277,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByRole("img", { name: "탑승 완료 29명 · 미승차 2명 · 미등원 3명 · 대기 6명" })).toBeInTheDocument();
   });
 
-  // R50 S14 — 관계자 명단은 미등원 행을 남기고 회색으로 보인다(Ruling 811). "명단에서 제외" 라는 보조 문구는 사실과 달랐다.
+  // 관계자 명단은 미등원 행을 남기고 회색으로 보인다(Ruling 811). "명단에서 제외" 라는 보조 문구는 사실과 달랐다.
   it("미등원 지표의 보조 문구는 명단에서 제외된다고 말하지 않고, 행이 회색으로 남는다고 말한다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue(emptyLive);
@@ -299,7 +299,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     render(<DashboardPage />);
 
     await screen.findByText("1호차 · 등원");
-    // 표 칸은 시:분만 보이고(시안), 초까지의 예정·실제 값은 칸의 설명(title)에 남는다(R21-B 지시).
+    // 표 칸은 시:분만 보이고(시안), 초까지의 예정·실제 값은 칸의 설명(title)에 남는다.
     // 실행 환경의 로컬 시간대에 좌우되지 않도록 같은 변환 함수로 기대값을 만든다.
     expect(
       screen.getByTitle(
@@ -318,7 +318,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.getByTitle("예정 출발 08:00")).toBeInTheDocument();
   });
 
-  // R21-B2 목표 1·2 — 예정 도착(est_arrival_time)이 도착 컬럼에 시:분:초로 뜬다.
+  // 예정 도착(est_arrival_time)이 도착 컬럼에 시:분:초로 뜬다.
   it("도착 컬럼이 est_arrival_time 을 예정 도착으로 보여준다", async () => {
     const estArrivalTime = "2026-09-19T08:27:00Z";
     mockGetDashboard.mockResolvedValue({
@@ -377,7 +377,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
       runs: [
         {
           ...baseDashboard.runs[0],
-          // 만료 전이어야 남은 분이 나온다(R53 A8 — 지난 만료는 '카운트다운 끝남').
+          // 만료 전이어야 남은 분이 나온다.
           noShowCases: [{ studentName: "이학생", stopName: "정문", expiresAt: new Date(Date.now() + 2.5 * 60_000).toISOString(), callAttempts: 0, lastContactResult: null }],
         },
       ],
@@ -389,7 +389,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(row).toHaveTextContent(/\d+분 안/);
   });
 
-  // R32-W11 — 미탑승 띠가 건수만 알리고 처리하러 갈 길이 없었다.
+  // 미탑승 띠가 건수만 알리고 처리하러 갈 길이 없었다.
   it("미승차 처리 항목에서 그 회차의 오늘 운행 화면으로 갈 수 있다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -419,7 +419,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   // clearTimeout 하는지를 이 검사 하나가 무는 유일한 대상이다. 호출 횟수가 아니라 clearTimeout 이
   // 그 타이머 id 로 불렸는지를 직접 본다. 타이머는 응답을 받은 뒤에 예약되므로(usePolling) 폴링 간격(7000ms)짜리를 찾는다.
   it("언마운트하면 폴링에 예약해 둔 다음 요청 타이머를 clearTimeout 으로 정리한다", () => {
-    // 연결 상태가 끊김이어야 폴링 간격이 7000ms 다(연결 중이면 30초 — R57 W-3).
+    // 연결 상태가 끊김이어야 폴링 간격이 7000ms 다(연결 중이면 30초).
     mockConnectionState = "disconnected";
     const setTimeoutSpy = vi.spyOn(global, "setTimeout");
     const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
@@ -483,7 +483,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBeforeEvent);
   });
 
-  // R57 W-7(K4) — 화면 값보다 오래된 위치(`received_at`)는 버린다.
+  // 화면 값보다 오래된 위치(`received_at`)는 버린다.
   it("R57 W-7: 화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
@@ -506,7 +506,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     expect(screen.queryByText("현재 1번 정류장 → 다음 후문")).not.toBeInTheDocument();
   });
 
-  // R57 fix1 F1 — REST 스냅샷의 `recorded_at` 은 기기 시각이고 방송의 `received_at` 은 서버 시각이다(서로 다른 시계). 기기 시계가 3분 앞선 스냅샷
+  // REST 스냅샷의 `recorded_at` 은 기기 시각이고 방송의 `received_at` 은 서버 시각이다(서로 다른 시계). 기기 시계가 3분 앞선 스냅샷
   // 때문에 첫 방송이 "낡은 값"으로 버려지면 안 된다 — 방송은 같은 시계(앞서 받은 방송의 `received_at`)와만 견준다.
   it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 반영된다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -542,7 +542,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     },
   );
 
-  // R32-W5 — 비상 알림은 `(staff)` 레이아웃의 EmergencyAlertProvider 가 전 화면에서 받는다.
+  // 비상 알림은 `(staff)` 레이아웃의 EmergencyAlertProvider 가 전 화면에서 받는다.
   // 대시보드가 같은 이벤트를 또 처리하면 같은 신고가 한 줄 배너와 팝업으로 두 번 보인다.
   it("emergency_raised·emergency_canceled 는 대시보드가 처리하지 않는다(레이아웃 팝업 몫)", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -592,7 +592,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   });
 });
 
-// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다(R46-FIXCONN C-12). 이 화면은 REST 폴링이 채운 목록을
+// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다. 이 화면은 REST 폴링이 채운 목록을
 // 연결 상태와 무관하게 그대로 보여 준다 — WS 가 끊겨도 "오늘 등록된 회차가 없습니다" 는 여전히 사실이다.
 describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12)", () => {
   afterEach(() => {
@@ -632,7 +632,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
   });
 });
 
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 3·4·5 — 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
+// 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
 // 버스를 고르면 §5.19 노선을 지도에 그린다(선택 해제·근사 경로 표시 포함).
 describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", () => {
   const fourStatusDashboard: DashboardResponseTypes = {
@@ -731,8 +731,8 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 
-  // R21-A 목표 4 — 이 describe 는 emptyLive(실시간 위치 전부 없음)를 쓴다. 1호차는
-  // idle 이라 위치가 없어 이전에는 카메라가 기본 좌표에 머물렀다 — 정차지 평균
+  // 이 describe 는 emptyLive(실시간 위치 전부 없음)를 쓴다. 1호차는
+  // idle 이라 위치가 없다 — 카메라가 정차지 평균
   // 좌표로 옮겨가는지 정확한 수치로 확인한다(MonitoringPage.test.tsx 와 같은 방식).
   it("실시간 위치가 없는 idle 회차를 골라도 카메라가 정차지 평균 좌표로 옮겨간다", async () => {
     mockGetRunRoute.mockResolvedValue({
@@ -755,7 +755,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     );
   });
 
-  // R18-B2 목표 1 — MonitoringPage.tsx 와 같은 방식으로 이 화면에도 적용한다.
+  // MonitoringPage.tsx 와 같은 방식으로 이 화면에도 적용한다.
   it("버스를 고르면 카메라가 그 버스 좌표로 옮겨가고 확대한다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
@@ -778,7 +778,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     );
   });
 
-  // R20-C 목표 4 — 3호차는 runStatus:"moving"(확정 이후)이라 좌표 0개는 "확정됐지만
+  // 3호차는 runStatus:"moving"(확정 이후)이라 좌표 0개는 "확정됐지만
   // 경로가 없음"(데이터 결손)이지 "아직 확정 전"이 아니다.
   it("경로 좌표가 0개면 확정됐지만 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
@@ -817,7 +817,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(await screen.findByText(/예정 경로 — 확정 시 달라질 수 있음/)).toBeInTheDocument();
   });
 
-  // R20-C 목표 1 — 버스를 골라도 지도만 움직이고 카드는 그대로였다(사용자 지적).
+  // 버스를 골라도 지도만 움직이고 카드는 그대로였다.
   it("버스를 고르면 그 카드에 aria-pressed=true 가 붙는다", async () => {
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
     render(<DashboardPage />);
@@ -830,7 +830,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(item).toHaveAttribute("aria-pressed", "true");
   });
 
-  // R20-C 목표 2 — 확정·대기 태그가 같은 색이었다(사용자 지적). 상태-색 매핑이
+  // 확정·대기 태그가 같은 색이었다. 상태-색 매핑이
   // 고정(C-09)이라 class 로 구분을 확인한다(Emotion 은 $status 가 다르면 다른 클래스).
   it("확정과 대기는 서로 다른 태그 색(class)을 쓴다", async () => {
     render(<DashboardPage />);
@@ -890,7 +890,7 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     expect(screen.getByRole("link", { name: /미승차 1명/ })).toBeInTheDocument();
   });
 
-  // R57 W-3(Ruling 873) — 연결이 살아 있으면 방송이 갱신을 가져오므로 안전망 조회는 30초, 끊기면 7초다(관제 · 오늘 운행 화면과 같다).
+  // 연결이 살아 있으면 방송이 갱신을 가져오므로 안전망 조회는 30초, 끊기면 7초다(관제 · 오늘 운행 화면과 같다).
   it("W-3: 실시간 연결 중에는 7초가 지나도 다시 읽지 않고 30초에 한 번 읽는다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -933,7 +933,7 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
     await waitFor(() => expect(mockGetDashboard.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
-  // R46-FIXRT L4 — 같은 일을 하는 MonitoringPage 는 300ms 로 묶는데 대시보드는 방송마다 바로 다시 불러왔다.
+  // 같은 일을 하는 MonitoringPage 는 300ms 로 묶는데 대시보드는 방송마다 바로 다시 불러왔다.
   // 등원 피크에 한 학원의 승차 이벤트가 몰리면 탭마다 같은 조회가 초당 수 회 나간다.
   it("이벤트가 잇따라 와도 300ms 안에서는 회차 목록·지표를 한 번씩만 다시 불러온다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });

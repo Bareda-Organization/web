@@ -16,7 +16,7 @@ export const StyledScheduleSection = styled.div`
   gap: var(--s4);
 `;
 
-// ── R48 요일표 · 일일 회차 · 확인 창 ───────────────────────────────────────────────
+// ── 요일표 · 일일 회차 · 확인 창 ───────────────────────────────────────────────
 
 export const StyledCancelKv = styled.dl`
   margin: 12px 0;

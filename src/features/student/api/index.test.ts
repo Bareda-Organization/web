@@ -94,7 +94,7 @@ describe("student api — snake_case ↔ camelCase 변환", () => {
   });
 });
 
-// R56 K2 · Ruling 894③ — DELETE /staff/students/{id}/photo → 204(본문 없음). 사진이 이미 없어도 204 라 멱등이다.
+// Ruling 894③ — DELETE /staff/students/{id}/photo → 204(본문 없음). 사진이 이미 없어도 204 라 멱등이다.
 describe("student api — deleteStudentPhoto", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

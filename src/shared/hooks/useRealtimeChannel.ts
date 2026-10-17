@@ -144,7 +144,7 @@ export const useRealtimeChannel = (
 };
 
 // 연결 상태만 읽는 훅 — 목적지를 구독하지 않고 공유 연결의 상태만 돌려준다. 레이아웃의 연결 띠처럼 방송 내용은 필요 없고 끊김만
-// 알리면 되는 화면이 쓴다연결은 `useRealtimeChannel` 과 같은 참조 계수를 쓰므로 마지막 사용자가 떠나야 닫힌다.
+// 알리면 되는 화면이 쓴다. 연결은 `useRealtimeChannel` 과 같은 참조 계수를 쓰므로 마지막 사용자가 떠나야 닫힌다.
 export const useRealtimeConnection = (): UseRealtimeChannelResult => {
   const [connectionState, setConnectionState] = useState<WsConnectionState>("disconnected");
   const clientRef = useRef<AcademyRealtimeClient | null>(null);

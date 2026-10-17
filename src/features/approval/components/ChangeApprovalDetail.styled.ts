@@ -47,7 +47,7 @@ export const StyledInfoLabel = styled.span`
   color: var(--text-secondary);
 `;
 
-// `R18-C` 목표 4(Ruling 319) — 전후 지도를 좌우로 나란히. 한 지도에 겹치지 않는다.
+// C` 목표 4(Ruling 319) — 전후 지도를 좌우로 나란히. 한 지도에 겹치지 않는다.
 export const StyledMapSurface = styled.div`
   height: ${MAP_SURFACE_HEIGHT};
   border-radius: var(--radius-md);

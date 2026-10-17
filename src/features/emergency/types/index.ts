@@ -34,7 +34,7 @@ export type EmergencyItemResponseTypes = {
   riderCount: number;
   contacts: EmergencyPersonTypes[];
   raisedAt: string;
-  // 단말이 누른 시각 — 서버가 항상 채우지만(안 보냈으면 접수 시각과 같다) 참고값이라 없어도 견딘다(R47 Ruling 744).
+  // 단말이 누른 시각 — 서버가 항상 채우지만(안 보냈으면 접수 시각과 같다) 참고값이라 없어도 견딘다(Ruling 744).
   occurredAt?: string | null;
   ackedAt: string | null;
   canceledAt: string | null;
@@ -45,9 +45,7 @@ export type EmergencyItemResponseTypes = {
   ackedBy: { name: string; memo: string | null } | null;
 };
 
-// BE-R1 목표 2 이전에는 §5.16 이 적은 `items[]` 와 달리 실측 응답 키가 `emergencies` 였다.
-// 서버가 정정돼 지금은 매핑 단계(api/index.ts)의 raw 타입도 `items` 를 그대로 받는다 —
-// 이 화면 타입은 그때도 지금도 `items` 라 바뀌지 않는다.
+// 응답 키는 §5.16 이 적은 대로 `items[]` 이고 이 화면 타입도 `items` 를 그대로 쓴다.
 export type EmergencyListResponseTypes = {
   items: EmergencyItemResponseTypes[];
   unackedCount: number;

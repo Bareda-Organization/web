@@ -56,7 +56,7 @@ describe("createStompClient", () => {
     expect(raw.connectHeaders).toEqual({ Authorization: "Bearer t2" });
   });
 
-  // R46-FIXCONN C-1 ③·C-3·C-4 — 숨은 탭에서도 하트비트가 제때 나가고, 반쯤 죽은 연결·응답 없는 연결 시도가 바로 정리된다.
+  // 숨은 탭에서도 하트비트가 제때 나가고, 반쯤 죽은 연결·응답 없는 연결 시도가 바로 정리된다.
   it("하트비트는 Worker 로 보낸다 — 숨은 탭의 setInterval 스로틀로 서버가 세션을 닫지 않게", () => {
     const client = createStompClient({
       brokerURL: "ws://localhost/ws/location",

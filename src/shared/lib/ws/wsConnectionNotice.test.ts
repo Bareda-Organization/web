@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getWsConnectionNotice } from "./wsConnectionNotice";
 
-// R46-FIXCONN C-12 — 같은 끊김을 화면마다 다른 문구로 알리던 것을 한 벌로 모은다(`API_SPEC §7` 연결 표 · Flutter 도 같은 문구).
+// 같은 끊김을 화면마다 다른 문구로 알리던 것을 한 벌로 모은다(`API_SPEC §7` 연결 표 · Flutter 도 같은 문구).
 describe("getWsConnectionNotice", () => {
   it("재연결 대기 중이면 재연결 안내를 돌려준다", () => {
     expect(getWsConnectionNotice("reconnecting")).toEqual({

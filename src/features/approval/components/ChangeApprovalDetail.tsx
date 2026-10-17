@@ -203,7 +203,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       void refreshPending();
       router.push("/change-approval");
     } catch (cause) {
-      // 예전 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
+      // 오래된 화면이라 거절된 경우(이미 결정됨·기한 경과·명단 이탈·낡은 미리보기)는 새로 불러와 최신 상태를 따른다.
       const failure = toDecideFailure(cause, "승인 처리에 실패했습니다");
       setDecideError(failure.message);
       if (failure.shouldReload) loadDetail();

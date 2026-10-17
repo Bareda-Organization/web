@@ -149,7 +149,7 @@ describe("useRealtimeChannel", () => {
     expect(instances[0].subscribeCalls).toEqual([{ destination: "/topic/admin/live" }]);
   });
 
-  // R57 W-4 — 세션이 아직 없어 학원 id 가 빈 문자열이면 `academyLiveDestination("")` 이 빈 목적지를 준다. 그 목적지로는 구독하지 않고
+  // 세션이 아직 없어 학원 id 가 빈 문자열이면 `academyLiveDestination("")` 이 빈 목적지를 준다. 그 목적지로는 구독하지 않고
   // (서버에 `/topic/academy//live` SUBSCRIBE 가 나가 4403 으로 연결이 닫히던 것을 막는다), 값이 생기면 그때 구독한다.
   it("W-4: 빈 destination 으로는 구독하지 않고, 값이 생기면 구독한다", () => {
     const { rerender } = renderHook(({ destination }: { destination: string }) => useRealtimeChannel(destination, () => {}), {
@@ -213,7 +213,7 @@ describe("useRealtimeChannel", () => {
     });
     expect(instances[0].connectCalls).toBe(2);
   });
-  // R46-FIXCONN C-1 ③·C-6 — 끊겼다 다시 붙으면 끊긴 사이 놓친 방송을 REST 로 한 번 메운다(API_SPEC §7 재연결 동기화).
+  // 끊겼다 다시 붙으면 끊긴 사이 놓친 방송을 REST 로 한 번 메운다(API_SPEC §7 재연결 동기화).
   // 실제 클라이언트는 재연결 대기가 끝나면 `connecting` 을 거쳐 `connected` 가 되므로 그 순서로 시험한다.
   describe("재연결 직후 콜백(onReconnected)", () => {
     it("끊김(reconnecting) 뒤 connecting 을 거쳐 connected 가 되면 한 번만 부른다", () => {
@@ -299,7 +299,7 @@ describe("useRealtimeChannel", () => {
       expect(onReconnected).toHaveBeenCalledTimes(1);
     });
   });
-  // R46-FIXCONN C-12 — 연결 상태만 읽는 화면(레이아웃의 연결 띠)도 같은 공유 연결을 쓴다. 구독은 걸지 않는다.
+  // 연결 상태만 읽는 화면(레이아웃의 연결 띠)도 같은 공유 연결을 쓴다. 구독은 걸지 않는다.
   describe("useRealtimeConnection (연결 상태만 읽기)", () => {
     it("목적지를 구독하지 않고 공유 연결의 상태를 돌려준다", () => {
       const { result } = renderHook(() => useRealtimeConnection());

@@ -80,7 +80,7 @@ export type ChangeApprovalsResponseTypes = {
 };
 
 // §5.5 GET /staff/approvals/{id} (상세) — 조회 시점에 재최적화를 정확히 1회 돌린다.
-// R21-A 추가 지시 ② — lat·lng 를 더했다(지도 마커용). 경유 지점만 가리키는 항목은
+// A 추가 지시 ② — lat·lng 를 더했다(지도 마커용). 경유 지점만 가리키는 항목은
 // 좌표를 안 실어 null 이다 — 그 마커만 건너뛴다(백엔드 코멘트와 같은 근거).
 export type RouteStopPreviewResponseTypes = {
   seq: number;
@@ -90,14 +90,14 @@ export type RouteStopPreviewResponseTypes = {
   lng: number | null;
 };
 
-// 지도에 그릴 도로 좌표 한 점(`R18-C` 목표 4, Ruling 319) — `features/map` 의 `MapPolyline.points`
+// 지도에 그릴 도로 좌표 한 점(Ruling 319) — `features/map` 의 `MapPolyline.points`
 // 와 같은 모양이라 변환 없이 그대로 넘길 수 있다.
 export type RoutePathPointResponseTypes = {
   lat: number;
   lng: number;
 };
 
-// R21-A 추가 지시 ② 이전엔 `reordered`·`removed` 가 문자열 배열로 선언돼 있었으나(타입 오기),
+// A 추가 지시 ② 이전엔 `reordered`·`removed` 가 문자열 배열로 선언돼 있었으나(타입 오기),
 // 실제 백엔드는 처음부터 객체(`stop_id`·`stop_name`)를 줬다 — 지금까지 이 필드를 화면에서
 // 쓴 적이 없어 드러나지 않았다. lat·lng 를 더하며 실제 모양대로 바로잡는다.
 export type RouteStopRefResponseTypes = {
@@ -112,7 +112,7 @@ export type RoutePreviewResponseTypes = {
   stopsAfter: RouteStopPreviewResponseTypes[];
   reordered: RouteStopRefResponseTypes[];
   removed: RouteStopRefResponseTypes[];
-  // `R18-C` 목표 4(Ruling 319) — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
+  // C` 목표 4(Ruling 319) — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
   // 옛 확정 노선 버전(도로 좌표 컬럼 도입 전)이면 빈 배열이다 — null 이 아니다.
   roadPathBefore: RoutePathPointResponseTypes[];
   roadPathAfter: RoutePathPointResponseTypes[];
@@ -123,7 +123,7 @@ export type ChangeApprovalAffectedStudentResponseTypes = {
   name: string;
 };
 
-// ⚠ 재최적화 전용 필드 8개(`R18-C` 에서 est_duration_before·est_duration_after 2개 추가)는
+// ⚠ 재최적화 전용 필드 8개(est_duration_before·est_duration_after 포함)는
 // 전부 null 일 수 있다 — 이미 결정된 건(approved·rejected·auto_rejected)의 상세 조회는
 // 재최적화를 하지 않는다(백엔드
 // `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`,
@@ -138,7 +138,7 @@ export type ChangeApprovalDetailResponseTypes = ChangeApprovalSummaryResponseTyp
   decidedByName: string | null;
   driverName: string | null;
   escortName: string | null;
-  // `R20-B` 목표 3(조율자 결정) — 회차 출발 예정 시각. 변경 전/후로 갈리지 않는다(재최적화가
+  // B` 목표 3(조율자 결정) — 회차 출발 예정 시각. 변경 전/후로 갈리지 않는다(재최적화가
   // 출발 시각 자체를 옮기지 않는다). `r20-a` 가 이 필드를 추가하기 전에는 백엔드가 아예
   // 내려주지 않으므로 `undefined` 를 `null` 로 흡수한다(api/changeApprovals.ts) — 값이
   // 없으면 견디는 화면을 만든다는 목표 5 와 같은 이유다.

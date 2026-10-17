@@ -14,11 +14,11 @@ export type RouteStop = {
   // W7 — §4.3·§5.19 `is_destination`(등원 회차의 마지막 항목, 학원). RTE-01 편성
   // 조회에는 이 필드가 없어(학원 자체를 정차지로 다루지 않는다) 기본값 false.
   isDestination?: boolean;
-  // R39 Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
+  // Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
   isWaypoint?: boolean;
   // §5.19 `waypoint_id`(경유 행만 값). `DELETE /staff/runs/{runId}/waypoints/{waypointId}` 의 경로 값이다.
   waypointId?: string | null;
-  // R39 — §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
+  // §4.3·§5.19 `change`(미경유 `skipped`). 값이 없으면 null. 강제 추가 `added` 는 노선 응답에 실리지 않는다(Ruling 401).
   change?: "added" | "skipped" | null;
   // Ruling 819 — §5.9 상세 응답의 `rider_count`(그 편성의 요일·방향 요일별 주소가 이 정차지로 매칭된 재원 학생 수). 경로(path) 응답에는 없다.
   riderCount?: number;
@@ -64,9 +64,7 @@ export type RouteUpsertRequestTypes = {
 
 export type LatLng = { lat: number; lng: number };
 
-// GET /staff/runs/{runId}/route(§5.19, RTE-02) — R15-T2 는 지도에 그릴 도로 경로 좌표를
-// 쓰고, R19 목표 1 이 정차지 마커용 stops 를 더한다(R15-T1 이 같이 만드는 고정 계약,
-// `docs/archive/rounds/be-rounds-r15-r21.md §8.23`). 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
+// GET /staff/runs/{runId}/route(§5.19, RTE-02) — 지도에 그릴 도로 경로 좌표와 정차지 마커용 stops 를 쓴다. 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
 // 더 있지만 여기서는 옮기지 않는다 — 필요해지면 그때 추가한다(YAGNI).
 // Ruling 321 — 확정 전(idle) 회차도 고정 노선 기반 "예정" 경로를 보여준다. 백엔드
 // (r20-a) 가 이 필드로 확정 여부를 알린다 — 화면은 "예정"과 "확정"을 반드시
@@ -79,7 +77,7 @@ export type RunRouteResponseTypes = {
   confirmed: boolean;
 };
 
-// GET /staff/routes/{id}/path(§5.9 신설, R27-B) — 편성 상세와 같은 stops 모양에 도로
+// GET /staff/routes/{id}/path(§5.9) — 편성 상세와 같은 stops 모양에 도로
 // 경로를 더한다. §5.19 RunRouteResponseTypes 와 달리 idle/confirmed 구별이 없다 —
 // 이 엔드포인트가 다루는 것은 확정 노선이 아니라 학기 단위 원본 편성이라 애초에
 // "확정 여부"라는 축이 없다.

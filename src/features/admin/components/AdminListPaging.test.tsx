@@ -17,9 +17,9 @@ import {
   getStaffSignupRequests,
 } from "../api";
 
-// R48 — 비상 알림 오른쪽 상시 칸의 작은 지도는 jsdom 에서 외부 스크립트를 불러오려다 오류를 내므로 목으로 바꾼다(지도 자체는 NaverMapSurface.test 가 맡는다).
+// 비상 알림 오른쪽 상시 칸의 작은 지도는 jsdom 에서 외부 스크립트를 불러오려다 오류를 내므로 목으로 바꾼다(지도 자체는 NaverMapSurface.test 가 맡는다).
 vi.mock("@/features/map", () => ({ MapSurface: () => null }));
-// 비상 알림 화면이 실시간 연결 상태를 읽는다(R48 머리말 "실시간 연결됨") — 시험에서 실제 WebSocket 을 열지 않게 연결 상태 훅만 목으로 바꾼다.
+// 비상 알림 화면이 실시간 연결 상태를 읽는다 — 시험에서 실제 WebSocket 을 열지 않게 연결 상태 훅만 목으로 바꾼다.
 vi.mock("@/shared/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/hooks")>()),
   useRealtimeConnection: () => ({ connectionState: "connected" }),
@@ -65,7 +65,7 @@ describe("메인 관리자 목록 — 총 개수와 다음 쪽", () => {
     expect(await screen.findByText(header)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
 
-    // 가입 승인은 첫 요청이 오른쪽 처리 칸에도 나온다(R48) — 같은 이름이 둘이어도 새 쪽의 항목이 보이면 된다.
+    // 가입 승인은 첫 요청이 오른쪽 처리 칸에도 나온다 — 같은 이름이 둘이어도 새 쪽의 항목이 보이면 된다.
     expect((await screen.findAllByText(secondPageItem)).length).toBeGreaterThan(0);
   });
 });

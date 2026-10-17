@@ -68,7 +68,7 @@ const renderProvider = () =>
     </EmergencyAlertProvider>,
   );
 
-// R32-W5 — 실시간 비상 알림이 대시보드 한 줄뿐이라 다른 화면에서는 안 보이고, 다른 알림에 덮였다.
+// 실시간 비상 알림이 대시보드 한 줄뿐이라 다른 화면에서는 안 보이고, 다른 알림에 덮였다.
 describe("EmergencyAlertProvider — 관계자 전 화면 비상 팝업", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -134,7 +134,7 @@ describe("EmergencyAlertProvider — 관계자 전 화면 비상 팝업", () => 
     expect(screen.getByText("미확인 0건")).toBeInTheDocument();
   });
 
-  // R52 · t5-sonnet A-5 — 보던 신고가 말없이 사라지면 오인 신고였는지 처리됐는지 알 수 없다. 취소됐다는 사실을 띠로 남기고 [닫기] 로 치운다.
+  // sonnet A-5 — 보던 신고가 말없이 사라지면 오인 신고였는지 처리됐는지 알 수 없다. 취소됐다는 사실을 띠로 남기고 [닫기] 로 치운다.
   it("보고 있던 신고가 취소되면 취소됐다는 안내를 남기고 닫기로 치운다", async () => {
     mockGet.mockResolvedValue({ items: [ITEM], unackedCount: 1 });
     renderProvider();
@@ -160,7 +160,7 @@ describe("EmergencyAlertProvider — 관계자 전 화면 비상 팝업", () => 
   });
 });
 
-// R53 최종 대조 · Ruling 885 ① — 띠 [확인] 을 누르는 순간 발신자가 철회하면(409 EMERGENCY_CANCELED) 실패 문구가 아니라 철회 안내를 보이고 그 건을 띠에서 닫는다.
+// Ruling 885 ① — 띠 [확인] 을 누르는 순간 발신자가 철회하면(409 EMERGENCY_CANCELED) 실패 문구가 아니라 철회 안내를 보이고 그 건을 띠에서 닫는다.
 describe("EmergencyAlertProvider — 확인 직전 철회(409 EMERGENCY_CANCELED)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -237,7 +237,7 @@ describe("EmergencyAlertProvider — 확인(ack) 경합·실패 문구(F01-12)",
   });
 });
 
-// R46-WEB B1 #1 — 띠가 화면 위에 떠(fixed) 등록·배치 변경 버튼을 가렸다. 흐름 속에 놓여야 아래 내용을 밀어 낸다.
+// 띠가 화면 위에 떠(fixed) 등록·배치 변경 버튼을 가렸다. 흐름 속에 놓여야 아래 내용을 밀어 낸다.
 describe("EmergencyAlertStrip — 버튼을 가리지 않는 위치", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -252,7 +252,7 @@ describe("EmergencyAlertStrip — 버튼을 가리지 않는 위치", () => {
   });
 });
 
-// R46-WEB A#6 — 메인 관리자 레이아웃도 같은 띠를 쓰되, 확인 주체는 관계자라 확인 버튼이 없다.
+// 메인 관리자 레이아웃도 같은 띠를 쓰되, 확인 주체는 관계자라 확인 버튼이 없다.
 describe("EmergencyAlertProvider — 메인 관리자 출처", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -275,7 +275,7 @@ describe("EmergencyAlertProvider — 메인 관리자 출처", () => {
   });
 });
 
-// R46-FUWEB B1 #1 — 비상 띠가 본문을 오래 밀어 내려도 접을 방법이 없었다. 접어도 건수는 남고, 새 비상은 접힌 띠를 다시 펼친다.
+// 비상 띠가 본문을 오래 밀어 내려도 접을 방법이 없었다. 접어도 건수는 남고, 새 비상은 접힌 띠를 다시 펼친다.
 describe("EmergencyAlertStrip — 접기", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -310,7 +310,7 @@ describe("EmergencyAlertStrip — 접기", () => {
   });
 });
 
-// R46-FIXCONN C-1 ②·C-6 — 근무 중 관계자는 다른 창을 보는 것이 평상 사용이다. 숨은 탭에서도 비상 폴링이 멈추면 안 되고,
+// 근무 중 관계자는 다른 창을 보는 것이 평상 사용이다. 숨은 탭에서도 비상 폴링이 멈추면 안 되고,
 // 연결이 끊겼다 돌아온 직후에는 끊긴 사이의 신고를 REST 로 한 번 받아 온다.
 describe("EmergencyAlertProvider — 숨은 탭·재연결 보충(R46-FIXCONN)", () => {
   const setHidden = (hidden: boolean) => {

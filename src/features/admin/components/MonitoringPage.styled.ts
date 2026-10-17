@@ -27,9 +27,8 @@ export const StyledFallbackNotice = styled.p`
   color: var(--text-secondary);
 `;
 
-// R20-C 목표 5 — 근사 경로 안내를 지도 위로 올린다. 예전엔 지도 아래 작은 글자라
-// 못 보고 "길이 아닌 곳을 지난다"로 오인했다— `StyledMapSurface`
-// 안(`position: relative`)에 겹쳐서 항상 눈에 들어오게 한다.
+// 근사 경로 안내는 지도 아래가 아니라 `StyledMapSurface`
+// 안(`position: relative`)에 겹쳐서 항상 눈에 들어오게 한다 — 못 보면 "길이 아닌 곳을 지난다"로 오인한다.
 export const StyledMapOverlayNotice = styled.p`
   position: absolute;
   top: 8px;
@@ -45,9 +44,8 @@ export const StyledMapOverlayNotice = styled.p`
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 `;
 
-// F4 — 자리표시(점선 테두리)를 걷어내고 실제 `MapSurface` 를 담는 크기 지정 컨테이너로
-// 바꾼다. `overflow: hidden` 은 지도 SDK 가 만드는 내부 타일 레이어가 둥근 모서리를
-// 넘치지 않게 한다. R15-T2 — "화면 상단에 가득차게" 요구에 맞춰 220px → 480px.
+// 실제 `MapSurface` 를 담는 크기 지정 컨테이너. `overflow: hidden` 은 지도 SDK 가 만드는 내부 타일 레이어가 둥근 모서리를
+// 넘치지 않게 한다. 높이는 480px 이다.
 export const StyledMapSurface = styled.div`
   position: relative;
   height: ${MAP_SURFACE_HEIGHT};
@@ -63,7 +61,7 @@ export const StyledRosterDialogScroll = styled.div`
   overflow-y: auto;
 `;
 
-// ── R48 시안 `monitoring` — 학원 레일 · 지도 · 선택 회차 칸 · 시간표 ──────────────────────────
+// ── 시안 `monitoring` — 학원 레일 · 지도 · 선택 회차 칸 · 시간표 ──────────────────────────
 export const StyledMonitoringGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(200px, 248fr) minmax(0, 504fr) minmax(280px, 344fr);

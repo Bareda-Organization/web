@@ -32,7 +32,7 @@ beforeAll(async () => {
 // 저장·재전송하는 refresh_token 쿠키에 의존한다(`httpClient.ts` 의
 // `credentials:"include"` 주석 — §1.2.1). Node/undici 의 `fetch()` 는 별도 호출
 // 사이에 쿠키를 들고 있지 않아, 프로덕션 `logout()`/`refresh()` 를 그대로 부르면
-// 유효한 액세스 토큰이 있어도 401 TOKEN_EXPIRED 로 실패한다(2026-09-14 curl 로
+// 유효한 액세스 토큰이 있어도 401 TOKEN_EXPIRED 로 실패한다(curl 로
 // sysadmin 계정에서도 동일 재현 — 계정 상태와 무관한 시험 환경의 한계다).
 // 이 파일 전용으로 raw fetch 로 로그인해 Set-Cookie 를 직접 캡처하고, 이후
 // 요청에 Cookie 헤더로 되먹인다 — 공용 헬퍼(`rawRestLogin.ts`)와 프로덕션
@@ -93,7 +93,7 @@ describe("auth api — 실서버 계약", () => {
     const result = await login(throwawayLoginId, "password");
 
     expect(result.status).toBe("pending");
-    // R46-FUFEAT ① — 임시 비밀번호 강제 변경 표식(§2.5)은 항상 값이 있다(초기화한 적 없는 계정은 false).
+    // 임시 비밀번호 강제 변경 표식(§2.5)은 항상 값이 있다(초기화한 적 없는 계정은 false).
     expect(result.mustChangePassword).toBe(false);
     pendingAccessToken = result.accessToken;
   });
@@ -236,7 +236,7 @@ describe("auth api — 실서버 계약", () => {
     expect(logoutResponse.status).toBe(204);
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) — 2026-09-14 Ruling 282(로그인 실패 차단) 수정이
+  // AUTH_ACCOUNT_BLOCKED— Ruling 282(로그인 실패 차단) 수정이
   // 병합되어 사양(§1.4) 그대로 재현된다. 실패 1~4회는 401 INVALID_CREDENTIALS 와 함께
   // remaining_attempts 가 4·3·2·1 로 줄고, 5회째부터는 계정이 차단돼 403
   // AUTH_ACCOUNT_BLOCKED 를 반환한다 — 그 뒤 올바른 비밀번호로 시도해도 이미
@@ -267,7 +267,7 @@ describe("auth api — 실서버 계약", () => {
       };
       expect(response.status).toBe(401);
       expect(json.error?.code).toBe("INVALID_CREDENTIALS");
-      // 실측(2026-09-14, BE-A 병합 후): 실패 1~4회는 remaining_attempts 가 4·3·2·1 로 줄어든다.
+      // 실측: 실패 1~4회는 remaining_attempts 가 4·3·2·1 로 줄어든다.
       expect(json.error?.details?.remaining_attempts).toBe(5 - attempt);
     }
 

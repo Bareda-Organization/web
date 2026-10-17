@@ -8,7 +8,7 @@ vi.mock("../../hooks", () => ({
   useRealtimeConnection: () => ({ connectionState: mockConnectionState }),
 }));
 
-// R46-FIXCONN C-12 — 비상·승인 화면처럼 연결 상태를 안 읽던 화면에서도 끊김이 보이게 레이아웃에 한 번만 둔다.
+// 비상·승인 화면처럼 연결 상태를 안 읽던 화면에서도 끊김이 보이게 레이아웃에 한 번만 둔다.
 describe("RealtimeConnectionStrip", () => {
   afterEach(() => {
     mockConnectionState = "connected";

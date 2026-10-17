@@ -10,11 +10,11 @@ import { ApiError } from "@/shared/lib/http";
 import type { WebSocketEnvelope, WsConnectionState } from "@/shared/lib/ws";
 import { envelope } from "@/shared/testing/wsEnvelope";
 
-// R18-B 목표 2 — `MapSurface` 를 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
+// `MapSurface` 를 목으로 바꿔 이 화면이 계산한 `camera` 값이 그
 // 컴포넌트에 무엇으로 전달되는지만 검증한다(SDK 렌더링이 아니라 화면의 계산
 // 로직 검증 — TodayRunPage.test.tsx 와 같은 방식).
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);
-// R18-B2 — `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
+// `cameraForSelectedBus`·`buildRouteDisplayState` 는 실제 구현을 그대로
 // 쓴다(순수 함수라 SDK 에 안 걸린다). `MapSurface` 만 목으로 바꾼다.
 vi.mock("@/features/map", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/map")>();
@@ -24,7 +24,7 @@ vi.mock("@/features/map", async (importOriginal) => {
   };
 });
 
-// A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
+// 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
 // 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
 // — academyId 가 정해지지 않은 채로 회차 조회를 시도하면 안 된다.
 //
@@ -39,7 +39,7 @@ vi.mock("../api", () => ({
   getRunAttention: vi.fn(async () => ({ items: [] })),
 }));
 
-// R15-T2 목표 4 — §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
+// §5.19 를 부르는 getRunRoute 는 features/route 를 통해서만 온다.
 vi.mock("@/features/route", () => ({
   getRunRoute: vi.fn(),
 }));
@@ -222,7 +222,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     expect(mockGetRunsLive.mock.calls.length).toBe(callsBefore);
   });
 
-  // R57 W-2 — 관제 채널은 전 학원 위치를 방송한다. 지금 보는 학원 목록에 없는 회차의 위치는 화면을 바꾸지 않으므로 다시 그리지도 않는다
+  // 관제 채널은 전 학원 위치를 방송한다. 지금 보는 학원 목록에 없는 회차의 위치는 화면을 바꾸지 않으므로 다시 그리지도 않는다
   // (새 배열을 돌려주면 위치 방송마다 지도·표 전체가 다시 그려졌다). 그리기 횟수는 지도 목(`mockMapSurface`) 호출 수로 센다.
   it("R57 W-2: 목록에 없는 회차의 position 이벤트는 화면을 다시 그리지 않는다", async () => {
     render(<MonitoringPage />);
@@ -242,7 +242,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     expect(mockMapSurface.mock.calls.length).toBeGreaterThan(rendersBefore);
   });
 
-  // R57 W-7(K4) — 화면에 있는 값보다 오래된 위치(`received_at`)는 버린다. 순서 보장이 없는 경로(재접속 직후 REST 스냅샷 · 두 연결 겹침)에서
+  // 화면에 있는 값보다 오래된 위치(`received_at`)는 버린다. 순서 보장이 없는 경로(재접속 직후 REST 스냅샷 · 두 연결 겹침)에서
   // 늦게 온 옛 좌표가 새 좌표를 덮어 버스가 뒤로 점프하던 것을 막는다.
   it("R57 W-7: 화면 값보다 오래된 position 이벤트는 무시하고, 같거나 새로우면 반영한다", async () => {
     render(<MonitoringPage />);
@@ -367,7 +367,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
   });
 });
 
-// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다(R46-FIXCONN C-12). 이 화면은 REST 폴링이 채운
+// 연결 끊김 안내는 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 맡는다. 이 화면은 REST 폴링이 채운
 // 목록·EmptyState 를 연결 상태와 무관하게 그대로 보여 준다.
 describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12)", () => {
   beforeEach(() => {
@@ -407,7 +407,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
   });
 });
 
-// R15-T2 docs/archive/rounds/be-rounds-r15-r21.md §8.23 목표 2·4·5 — 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
+// 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
 // 유지). 버스를 고르면 그 노선을 지도에 그리고, 근사 경로면 안내한다.
 describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () => {
   beforeEach(() => {
@@ -483,7 +483,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     expect(await screen.findByText("근사 경로")).toBeInTheDocument();
   });
 
-  // R19 목표 1 — 정차지도 kind:"stop" 마커로 함께 그린다. 버스 마커(kind:"bus")를
+  // 정차지도 kind:"stop" 마커로 함께 그린다. 버스 마커(kind:"bus")를
   // 지우지 않고 더하는지, id 로 어느 정차지인지까지 본다(개수만 세는 단언은
   // 범위 조건을 못 잡는다).
   it("버스를 고르면 그 회차의 정차지도 kind:\"stop\" 마커로 함께 그린다", async () => {
@@ -506,10 +506,8 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     );
   });
 
-  // R21-A 목표 4 — baseLiveRun 은 position:null(실시간 위치 없음)이다. 이전에는
-  // 이 경우 `selectedBusMarker` 가 항상 null 이라 카메라가 기본 좌표(서울 시청)에
-  // 머물러, 정차지는 실제로 그려지는데도 화면 밖이라 안 보였다(조율자 실측 —
-  // 백엔드는 idle·확정·종료 회차도 stops 를 채워 보낸다). 정차지 두 곳의 평균
+  // baseLiveRun 은 position:null(실시간 위치 없음)이다. 이 경우 `selectedBusMarker` 는 null 이라 카메라를 기본 좌표(서울 시청)에 두면
+  // 정차지가 화면 밖에 있다(백엔드는 idle·확정·종료 회차도 stops 를 채워 보낸다). 정차지 두 곳의 평균
   // 좌표로 카메라가 옮겨가는지 정확한 수치로 확인한다(범위가 아니라 값 자체).
   it("실시간 위치가 없는 회차를 골라도 카메라가 정차지 평균 좌표로 옮겨간다", async () => {
     mockGetRunRoute.mockResolvedValue({
@@ -550,7 +548,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     expect(mockGetRunRoute).toHaveBeenCalledTimes(1);
   });
 
-  // R18-B 목표 2 — 버스를 고르면 그 버스를 지도 정중앙에 두고 확대한다.
+  // 버스를 고르면 그 버스를 지도 정중앙에 두고 확대한다.
   it("버스를 고르면 카메라가 그 버스 좌표로 옮겨가고 확대한다", async () => {
     const busWithPosition: RunLiveItemResponseTypes = {
       ...baseLiveRun,
@@ -574,9 +572,9 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     );
   });
 
-  // R18-B 목표 3 — 좌표가 0개면 "빈 지도"와 구별되는 안내를 띄운다. 이 블록의
+  // 좌표가 0개면 "빈 지도"와 구별되는 안내를 띄운다. 이 블록의
   // 기본 목(beforeEach)이 이미 roadPath: [] 라 별도 목 설정이 필요 없다.
-  // R20-C 목표 4 — baseLiveRun 은 runStatus:"moving"(확정 이후)이라 좌표 0개는
+  // baseLiveRun 은 runStatus:"moving"(확정 이후)이라 좌표 0개는
   // "확정됐지만 경로가 없음"(데이터 결손)이지 "아직 확정 전"이 아니다.
   it("경로 좌표가 0개면 확정됐지만 경로 정보가 아직 없습니다 를 보여주고 근사 경로 안내는 뜨지 않는다", async () => {
     render(<MonitoringPage />);
@@ -625,7 +623,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
   });
 });
 
-// R20-C 목표 1·2 — 사용자가 직접 시연해 지적한 두 가지. 버스를 골라도 우측 목록
+// 사용자가 직접 시연해 지적한 두 가지. 버스를 골라도 우측 목록
 // 카드가 그대로였고(무엇을 눌렀는지 모름), 확정·대기 태그가 같은 색이었다.
 describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   beforeEach(() => {
@@ -669,7 +667,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
     });
     render(<MonitoringPage />);
 
-    // R48 — 상태 칩은 클래스가 아니라 의미 이름(data-tone)으로 가른다. 같은 회차 행 안의 칩끼리 비교한다.
+    // 상태 칩은 클래스가 아니라 의미 이름(data-tone)으로 가른다. 같은 회차 행 안의 칩끼리 비교한다.
     const idleRow = (await screen.findByRole("button", { name: /5호차 · 등원/ })).closest("tr") as HTMLElement;
     const confirmedRow = (await screen.findByRole("button", { name: /6호차 · 등원/ })).closest("tr") as HTMLElement;
     const idleChip = within(idleRow).getByText("운행 전").closest("[data-tone]");
@@ -679,7 +677,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
   });
 });
 
-// R16 docs/archive/rounds/be-rounds-r15-r21.md §8.25 목표 7 — §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
+// §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
 // 이 화면은 받은 것을 거르지 않고 그대로 그려야 한다. ⚠ 특히 `finished` 는
 // 사용자가 "운행종료 버스도 목록에 남긴다" 로 확정한 항목이라(Ruling 310) 단독으로 못박는다.
 describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
@@ -893,7 +891,7 @@ describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
   });
 });
 
-// R46-FIXRT L3 — 관제 회차 목록(`/admin/academies/{id}/runs/live`)은 가장 무거운 GET 이다. 실시간 연결이 살아 있으면 방송이
+// 관제 회차 목록(`/admin/academies/{id}/runs/live`)은 가장 무거운 GET 이다. 실시간 연결이 살아 있으면 방송이
 // 갱신을 가져오므로 폴링은 안전망일 뿐이라 30초로 늦추고, 연결이 끊겼을 때(재연결 중·권한 거부)만 7초를 유지한다.
 describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른다(L3)", () => {
   beforeEach(() => {
@@ -925,7 +923,7 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
     expect(mockGetRunsLive.mock.calls.length).toBe(before + 1);
   });
 
-  // R50 M9 — 머리 설명이 연결 상태와 상관없이 "30초마다" 라고 적던 것(연결이 끊기면 7초 · UF-O-02).
+  // 머리 설명이 연결 상태와 상관없이 "30초마다" 라고 적던 것(연결이 끊기면 7초 · UF-O-02).
   it("머리 설명의 갱신 주기는 실시간 연결이 살아 있으면 30초, 끊기면 7초로 사실대로 적는다", async () => {
     const view = render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
@@ -938,7 +936,7 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
     expect(screen.queryByText(/30초마다/)).not.toBeInTheDocument();
   });
 
-  // R51 L2 — 한 번도 붙기 전(최초 연결 중)에는 "끊겼다" 가 아니라 "연결하는 중" 이다. 한 번 붙었다 끊긴 뒤의 재연결은 계속 "끊겨" 로 말한다.
+  // 한 번도 붙기 전(최초 연결 중)에는 "끊겼다" 가 아니라 "연결하는 중" 이다. 한 번 붙었다 끊긴 뒤의 재연결은 계속 "끊겨" 로 말한다.
   it("처음 연결하는 중(connecting)에는 '끊겨' 가 아니라 연결 중이라고 적는다", async () => {
     mockConnectionState = "connecting";
     render(<MonitoringPage />);
@@ -1087,7 +1085,7 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
     });
     render(<MonitoringPage />);
 
-    // R48 — 요약 띠가 학원 레일의 칩으로 옮겨졌다(문제 있는 곳이 맨 앞).
+    // 요약 띠가 학원 레일의 칩으로 옮겨졌다(문제 있는 곳이 맨 앞).
     expect(await screen.findByRole("button", { name: /송파학원.*비상 2건/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /강동학원.*비상/ })).not.toBeInTheDocument(); // 확인된 건은 세지 않는다
     expect(mockGetEmergencies).toHaveBeenCalledWith("open");
@@ -1112,7 +1110,7 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
   });
 });
 
-// R46-FUFEAT ④(Ruling 543) — 전체 관제에서 어느 학원에 오늘 지연·확정 실패가 있는지도 한눈에 보인다.
+// 전체 관제에서 어느 학원에 오늘 지연·확정 실패가 있는지도 한눈에 보인다.
 describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT ④)", () => {
   const academies = [
     { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
