@@ -429,6 +429,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
   // clearTimeout 하는지를 이 검사 하나가 무는 유일한 대상이다. 호출 횟수가 아니라 clearTimeout 이
   // 그 타이머 id 로 불렸는지를 직접 본다. 타이머는 응답을 받은 뒤에 예약되므로(usePolling) 폴링 간격(7000ms)짜리를 찾는다.
   it("언마운트하면 폴링에 예약해 둔 다음 요청 타이머를 clearTimeout 으로 정리한다", () => {
+    // 연결 상태가 끊김이어야 폴링 간격이 7000ms 다(연결 중이면 30초 — R57 W-3).
+    mockConnectionState = "disconnected";
     const setTimeoutSpy = vi.spyOn(global, "setTimeout");
     const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -858,7 +860,8 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
   });
 
   // F01-01 — getDashboard 는 마운트 때 한 번뿐이라 지표·표·미탑승 배너가 진입 시점 값에서 굳었다.
-  it("7초 주기 갱신이 지표·회차 상태·미탑승 배너를 새로 그린다", async () => {
+  it("실시간 연결이 끊긴 동안 7초 주기 갱신이 지표·회차 상태·미탑승 배너를 새로 그린다", async () => {
+    mockConnectionState = "disconnected";
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockGetDashboard.mockResolvedValueOnce({ ...baseDashboard, runs: [runOf("1", { runStatus: "confirmed" })] });
     render(<DashboardPage />);
@@ -878,6 +881,36 @@ describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", (
 
     expect(await screen.findByText("50")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /미승차 1명/ })).toBeInTheDocument();
+  });
+
+  // R57 W-3(Ruling 873) — 연결이 살아 있으면 방송이 갱신을 가져오므로 안전망 조회는 30초, 끊기면 7초다(관제 · 오늘 운행 화면과 같다).
+  it("W-3: 실시간 연결 중에는 7초가 지나도 다시 읽지 않고 30초에 한 번 읽는다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+    const dashboardCalls = mockGetDashboard.mock.calls.length;
+    const liveCalls = mockGetRunsLive.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls);
+    expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls);
+
+    await vi.advanceTimersByTimeAsync(23000);
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls + 1);
+    expect(mockGetRunsLive.mock.calls.length).toBe(liveCalls + 1);
+  });
+
+  it("W-3: 연결 중이 아니면(끊김) 7초마다 다시 읽는다", async () => {
+    mockConnectionState = "reconnecting";
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    render(<DashboardPage />);
+    await screen.findByText("42");
+    const dashboardCalls = mockGetDashboard.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(mockGetDashboard.mock.calls.length).toBe(dashboardCalls + 1);
   });
 
   it.each(["rider_changed", "run_started", "run_ended"] as const)("%s 이벤트는 지표·회차 표도 다시 불러온다", async (eventType) => {

@@ -54,6 +54,9 @@ import {
 
 // §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다(판단 근거, 보고서 §1).
 const LIVE_POLL_INTERVAL_MS = 7000;
+// 실시간 연결이 살아 있으면 방송(`position` · `stop_arrived` · `rider_changed` · `run_started` · `run_ended`)이 갱신을 가져온다 —
+// 안전망 조회만 이 간격으로 남긴다(R57 W-3 · Ruling 873, 관제 · 오늘 운행 화면과 같다).
+const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 방송 이벤트 뒤 재조회를 묶는 간격 — MonitoringPage.tsx 의 `RUNS_REFRESH_DEBOUNCE_MS` 와 같다(R46-FIXRT L4).
 const EVENT_REFRESH_DEBOUNCE_MS = 300;
 
@@ -83,7 +86,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   const [liveRuns, setLiveRuns] = useState<RunLiveItemResponseTypes[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // "지금" — 응답을 받을 때마다 갱신한다(7초 주기). 시간표의 지금 선 · 미승차 남은 분이 이 값을 쓴다.
+  // "지금" — 응답을 받을 때마다 갱신한다(폴링 주기 — 연결 중 30초 · 끊김 7초, 방송이 재조회를 부르면 그때도). 시간표의 지금 선 · 미승차 남은 분이 이 값을 쓴다.
   const [nowMs, setNowMs] = useState(() => Date.now());
   // F01-09 — 도착한 탑승 승인 요청. 처리 경로(승인 화면)와 닫기를 함께 두고, 여러 건이면 건수로 합친다.
   const [approvalRequests, setApprovalRequests] = useState<{ approvalId: string; label: string }[]>([]);
@@ -352,11 +355,11 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   }, [loadDashboard, loadLive]);
 
   // F01-01 — 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다. 응답을 받은 뒤 다음 요청을 예약하고,
-  // 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C).
+  // 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다(R46-WEB C). 간격은 실시간 연결 상태를 따른다 — 연결돼 있으면 30초, 아니면 7초.
   usePolling(async () => {
     const results = await Promise.all([loadLive(), loadDashboard(true)]);
     return results.every(Boolean);
-  }, LIVE_POLL_INTERVAL_MS);
+  }, connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS);
 
   const toAcademyRuns = runs.filter((run) => run.direction === "to_academy");
   const toAcademyRiders = sumRiders(toAcademyRuns);
