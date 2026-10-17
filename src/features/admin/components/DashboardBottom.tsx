@@ -1,5 +1,4 @@
-import { Card, EmptyState, Feed, RunStatusChip, StatusChip } from "@/shared/ui";
-import type { FeedItem } from "@/shared/ui";
+import { Card, EmptyState, RunStatusChip, StatusChip } from "@/shared/ui";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { academySlot } from "../lib/relativeTime";
 import { academyStatusCounts, directionLabel, eventSentence, eventTime, onTimeText, runProgress } from "../lib/dashboardView";
@@ -9,6 +8,8 @@ import {
   StyledCardBody,
   StyledCardHeading,
   StyledFaint,
+  StyledFeed,
+  StyledFeedTime,
   StyledFill,
   StyledHBar,
   StyledHealthRow,
@@ -199,12 +200,21 @@ export const MetricsCard = ({ data, days }: { data: DashboardResponseTypes; days
 
 export const RecentEventsCard = ({ data }: { data: DashboardResponseTypes }) => {
   const now = new Date(data.asOf);
-  const items: FeedItem[] = data.recentEvents.map((event) => ({ time: eventTime(event.at, now), text: eventSentence(event) }));
+  const items = data.recentEvents.map((event) => ({ time: eventTime(event.at, now), text: eventSentence(event) }));
   return (
     <Card padding={0}>
       <StyledCardBody aria-labelledby="dashboard-events-title">
         <StyledCardHeading id="dashboard-events-title">최근 기록</StyledCardHeading>
-        {items.length === 0 ? <StyledFaint>최근 7일 안에 운영 기록이 없습니다.</StyledFaint> : <Feed items={items} />}
+        {items.length === 0 ? <StyledFaint>최근 7일 안에 운영 기록이 없습니다.</StyledFaint> : (
+          <StyledFeed>
+            {items.map((item, index) => (
+              <li key={`${item.time}-${index}`}>
+                <StyledFeedTime>{item.time}</StyledFeedTime>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </StyledFeed>
+        )}
       </StyledCardBody>
     </Card>
   );

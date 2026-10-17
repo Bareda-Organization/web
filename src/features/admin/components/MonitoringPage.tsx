@@ -9,9 +9,8 @@ import {
   parseWsEmergencyRaisedPayload,
   parseWsEmergencyCanceledPayload,
   parseWsPositionPayload,
-  type WebSocketEnvelope,
 } from "@/shared/lib/ws";
-import { usePolling, useRealtimeChannel } from "@/shared/hooks";
+import { LIVE_POLL_CONNECTED_INTERVAL_MS, LIVE_POLL_INTERVAL_MS, useLiveRefresh, usePolling } from "@/shared/hooks";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
@@ -46,13 +45,6 @@ import {
 } from "./MonitoringPage.styled";
 import { StyledMonitoringStamp, StyledMonitoringStampDot } from "./MonitoringPage.stamp";
 
-// §5.18 과 같은 근거로 5~10초 폴링 중간값 7초를 그대로 따른다(run/components/DashboardPage.tsx 참고).
-// 실시간 연결이 끊겼을 때(재연결 중·권한 거부)의 안전망 간격이다.
-const LIVE_POLL_INTERVAL_MS = 7000;
-// 실시간 연결이 살아 있으면 방송(`stop_arrived`·`rider_changed`·`run_started`·`run_ended`)이 갱신을 가져온다 — 이 조회는 오늘
-// 취소 아닌 회차 전부를 정차 목록과 함께 돌려주는 가장 무거운 GET 이라 안전망으로만 느리게 돈다.
-// 연결이 끊기면 서버 무송신 20초 초과를 10초 주기로 점검해 20~30초 안에 감지하고 7초로 돌아간다(`API_SPEC §7.2`).
-const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
 // 학원별 미확인 비상·지연·확정 실패 요약은 한 번의 목록 조회라 회차 갱신보다 느린 주기면 충분하다(실시간 비상은 아래 방송 배너가 따로 띄운다).
 const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
 
@@ -72,9 +64,6 @@ type LiveEmergencyAlert = {
   type?: string;
   academyName?: string | null;
 };
-
-// 방송 이벤트로 회차 목록을 다시 읽을 때 겹친 이벤트를 한 번으로 묶는 대기 시간.
-const RUNS_REFRESH_DEBOUNCE_MS = 300;
 
 export const MonitoringPage = () => {
   const [academies, setAcademies] = useState<AcademySummaryResponseTypes[]>([]);
@@ -296,26 +285,23 @@ export const MonitoringPage = () => {
   // 판단(payload 조각으로 목록 구조를 재구성하지 않는다).
   // `emergency_raised` 는 학원 필터와 무관하게 항상 띄운다 — Goal 8 이 요구하는
   // "모든 학원의 실시간 갱신"의 일부다.
-  // 이 채널은 전 학원을 방송한다. 지금 보는 학원 목록에 있는 회차의 이벤트만 재조회하고,
-  // 잇단 이벤트는 짧게 묶어 한 번만 읽는다.
+  // 이 채널은 전 학원을 방송한다. 지금 보는 학원 목록에 있는 회차의 이벤트만 재조회한다.
+  // 잇단 이벤트를 묶어 한 번만 읽는 일 · 연결 상태에 따른 폴링 간격(연결 30초 · 끊김 7초) · 재연결 직후 보충은 `useLiveRefresh` 가 맡는다.
   const runsRef = useRef(runs);
   // 레이아웃 효과로 맞춘다 — 일반 효과는 커밋보다 늦게 돌아, 목록이 화면에 나온 직후 도착한 방송이 아직 비어 있는 목록을 읽고 버려졌다.
   useLayoutEffect(() => {
     runsRef.current = runs;
   });
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleRunsRefresh = useCallback(
-    (id: string) => {
-      if (refreshTimerRef.current !== null) return;
-      refreshTimerRef.current = setTimeout(() => {
-        refreshTimerRef.current = null;
-        void loadRuns(id);
-      }, RUNS_REFRESH_DEBOUNCE_MS);
-    },
-    [loadRuns],
-  );
-  const handleEnvelope = useCallback(
-    (envelope: WebSocketEnvelope) => {
+  const refreshRuns = () => {
+    if (academyId != null) void loadRuns(academyId);
+  };
+  const { connectionState, cancelPendingRefresh } = useLiveRefresh({
+    destination: adminLiveDestination(),
+    refreshScope: (envelope) => (academyId != null && runsRef.current.some((run) => String(run.runId) === envelope.runId) ? true : null),
+    refresh: refreshRuns,
+    // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다.
+    onReconnected: refreshRuns,
+    onEnvelope: (envelope) => {
       switch (envelope.event) {
         case "position": {
           const payload = parseWsPositionPayload(envelope.payload);
@@ -329,14 +315,6 @@ export const MonitoringPage = () => {
           });
           return;
         }
-        case "stop_arrived":
-        case "rider_changed":
-        case "run_started":
-        case "run_ended":
-          if (academyId != null && runsRef.current.some((run) => String(run.runId) === envelope.runId)) {
-            scheduleRunsRefresh(academyId);
-          }
-          return;
         case "emergency_raised": {
           const payload = parseWsEmergencyRaisedPayload(envelope.payload);
           setLiveAlerts((prev) => [
@@ -369,12 +347,8 @@ export const MonitoringPage = () => {
           return;
       }
     },
-    [academyId, scheduleRunsRefresh],
-  );
-  // 끊겼다 다시 붙었다 — 끊긴 사이의 방송은 되찾을 길이 없다. 안전망이 30초로 늦춰지기 전에 한 번 받아 둔다(판정을
-  // 훅이 맡는다 — 재연결 대기 뒤 `connecting` 을 거치므로 직전 렌더 상태 비교로는 못 잡았다).
-  const { connectionState } = useRealtimeChannel(adminLiveDestination(), handleEnvelope, () => {
-    if (academyId != null) void loadRuns(academyId);
+    poll: () => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)),
+    pollEnabled: academyId != null,
   });
   // 연결 끊김 안내는 이 화면이 아니라 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 모든 화면에서 한 번만 띄운다.
   // `runs` 는 REST 폴링이 WS 와 무관하게 계속 채우므로 연결이 끊겨도 목록·EmptyState 는 그대로다.
@@ -386,22 +360,9 @@ export const MonitoringPage = () => {
     (async () => {
       await loadRuns(academyId);
     })();
-    return () => {
-      // 학원을 바꾸거나 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
-      if (refreshTimerRef.current !== null) {
-        clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-    };
-  }, [academyId, loadRuns]);
-
-  // 응답을 받은 뒤 다음 요청을 예약하고, 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다.
-  // 간격은 실시간 연결 상태를 따른다 — 연결되어 있으면 30초, 아니면 7초.
-  usePolling(
-    () => (academyId == null ? Promise.resolve(true) : loadRuns(academyId)),
-    connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS,
-    academyId != null,
-  );
+    // 학원을 바꾸거나 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
+    return cancelPendingRefresh;
+  }, [academyId, loadRuns, cancelPendingRefresh]);
 
   // 한 번의 `GET /admin/emergencies?status=open` 으로 전 학원의 미확인 비상을 받아 학원별로 센다(Ruling 497 — 학원마다
   // §6.8 을 부르면 학원 수에 비례해 요청이 늘어난다). 실패해도 관제 화면을 막지 않는다 — 요약이 비어 보일 뿐이다.

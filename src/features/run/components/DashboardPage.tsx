@@ -10,9 +10,8 @@ import {
   isStalePosition,
   parseWsApprovalRequestedPayload,
   parseWsPositionPayload,
-  type WebSocketEnvelope,
 } from "@/shared/lib/ws";
-import { usePolling, useRealtimeChannel } from "@/shared/hooks";
+import { useLiveRefresh } from "@/shared/hooks";
 import { AlertBanner, Button, EmptyState, PageHeader, SkeletonGroup, Skeleton, StatStrip } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { formatHeaderDate } from "@/shared/lib/format/dateTime";
@@ -51,14 +50,6 @@ import {
   StyledRunRiderBlock,
   StyledSegmentBar,
 } from "./DashboardPage.styled";
-
-// §5.18 이 5~10초 폴링 대상이라고 명시(LOC-01) — 중간값 7초를 썼다.
-const LIVE_POLL_INTERVAL_MS = 7000;
-// 실시간 연결이 살아 있으면 방송(`position` · `stop_arrived` · `rider_changed` · `run_started` · `run_ended`)이 갱신을 가져온다 —
-// 안전망 조회만 이 간격으로 남긴다(Ruling 873, 관제 · 오늘 운행 화면과 같다).
-const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
-// 방송 이벤트 뒤 재조회를 묶는 간격 — MonitoringPage.tsx 의 `RUNS_REFRESH_DEBOUNCE_MS` 와 같다.
-const EVENT_REFRESH_DEBOUNCE_MS = 300;
 
 // MonitoringPage.tsx 와 같은 기본 좌표(서울 시청) — 위치 수신 전에도 지도가 빈 화면이
 // 아니게 한다.
@@ -262,34 +253,19 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   // 최신값을 받는 효과만 노리고, payload 조각으로 상태를 억지로 재구성하지
   // 않는다. `AuthGateGuard` 가 관계자 role 에서만 이
   // 화면을 그리므로 `session.academy` 는 항상 값이 있다고 본다(서버 불변식).
-  // 이벤트 뒤 재조회 묶음 — 첫 이벤트가 타이머를 걸고, 타이머가 도는 동안의 이벤트는 그 묶음에 들어간다(타이머를
-  // 밀지 않는다 — 이벤트가 쉬지 않고 와도 화면이 `EVENT_REFRESH_DEBOUNCE_MS` 보다 오래 낡지 않는다). 지표·회차 표는
-  // 묶음 안에 그 이벤트가 하나라도 있을 때만 다시 받는다.
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const refreshDashboardRef = useRef(false);
-  const scheduleRefresh = useCallback(
-    (withDashboard: boolean) => {
-      if (withDashboard) refreshDashboardRef.current = true;
-      if (refreshTimerRef.current !== null) return;
-      refreshTimerRef.current = setTimeout(() => {
-        refreshTimerRef.current = null;
-        const needsDashboard = refreshDashboardRef.current;
-        refreshDashboardRef.current = false;
-        void loadLive();
-        if (needsDashboard) void loadDashboard(true);
-      }, EVENT_REFRESH_DEBOUNCE_MS);
+  // 재조회 묶음·연결 상태에 따른 폴링 간격(연결 30초 · 끊김 7초)은 `useLiveRefresh` 가 맡는다. 지표·회차 표는
+  // 묶음 안에 `stop_arrived` 외의 이벤트가 하나라도 있을 때만 다시 받는다(`wide`).
+  // 비상 알림(`emergency_raised`·`emergency_canceled`)은 `(staff)` 레이아웃의
+  // EmergencyAlertProvider 가 전 화면에서 받는다 — 여기서 또 처리하면 이중 표시다.
+  // 지표·회차 표·미탑승 배너도 폴링으로 같은 주기에 새로 받는다.
+  const { connectionState } = useLiveRefresh({
+    destination: academyLiveDestination(session?.academy?.id ?? ""),
+    refreshScope: (envelope) => envelope.event !== "stop_arrived",
+    refresh: (wide) => {
+      void loadLive();
+      if (wide) void loadDashboard(true);
     },
-    [loadLive, loadDashboard],
-  );
-  useEffect(
-    () => () => {
-      // 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
-      if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current);
-    },
-    [],
-  );
-  const handleEnvelope = useCallback(
-    (envelope: WebSocketEnvelope) => {
+    onEnvelope: (envelope) => {
       switch (envelope.event) {
         case "position": {
           const payload = parseWsPositionPayload(envelope.payload);
@@ -309,18 +285,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
           });
           return;
         }
-        // 잇단 이벤트는 짧게 묶어 한 번만 읽는다(MonitoringPage 와 같다).
-        case "stop_arrived":
-          scheduleRefresh(false);
-          return;
-        // 탑승 수·회차 상태는 위치 응답이 아니라 대시보드 응답에 있어 함께 다시 불러온다.
-        case "rider_changed":
-        case "run_started":
-        case "run_ended":
-          scheduleRefresh(true);
-          return;
-        // 비상 알림(`emergency_raised`·`emergency_canceled`)은 `(staff)` 레이아웃의
-        // EmergencyAlertProvider 가 전 화면에서 받는다 — 여기서 또 처리하면 이중 표시다.
         case "approval_requested": {
           const payload = parseWsApprovalRequestedPayload(envelope.payload);
           setApprovalRequests((prev) =>
@@ -335,9 +299,11 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
           return;
       }
     },
-    [scheduleRefresh],
-  );
-  const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope);
+    poll: async () => {
+      const results = await Promise.all([loadLive(), loadDashboard(true)]);
+      return results.every(Boolean);
+    },
+  });
   // 연결 끊김 안내는 이 화면이 아니라 레이아웃의 연결 띠(`RealtimeConnectionStrip`)가 모든 화면에서 한 번만 띄운다.
   // `liveRuns` 는 REST 폴링(7초)이 WS 와 무관하게 계속 채우므로 WS 가 끊겨도 "오늘 등록된 회차가 없습니다" 는 여전히 사실이다.
 
@@ -353,13 +319,6 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       cancelled = true;
     };
   }, [loadDashboard, loadLive]);
-
-  // 지표·회차 표·미탑승 배너도 같은 주기로 새로 받는다. 응답을 받은 뒤 다음 요청을 예약하고,
-  // 숨은 탭에서는 멈추며, 실패하면 간격을 늘린다. 간격은 실시간 연결 상태를 따른다 — 연결돼 있으면 30초, 아니면 7초.
-  usePolling(async () => {
-    const results = await Promise.all([loadLive(), loadDashboard(true)]);
-    return results.every(Boolean);
-  }, connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS);
 
   const toAcademyRuns = runs.filter((run) => run.direction === "to_academy");
   const toAcademyRiders = sumRiders(toAcademyRuns);

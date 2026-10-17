@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { describeApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, StatStrip, StatusChip, Textarea, useToast } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, RejectReasonDialog, StatStrip, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -536,25 +536,20 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
         <p>{approveConfirmText}</p>
         <p>승인하면 노선을 다시 확정해 {crew || "기사·동승자"}에게 재배포하고 학부모에게 알립니다. 되돌릴 수 없습니다.</p>
       </Dialog>
-      <Dialog
+      <RejectReasonDialog
         open={canDecide && mode === "reject"}
         title={`${detail.studentName} 구간 변경 거절`}
-        showClose
+        confirmLabel="구간 변경 거절"
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
+        maxLength={200}
+        fieldHint="학부모에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요"
+        emptyHint="사유를 입력하면 [구간 변경 거절] 버튼이 켜집니다."
+        submitting={submitting}
+        confirmDisabled={isExpired}
+        onConfirm={handleReject}
         onClose={() => setMode(null)}
-        actionHint={rejectReason.trim() ? undefined : "사유를 입력하면 [구간 변경 거절] 버튼이 켜집니다."}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setMode(null)} disabled={submitting}>
-              뒤로
-            </Button>
-            <Button variant="danger" onClick={handleReject} disabled={submitting || isExpired || !rejectReason.trim()}>
-              {submitting ? "처리 중..." : "구간 변경 거절"}
-            </Button>
-          </>
-        }
-      >
-        <Textarea label="거절 사유" required maxLength={200} hint="학부모에게 그대로 전달됩니다 · 학생 이름·연락처는 적지 마세요" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
-      </Dialog>
+      />
     </StyledDetailLayout>
   );
 };

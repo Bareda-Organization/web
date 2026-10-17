@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeApiError } from "@/shared/lib/http";
-import { AlertBanner, OptionList, OptionListItem, SearchField, StatusChip } from "@/shared/ui";
+import { AlertBanner, SearchField, StatusChip } from "@/shared/ui";
 import type { LinkCandidateTypes } from "../types";
-import { StyledCandidateLabel, StyledCandidateList } from "./LinkCandidatePicker.styled";
+import { StyledCandidateLabel, StyledCandidateList, StyledOptionList, StyledOptionListItem } from "./LinkCandidatePicker.styled";
 
 type LinkCandidatePickerProps = {
   /** 이름 검색으로 후보를 가져온다 — 검색어가 없으면 처음 몇 명을 보여준다. */
@@ -71,12 +71,12 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
       <StyledCandidateList>
         {candidates.length === 0 && !error ? <p>검색 결과가 없습니다</p> : null}
         {candidates.length > 0 ? (
-          <OptionList>
+          <StyledOptionList>
             {candidates.map((candidate) => {
               const disabled = candidate.disabledReason !== undefined;
               const picked = selectedIds.includes(candidate.id);
               return (
-                <OptionListItem key={candidate.id} picked={picked}>
+                <StyledOptionListItem key={candidate.id} $picked={picked} aria-current={picked ? "true" : undefined}>
                   <StyledCandidateLabel $disabled={disabled}>
                     <input
                       type={multiple ? "checkbox" : "radio"}
@@ -92,10 +92,10 @@ export const LinkCandidatePicker = ({ search, selectedIds, onChange, multiple, p
                     {/* 연결할 수 없는 사유를 같은 줄에 보인다 — 눌러 본 뒤 409 ALREADY_LINKED 를 받지 않게 한다. */}
                     {disabled ? <StatusChip tone="off" marker={false}>{candidate.disabledReason}</StatusChip> : <StatusChip tone="ok" marker={false} quiet>연결 가능</StatusChip>}
                   </StyledCandidateLabel>
-                </OptionListItem>
+                </StyledOptionListItem>
               );
             })}
-          </OptionList>
+          </StyledOptionList>
         ) : null}
       </StyledCandidateList>
     </>

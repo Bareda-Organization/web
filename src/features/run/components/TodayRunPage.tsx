@@ -4,8 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError, describeApiError } from "@/shared/lib/http";
-import { usePolling, useRealtimeChannel } from "@/shared/hooks";
-import { academyLiveDestination, isStalePosition, parseWsPositionPayload, type WebSocketEnvelope } from "@/shared/lib/ws";
+import { useLiveRefresh } from "@/shared/hooks";
+import { academyLiveDestination, isStalePosition, parseWsPositionPayload } from "@/shared/lib/ws";
 import { useAuthSession } from "@/features/auth";
 import { AlertBanner, Button, Card, EmptyState, PageHeader, StatusPill } from "@/shared/ui";
 import { formatHeaderDate } from "@/shared/lib/format/dateTime";
@@ -56,14 +56,6 @@ import { formatDateTime } from "@/shared/lib/format/dateTime";
 // `position{lat,lng}` 을 준다 — 버스 마커는 그 응답에서 채운다. 위치
 // 미수신 상태(`position=null`)에서는 지도가 이 기본 좌표를 그대로 보여준다.
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
-
-// 실시간 연결이 끊겼을 때(재연결 중)의 안전망 간격 — DashboardPage.tsx 와 같은 7초.
-const LIVE_POLL_INTERVAL_MS = 7000;
-// 실시간 연결이 살아 있으면 방송(`position` · `stop_arrived` · `rider_changed` · `run_started` · `run_ended`)이 갱신을 가져온다(Ruling 873).
-// 방송이 없는 값(지연 분 · 확정 전환 · 노선 확인)과 놓친 방송은 이 느린 조회가 메운다 — MonitoringPage.tsx 와 같은 30초.
-const LIVE_POLL_CONNECTED_INTERVAL_MS = 30000;
-// 방송 뒤 재조회를 묶는 간격 — DashboardPage.tsx · MonitoringPage.tsx 와 같다.
-const EVENT_REFRESH_DEBOUNCE_MS = 300;
 
 // 명단 상태 칩(탑승 완료 · 미승차 · 미등원 …)은 `BoardingStatusChip` 이 고정 매핑으로 그린다 — 미등원은 회색(Ruling 811).
 const STATUS_LABEL: Record<string, string> = { waiting: "대기", boarded: "탑승 완료", alighted: "하차 완료", absent: "미등원", no_show: "미승차" };
@@ -337,13 +329,12 @@ export const TodayRunPage = () => {
   // 위치(`position`)는 payload 로 마커만 바꾸고(REST 를 부르지 않는다), 나머지 방송은 짧게 묶어 한 번 다시 읽는다 —
   // 이 회차의 방송이면 회차 목록 · 명단 · 위치를, 다른 회차의 방송이면 회차 목록만(우측 버스 목록의 상태가 바뀔 수 있다).
   // 명단 조회는 서버가 호출마다 감사 기록을 남기므로 이 회차와 무관한 방송으로는 읽지 않는다.
+  // 묶기 · 연결 상태에 따른 폴링 간격(연결 30초 · 끊김 7초) · 재연결 직후 보충은 `useLiveRefresh` 가 맡는다.
   const selectedRunIdRef = useRef(selectedRunId);
   // 레이아웃 효과로 맞춘다 — 타이머가 지금 보는 회차를 읽어야 하고, 일반 효과는 커밋보다 늦게 돈다(MonitoringPage.tsx 와 같다).
   useLayoutEffect(() => {
     selectedRunIdRef.current = selectedRunId;
   });
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const refreshSelectedRef = useRef(false);
   const refreshAll = useCallback(
     (includeSelected: boolean) => {
       void loadRuns(true);
@@ -355,74 +346,38 @@ export const TodayRunPage = () => {
     },
     [loadRuns, loadRoster, loadLiveRun],
   );
-  const scheduleRefresh = useCallback(
-    (forSelectedRun: boolean) => {
-      if (forSelectedRun) refreshSelectedRef.current = true;
-      if (refreshTimerRef.current !== null) return;
-      refreshTimerRef.current = setTimeout(() => {
-        refreshTimerRef.current = null;
-        const includeSelected = refreshSelectedRef.current;
-        refreshSelectedRef.current = false;
-        refreshAll(includeSelected);
-      }, EVENT_REFRESH_DEBOUNCE_MS);
-    },
-    [refreshAll],
-  );
-  useEffect(
-    () => () => {
-      // 화면을 떠나면 예약해 둔 방송 재조회도 버린다.
-      if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current);
-    },
-    [],
-  );
-  const handleEnvelope = useCallback(
-    (envelope: WebSocketEnvelope) => {
-      const isSelectedRun = envelope.runId === selectedRunIdRef.current;
-      switch (envelope.event) {
-        case "position": {
-          if (!isSelectedRun) return;
-          const payload = parseWsPositionPayload(envelope.payload);
-          setLiveRun((prev) =>
-            // 회차를 막 바꿔 새 회차의 위치 응답이 오기 전에는 prev 가 앞 회차 값이다 — 같은 회차일 때만 좌표를 바꾼다.
-            // 앞서 받은 방송보다 오래된 위치는 버린다 — REST 스냅샷(기기 시각)과는 견주지 않는다.
-            prev && prev.runId === envelope.runId && !isStalePosition(prev.position?.wsReceivedAt, payload.receivedAt)
-              ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt, wsReceivedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
-              : prev,
-          );
-          return;
-        }
-        // 다른 회차의 도착은 이 화면의 어떤 값도 바꾸지 않는다.
-        case "stop_arrived":
-          if (isSelectedRun) scheduleRefresh(true);
-          return;
-        case "rider_changed":
-        case "run_started":
-        case "run_ended":
-          scheduleRefresh(isSelectedRun);
-          return;
-        default:
-          // 비상 알림은 `(staff)` 레이아웃의 EmergencyAlertProvider 가 전 화면에서 받는다 · 탑승 승인 요청은 승인 대기 제공자가 받는다.
-          return;
-      }
-    },
-    [scheduleRefresh],
-  );
-  // 끊겼다 다시 붙으면 끊긴 사이의 방송을 되찾을 길이 없다 — 한 번 REST 로 메운다(`API_SPEC §7.2`, DashboardPage 와 같은 훅 계약).
-  const { connectionState } = useRealtimeChannel(academyLiveDestination(session?.academy?.id ?? ""), handleEnvelope, () => refreshAll(true));
-
   // 종료되지 않은 회차는 화면을 열어 둔 동안 회차 상태·명단·위치를 다시 불러온다(안전망). 표를 '불러오는 중' 으로
   // 뒤집지 않도록 전부 silent 다.
   // 응답을 받은 뒤 다음 요청을 예약한다 — 명단 조회는 서버가 호출마다 감사 기록을 남기므로 요청이 겹치면 기록도 겹친다.
-  // 숨은 탭에서는 멈추고 실패하면 간격을 늘린다. 간격은 실시간 연결 상태를 따른다 — 연결돼 있으면 30초, 아니면 7초(Ruling 873).
-  usePolling(
-    async () => {
+  // 끊겼다 다시 붙으면 끊긴 사이의 방송을 되찾을 길이 없다 — 한 번 REST 로 메운다(`API_SPEC §7.2`).
+  useLiveRefresh({
+    destination: academyLiveDestination(session?.academy?.id ?? ""),
+    // 다른 회차의 도착은 이 화면의 어떤 값도 바꾸지 않는다.
+    refreshScope: (envelope) => {
+      const isSelectedRun = envelope.runId === selectedRunIdRef.current;
+      return envelope.event === "stop_arrived" && !isSelectedRun ? null : isSelectedRun;
+    },
+    refresh: refreshAll,
+    onReconnected: () => refreshAll(true),
+    onEnvelope: (envelope) => {
+      // 위치 외의 방송 — 비상 알림은 `(staff)` 레이아웃의 EmergencyAlertProvider 가 전 화면에서 받는다 · 탑승 승인 요청은 승인 대기 제공자가 받는다.
+      if (envelope.event !== "position" || envelope.runId !== selectedRunIdRef.current) return;
+      const payload = parseWsPositionPayload(envelope.payload);
+      setLiveRun((prev) =>
+        // 회차를 막 바꿔 새 회차의 위치 응답이 오기 전에는 prev 가 앞 회차 값이다 — 같은 회차일 때만 좌표를 바꾼다.
+        // 앞서 받은 방송보다 오래된 위치는 버린다 — REST 스냅샷(기기 시각)과는 견주지 않는다.
+        prev && prev.runId === envelope.runId && !isStalePosition(prev.position?.wsReceivedAt, payload.receivedAt)
+          ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt, wsReceivedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
+          : prev,
+      );
+    },
+    poll: async () => {
       if (selectedRunId == null) return true;
       const results = await Promise.all([loadRuns(true), loadRoster(selectedRunId, true), loadLiveRun(selectedRunId, true)]);
       return results.every(Boolean);
     },
-    connectionState === "connected" ? LIVE_POLL_CONNECTED_INTERVAL_MS : LIVE_POLL_INTERVAL_MS,
-    selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
-  );
+    pollEnabled: selectedRunId != null && selectedRunStatus != null && selectedRunStatus !== "finished",
+  });
 
   // 카운트다운(미승차 대기 시간)이 있으면 1초마다, 없으면 30초마다 "지금" 을 다시 읽는다.
   const nowMs = useNow(selectedRun && selectedRun.noShowCases.length > 0 ? 1000 : 30_000);

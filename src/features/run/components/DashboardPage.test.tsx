@@ -56,8 +56,9 @@ const mockUseRealtimeChannel = vi.fn((_destination: string, onEnvelope: (envelop
   capturedOnEnvelope = onEnvelope;
   return { connectionState: mockConnectionState };
 });
-vi.mock("@/shared/hooks", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+// `useLiveRefresh` 가 채널 훅을 `./useRealtimeChannel` 에서 직접 가져오므로 그 모듈을 가짜로 바꾼다.
+vi.mock("@/shared/hooks/useRealtimeChannel", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks/useRealtimeChannel")>()),
   useRealtimeChannel: (destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void) =>
     mockUseRealtimeChannel(destination, onEnvelope),
 }));

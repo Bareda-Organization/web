@@ -53,8 +53,9 @@ vi.mock("@/features/auth", () => ({
 let capturedOnEnvelope: ((envelope: WebSocketEnvelope) => void) | undefined;
 let capturedOnReconnected: (() => void) | undefined;
 let mockConnectionState: WsConnectionState = "disconnected";
-vi.mock("@/shared/hooks", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/shared/hooks")>()),
+// `useLiveRefresh` 가 채널 훅을 `./useRealtimeChannel` 에서 직접 가져오므로 그 모듈을 가짜로 바꾼다.
+vi.mock("@/shared/hooks/useRealtimeChannel", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/hooks/useRealtimeChannel")>()),
   useRealtimeChannel: (_destination: string, onEnvelope: (envelope: WebSocketEnvelope) => void, onReconnected?: () => void) => {
     capturedOnEnvelope = onEnvelope;
     capturedOnReconnected = onReconnected;

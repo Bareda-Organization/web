@@ -260,3 +260,29 @@ export const StyledSkeletonGrid = styled.div`
   display: grid;
   gap: var(--s4);
 `;
+
+// 최근 기록 — 시각(왼쪽 48px) + 한 줄 사건
+export const StyledFeed = styled.ul`
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+
+  & > li {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: var(--s2);
+    padding: var(--s2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    line-height: 1.45;
+  }
+
+  & > li:last-of-type {
+    border-bottom: 0;
+  }
+`;
+
+export const StyledFeedTime = styled.span`
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+`;
