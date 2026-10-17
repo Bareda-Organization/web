@@ -10,6 +10,10 @@
 // 묶었지만, `CONVENTIONS_REACT.md` "PascalCase 는 React 컴포넌트와 도메인 요소(폴더)에만"
 // 규칙상 값 바인딩에 PascalCase 를 쓸 수 없다 — TS 는 네임스페이스 클래스가
 // 관용적이지도 않으므로 그냥 함수 2개로 둔다.
-export const academyLiveDestination = (academyId: string): string => `/topic/academy/${academyId}/live`;
+//
+// 학원 id 가 비어 있으면(세션을 아직 모를 때) 빈 문자열을 준다 — `useRealtimeChannel` 이 빈 목적지는 구독하지 않는다(R57 W-4).
+// 그대로 만들면 `/topic/academy//live` 가 서버로 나가 구독 거부(4403)로 연결이 닫힌다.
+export const academyLiveDestination = (academyId: string): string =>
+  academyId.trim() === "" ? "" : `/topic/academy/${academyId}/live`;
 
 export const adminLiveDestination = (): string => "/topic/admin/live";

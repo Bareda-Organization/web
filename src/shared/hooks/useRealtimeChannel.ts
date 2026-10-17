@@ -126,7 +126,8 @@ export const useRealtimeChannel = (
   }, []);
 
   useEffect(() => {
-    if (connectionState !== "connected") return;
+    // 빈 목적지(세션 전 학원 id — `academyLiveDestination("")`)는 구독하지 않는다(R57 W-4).
+    if (connectionState !== "connected" || destination === "") return;
     const client = clientRef.current;
     if (client === null) return;
     const unsubscribe = client.subscribe(destination, (envelope) => onEnvelopeRef.current(envelope));

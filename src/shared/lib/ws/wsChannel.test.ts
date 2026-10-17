@@ -9,6 +9,11 @@ describe("wsChannel", () => {
     expect(academyLiveDestination("42")).toBe("/topic/academy/42/live");
   });
 
+  it("W-4: 학원 id 가 비었으면 /topic/academy//live 를 만들지 않고 빈 목적지를 준다", () => {
+    expect(academyLiveDestination("")).toBe("");
+    expect(academyLiveDestination("  ")).toBe("");
+  });
+
   it("adminLiveDestination 은 고정 목적지 /topic/admin/live 를 만든다", () => {
     expect(adminLiveDestination()).toBe("/topic/admin/live");
   });

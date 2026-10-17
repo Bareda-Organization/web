@@ -135,6 +135,21 @@ describe("useRealtimeChannel", () => {
     expect(instances[0].subscribeCalls).toEqual([{ destination: "/topic/admin/live" }]);
   });
 
+  // R57 W-4 — 세션이 아직 없어 학원 id 가 빈 문자열이면 `academyLiveDestination("")` 이 빈 목적지를 준다. 그 목적지로는 구독하지 않고
+  // (서버에 `/topic/academy//live` SUBSCRIBE 가 나가 4403 으로 연결이 닫히던 것을 막는다), 값이 생기면 그때 구독한다.
+  it("W-4: 빈 destination 으로는 구독하지 않고, 값이 생기면 구독한다", () => {
+    const { rerender } = renderHook(({ destination }: { destination: string }) => useRealtimeChannel(destination, () => {}), {
+      initialProps: { destination: "" },
+    });
+    act(() => {
+      instances[0].emitState("connected");
+    });
+    expect(instances[0].subscribeCalls).toEqual([]);
+
+    rerender({ destination: "/topic/academy/1/live" });
+    expect(instances[0].subscribeCalls).toEqual([{ destination: "/topic/academy/1/live" }]);
+  });
+
   it("destination 이 바뀌면 옛 구독을 해제하고 새 destination 으로 다시 구독한다", () => {
     const { rerender } = renderHook(
       ({ destination }: { destination: string }) => useRealtimeChannel(destination, () => {}),
