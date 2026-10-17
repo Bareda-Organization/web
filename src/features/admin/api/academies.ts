@@ -11,40 +11,12 @@ import type {
   CreateAcademyResponseTypes,
   UpdateAcademyRequestTypes,
 } from "../types";
+import type { WithId } from "./wireId";
 
-type RawAcademySummary = {
-  id: string | number;
-  code: string;
-  name: string;
-  region: string;
-  staff_count: number;
-  user_count: number;
-  status: AcademyStatus;
-  // R48 Ruling 806 — 서버가 아직 안 주면 없다.
-  has_address?: boolean;
-  pending_signup_count?: number;
-};
+type WireAcademySummary = WithId<AcademySummaryResponseTypes, "id">;
 
-type RawAcademiesResponse = {
-  summary?: { total: number; active: number; inactive: number; user_count: number } | null;
-  items: RawAcademySummary[];
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-};
-
-const toSummary = (raw: RawAcademySummary): AcademySummaryResponseTypes => ({
-  id: asIdString(raw.id),
-  code: raw.code,
-  name: raw.name,
-  region: raw.region,
-  staffCount: raw.staff_count,
-  userCount: raw.user_count,
-  status: raw.status,
-  hasAddress: raw.has_address,
-  pendingSignupCount: raw.pending_signup_count,
-});
+// 서버 id 는 숫자 — 화면 타입은 문자열
+const toSummary = (raw: WireAcademySummary): AcademySummaryResponseTypes => ({ ...raw, id: asIdString(raw.id) });
 
 // GET /admin/academies (§6.1, ACAD-01, O-01). §1.8 페이징 — 안 넘기면 서버는 첫 20건만 준다.
 export const getAcademies = async (
@@ -52,18 +24,12 @@ export const getAcademies = async (
   status?: AcademyStatus,
   paging: PagingRequest = {},
 ): Promise<AcademiesResponseTypes> => {
-  const raw = await apiFetch<RawAcademiesResponse>("/admin/academies", {
+  const raw = await apiFetch<Omit<AcademiesResponseTypes, "items"> & { items: WireAcademySummary[] }>("/admin/academies", {
     method: "GET",
     query: { q: q || undefined, status, page: paging.page, size: paging.size },
   });
-  return {
-    summary: raw.summary ? { total: raw.summary.total, active: raw.summary.active, inactive: raw.summary.inactive, userCount: raw.summary.user_count } : null,
-    items: raw.items.map(toSummary),
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-  };
+  // summary 는 서버가 안 주면 null (Ruling 806)
+  return { ...raw, summary: raw.summary ?? null, items: raw.items.map(toSummary) };
 };
 
 const ALL_ACADEMIES_PAGE_SIZE = 100;
@@ -81,49 +47,37 @@ export const getAllAcademies = async (): Promise<AcademySummaryResponseTypes[]> 
   return all;
 };
 
-type RawStaffAccountRef = { account_id: string | number; name: string; login_id: string; last_login_at?: string | null; status: string };
+// status 는 모르는 값이 와도 active 로 본다
+type WireStaffAccountRef = Omit<WithId<AcademyStaffAccountRefResponseTypes, "accountId">, "status"> & { status: string };
 
-type RawAcademyDetail = RawAcademySummary & {
-  address: string | null;
-  contact: string | null;
-  memo: string | null;
-  staff_accounts: RawStaffAccountRef[];
-  stats: { moving_bus_count: number; moving_bus_nos?: string[] };
+type WireAcademyDetail = Omit<WithId<AcademyDetailResponseTypes, "id">, "staffAccounts"> & {
+  staffAccounts: WireStaffAccountRef[];
 };
 
-const toStaffAccountRef = (raw: RawStaffAccountRef): AcademyStaffAccountRefResponseTypes => ({
-  accountId: asIdString(raw.account_id),
-  name: raw.name,
-  loginId: raw.login_id,
-  lastLoginAt: raw.last_login_at ?? null,
+// 서버 id 는 숫자 · lastLoginAt 은 없으면 null · status 는 active/inactive 둘로 좁힌다
+const toStaffAccountRef = (raw: WireStaffAccountRef): AcademyStaffAccountRefResponseTypes => ({
+  ...raw,
+  accountId: asIdString(raw.accountId),
+  lastLoginAt: raw.lastLoginAt ?? null,
   status: raw.status === "inactive" ? "inactive" : "active",
 });
 
 // GET /admin/academies/{id} (§6.3, ACAD-03, O-01).
 export const getAcademy = async (id: string): Promise<AcademyDetailResponseTypes> => {
-  const raw = await apiFetch<RawAcademyDetail>(`/admin/academies/${id}`, { method: "GET" });
+  const raw = await apiFetch<WireAcademyDetail>(`/admin/academies/${id}`, { method: "GET" });
   return {
-    ...toSummary(raw),
-    address: raw.address,
-    contact: raw.contact,
-    memo: raw.memo,
-    staffAccounts: raw.staff_accounts.map(toStaffAccountRef),
-    stats: { movingBusCount: raw.stats.moving_bus_count, movingBusNos: raw.stats.moving_bus_nos ?? [] },
+    ...raw,
+    id: asIdString(raw.id),
+    staffAccounts: raw.staffAccounts.map(toStaffAccountRef),
+    // 서버가 안 주면 빈 배열
+    stats: { ...raw.stats, movingBusNos: raw.stats.movingBusNos ?? [] },
   };
-};
-
-type RawCreateAcademyResponse = {
-  academy_id: string | number;
-  code: string;
-  name: string;
-  region: string;
-  warnings: string[];
 };
 
 // POST /admin/academies (§6.2, ACAD-02, O-01). code 는 서버 자동 생성 — 요청에 없다.
 // 학원명+지역 중복은 저장을 막지 않고 warnings[] 로만 알린다.
 export const createAcademy = async (payload: CreateAcademyRequestTypes): Promise<CreateAcademyResponseTypes> => {
-  const raw = await apiFetch<RawCreateAcademyResponse>("/admin/academies", {
+  const raw = await apiFetch<WithId<CreateAcademyResponseTypes, "academyId">>("/admin/academies", {
     method: "POST",
     body: {
       name: payload.name,
@@ -133,13 +87,7 @@ export const createAcademy = async (payload: CreateAcademyRequestTypes): Promise
       memo: payload.memo,
     },
   });
-  return {
-    academyId: asIdString(raw.academy_id),
-    code: raw.code,
-    name: raw.name,
-    region: raw.region,
-    warnings: raw.warnings,
-  };
+  return { ...raw, academyId: asIdString(raw.academyId) };
 };
 
 // PATCH /admin/academies/{id} (§6.3, ACAD-04, O-01). code 는 수정 대상 밖 — 요청에 안 싣는다.

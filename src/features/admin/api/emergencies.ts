@@ -1,89 +1,36 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
-import type {
-  EmergenciesResponseTypes,
-  EmergencyAcademyRefResponseTypes,
-  EmergencyItemResponseTypes,
-  EmergencyPersonResponseTypes,
-  EmergencyPositionResponseTypes,
-  EmergencyType,
-} from "../types";
+import type { EmergenciesResponseTypes, EmergencyItemResponseTypes, EmergencyPositionResponseTypes } from "../types";
+import type { WithId } from "./wireId";
 
-type RawAcademyRef = { id: string | number; name: string; contact: string | null };
-type RawPerson = { name: string | null; role: string; phone: string | null };
 // 서버는 위치 기록이 없으면 null 이 아니라 세 값이 모두 null 인 객체를 준다(§5.16 · Ruling 848 ③).
-type RawPosition = { lat: number | null; lng: number | null; recorded_at: string | null } | null;
+type WirePosition = { lat: number | null; lng: number | null; recordedAt: string | null } | null;
 
-type RawEmergencyItem = {
-  emergency_id: string | number;
-  academy: RawAcademyRef;
-  type: EmergencyType;
-  memo: string | null;
-  raised_by: RawPerson;
-  run_id: string | number;
-  bus_no: string;
-  direction: "to_academy" | "from_academy";
-  position: RawPosition;
-  rider_count: number;
-  contacts: RawPerson[];
-  raised_at: string;
-  occurred_at?: string | null;
-  staff_acked: boolean;
-  acked_at: string | null;
-  canceled_at: string | null;
-  acked_by: { name: string; memo: string | null } | null;
-  elapsed_since_raised: number;
+type WireEmergencyItem = Omit<EmergencyItemResponseTypes, "emergencyId" | "academy" | "runId" | "position"> & {
+  emergencyId: string | number;
+  academy: WithId<EmergencyItemResponseTypes["academy"], "id">;
+  runId: string | number;
+  position: WirePosition;
 };
 
-// BE-R1 목표 2 이전에는 실제 응답의 최상위 키가 `emergencies` 였다(§6.11 문서와 어긋났었다).
-// 서버가 §6.11·§5.16 대로 `items` 를 내려보내게 고쳐져 이 어댑터도 함께 맞춘다.
-type RawEmergenciesResponse = { items: RawEmergencyItem[]; unacked_count: number; counts?: { open: number; acked: number; canceled: number } };
+const toPosition = (raw: WirePosition): EmergencyPositionResponseTypes =>
+  raw && raw.lat !== null && raw.lng !== null ? { lat: raw.lat, lng: raw.lng, recordedAt: raw.recordedAt } : null;
 
-const toAcademyRef = (raw: RawAcademyRef): EmergencyAcademyRefResponseTypes => ({
-  id: asIdString(raw.id),
-  name: raw.name,
-  contact: raw.contact,
-});
-
-const toPerson = (raw: RawPerson): EmergencyPersonResponseTypes => ({
-  name: raw.name,
-  role: raw.role,
-  phone: raw.phone,
-});
-
-const toPosition = (raw: RawPosition): EmergencyPositionResponseTypes =>
-  raw && raw.lat !== null && raw.lng !== null ? { lat: raw.lat, lng: raw.lng, recordedAt: raw.recorded_at } : null;
-
-const toEmergencyItem = (raw: RawEmergencyItem): EmergencyItemResponseTypes => ({
-  emergencyId: asIdString(raw.emergency_id),
-  academy: toAcademyRef(raw.academy),
-  type: raw.type,
-  memo: raw.memo,
-  raisedBy: toPerson(raw.raised_by),
-  runId: asIdString(raw.run_id),
-  busNo: raw.bus_no,
-  direction: raw.direction,
+// 서버 id 는 숫자 · 위치 없음 객체를 null 로 · occurredAt 은 없으면 null
+const toEmergencyItem = (raw: WireEmergencyItem): EmergencyItemResponseTypes => ({
+  ...raw,
+  emergencyId: asIdString(raw.emergencyId),
+  academy: { ...raw.academy, id: asIdString(raw.academy.id) },
+  runId: asIdString(raw.runId),
   position: toPosition(raw.position),
-  riderCount: raw.rider_count,
-  contacts: raw.contacts.map(toPerson),
-  raisedAt: raw.raised_at,
-  occurredAt: raw.occurred_at ?? null,
-  staffAcked: raw.staff_acked,
-  ackedAt: raw.acked_at,
-  canceledAt: raw.canceled_at,
-  ackedBy: raw.acked_by,
-  elapsedSinceRaised: raw.elapsed_since_raised,
+  occurredAt: raw.occurredAt ?? null,
 });
 
 // GET /admin/emergencies (§6.11, O-07). status·academy_id 쿼리는 목록 화면의 필터에 대응한다.
 export const getEmergencies = async (status?: string, academyId?: string): Promise<EmergenciesResponseTypes> => {
-  const raw = await apiFetch<RawEmergenciesResponse>("/admin/emergencies", {
+  const raw = await apiFetch<Omit<EmergenciesResponseTypes, "items"> & { items: WireEmergencyItem[] }>("/admin/emergencies", {
     method: "GET",
     query: { status, academy_id: academyId },
   });
-  return {
-    items: raw.items.map(toEmergencyItem),
-    unackedCount: raw.unacked_count,
-    counts: raw.counts,
-  };
+  return { ...raw, items: raw.items.map(toEmergencyItem) };
 };

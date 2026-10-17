@@ -1,44 +1,20 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
-import type { ForceFinishResponseTypes, StaleMovingRunListResponseTypes } from "../types";
-
-type RawStaleMovingRunListResponse = {
-  items: {
-    run_id: string | number;
-    academy_id: string | number;
-    academy_name: string;
-    // §6.16 academy_contact(Ruling 808) — 미등록이면 null, 서버가 아직 안 주면 없다.
-    academy_contact?: string | null;
-    service_date: string;
-    direction: "to_academy" | "from_academy";
-    bus_no: string;
-    started_at: string | null;
-    finish_pending: boolean;
-    boarded_count: number;
-  }[];
-};
-
-type RawForceFinishResponse = {
-  run_id: string | number;
-  finished_at: string;
-  boarded_count: number;
-};
+import type { ForceFinishResponseTypes, StaleMovingRunItemResponseTypes, StaleMovingRunListResponseTypes } from "../types";
+import type { WithId } from "./wireId";
 
 // GET /admin/runs/stale-moving (§6.16) — `StaleMovingRun` 경보가 세는 회차(운행일이 어제보다 이른 미취소 이동 중 회차)와 같다. 운행일 오름차순.
 export const getStaleMovingRuns = async (): Promise<StaleMovingRunListResponseTypes> => {
-  const raw = await apiFetch<RawStaleMovingRunListResponse>("/admin/runs/stale-moving", { method: "GET" });
+  const raw = await apiFetch<{ items: WithId<StaleMovingRunItemResponseTypes, "runId" | "academyId">[] }>("/admin/runs/stale-moving", {
+    method: "GET",
+  });
+  // 서버 id 는 숫자 · academyContact 는 미등록이거나 서버가 안 주면 null (Ruling 808)
   return {
     items: raw.items.map((item) => ({
-      runId: asIdString(item.run_id),
-      academyId: asIdString(item.academy_id),
-      academyName: item.academy_name,
-      academyContact: item.academy_contact ?? null,
-      serviceDate: item.service_date,
-      direction: item.direction,
-      busNo: item.bus_no,
-      startedAt: item.started_at,
-      finishPending: item.finish_pending,
-      boardedCount: item.boarded_count,
+      ...item,
+      runId: asIdString(item.runId),
+      academyId: asIdString(item.academyId),
+      academyContact: item.academyContact ?? null,
     })),
   };
 };
@@ -47,9 +23,10 @@ export const getStaleMovingRuns = async (): Promise<StaleMovingRunListResponseTy
 // reason 은 공백만으로 채울 수 없다(빈 문자열 검증은 호출부 화면에서 막는다).
 // 화면이 코드로 분기하는 오류 — RUN_NOT_MOVING·RUN_NOT_STALE·RUN_CANCELED(§6.17 · §8 사전에 등재, `apiErrorCodes.ts`).
 export const forceFinishRun = async (runId: string, reason: string): Promise<ForceFinishResponseTypes> => {
-  const raw = await apiFetch<RawForceFinishResponse>(`/admin/runs/${runId}/force-finish`, {
+  const raw = await apiFetch<WithId<ForceFinishResponseTypes, "runId">>(`/admin/runs/${runId}/force-finish`, {
     method: "POST",
     body: { reason },
   });
-  return { runId: asIdString(raw.run_id), finishedAt: raw.finished_at, boardedCount: raw.boarded_count };
+  // 서버 id 는 숫자 — 화면 타입은 문자열
+  return { ...raw, runId: asIdString(raw.runId) };
 };

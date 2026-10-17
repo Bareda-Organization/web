@@ -1,96 +1,30 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
-import type {
-  AcademyRunsLiveResponseTypes,
-  LiveContactResponseTypes,
-  LivePositionResponseTypes,
-  LiveStopResponseTypes,
-  RunLiveItemResponseTypes,
-  RunStatus,
-} from "../types";
+import type { AcademyRunsLiveResponseTypes, RunLiveItemResponseTypes } from "../types";
+import type { WithId } from "./wireId";
 
-type RawPosition = { lat: number; lng: number; received_at: string } | null;
-
-type RawLiveStop = {
-  stop_id: string | number;
-  seq: number;
-  name: string;
-  lat: number;
-  lng: number;
-  change: string | null;
-  arrived_at: string | null;
-  eta: string | null;
+// 서버가 아직 안 주면 없는 칸(delayMinutes · finishedAt, Ruling 805)과 id 숫자를 받는 서버 모양.
+type WireRunLiveItem = Omit<RunLiveItemResponseTypes, "runId" | "stops"> & {
+  runId: string | number;
+  stops: WithId<RunLiveItemResponseTypes["stops"][number], "stopId">[];
 };
 
-type RawContact = { name: string; phone: string } | null;
-
-type RawRunLiveItem = {
-  run_id: string | number;
-  bus_no: string;
-  direction: "to_academy" | "from_academy";
-  run_status: RunStatus;
-  position: RawPosition;
-  last_seen_at: string | null;
-  depart_time: string;
-  confirm_at: string;
-  est_depart_time: string;
-  stops: RawLiveStop[];
-  destination_eta: string | null;
-  driver: RawContact;
-  escort: RawContact;
-  // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`). 강제 확정
-  // 대상(§6.14)을 알아보는 재료 — `ForceConfirmPage` 가 이 값으로 문구를 낸다.
-  consecutive_failures: number;
-  // R48 Ruling 805 — 서버가 아직 안 주면 없다.
-  delay_minutes?: number | null;
-  finished_at?: string | null;
-};
-
-type RawAcademyRunsLiveResponse = { runs: RawRunLiveItem[] };
-
-const toPosition = (raw: RawPosition): LivePositionResponseTypes =>
-  raw ? { lat: raw.lat, lng: raw.lng, receivedAt: raw.received_at } : null;
-
-const toStop = (raw: RawLiveStop): LiveStopResponseTypes => ({
-  stopId: asIdString(raw.stop_id),
-  seq: raw.seq,
-  name: raw.name,
-  lat: raw.lat,
-  lng: raw.lng,
-  change: raw.change,
-  arrivedAt: raw.arrived_at,
-  eta: raw.eta,
-});
-
-// ⚠ 배치되지 않은 회차는 기사·동승자가 없다 — R16 이 §6.8 을 오늘 4종 상태 전부로 넓히면서
-// (Ruling 315) idle·confirmed 회차가 목록에 들어왔고, 그 회차에는 배치가 아직 없다. 옛 판은
-// moving 만 오던 시절의 가정(항상 배치돼 있다)으로 raw.name 을 바로 읽어 TypeError 로 죽었다.
-const toContact = (raw: RawContact): LiveContactResponseTypes | null =>
-  raw == null ? null : { name: raw.name, phone: raw.phone };
-
-const toRunLiveItem = (raw: RawRunLiveItem): RunLiveItemResponseTypes => ({
-  runId: asIdString(raw.run_id),
-  busNo: raw.bus_no,
-  direction: raw.direction,
-  runStatus: raw.run_status,
-  position: toPosition(raw.position),
-  lastSeenAt: raw.last_seen_at,
-  departTime: raw.depart_time,
-  confirmAt: raw.confirm_at,
-  estDepartTime: raw.est_depart_time,
-  stops: raw.stops.map(toStop),
-  destinationEta: raw.destination_eta,
-  driver: toContact(raw.driver),
-  escort: toContact(raw.escort),
-  consecutiveFailures: raw.consecutive_failures,
-  delayMinutes: raw.delay_minutes ?? null,
-  finishedAt: raw.finished_at ?? null,
+// 서버 id 는 숫자 · delayMinutes · finishedAt 은 없으면 null.
+// ⚠ 배치되지 않은 회차(idle · confirmed, Ruling 315)는 driver · escort 가 null — 그대로 통과시키되 undefined 는 null 로 맞춘다.
+const toRunLiveItem = (raw: WireRunLiveItem): RunLiveItemResponseTypes => ({
+  ...raw,
+  runId: asIdString(raw.runId),
+  stops: raw.stops.map((stop) => ({ ...stop, stopId: asIdString(stop.stopId) })),
+  driver: raw.driver ?? null,
+  escort: raw.escort ?? null,
+  delayMinutes: raw.delayMinutes ?? null,
+  finishedAt: raw.finishedAt ?? null,
 });
 
 // GET /admin/academies/{id}/runs/live (§6.8, O-05 · O-06). 학원 경계를 넘나드는 화면이라
 // 호출부(컴포넌트)가 학원 목록을 먼저 받아 이 함수를 학원마다 돌린다.
 export const getAcademyRunsLive = async (academyId: string): Promise<AcademyRunsLiveResponseTypes> => {
-  const raw = await apiFetch<RawAcademyRunsLiveResponse>(`/admin/academies/${academyId}/runs/live`, {
+  const raw = await apiFetch<{ runs: WireRunLiveItem[] }>(`/admin/academies/${academyId}/runs/live`, {
     method: "GET",
   });
   return { runs: raw.runs.map(toRunLiveItem) };
