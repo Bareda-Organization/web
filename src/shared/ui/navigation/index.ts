@@ -1,6 +1,3 @@
-export { TabBar } from "./TabBar";
-export type { TabBarProps } from "./TabBar";
-
 export { SideNav } from "./SideNav";
 export type { SideNavProps } from "./SideNav";
 

@@ -7,7 +7,5 @@ export { login } from "./login";
 export { refresh } from "./refresh";
 export { logout } from "./logout";
 export { changePassword } from "./password";
-export { recoverAccount } from "./recover";
 export { resetAccountPassword } from "./passwordReset";
 export { getMe } from "./me";
-export { registerDevice, unregisterDevice } from "./devices";

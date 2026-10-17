@@ -8,13 +8,6 @@ export const StyledStudentLayout = styled.div`
   padding: 0 24px 24px;
 `;
 
-export const StyledStudentToolbar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-`;
-
 export const StyledSubText = styled.small`
   display: block;
   font-size: var(--fs-xs);

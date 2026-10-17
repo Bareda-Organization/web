@@ -1,9 +1,6 @@
 export { RosterTable } from "./RosterTable";
 export type { RosterTableProps } from "./RosterTable";
 
-export { StatCard } from "./StatCard";
-export type { StatCardProps } from "./StatCard";
-
 export { StatStrip } from "./StatStrip";
 export type { StatStripItem, StatStripProps } from "./StatStrip";
 

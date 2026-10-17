@@ -5,14 +5,6 @@ import type { ReactNode } from "react";
 // 하위 타입이다 — 컴포넌트 자체의 Props 타입은 각 컴포넌트 파일 맨 위에 둔다
 // (`docs/frontend/web/CONVENTIONS_REACT.md` "타입" 절: "props 안에서 쓰는 배열·객체 타입 포함").
 
-/** TabBar 탭 항목 */
-export type TabBarItem = {
-  value: string;
-  label: string;
-  icon: string;
-  badge?: number;
-};
-
 /** SideNav 메뉴 항목 */
 export type SideNavItem = {
   value: string;

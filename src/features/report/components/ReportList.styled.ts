@@ -8,13 +8,6 @@ export const StyledReportLayout = styled.div`
   padding: 0 24px 24px;
 `;
 
-export const StyledReportFilters = styled.div`
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-`;
-
 export const StyledReportNote = styled.small`
   display: block;
   font-size: var(--fs-xs);

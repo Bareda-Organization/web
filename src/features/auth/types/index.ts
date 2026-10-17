@@ -84,26 +84,6 @@ export type ChangePasswordRequestTypes = {
   newPassword: string;
 };
 
-export type RecoverAccountRequestTypes = {
-  type: "login_id" | "password";
-  phone: string;
-  verificationCode?: string;
-};
-
-export type DevicePlatform = "android" | "ios" | "web";
-
-export type DeviceRegisterRequestTypes = {
-  token: string;
-  platform: DevicePlatform;
-  deviceId: string;
-  appVersion?: string;
-};
-
-export type DeviceRegisterResponseTypes = {
-  deviceId: string;
-  registeredAt: string;
-};
-
 // AuthSessionProvider 가 들고 있는 세션 스냅샷. 로그인·새로고침 재발급·`/me` 조회가
 // 전부 이 형태로 합쳐진다 — 화면은 이 타입 하나만 보고 판단한다.
 export type AuthSession = {
