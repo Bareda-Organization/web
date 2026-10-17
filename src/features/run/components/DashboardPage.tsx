@@ -293,15 +293,15 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       switch (envelope.event) {
         case "position": {
           const payload = parseWsPositionPayload(envelope.payload);
-          // 목록에 없는 회차와 화면 값보다 오래된 위치는 같은 배열을 돌려준다 — 새 배열은 다시 그리기를 부른다(R57 W-2 · W-7).
+          // 목록에 없는 회차와 앞서 받은 방송보다 오래된 위치는 같은 배열을 돌려준다 — 새 배열은 다시 그리기를 부른다(R57 W-2 · W-7). 방송은 방송끼리만 견준다(`wsReceivedAt` · fix1 F1).
           setLiveRuns((prev) => {
             const target = prev.find((run) => String(run.runId) === envelope.runId);
-            if (target === undefined || isStalePosition(target.position?.recordedAt, payload.receivedAt)) return prev;
+            if (target === undefined || isStalePosition(target.position?.wsReceivedAt, payload.receivedAt)) return prev;
             return prev.map((run) =>
               run === target
                 ? {
                     ...run,
-                    position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt },
+                    position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt, wsReceivedAt: payload.receivedAt },
                     currentStop: payload.currentStopName ?? run.currentStop,
                   }
                 : run,

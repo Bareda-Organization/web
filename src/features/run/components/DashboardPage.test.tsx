@@ -516,6 +516,24 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
     expect(screen.queryByText("현재 1번 정류장 → 다음 후문")).not.toBeInTheDocument();
   });
 
+  // R57 fix1 F1 — REST 스냅샷의 `recorded_at` 은 기기 시각이고 방송의 `received_at` 은 서버 시각이다(서로 다른 시계). 기기 시계가 3분 앞선 스냅샷
+  // 때문에 첫 방송이 "낡은 값"으로 버려지면 안 된다 — 방송은 같은 시계(앞서 받은 방송의 `received_at`)와만 견준다.
+  it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 반영된다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue({
+      runs: [{ ...baseLiveRun, position: { lat: 37.1, lng: 127.1, recordedAt: "2026-09-13T00:03:00Z" } }],
+    });
+    render(<DashboardPage />);
+    await screen.findByText("현재 정문 → 다음 후문");
+
+    act(() => {
+      capturedOnEnvelope?.(
+        envelope("position", { lat: 37.5, lng: 127.0, received_at: "2026-09-13T00:00:00Z", current_stop_name: "3번 정류장", eta: null }),
+      );
+    });
+    expect(await screen.findByText("현재 3번 정류장 → 다음 후문")).toBeInTheDocument();
+  });
+
   it.each(["stop_arrived", "rider_changed", "run_started", "run_ended"] as const)(
     "%s 이벤트는 payload 를 직접 반영하지 않고 실시간 목록을 재조회한다",
     async (eventType) => {

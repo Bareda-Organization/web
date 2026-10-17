@@ -984,6 +984,23 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
       expect(mockMapSurface).not.toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.1 })] }));
     });
 
+    // R57 fix1 F1 — REST 스냅샷 `recorded_at`(기기 시각)과 방송 `received_at`(서버 시각)은 다른 시계다. 기기 시계가 3분 앞서도 첫 방송은 반영된다.
+    it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 마커를 옮긴다", async () => {
+      mockGetRunRoster.mockResolvedValue(baseRoster);
+      mockGetRunsLive.mockResolvedValue({
+        runs: [{ ...liveRun7(37.5, 127.0).runs[0], position: { lat: 37.5, lng: 127.0, recordedAt: "2026-10-10T08:08:00+09:00" } }],
+      });
+      render(<TodayRunPage />);
+      await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
+
+      act(() =>
+        capturedOnEnvelope?.(envelope("position", { lat: 37.7, lng: 127.2, received_at: "2026-10-10T08:05:00+09:00", current_stop_name: "후문", eta: null })),
+      );
+      await waitFor(() =>
+        expect(mockMapSurface).toHaveBeenLastCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.7, lng: 127.2 })] })),
+      );
+    });
+
     it("다른 회차의 방송은 회차 목록만 다시 읽고 이 회차의 명단은 읽지 않는다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);

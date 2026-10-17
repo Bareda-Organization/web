@@ -384,9 +384,9 @@ export const TodayRunPage = () => {
           const payload = parseWsPositionPayload(envelope.payload);
           setLiveRun((prev) =>
             // 회차를 막 바꿔 새 회차의 위치 응답이 오기 전에는 prev 가 앞 회차 값이다 — 같은 회차일 때만 좌표를 바꾼다.
-            // 화면 값보다 오래된 위치는 버린다(R57 W-7).
-            prev && prev.runId === envelope.runId && !isStalePosition(prev.position?.recordedAt, payload.receivedAt)
-              ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
+            // 앞서 받은 방송보다 오래된 위치는 버린다 — REST 스냅샷(기기 시각)과는 견주지 않는다(R57 W-7 · fix1 F1).
+            prev && prev.runId === envelope.runId && !isStalePosition(prev.position?.wsReceivedAt, payload.receivedAt)
+              ? { ...prev, position: { lat: payload.lat, lng: payload.lng, recordedAt: payload.receivedAt, wsReceivedAt: payload.receivedAt }, currentStop: payload.currentStopName ?? prev.currentStop }
               : prev,
           );
           return;
