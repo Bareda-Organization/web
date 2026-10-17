@@ -1,44 +1,19 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
   AssignmentEntryResponseTypes,
   AssignmentRequestTypes,
   AssignmentResponseTypes,
   AssignmentWarningResponseTypes,
-  ManagerRole,
 } from "../types";
 
-type RawAssignmentEntry = {
-  manager_id: string | number;
-  name: string;
-  role: ManagerRole;
+// 서버 id 는 숫자 — 화면 타입은 문자열.
+type WireAssignment = Omit<AssignmentResponseTypes, "runId" | "assignments" | "warnings"> & {
+  runId: string | number;
+  assignments: WithId<AssignmentEntryResponseTypes, "managerId">[];
+  warnings: WithId<AssignmentWarningResponseTypes, "managerId">[];
 };
-
-type RawAssignmentWarning = {
-  code: AssignmentWarningResponseTypes["code"];
-  manager_id: string | number;
-  role: ManagerRole;
-  message: string;
-};
-
-type RawAssignmentResponse = {
-  run_id: string | number;
-  assignments: RawAssignmentEntry[];
-  warnings: RawAssignmentWarning[];
-};
-
-const toEntry = (raw: RawAssignmentEntry): AssignmentEntryResponseTypes => ({
-  managerId: asIdString(raw.manager_id),
-  name: raw.name,
-  role: raw.role,
-});
-
-const toWarning = (raw: RawAssignmentWarning): AssignmentWarningResponseTypes => ({
-  code: raw.code,
-  managerId: asIdString(raw.manager_id),
-  role: raw.role,
-  message: raw.message,
-});
 
 // PATCH /staff/runs/{runId}/assignment (§5.14, A-06).
 // ⚠ 정본에는 시간 창 제약(CHANGE_WINDOW_CLOSED)이 없다 — WORK_HOURS_MISMATCH ·
@@ -56,13 +31,13 @@ export const patchRunAssignment = async (
     body.escort_manager_id = payload.escortManagerId;
   }
 
-  const raw = await apiFetch<RawAssignmentResponse>(`/staff/runs/${runId}/assignment`, {
+  const raw = await apiFetch<WireAssignment>(`/staff/runs/${runId}/assignment`, {
     method: "PATCH",
     body,
   });
   return {
-    runId: asIdString(raw.run_id),
-    assignments: raw.assignments.map(toEntry),
-    warnings: raw.warnings.map(toWarning),
+    runId: asIdString(raw.runId),
+    assignments: raw.assignments.map((entry) => ({ ...entry, managerId: asIdString(entry.managerId) })),
+    warnings: raw.warnings.map((warning) => ({ ...warning, managerId: asIdString(warning.managerId) })),
   };
 };

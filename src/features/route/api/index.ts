@@ -1,109 +1,60 @@
 import { apiFetch } from "@/shared/lib/http";
 import { asIdString } from "@/shared/lib/ws";
+import type { WithId } from "@/shared/lib/http/wireId";
 import type {
   RouteDetailResponseTypes,
-  RouteListItemResponseTypes,
   RouteListResponseTypes,
   RoutePathResponseTypes,
+  NearbyStopTypes,
   RouteStop,
   RouteStopSaveItemTypes,
   RouteSummaryTypes,
   RouteUpsertRequestTypes,
-  RunDirection,
   RunRouteResponseTypes,
   StopListItemTypes,
   StopListResponseTypes,
   StopSuggestionTypes,
   StopUpdateRequestTypes,
-  Weekday,
 } from "../types";
 
-// `is_destination` 는 RTE-01(고정 노선 편성) 응답에는 없고 §4.3·§5.19 응답에만
-// 온다 — `?:` 로 두고 매핑에서 `?? false` 로 기본값을 준다.
-type RawRouteStop = {
-  stop_id: string | number;
-  seq: number;
-  name: string;
-  lat: number;
-  lng: number;
-  is_destination?: boolean;
-  is_waypoint?: boolean;
-  waypoint_id?: string | number | null;
-  change?: "added" | "skipped" | null;
-  rider_count?: number;
-};
+// 서버 id 는 숫자 — 화면 타입은 문자열. `isDestination` 은 RTE-01(고정 노선 편성) 응답에는 없고 §4.3·§5.19 응답에만 온다.
+// isWaypoint · waypointId · change 도 없을 수 있어 아래에서 기본값을 준다.
+type WireRouteStop = Omit<RouteStop, "stopId" | "waypointId"> & { stopId: string | number; waypointId?: string | number | null };
+type WireRouteDetail = WithId<RouteSummaryTypes, "id" | "busId"> & { stops: WireRouteStop[] };
 
-type RawRouteSummary = {
-  id: string | number;
-  bus_id: string | number;
-  bus_no: string;
-  weekday: Weekday;
-  direction: RunDirection;
-  name: string | null;
-  active: boolean;
-};
-
-// 목록 항목만 정차지 수(`stop_count`)를 싣는다 — 상세는 stops[] 를 싣는다(§5.9).
-type RawRouteListItem = RawRouteSummary & { stop_count: number };
-
-type RawRouteListResponse = {
-  items: RawRouteListItem[];
-  page: number;
-  size: number;
-  total_count: number;
-  has_next: boolean;
-};
-
-type RawRouteDetail = RawRouteSummary & { stops: RawRouteStop[] };
-
-const toStop = (raw: RawRouteStop): RouteStop => ({
-  stopId: asIdString(raw.stop_id),
-  seq: raw.seq,
-  name: raw.name,
-  lat: raw.lat,
-  lng: raw.lng,
-  isDestination: raw.is_destination ?? false,
-  isWaypoint: raw.is_waypoint ?? false,
-  waypointId: raw.waypoint_id == null ? null : asIdString(raw.waypoint_id),
+const toStop = (raw: WireRouteStop): RouteStop => ({
+  ...raw,
+  stopId: asIdString(raw.stopId),
+  isDestination: raw.isDestination ?? false,
+  isWaypoint: raw.isWaypoint ?? false,
+  waypointId: raw.waypointId == null ? null : asIdString(raw.waypointId),
   change: raw.change ?? null,
-  riderCount: raw.rider_count,
 });
 
-const toSummary = (raw: RawRouteSummary): RouteSummaryTypes => ({
+// 서버 id 는 숫자 — 화면 타입은 문자열.
+const toSummary = (raw: WithId<RouteSummaryTypes, "id" | "busId">): RouteSummaryTypes => ({
+  ...raw,
   id: asIdString(raw.id),
-  busId: asIdString(raw.bus_id),
-  busNo: raw.bus_no,
-  weekday: raw.weekday,
-  direction: raw.direction,
-  name: raw.name,
-  active: raw.active,
+  busId: asIdString(raw.busId),
 });
 
-const toListItem = (raw: RawRouteListItem): RouteListItemResponseTypes => ({
-  ...toSummary(raw),
-  stopCount: raw.stop_count,
-});
-
-const toDetail = (raw: RawRouteDetail): RouteDetailResponseTypes => ({
+const toDetail = (raw: WireRouteDetail): RouteDetailResponseTypes => ({
   ...toSummary(raw),
   stops: raw.stops.map(toStop),
 });
 
 // GET /staff/routes (RTE-01, §1.8 페이징) — 비활성 편성도 실린다(편성 이력 보존).
 export const getRoutes = async (page: number, size = 20): Promise<RouteListResponseTypes> => {
-  const raw = await apiFetch<RawRouteListResponse>("/staff/routes", { method: "GET", query: { page, size } });
-  return {
-    items: raw.items.map(toListItem),
-    page: raw.page,
-    size: raw.size,
-    totalCount: raw.total_count,
-    hasNext: raw.has_next,
-  };
+  const raw = await apiFetch<Omit<RouteListResponseTypes, "items"> & { items: (WithId<RouteSummaryTypes, "id" | "busId"> & { stopCount: number })[] }>(
+    "/staff/routes",
+    { method: "GET", query: { page, size } },
+  );
+  return { ...raw, items: raw.items.map((item) => ({ ...toSummary(item), stopCount: item.stopCount })) };
 };
 
 // GET /staff/routes/{id} — 정차 순서를 seq 차례로 함께 싣는다.
 export const getRouteDetail = async (id: string): Promise<RouteDetailResponseTypes> => {
-  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}`, { method: "GET" });
+  const raw = await apiFetch<WireRouteDetail>(`/staff/routes/${id}`, { method: "GET" });
   return toDetail(raw);
 };
 
@@ -118,7 +69,7 @@ const toBody = (request: RouteUpsertRequestTypes) => ({
 
 // POST /staff/routes — 201. stop_ids 를 생략하면 정차지 없이 시작한다.
 export const createRoute = async (request: RouteUpsertRequestTypes): Promise<RouteDetailResponseTypes> => {
-  const raw = await apiFetch<RawRouteDetail>("/staff/routes", { method: "POST", body: toBody(request) });
+  const raw = await apiFetch<WireRouteDetail>("/staff/routes", { method: "POST", body: toBody(request) });
   return toDetail(raw);
 };
 
@@ -128,7 +79,7 @@ export const updateRoute = async (
   id: string,
   request: Partial<RouteUpsertRequestTypes>,
 ): Promise<RouteDetailResponseTypes> => {
-  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}`, {
+  const raw = await apiFetch<WireRouteDetail>(`/staff/routes/${id}`, {
     method: "PATCH",
     body: toBody(request as RouteUpsertRequestTypes),
   });
@@ -141,71 +92,44 @@ export const deleteRoute = async (id: string): Promise<void> => {
 };
 
 // POST /staff/routes/{id}/optimize (RTE-09) — 미리보기 플래그가 없다. 호출 즉시
-// 기존 수동 순서를 버리고 커밋한다(§2 판단 근거 — 그래서 화면에 확인 단계를 둔다).
-// 기준점은 보내지 않는다 — 서버가 방향 규칙(Ruling 190, 등원은 첫 승차지 → 학원)으로 정한다
-// (2026-09-23 사용자 지시 — 위경도 입력칸 제거). `fixedStopIds` 는 지금 자리를 지킬 승하차지다(시점·종점·중간 고정).
+// 기존 수동 순서를 버리고 커밋한다(그래서 화면에 확인 단계를 둔다).
+// 기준점은 보내지 않는다 — 서버가 방향 규칙(Ruling 190, 등원은 첫 승차지 → 학원)으로 정한다. `fixedStopIds` 는 지금 자리를 지킬 승하차지다(시점·종점·중간 고정).
 export const optimizeRoute = async (id: string, fixedStopIds: string[] = []): Promise<RouteDetailResponseTypes> => {
-  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${id}/optimize`, {
+  const raw = await apiFetch<WireRouteDetail>(`/staff/routes/${id}/optimize`, {
     method: "POST",
     body: { fixed_stop_ids: fixedStopIds },
   });
   return toDetail(raw);
 };
 
-type RawRoutePath = { road_path: RawGeoPoint[]; fallback_used: boolean; stops: RawRouteStop[]; distance_m?: number | null; duration_s?: number | null; computed_at?: string | null };
-
-// GET /staff/routes/{id}/path(§5.9 신설, R27-B) — 편성 화면 지도가 그릴 도로 경로.
-// stops 는 getRouteDetail 과 같은 RawRouteStop 모양이라 toStop 을 그대로 재사용한다.
+// GET /staff/routes/{id}/path(§5.9) — 편성 화면 지도가 그릴 도로 경로.
+// stops 는 getRouteDetail 과 같은 모양이라 toStop 을 그대로 재사용한다. 거리·소요·계산 시각은 없으면 null.
 export const getRoutePath = async (id: string): Promise<RoutePathResponseTypes> => {
-  const raw = await apiFetch<RawRoutePath>(`/staff/routes/${id}/path`, { method: "GET" });
+  const raw = await apiFetch<Omit<RoutePathResponseTypes, "stops"> & { stops: WireRouteStop[] }>(`/staff/routes/${id}/path`, { method: "GET" });
   return {
-    roadPath: raw.road_path.map((point) => ({ lat: point.lat, lng: point.lng })),
-    fallbackUsed: raw.fallback_used,
+    ...raw,
     stops: raw.stops.map(toStop),
-    distanceM: raw.distance_m ?? null,
-    durationS: raw.duration_s ?? null,
-    computedAt: raw.computed_at ?? null,
+    distanceM: raw.distanceM ?? null,
+    durationS: raw.durationS ?? null,
+    computedAt: raw.computedAt ?? null,
   };
 };
 
-type RawNearbyStop = {
-  stop_id: string | number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  distance_m: number;
-};
+// 서버 id 는 숫자 — 화면 타입은 문자열. placeName 은 빈 문자열이면 싣지 않는다.
+type WireStopSuggestion = Omit<StopSuggestionTypes, "nearby"> & { nearby: WithId<NearbyStopTypes, "stopId">[] };
 
-type RawStopSearch = {
-  place_name?: string;
-  lat: number;
-  lng: number;
-  display_name: string;
-  nearby: RawNearbyStop[];
-};
-
-const toStopSuggestion = (raw: RawStopSearch): StopSuggestionTypes => ({
-  ...(raw.place_name ? { placeName: raw.place_name } : {}),
-  lat: raw.lat,
-  lng: raw.lng,
-  displayName: raw.display_name,
-  nearby: raw.nearby.map((item) => ({
-    stopId: asIdString(item.stop_id),
-    name: item.name,
-    address: item.address,
-    lat: item.lat,
-    lng: item.lng,
-    distanceM: item.distance_m,
-  })),
+const toStopSuggestion = ({ placeName, nearby, ...rest }: WireStopSuggestion): StopSuggestionTypes => ({
+  ...rest,
+  ...(placeName ? { placeName } : {}),
+  nearby: nearby.map((item) => ({ ...item, stopId: asIdString(item.stopId) })),
 });
 
 /**
- * §5.9 주소 자동완성(2026-09-23 사용자 지시) — 일부만 친 주소로 후보 여럿. **조회 전용이다** —
+ * §5.9 주소 자동완성 — 일부만 친 주소로 후보 여럿. **조회 전용이다** —
  * 승하차지는 저장 버튼을 눌러야 생긴다. 후보가 없으면 빈 목록이다(오류 아님).
  */
 export const suggestStops = async (query: string): Promise<StopSuggestionTypes[]> => {
-  const raw = await apiFetch<{ items: RawStopSearch[] }>(
+  const raw = await apiFetch<{ items: WireStopSuggestion[] }>(
     `/staff/stops/suggest?query=${encodeURIComponent(query)}`,
     { method: "GET" },
   );
@@ -213,14 +137,14 @@ export const suggestStops = async (query: string): Promise<StopSuggestionTypes[]
 };
 
 /**
- * §5.9 승하차지 한 번에 저장(2026-09-23 사용자 지시) — 추가·수정·삭제·순서를 한 요청으로.
+ * §5.9 승하차지 한 번에 저장 — 추가·수정·삭제·순서를 한 요청으로.
  * 배열 순서가 정차 순서다. `stopId` 가 없으면 새로 만든다(50m 안 기존 승하차지가 있으면 그것).
  */
 export const saveRouteStops = async (
   routeId: string,
   stops: RouteStopSaveItemTypes[],
 ): Promise<RouteDetailResponseTypes> => {
-  const raw = await apiFetch<RawRouteDetail>(`/staff/routes/${routeId}/stops`, {
+  const raw = await apiFetch<WireRouteDetail>(`/staff/routes/${routeId}/stops`, {
     method: "PUT",
     body: {
       stops: stops.map((stop) => ({
@@ -235,58 +159,27 @@ export const saveRouteStops = async (
   return toDetail(raw);
 };
 
-type RawGeoPoint = { lat: number; lng: number };
-
-// R15-T1 이 §5.19 응답에 함께 싣는 필드 + R19 목표 1 이 쓰는 stops(§4.3 과 같은 구조를
-// §5.19 가 그대로 물려받는다 — `RawRouteStop` 을 재사용한다, 위 `toStop` 참고).
 // Ruling 321 — `confirmed` 는 idle 회차의 "예정" 경로를 화면이 구별하게 하는 신호다.
-// `?:` 인 이유는 이 필드를 아직 안 보내는 옛 백엔드와의 호환(getRunRoute 기본값 true).
-type RawStaffRunRoute = {
-  road_path: RawGeoPoint[];
-  fallback_used: boolean;
-  stops: RawRouteStop[];
-  confirmed?: boolean;
-};
-
-// GET /staff/runs/{runId}/route(§5.19, RTE-02, R15-T2 목표 4 · R19 목표 1 · Ruling 321) —
-// 선택한 버스의 노선(도로 경로)과 정차지를 지도에 그리는 데 쓴다. 이름은
-// `docs/archive/rounds/be-rounds-r15-r21.md §8.23` 고정 계약을 그대로 따른다.
+// 이 필드를 아직 안 보내는 옛 백엔드는 확정 경로만 돌려줬으므로 기본값은 true 다.
+// GET /staff/runs/{runId}/route(§5.19, RTE-02, Ruling 321) — 선택한 버스의 노선(도로 경로)과 정차지를 지도에 그리는 데 쓴다.
 export const getRunRoute = async (runId: string): Promise<RunRouteResponseTypes> => {
-  const raw = await apiFetch<RawStaffRunRoute>(`/staff/runs/${runId}/route`, { method: "GET" });
-  return {
-    roadPath: raw.road_path.map((point) => ({ lat: point.lat, lng: point.lng })),
-    fallbackUsed: raw.fallback_used,
-    stops: raw.stops.map(toStop),
-    // 옛 백엔드(필드 부재)는 지금까지 confirmed·moving·finished 회차의 실제 확정
-    // 경로만 돌려줬으므로 기본값 true 가 기존 동작을 그대로 보존한다.
-    confirmed: raw.confirmed ?? true,
-  };
+  const raw = await apiFetch<Omit<RunRouteResponseTypes, "stops" | "confirmed"> & { stops: WireRouteStop[]; confirmed?: boolean }>(
+    `/staff/runs/${runId}/route`,
+    { method: "GET" },
+  );
+  return { ...raw, stops: raw.stops.map(toStop), confirmed: raw.confirmed ?? true };
 };
 
-type RawStopListItem = {
-  stop_id: string | number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  routes: { route_id: string | number; bus_no: string; weekday: Weekday; direction: RunDirection; active: boolean }[];
-  student_count: number;
+// 서버 id 는 숫자 — 화면 타입은 문자열.
+type WireStopListItem = Omit<StopListItemTypes, "stopId" | "routes"> & {
+  stopId: string | number;
+  routes: WithId<StopListItemTypes["routes"][number], "routeId">[];
 };
 
-const toStopListItem = (raw: RawStopListItem): StopListItemTypes => ({
-  stopId: asIdString(raw.stop_id),
-  name: raw.name,
-  address: raw.address,
-  lat: raw.lat,
-  lng: raw.lng,
-  routes: raw.routes.map((route) => ({
-    routeId: asIdString(route.route_id),
-    busNo: route.bus_no,
-    weekday: route.weekday,
-    direction: route.direction,
-    active: route.active,
-  })),
-  studentCount: raw.student_count,
+const toStopListItem = (raw: WireStopListItem): StopListItemTypes => ({
+  ...raw,
+  stopId: asIdString(raw.stopId),
+  routes: raw.routes.map((route) => ({ ...route, routeId: asIdString(route.routeId) })),
 });
 
 // §1.8 — 페이징 `size` 의 서버 상한.
@@ -297,11 +190,11 @@ const STOP_PAGE_SIZE_MAX = 100;
  * `q` 는 이름 또는 주소에 들어 있는 글자(비우면 전부). 정렬은 서버가 이름 오름차순으로 정한다.
  */
 export const getStops = async (page: number, size = 20, q?: string): Promise<StopListResponseTypes> => {
-  const raw = await apiFetch<{ items: RawStopListItem[]; page: number; size: number; total_count: number; has_next: boolean }>(
+  const raw = await apiFetch<Omit<StopListResponseTypes, "items"> & { items: WireStopListItem[] }>(
     "/staff/stops",
     { method: "GET", query: { page, size, q: q || undefined } },
   );
-  return { items: raw.items.map(toStopListItem), page: raw.page, size: raw.size, totalCount: raw.total_count, hasNext: raw.has_next };
+  return { ...raw, items: raw.items.map(toStopListItem) };
 };
 
 /**
@@ -323,7 +216,7 @@ export const getAllStops = async (): Promise<StopListItemTypes[]> => {
  * 노선의 표시에 함께 반영된다(학생 요일별 주소는 사본이라 불변). 응답은 목록 항목과 같은 형태다.
  */
 export const updateStop = async (id: string, request: StopUpdateRequestTypes): Promise<StopListItemTypes> => {
-  const raw = await apiFetch<RawStopListItem>(`/staff/stops/${id}`, {
+  const raw = await apiFetch<WireStopListItem>(`/staff/stops/${id}`, {
     method: "PATCH",
     body: { name: request.name, address: request.address, lat: request.position?.lat, lng: request.position?.lng },
   });
