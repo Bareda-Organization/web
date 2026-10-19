@@ -180,8 +180,8 @@ describe("EmergencyAlertProvider — 확인 직전 철회(409 EMERGENCY_CANCELED
   });
 });
 
-// F01-12 — ack 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리거나, 이미 처리된 건을 실패로 안내하면 안 된다.
-describe("EmergencyAlertProvider — 확인(ack) 경합·실패 문구(F01-12)", () => {
+// ack 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리거나, 이미 처리된 건을 실패로 안내하면 안 된다.
+describe("EmergencyAlertProvider — 확인(ack) 경합·실패 문구", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("ack 성공 뒤에 도착한 ack 이전 폴링 응답이 팝업을 되살리지 않는다", async () => {

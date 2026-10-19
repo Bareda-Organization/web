@@ -265,7 +265,7 @@ export const MonitoringPage = () => {
   );
 
   // 지도 위 마커 클릭. 버스 마커만 회차 선택으로 넘긴다 — 정차지·출발지·도착지는
-  // `stop-`·`origin-` 처럼 다른 kind 라 W1(식별자 문자열 흡수) 이후에도 kind 로 가른다
+  // `stop-`·`origin-` 처럼 다른 kind 라 식별자가 문자열로 통일된 뒤에도 kind 로 가른다
   // (숫자로 읽히는지로 가르면 서버가 숫자 아닌 문자열 id 를 보내는 순간 선택이 조용히 실패한다).
   const handleSelectMarker = useCallback(
     (markerId: string) => {

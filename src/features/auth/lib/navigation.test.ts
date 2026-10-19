@@ -48,7 +48,7 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(session, "/academies")).toBeNull();
   });
 
-  // F03-12 — 접근 판정의 단위는 경로 목록이 아니라 라우트 그룹이다. (admin) 레이아웃은 system_admin,
+  // 접근 판정의 단위는 경로 목록이 아니라 라우트 그룹이다. (admin) 레이아웃은 system_admin,
   // (staff) 레이아웃은 staff 를 요구한다고 알리고, 이 함수는 세션 역할이 그와 다르면 자기 홈으로 보낸다.
   it("active 인데 그룹이 요구하는 역할과 다르면 자기 홈으로 되돌린다", () => {
     expect(decideAuthRedirect(baseSession("active", "staff"), "/academies", "system_admin")).toBe("/dashboard");

@@ -90,8 +90,8 @@ describe("ReportList — 시각 표기", () => {
   });
 });
 
-// F01-05·F01-14 — 종류·날짜·회차 필터가 조회 하나로 모이고, 앞선 요청의 늦은 응답은 버려진다.
-describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
+// 종류·날짜·회차 필터가 조회 하나로 모이고, 앞선 요청의 늦은 응답은 버려진다.
+describe("ReportList — 필터·경합", () => {
   const REPORT = (reportId: string, memo: string) =>
     ({ reportId, type: "etc", busNo: "1호차", studentName: null, reportedBy: "김기사", reportedAt: "2026-09-12T08:00:00Z", memo, handled: false }) as never;
 

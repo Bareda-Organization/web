@@ -52,7 +52,7 @@ beforeEach(() => {
   mockGetRuns.mockResolvedValue({ items: [] });
 });
 
-describe("RouteDetail — F02-11 편성 정보 수정 뒤에도 승하차지 편집이 남는다", () => {
+describe("RouteDetail — 편성 정보 수정 뒤에도 승하차지 편집이 남는다", () => {
   it("편성 정보를 저장해 상세를 다시 불러와도 승하차지 패널은 다시 마운트되지 않는다", async () => {
     render(<RouteDetail routeId="1" />);
     const panel = await screen.findByText("승하차지 패널");
