@@ -1246,7 +1246,7 @@ describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제", () => {
 
     await screen.findByText("김학생");
     expect(screen.queryByLabelText("학생 이름 검색")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("정차지 필터")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("승하차지 필터")).not.toBeInTheDocument();
   });
 });
 

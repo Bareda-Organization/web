@@ -59,6 +59,15 @@ describe("RouteList — 요일표", () => {
     expect(mockGetRoutes).toHaveBeenCalledWith(0, 500);
   });
 
+  it("활성 편성이 모두 승하차지를 가졌으면 지표가 「모든 활성 편성에 승하차지가 있음」 이라고 말한다", async () => {
+    mockGetRoutes.mockResolvedValue({ items: [route("1", 3), route("3", 5, { weekday: "wed", active: false })], page: 0, size: 500, totalCount: 2, hasNext: false });
+    render(<RouteList />);
+    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
+
+    expect(screen.getByText("승하차지 0곳", { selector: "div" }).parentElement).toHaveTextContent("모든 활성 편성에 승하차지가 있음");
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
   it("범례 · 지표 · 머리글은 「승하차지」 말로 말하고 「정차지」 는 없다", async () => {
     render(<RouteList />);
     await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
