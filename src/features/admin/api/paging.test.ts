@@ -5,7 +5,7 @@ import { getBlockedAccounts } from "./blockedAccounts";
 import { getStaffAccounts } from "./staffAccounts";
 import { getStaffSignupRequests } from "./signupRequests";
 
-// F03-04 — §1.8: 목록은 page(0 기점)·size 를 받는다. 안 넘기면 서버는 첫 20건만 준다.
+// §1.8: 목록은 page(0 기점)·size 를 받는다. 안 넘기면 서버는 첫 20건만 준다.
 const respond = (items: unknown[], hasNext = false, totalCount = items.length) =>
   ({
     ok: true,

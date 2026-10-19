@@ -21,7 +21,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("StopAddressSearch — F02-15", () => {
+describe("StopAddressSearch — 후보 선택 · 재검색 · 늦은 응답", () => {
   it("후보를 고르면 고른 이름으로 지오코딩을 한 번 더 부르지 않는다", async () => {
     mockSuggest.mockResolvedValue([suggestion]);
     render(<StopAddressSearch onPick={vi.fn()} />);

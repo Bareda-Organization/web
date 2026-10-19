@@ -8,7 +8,7 @@ import { getRunRoute } from "@/features/route";
 import { deleteWaypoint, getDashboard, getManagers, getRunRoster, getRunsLive, patchRunAssignment, postForcedAdd, postWaypoint } from "./index";
 
 // 대시보드·오늘의 회차 화면(§5.3·§5.4·§5.13·§5.18, A-03·A-04·A-06·A-14)이 부르는
-// 엔드포인트를 실제 F5-W1 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
+// 엔드포인트를 실제 전용 백엔드(NEXT_PUBLIC_API_BASE_URL)에 붙여 확인한다 —
 // `NEXT_PUBLIC_API_BASE_URL=http://localhost:8130 npm test` 로 실행. 미지정이면
 // `requireRealBackendApiBaseUrl()` 이 즉시 던진다(기본값 8080 으로 조용히 새는 것을 막음).
 const API_BASE_URL = requireRealBackendApiBaseUrl();
@@ -25,7 +25,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("run api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1)·staffB(academy_id=2).
+  // 시드(전용 DB) 기준 — staffA(academy_id=1)·staffB(academy_id=2).
   // run_id=2 는 staffA 학원 소속 확정 회차다(roster 2명).
 
   it("getDashboard 는 staffA 학원의 지표·회차 목록을 돌려준다", async ({ skip }) => {
@@ -150,7 +150,7 @@ describe("run api — 실서버 계약", () => {
 //
 // ⚠ 네이버 Directions 를 부르는 요청은 **미리보기 2회**(추가 1 · 삭제 1)뿐이다 — 배포(apply=true)는 미리보기의 계산을 그대로 쓰고
 // 지도 API 를 다시 부르지 않는다(§5.15). 503 MAP_ROUTE_UNAVAILABLE 재시도를 한 번씩 허용해도 통틀어 4회 이하다.
-// 이 검사는 서버가 K1(`stops[].waypoint_id`)을 싣는 빌드에서만 끝까지 간다.
+// 이 검사는 서버가 `stops[].waypoint_id` 를 싣는 빌드에서만 끝까지 간다.
 const MAP_ROUTE_RETRY_DELAY_MS = 11_000;
 
 const retryOnMapRouteUnavailable = async <T,>(fn: () => Promise<T>): Promise<T> => {

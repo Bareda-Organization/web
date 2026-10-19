@@ -198,7 +198,7 @@ export type RunLiveItemResponseTypes = {
   // 배치 전(idle·confirmed) 회차는 기사·동승자가 부재다 — Ruling 315.
   driver: LiveContactResponseTypes | null;
   escort: LiveContactResponseTypes | null;
-  // W4 — 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`).
+  // 확정 배치의 연속 실패 횟수, 성공 시 0(`API_SPEC §6.8`).
   consecutiveFailures: number;
   // Ruling 805 — `moving` 이 아니면 null · `finished` 가 아니면 finished_at 이 null. 서버가 안 주면 없다.
   delayMinutes?: number | null;
@@ -246,9 +246,9 @@ export type BlockedAccountItemResponseTypes = {
   blockedAt: string;
   failedAttempts: number;
   reason: string;
-  // W6 — §9.1 역할(`Ruling 328`).
+  // §9.1 역할(`Ruling 328`).
   role: AccountRole;
-  // W6 — 차단 직전 계정 상태. 해제하면 이 값으로 되돌아간다(§6.12 · `Ruling 328`).
+  // 차단 직전 계정 상태. 해제하면 이 값으로 되돌아간다(§6.12 · `Ruling 328`).
   statusBeforeBlock: "active" | "pending" | "rejected";
 };
 

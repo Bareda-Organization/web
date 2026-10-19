@@ -77,7 +77,7 @@ describe("bus api — snake_case ↔ camelCase 변환", () => {
     });
   });
 
-  // W5 — API_SPEC §5.12 "PATCH 응답의 warnings[]"(BR-116). 정원 축소로 기배정
+  // API_SPEC §5.12 "PATCH 응답의 warnings[]"(BR-116). 정원 축소로 기배정
   // 인원이 넘치는 회차마다 CAPACITY_BELOW_ASSIGNED 1건씩 온다.
   it("updateBus 는 응답의 warnings[] 를 camelCase 로 흡수한다", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
