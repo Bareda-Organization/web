@@ -518,7 +518,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
 
   // REST 스냅샷의 `recorded_at` 은 기기 시각이고 방송의 `received_at` 은 서버 시각이다(서로 다른 시계). 기기 시계가 3분 앞선 스냅샷
   // 때문에 첫 방송이 "낡은 값"으로 버려지면 안 된다 — 방송은 같은 시계(앞서 받은 방송의 `received_at`)와만 견준다.
-  it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 반영된다", async () => {
+  it("기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 반영된다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({
       runs: [{ ...baseLiveRun, position: { lat: 37.1, lng: 127.1, recordedAt: "2026-09-13T00:03:00Z" } }],
@@ -853,7 +853,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택", () => {
   });
 });
 
-// F01-01·F01-05·F01-09·C00-03 — 지표·표의 자동 갱신 · 늦은 노선 응답 차단 · 승인 요청 배너 처리 경로.
+// 지표·표의 자동 갱신 · 늦은 노선 응답 차단 · 승인 요청 배너 처리 경로.
 describe("DashboardPage — 갱신·경합·승인 배너", () => {
   const runOf = (runId: string, overrides: Partial<DashboardResponseTypes["runs"][number]> = {}) => ({
     ...baseDashboard.runs[0],
@@ -876,7 +876,7 @@ describe("DashboardPage — 갱신·경합·승인 배너", () => {
     vi.clearAllMocks();
   });
 
-  // F01-01 — getDashboard 는 마운트 때 한 번뿐이라 지표·표·미탑승 배너가 진입 시점 값에서 굳었다.
+  // getDashboard 를 마운트 때 한 번만 부르면 지표·표·미탑승 배너가 진입 시점 값에서 굳는다.
   it("실시간 연결이 끊긴 동안 7초 주기 갱신이 지표·회차 상태·미탑승 배너를 새로 그린다", async () => {
     mockConnectionState = "disconnected";
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -1016,7 +1016,7 @@ describe("DashboardPage — 갱신·경합·승인 배너", () => {
     expect(screen.queryByText("서버 오류")).not.toBeInTheDocument();
   });
 
-  // F01-05 — 버스 A 를 고른 직후 B 를 고르면 A 의 노선 응답이 늦게 와서 B 의 지도를 A 의 값으로 되돌렸다.
+  // 버스 A 를 고른 직후 B 를 고르면 A 의 노선 응답이 늦게 와도 B 의 지도를 A 의 값으로 되돌리지 않는다.
   it("버스를 바꾸기 전에 보낸 노선 요청의 늦은 응답이 새로 고른 버스의 노선 안내를 덮지 않는다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -1056,7 +1056,7 @@ describe("DashboardPage — 갱신·경합·승인 배너", () => {
     expect(screen.queryByText("확정되지 않은 회차입니다")).not.toBeInTheDocument();
   });
 
-  // F01-09 — 승인 요청 배너가 지워지지도, 승인 화면으로 가지도 못했고, 다음 요청이 오면 앞 건이 사라졌다.
+  // 승인 요청 배너는 지울 수 있고, 승인 화면으로 갈 수 있고, 다음 요청이 와도 앞 건이 남는다.
   describe("탑승 승인 요청 배너", () => {
     const approval = (approvalId: number, studentName: string, stopName: string) =>
       envelope("approval_requested", {

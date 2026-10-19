@@ -233,7 +233,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       expect(screen.queryByRole("button", { name: /다른 버스로/ })).not.toBeInTheDocument();
     });
 
-    // F01-07 — 강제 추가는 ①구간(확정 전) 전용이다(§5.7). 확정된 회차에서 끝까지 입력하고서야 403 을 받게 하지 않는다.
+    // 강제 추가는 ①구간(확정 전) 전용이다(§5.7). 확정된 회차에서 끝까지 입력하고서야 403 을 받게 하지 않는다.
     it("확정된 회차에서는 [강제 승하차지 추가] 를 누를 수 없고, 확정 전 회차에서는 누를 수 있다", async () => {
       mockRunIdParam = "7";
       mockGetDashboard.mockResolvedValue(dashboardOf([idleRun("7", "2호차", "to_academy", "confirmed")]));
@@ -817,7 +817,7 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기"
   });
 });
 
-// C00-01·F01-03·F01-04·F01-05·C00-03·F01-14 — 선택 회차 유지 · 자동 갱신 · 요청 경합 · 노선 없음 안내.
+// 선택 회차 유지 · 자동 갱신 · 요청 경합 · 노선 없음 안내.
 describe("TodayRunPage — 선택 유지·갱신·경합", () => {
   const runOf = (runId: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
     ...baseDashboard.runs[0],
@@ -853,7 +853,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합", () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  // F01-04 — 직접 진입하면 회차 목록이 오기 전에 상태 없이 노선을 그리는 호출이 먼저 나가고, 목록이 오면 다시 나갔다.
+  // 직접 진입하면 회차 목록이 오기 전에는 노선을 그리는 호출이 나가지 않고, 목록이 오면 한 번씩만 나간다.
   it("회차 목록이 오기 전에는 명단·노선을 부르지 않고, 목록이 오면 각 한 번씩만 부른다", async () => {
     mockRunIdParam = "7";
     let resolveDashboard: (value: DashboardResponseTypes) => void = () => {};
@@ -869,7 +869,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합", () => {
     expect(mockGetRunRoster).toHaveBeenCalledTimes(1);
   });
 
-  // F01-03 — 명단·현재 위치·버스 마커는 진입 시점 값에서 갱신이 없었다.
+  // 명단·현재 위치·버스 마커는 진입 시점 값에서 멈추지 않고 주기로 갱신된다.
   it("진행 중인 회차는 7초마다 명단·위치·회차 상태를 다시 불러와 탑승 현황이 바뀐다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockRunIdParam = "7";
@@ -979,7 +979,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합", () => {
     });
 
     // REST 스냅샷 `recorded_at`(기기 시각)과 방송 `received_at`(서버 시각)은 다른 시계다. 기기 시계가 3분 앞서도 첫 방송은 반영된다.
-    it("F1: 기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 마커를 옮긴다", async () => {
+    it("기기 시계가 앞선 REST 스냅샷(recorded_at 3분 뒤) 위에도 첫 position 방송은 마커를 옮긴다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       mockGetRunsLive.mockResolvedValue({
         runs: [{ ...liveRun7(37.5, 127.0).runs[0], position: { lat: 37.5, lng: 127.0, recordedAt: "2026-10-10T08:08:00+09:00" } }],
@@ -1117,7 +1117,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합", () => {
     expect(mockGetRunRoster).toHaveBeenCalledTimes(1);
   });
 
-  // F01-05 — 회차를 연달아 바꾸면 이전 회차의 명단이 늦게 와서 새 회차 제목 아래에 남았다.
+  // 회차를 연달아 바꿔도 이전 회차의 명단이 늦게 와서 새 회차 제목 아래에 남지 않는다.
   it("회차를 바꾸기 전에 보낸 명단 요청의 늦은 응답이 새 회차의 명단을 덮지 않는다", async () => {
     mockRunIdParam = "7";
     let resolveOld: (value: RosterItemResponseTypes[]) => void = () => {};
@@ -1153,7 +1153,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합", () => {
     expect(screen.queryByText("확정되지 않은 회차입니다")).not.toBeInTheDocument();
   });
 
-  // F01-14 — 보호자 미연결 학생은 연락처가 null(§5.4)이다. 다른 null 열(반)처럼 "-" 로 보여 실패로 읽히지 않게 한다.
+  // 보호자 미연결 학생은 연락처가 null(§5.4)이다. 다른 null 열(반)처럼 "-" 로 보여 실패로 읽히지 않게 한다.
   it("보호자 연락처가 없는 학생은 빈 칸이 아니라 보호자 미연결로 보인다", async () => {
     mockRunIdParam = "7";
     mockGetDashboard.mockResolvedValue(dashboardOf(runOf("7", "idle")));

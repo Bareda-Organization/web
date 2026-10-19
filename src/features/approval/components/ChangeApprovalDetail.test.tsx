@@ -228,7 +228,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
       expect(await screen.findByText("38분")).toBeInTheDocument();
     });
 
-    it("departTime 이 아직 응답에 없으면(r20-a 미병합) 출발·도착시간에 이유를 안내한다", async () => {
+    it("departTime 이 아직 응답에 없으면 출발·도착시간에 이유를 안내한다", async () => {
       mockGetDetail.mockResolvedValue({ ...baseDetail, departTime: null });
       render(<ChangeApprovalDetail approvalId="5" />);
 
@@ -476,8 +476,8 @@ describe("ChangeApprovalDetail — 다시 불러오기", () => {
   });
 });
 
-// F02-14 — 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다(재결정은 409). 거절·가입 승인처럼 확인 단계를 둔다.
-describe("ChangeApprovalDetail — F02-14 승인 확인 단계", () => {
+// 승인은 노선 재확정·승하차지 삭제를 일으키고 되돌릴 수 없다(재결정은 409). 거절·가입 승인처럼 확인 단계를 둔다.
+describe("ChangeApprovalDetail — 승인 확인 단계", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
@@ -523,8 +523,8 @@ describe("ChangeApprovalDetail — F02-14 승인 확인 단계", () => {
   });
 });
 
-// F02-06 — 다른 관계자가 먼저 결정했거나 기한이 지난 뒤 결정하면 서버가 거절한다. 옛 화면에 버튼이 그대로 남으면 같은 오류가 반복된다.
-describe("ChangeApprovalDetail — F02-06 결정 실패 뒤 최신 상태로", () => {
+// 다른 관계자가 먼저 결정했거나 기한이 지난 뒤 결정하면 서버가 거절한다. 옛 화면에 버튼이 그대로 남으면 같은 오류가 반복된다.
+describe("ChangeApprovalDetail — 결정 실패 뒤 최신 상태로", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-12T23:00:00Z"));
