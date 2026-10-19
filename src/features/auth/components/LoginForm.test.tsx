@@ -6,7 +6,7 @@ import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { useAuthSession } from "../hooks/useAuthSession";
 
 // `useAuthSession` 을 모킹해 login() 이 던지는 ApiError 코드별로 화면이 다른 문구를
-// 그리는지 확인한다 — 보고서 4항이 지목한 "LoginForm 의 에러 코드별 분기" 그 자리다.
+// 그리는지 확인한다 — "LoginForm 의 에러 코드별 분기" 그 자리다.
 // 여기서 다루는 3종(INVALID_CREDENTIALS·AUTH_ACCOUNT_BLOCKED·AUTH_STAFF_INACTIVE)은
 // LoginForm.tsx 가 이름을 걸고 처리하는 코드 전부다.
 vi.mock("../hooks/useAuthSession", () => ({

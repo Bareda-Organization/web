@@ -115,7 +115,7 @@ describe("ChangeApprovalList — F02-04 늦게 온 옛 응답", () => {
   });
 });
 
-// B1 #5 — 처리 기한을 시각으로만 보여 주면 남은 시간을 알 수 없다. 대기 건은 자동 거절까지 남은 시간을 함께 보여 준다.
+// 처리 기한을 시각으로만 보여 주면 남은 시간을 알 수 없다. 대기 건은 자동 거절까지 남은 시간을 함께 보여 준다.
 describe("ChangeApprovalList — 자동 거절까지 남은 시간", () => {
   afterEach(() => {
     vi.useRealTimers();

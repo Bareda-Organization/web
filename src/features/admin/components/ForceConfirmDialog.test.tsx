@@ -5,7 +5,7 @@ import { forceConfirmRun } from "../api";
 import { ApiError } from "@/shared/lib/http";
 import type { RunLiveItemResponseTypes } from "../types";
 
-// §6.14, BRIEF-a1.md §4.1 — "되돌릴 수 없다. 확인 단계와 그 결과 표시가 이 화면의 본체".
+// §6.14 — 되돌릴 수 없다. 확인 단계와 그 결과 표시가 이 화면의 본체다.
 // 그래서 이 검사는 렌더 여부가 아니라 (1) 사유 없이는 실행할 수 없는지 (2) 성공한 뒤
 // 폼으로 되돌아갈 길이 실제로 없는지를 확인한다.
 vi.mock("../api", () => ({

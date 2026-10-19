@@ -5,7 +5,7 @@ import { UnblockConfirmDialog } from "./UnblockConfirmDialog";
 import { unblockAccount } from "../api";
 import type { BlockedAccountItemResponseTypes } from "../types";
 
-// §6.12, BRIEF-a1.md §4.2 — "누가 왜 차단됐는지 보이지 않으면 판단할 수 없다".
+// §6.12 — 누가 왜 차단됐는지 보이지 않으면 판단할 수 없다.
 // 그래서 이 검사는 확정 버튼이 있는지가 아니라, 확정하기 *전에* 차단 사유·시각·
 // 실패 횟수가 화면에 실제로 노출되는지를 본다.
 vi.mock("../api", () => ({

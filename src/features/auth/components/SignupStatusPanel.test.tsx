@@ -5,7 +5,7 @@ import { getSignupStatus, reapplySignup, searchAcademies } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { SignupStatusResponseTypes } from "../types";
 
-// 보고서 4항의 오타 예시("status === 'rejected' 를 'pending' 으로") 그 자체를 겨냥한다.
+// 상태값 오타 예시("status === 'rejected' 를 'pending' 으로") 그 자체를 겨냥한다.
 // pending 과 rejected 는 같은 컴포넌트 안에서 완전히 다른 블록(거절 사유·재신청 진입점)을
 // 켜고 끄므로, 상태값 하나만 틀려도 화면이 반대로 나온다 — 그 갈림을 여기서 고정한다.
 vi.mock("../api", () => ({

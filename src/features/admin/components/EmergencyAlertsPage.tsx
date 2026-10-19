@@ -50,7 +50,7 @@ const fetchTab = async (tab: StatusTab) => {
   };
 };
 
-// §6.11 비상 알림(O-07). 메인 관리자는 전 학원 알림을 한 화면에서 보므로 목록에 학원명 열을 둔다(BRIEF-a1.md §2).
+// §6.11 비상 알림(O-07). 메인 관리자는 전 학원 알림을 한 화면에서 보므로 목록에 학원명 열을 둔다.
 // 상태 탭 건수 · 미확인 띠(몇 분째 응답 없음 + 학원에 전화) · 오른쪽 상시 칸(작은 지도 · 학원 확인 상태 · 바로 연락).
 export const EmergencyAlertsPage = () => {
   const [tab, setTab] = useState<StatusTab>("open");

@@ -28,7 +28,7 @@ import {
 const PAGE_SIZE = 20;
 
 // §6.4~§6.5 관계자 가입 승인(O-02). 목록마다 소속 학원을 함께 보여 준다 — 메인 관리자는
-// 학원 경계를 넘는 유일한 역할이라(BRIEF-a1.md §2) 어느 학원 요청인지 없이는 처리할 수 없다.
+// 학원 경계를 넘는 유일한 역할이라 어느 학원 요청인지 없이는 처리할 수 없다.
 // 왼쪽 목록 · 오른쪽 처리 칸(첫 요청이 처음부터 선택돼 있다) · 목록 아래 승인 규칙.
 export const MemberApprovalsPage = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);

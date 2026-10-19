@@ -161,8 +161,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
   // 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
-  // 포함 여부로 본다(판단 근거, 보고서 §1).
-  // A #3 — 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
+  // 포함 여부로 본다.
+  // 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
   it("확정·운행 중 회차는 기사·동승자 옆에 노선 확인 여부를 보여 준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -442,7 +442,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
 // Goal 7 — `/topic/academy/{academyId}/live` 이벤트 배선. `position` 은 payload 를
 // 그대로 병합하고, 나머지 회차 상태 변화는 `loadLive()`(getRunsLive) 재조회로
-// 반영한다는 판단(보고서 §1)을 고정한다.
+// 반영한다는 규칙을 고정한다.
 describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   beforeEach(() => {
     mockUseAuthSession.mockReturnValue({
@@ -617,7 +617,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
     },
   );
 
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 빈 목록 문구가 연결 상태와 같은 조건으로 묶여도 기존 시험은 전부 liveRuns 가
+  // 빈 목록 문구가 연결 상태와 같은 조건으로 묶여도 기존 시험은 전부 liveRuns 가
   // 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 둘이 서로 무관함을 고정한다.
   it("목록에 항목이 있으면(runs 비어있지 않음) 연결이 끊겨도 목록이 보이고 빈 목록 문구는 뜨지 않는다", async () => {
     mockUseAuthSession.mockReturnValue({ session });

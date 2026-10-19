@@ -67,7 +67,7 @@ describe("EmergencyDetailDialog — 조치 메모", () => {
   });
 });
 
-// B1 #17 — 비상 때 가장 급한 일은 기사·동승자에게 전화하는 것이다. 번호가 글자로만 있으면 옮겨 적어야 한다.
+// 비상 때 가장 급한 일은 기사·동승자에게 전화하는 것이다. 번호가 글자로만 있으면 옮겨 적어야 한다.
 describe("EmergencyDetailDialog — 연락처", () => {
   afterEach(() => vi.restoreAllMocks());
 

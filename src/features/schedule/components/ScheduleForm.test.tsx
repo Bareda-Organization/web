@@ -191,8 +191,8 @@ describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
   });
 });
 
-// B1 #7 — 월~금 운영 학원이 스케줄 폼을 요일마다 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
-describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
+// 월~금 운영 학원이 스케줄 폼을 요일마다 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
+describe("ScheduleForm — 요일 여러 개 한 번에", () => {
   afterEach(() => vi.clearAllMocks());
 
   const fillAndSubmit = async (container: HTMLElement, weekdayLabels: string[]) => {

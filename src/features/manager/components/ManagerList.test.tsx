@@ -22,7 +22,7 @@ const manager = (id: string, name: string, over: Record<string, unknown> = {}) =
 });
 const page = (items: ReturnType<typeof manager>[]) => ({ items, counts: null, page: 0, size: 20, totalCount: items.length, hasNext: false });
 
-// B1 #8 — 매니저를 등록해도 앱에서 가입 승인을 받기 전에는 앱에 들어올 수 없다. 목록이 그 상태를 말해 줘야 한다.
+// 매니저를 등록해도 앱에서 가입 승인을 받기 전에는 앱에 들어올 수 없다. 목록이 그 상태를 말해 줘야 한다.
 describe("ManagerList — 앱 계정 연결 상태", () => {
   afterEach(() => vi.clearAllMocks());
 

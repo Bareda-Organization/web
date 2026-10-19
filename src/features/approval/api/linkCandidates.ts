@@ -17,7 +17,7 @@ export const searchStudentCandidates = async (q?: string): Promise<LinkCandidate
     method: "GET",
     query: { page: 0, size: CANDIDATE_PAGE_SIZE, q: q || undefined },
   });
-  // 동명이인은 반이 같을 수 있어 보호자 연락처(서버가 목록에 주는 값)로 가른다 — B1 #14.
+  // 동명이인은 반이 같을 수 있어 보호자 연락처(서버가 목록에 주는 값)로 가른다.
   return raw.items.map((s) => ({
     id: asIdString(s.studentId),
     name: s.name,

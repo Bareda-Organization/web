@@ -166,7 +166,7 @@ describe("approval api — 실서버 계약", () => {
     });
   });
 
-  // B1 #14(Ruling 495) — 학생 목록이 계정 연결 여부(account_linked)를 줘 승인 화면이 연결된 학생을 고를 수 없게 한다.
+  // Ruling 495 — 학생 목록이 계정 연결 여부(account_linked)를 줘 승인 화면이 연결된 학생을 고를 수 없게 한다.
   it("searchStudentCandidates 는 학생 본인 계정이 연결된 학생(이하늘)만 선택 불가로 표시하고 동명이인 구분 정보를 낸다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));

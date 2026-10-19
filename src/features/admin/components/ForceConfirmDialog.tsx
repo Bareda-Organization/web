@@ -29,7 +29,7 @@ const FAILURE_BY_CODE: Record<string, string> = {
   RUN_CANCELED: "임시 취소된 회차라 강제 확정할 수 없습니다.",
 };
 
-// §6.14, BRIEF-a1.md §4.1 — "확인 단계와 그 결과 표시가 이 화면의 본체". 되돌릴 수 없는
+// §6.14 — 확인 단계와 그 결과 표시가 이 화면의 본체다. 되돌릴 수 없는
 // 동작이라 (1) 사유 입력 없이는 실행 단추를 켜지 않고(꺼진 단추 아래에 켜지는 조건을 적는다 — U-05) (2) 성공한 뒤에는 폼으로
 // 되돌아가지 못하게 결과 화면으로 고정한다 — 실수로 두 번 누르는 경로 자체를 없앤다.
 export const ForceConfirmDialog = ({ run, academyName, onClose, onDone }: ForceConfirmDialogProps) => {

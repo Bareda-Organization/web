@@ -7,7 +7,7 @@ const items = [
   { value: "student", label: "학생 관리", icon: "users" },
 ];
 
-// B1 #22 — 사이드바가 button 이라 새 탭으로 열기·링크 복사가 안 되고 현재 위치를 알릴 수 없었다.
+// 사이드바가 button 이면 새 탭으로 열기·링크 복사가 안 되고 현재 위치를 알릴 수 없다.
 describe("SideNav — 링크", () => {
   it("주소(href)가 있으면 링크로 그리고 현재 화면에 aria-current 를 단다", () => {
     render(<SideNav items={items} value="student" getHref={(value) => `/${value}`} />);

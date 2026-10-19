@@ -147,7 +147,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
     await waitFor(() => expect(mockGetDetail).toHaveBeenCalledTimes(2));
   });
 
-  // 이미 결정된 건(routePreview 등이 전부 null) — 실서버 계약 시험이 잡은 결함(보고서 §1·§2)의
+  // 이미 결정된 건(routePreview 등이 전부 null) — 실서버 계약 시험이 잡은 결함의
   // 고정 시험. 이 널을 못 다루면 `stopsBefore` 접근에서 TypeError 로 렌더가 죽는다.
   it("이미 결정된 건(routePreview 가 null)은 노선 비교 대신 안내 문구를 보여주고 승인/거절 버튼을 감춘다", async () => {
     mockGetDetail.mockResolvedValue({

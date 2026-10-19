@@ -55,7 +55,7 @@ export const NaverMapSurface = ({
   // ⇒ **지도가 생긴 사실 자체를 신호로 만들어** 세 effect 가 다시 돌게 한다.
   const [mapReady, setMapReady] = useState(false);
   // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
-  // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
+  // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기).
   const displayedPositions = useRef<Map<string, LatLng>>(new Map());
   // 마커별로 "지금 화면에 반영된 아이콘 HTML". 달라졌을 때만 다시 굳힌다.
   const renderedIcons = useRef<Map<string, string>>(new Map());
@@ -99,7 +99,7 @@ export const NaverMapSurface = ({
     }
 
     const unsubscribeAuthFailure = onNaverAuthFailure(() => {
-      // SDK 는 인증 실패 신호만 주고 원인 값을 넘기지 않는다(보고서 §1·§2) —
+      // SDK 는 인증 실패 신호만 주고 원인 값을 넘기지 않는다 —
       // 고정된 계약 형태(`onAuthFailed(exception)`)를 지키기 위해 여기서
       // `Error` 를 만들어 전달한다.
       onAuthFailed?.(new Error("네이버 지도 인증에 실패했다"));
@@ -352,7 +352,7 @@ export const NaverMapSurface = ({
   }, [focusKey, mapReady]);
 
   // 마커 갱신 — id 기준으로 추가·제거하고, 기존 마커의 좌표 변경은 보간
-  // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다 — COMMON-B2 §2).
+  // 컨트롤러에 맡긴다(즉시 `setPosition` 하지 않는다).
   useEffect(() => {
     const map = mapRef.current;
     const naverMaps = window.naver?.maps;

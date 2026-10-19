@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSavedNotice } from "./useSavedNotice";
 
-// B1 #19 — 등록·수정 뒤 대화상자가 닫히고 표만 바뀌어 저장됐는지 알 수 없었다.
+// 등록·수정 뒤 대화상자가 닫히고 표만 바뀌면 저장됐는지 알 수 없다.
 describe("useSavedNotice", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());

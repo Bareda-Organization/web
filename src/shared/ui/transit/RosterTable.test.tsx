@@ -64,7 +64,7 @@ describe("RosterTable — 빈 목록과 키보드", () => {
   });
 });
 
-// B1 #11 — 조회에 실패했는데 "표시할 내용이 없습니다" 가 같이 떠서 실제로 없는 것으로 읽혔다.
+// 조회에 실패했는데 "표시할 내용이 없습니다" 가 같이 뜨면 실제로 없는 것으로 읽힌다.
 describe("RosterTable — 조회 실패", () => {
   it("행이 없고 조회가 실패했으면 빈 목록 문구 대신 불러오지 못했다고 보여 준다", () => {
     render(<RosterTable<Row> columns={columns} rows={[]} hasError />);

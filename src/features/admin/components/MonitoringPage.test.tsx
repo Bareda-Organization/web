@@ -392,7 +392,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
     },
   );
 
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
+  // 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
   // 같은 조건으로 묶이지 않았음을 고정한다.
   it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 목록은 보이고 EmptyState 는 뜨지 않는다", async () => {
     mockConnectionState = "reconnecting";
@@ -1061,8 +1061,8 @@ describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09
   });
 });
 
-// B1 #24 — 학원 선택으로 한 곳씩만 보이던 전체 관제에서 어느 학원에 미확인 비상이 있는지 한눈에 보인다.
-describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
+// 전체 관제는 학원 선택으로 한 곳씩만 보여도 어느 학원에 미확인 비상이 있는지 한눈에 보인다.
+describe("MonitoringPage — 학원별 미확인 비상 요약", () => {
   const academies = [
     { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
     { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },

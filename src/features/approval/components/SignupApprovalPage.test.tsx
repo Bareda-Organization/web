@@ -106,7 +106,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
     );
   });
 
-  // B1 #14 — 신청자는 자기 이름으로 가입했으니 관계자가 같은 이름을 다시 치지 않게 후보 검색을 그 이름으로 시작한다.
+  // 신청자는 자기 이름으로 가입했으니 관계자가 같은 이름을 다시 치지 않게 후보 검색을 그 이름으로 시작한다.
   it("학생·기사 승인은 신청자 이름으로 먼저 후보를 검색한다", async () => {
     mockGetSignupRequests.mockResolvedValue({
       ...baseList,

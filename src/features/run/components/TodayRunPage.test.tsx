@@ -155,7 +155,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
     expect(mockGetRunRoster).toHaveBeenCalledWith("7");
   });
 
-  // A #3 — 선택한 회차의 기사·동승자가 노선 확인 버튼을 눌렀는지 보인다(MON-05).
+  // 선택한 회차의 기사·동승자가 노선 확인 버튼을 눌렀는지 보인다(MON-05).
   it("선택한 회차의 기사·동승자 옆에 노선 확인 여부를 보여 준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -241,7 +241,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
       const { unmount } = render(<TodayRunPage />);
       await screen.findByText("김학생");
       expect(screen.getByRole("button", { name: "강제 승하차지 추가" })).toBeDisabled();
-      // B1 #25 — 사유가 툴팁뿐이면 키보드·터치로 못 읽는다. 글자로도 보인다.
+      // 사유가 툴팁뿐이면 키보드·터치로 못 읽으므로 글자로도 보인다.
       expect(screen.getByText("확정된 회차에는 추가할 수 없습니다 (출발 30분 전까지만)")).toBeInTheDocument();
       unmount();
 
@@ -371,7 +371,7 @@ describe("TodayRunPage — 회차 선택·명단·결석 라벨", () => {
   });
 
   // DashboardPage.test.tsx 와 같은 이유로 `container.textContent`
-  // 포함 여부로 본다(판단 근거, 보고서 §1). 명단 표 행마다 같은 회차 값이 반복되므로 한
+  // 포함 여부로 본다. 명단 표 행마다 같은 회차 값이 반복되므로 한
   // 번만 나오는지까지는 보지 않고 "떴는가"만 본다.
   it("명단 표와 사이드 카드 모두 출발·도착 시각을 예정·실제로 구별해 보여준다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
@@ -565,7 +565,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시", () => {
     mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
   });
 
-  // B1 #3 — 같은 이름 회차를 구분하도록 버스 목록 항목 앞에 출발 시각을 붙인다.
+  // 같은 이름 회차를 구분하도록 버스 목록 항목 앞에 출발 시각을 붙인다.
   it("idle·confirmed·moving·finished 4종 상태가 전부 목록에 남는다 — finished 도 걸러내지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(fourStatusDashboard);
     mockGetRunRoster.mockResolvedValue(baseRoster);

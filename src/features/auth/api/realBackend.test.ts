@@ -36,7 +36,7 @@ beforeAll(async () => {
 // sysadmin 계정에서도 동일 재현 — 계정 상태와 무관한 시험 환경의 한계다).
 // 이 파일 전용으로 raw fetch 로 로그인해 Set-Cookie 를 직접 캡처하고, 이후
 // 요청에 Cookie 헤더로 되먹인다 — 공용 헬퍼(`rawRestLogin.ts`)와 프로덕션
-// 코드는 고치지 않는다(판단 근거, 보고서 §1).
+// 코드는 고치지 않는다.
 async function rawLoginWithCookie(loginId: string, password = "password") {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -64,7 +64,7 @@ describe("auth api — 실서버 계약", () => {
 
   // 아래 일련의 시험이 공유하는 일회용 staff 계정 — signup(§2.2)으로 만들어
   // pending → rejected(관리자 raw fetch 반려) → pending(reapply) 순으로 전이시켜
-  // AUTH_PENDING·AUTH_REJECTED 두 코드를 계정 하나로 재현한다(판단 근거, 보고서 §1).
+  // AUTH_PENDING·AUTH_REJECTED 두 코드를 계정 하나로 재현한다.
   const suffix = Date.now().toString().slice(-8);
   const throwawayLoginId = `f5w2a${suffix}`;
   const throwawayPhone = `010-9${suffix}`;
@@ -142,7 +142,7 @@ describe("auth api — 실서버 계약", () => {
   }) => {
     if (!backendReachable) skip();
     // admin 기능의 함수를 직접 import 하면 auth↔admin 기능 경계를 넘으므로
-    // raw fetch 로 부른다(판단 근거, 보고서 §1) — sysadmin 로그인은 계약 시험
+    // raw fetch 로 부른다 — sysadmin 로그인은 계약 시험
     // 공용 헬퍼(rawRestLogin)를 그대로 쓴다(쿠키가 필요 없는 호출이라 문제없다).
     const sysadminToken = await rawRestLogin(API_BASE_URL, "sysadmin");
     const listResponse = await fetch(`${API_BASE_URL}/admin/staff-signup-requests`, {
@@ -172,7 +172,7 @@ describe("auth api — 실서버 계약", () => {
     // 토큰을 무조건 Authorization 으로 붙인다(/auth/login 도 예외가 아니다). 앞선
     // "login 은 pending 계정도" 시험이 pending 토큰을 store 에 남겨 두므로, 지우지
     // 않고 이 login() 을 부르면 그 낡은 pending 토큰이 실려 백엔드가 로그인 자체를
-    // 403 AUTH_PENDING 으로 막는다(실측 — 판단 근거, 보고서 §2). login() 은 원래
+    // 403 AUTH_PENDING 으로 막는다. login() 은 원래
     // 미인증 호출이어야 하므로 직전에 store 를 비운다.
     setAccessToken(null);
 

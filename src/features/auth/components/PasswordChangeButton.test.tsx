@@ -18,7 +18,7 @@ const openDialogAndFill = (current: string, next: string, confirm: string) => {
   fireEvent.change(screen.getByLabelText(/새 비밀번호 확인/), { target: { value: confirm } });
 };
 
-// A #4 — 관리자가 초기화해 준 임시 비밀번호를 관계자·메인 관리자가 직접 바꾸는 길.
+// 관리자가 초기화해 준 임시 비밀번호를 관계자·메인 관리자가 직접 바꾸는 길.
 describe("PasswordChangeButton", () => {
   afterEach(() => vi.clearAllMocks());
 

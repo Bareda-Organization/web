@@ -116,7 +116,7 @@ const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: Ac
 };
 
 // §6.1~§6.3 학원 목록 · 등록 · 수정(O-01). 관계자 가입은 활성 학원 검색에서 출발하므로
-// (BRIEF-a1.md §4.4) 등록 직후 목록을 다시 불러 그 학원이 실제로 뜨는지 화면에서
+// 등록 직후 목록을 다시 불러 그 학원이 실제로 뜨는지 화면에서
 // 확인할 수 있게 한다.
 export const AcademiesPage = () => {
   const [query, setQuery] = useState("");

@@ -143,7 +143,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     expect(screen.getByRole("button", { name: "다음" })).toBeDisabled();
   });
 
-  // B1 #25 — 주소를 손으로 치지 않고 후보에서 고른다. 고르기 전에는 다음으로 갈 수 없고, 고른 주소가 화면에 보인다.
+  // 주소를 손으로 치지 않고 후보에서 고른다. 고르기 전에는 다음으로 갈 수 없고, 고른 주소가 화면에 보인다.
   it("주소는 후보에서 고르며, 고르기 전에는 다음이 비활성이고 고른 뒤에는 그 주소가 보인다", async () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
     await pickExistingStudent();

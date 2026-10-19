@@ -53,7 +53,7 @@ const EMERGENCY_SUMMARY_INTERVAL_MS = 30000;
 const DEFAULT_CAMERA: MapCamera = { lat: 37.5666103, lng: 126.9783882, zoom: 12 };
 
 // §6.8~§6.9 전체 관제 — 학원별 실시간 회차(O-05·O-06). 메인 관리자는 학원 경계를 넘는
-// 유일한 역할이라(BRIEF-a1.md §2) 학원 선택 드롭다운이 이 화면의 진입점이다 — 관계자
+// 유일한 역할이라 학원 선택 드롭다운이 이 화면의 진입점이다 — 관계자
 // 대시보드처럼 학원 하나로 고정된 화면이 아니다.
 // 실시간 비상 알림 한 건 — 발생(raised)과 취소(canceled) 모두 그 신고(emergencyId) 자리에 남는다.
 type LiveEmergencyAlert = {
@@ -277,7 +277,7 @@ export const MonitoringPage = () => {
   );
 
   // Goal 8 — `/topic/admin/live` 구독. 이 채널은 학원 경계를 넘어 전체를
-  // 방송하므로(BRIEF-a1.md §2) `runs` 는 화면이 지금 선택한 학원 하나만 들고
+  // 방송하므로 `runs` 는 화면이 지금 선택한 학원 하나만 들고
   // 있다 — 봉투에는 어느 학원 소속인지 알려주는 필드가 없어(§7 공통 봉투),
   // `runId` 가 지금 목록에 있는 회차와 일치할 때만 직접 갱신하고(`position`),
   // 새 회차 시작·종료처럼 `runs` 자체의 구성이 바뀔 수 있는 이벤트는 지금

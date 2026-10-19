@@ -27,7 +27,7 @@ describe("interpolateLatLng — 진행률에 따른 선형 보간", () => {
 
   it("진행률이 1 을 넘겨 들어와도 목표 좌표를 넘어가지 않는다", () => {
     // 다음 좌표가 늦게 도착해 진행률 계산이 1 을 넘길 수 있다 — 그래도 마커가
-    // 목표 지점을 지나쳐 가면 안 된다(COMMON-B2 §2).
+    // 목표 지점을 지나쳐 가면 안 된다.
     expect(interpolateLatLng(START, END, 1.8)).toEqual(END);
   });
 

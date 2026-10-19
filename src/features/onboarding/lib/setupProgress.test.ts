@@ -4,7 +4,7 @@ import { countSchedulesWithoutRoute } from "./setupProgress";
 const route = (busId: string, weekday: string, direction: string, active = true) => ({ busId, weekday, direction, active });
 const schedule = (busId: string, weekday: string, direction: string, active = true) => ({ busId, weekday, direction, active });
 
-// B1 #9 — 노선 없이 스케줄만 있으면 그 회차는 "고정 노선이 없습니다" 가 된다. 차량·요일·방향이 같은 활성 노선이 있어야 짝이 맞는다.
+// 노선 없이 스케줄만 있으면 그 회차는 "고정 노선이 없습니다" 가 된다. 차량·요일·방향이 같은 활성 노선이 있어야 짝이 맞는다.
 describe("countSchedulesWithoutRoute", () => {
   it("차량·요일·방향이 같은 활성 노선이 없는 활성 스케줄만 센다", () => {
     const count = countSchedulesWithoutRoute(

@@ -49,7 +49,7 @@ describe("RouteForm — 등록 실패 갈래", () => {
   });
 });
 
-// B1 #10 — 등록을 저장하면 목록으로 돌아가 정차지를 넣으러 다시 찾아 들어가야 했다. 만든 편성의 id 를 넘겨 상세로 이어 준다.
+// 등록을 저장하면 만든 편성의 id 를 넘겨 상세로 이어 준다 — 목록으로 돌아가면 정차지를 넣으러 다시 찾아 들어가야 한다.
 describe("RouteForm — 등록 뒤 이어가기", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -145,8 +145,8 @@ describe("RouteForm — F02-17 편성 이름 지우기", () => {
   });
 });
 
-// B1 #7 — 월~금 운영 학원이 요일마다 폼을 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
-describe("RouteForm — B1 #7 요일 여러 개 한 번에", () => {
+// 월~금 운영 학원이 요일마다 폼을 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
+describe("RouteForm — 요일 여러 개 한 번에", () => {
   afterEach(() => vi.clearAllMocks());
 
   const oneBus = {

@@ -35,7 +35,7 @@ const ackText = (emergency: EmergencyItemResponseTypes): string => {
 };
 
 // §6.11 상세 — 목록에 다 못 담는 위치·연락처·메모를 오른쪽 상시 칸에 보인다. 비상 상황이라는 맥락상
-// §6.13 감사 이력과 달리 연락처를 마스킹하지 않는다(판단 근거, 보고서 §1) — 대응이 급한 화면에서 정보를 가리면 오히려 위험하다.
+// §6.13 감사 이력과 달리 연락처를 마스킹하지 않는다 — 대응이 급한 화면에서 정보를 가리면 오히려 위험하다.
 export const EmergencyDetailPanel = ({ emergency }: { emergency: EmergencyItemResponseTypes }) => {
   const deviceNote = deviceTimeNote(emergency.raisedAt, emergency.occurredAt);
   const canceled = emergency.canceledAt !== null;

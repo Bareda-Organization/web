@@ -78,7 +78,7 @@ const resolveActiveValue = (pathname: string): string => {
 
 // SideNav 원본(kit.jsx)은 로컬 state 로 화면을 전환하는 SPA 스위치 방식이지만, 이 앱은
 // Next.js 라우팅을 쓴다 — value 를 현재 경로에서 계산하고 onChange 는 router.push 로
-// 바꾼다(판단 근거, 보고서 §1).
+// 바꾼다.
 const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();

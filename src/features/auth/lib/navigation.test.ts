@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { decideAuthRedirect } from "./navigation";
 import type { AuthSession } from "../types";
 
-// `AuthGateGuard`(features/auth) 가 유일하게 부르는 판정 함수. 보고서 4항이 지목한
-// "브라우저 없이도 재현 가능한 순수 분기 로직" 중 하나 — 상태 3종(pending·rejected·active)
+// `AuthGateGuard`(features/auth) 가 유일하게 부르는 판정 함수다. 브라우저 없이도
+// 재현 가능한 순수 분기 로직이다 — 상태 3종(pending·rejected·active)
 // 이 각자 다른 경로로 갈라지는 것을 여기서 고정한다.
 const baseSession = (status: AuthSession["status"], role: AuthSession["role"] = "staff"): AuthSession => ({
   accountId: "acc-1",
@@ -57,7 +57,7 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(baseSession("active", "system_admin"), "/academies", "system_admin")).toBeNull();
   });
 
-  // BRIEF-a1.md §2 — "관계자가 주소를 직접 쳐서 (admin) 에 들어가는지" 가 가장 위험한 자리.
+  // "관계자가 주소를 직접 쳐서 (admin) 에 들어가는지" 가 가장 위험한 자리.
   // 경로 목록에 등록하지 않은 새 화면 폴더도 그 그룹 안에 있으면 자동으로 막혀야 한다(기본은 거부).
   it("경로 목록에 없는 새 화면도 그룹 역할이 다르면 닫힌다", () => {
     expect(decideAuthRedirect(baseSession("active", "staff"), "/brand-new-admin-screen", "system_admin")).toBe("/dashboard");
