@@ -17,7 +17,7 @@ describe("RosterTable — 빈 목록과 키보드", () => {
     expect(screen.getByText("등록된 차량이 없습니다")).toBeInTheDocument();
   });
 
-  // 목록을 불러오는 동안에는 "표시할 내용이 없습니다" 가 보이면 안 된다(K15).
+  // 목록을 불러오는 동안에는 "표시할 내용이 없습니다" 가 보이면 안 된다.
   it("불러오는 중이면 빈 목록 문구 대신 불러오는 중 문구를 보여 준다", () => {
     render(<RosterTable<Row> columns={columns} rows={[]} loading />);
     expect(screen.getByText("불러오는 중입니다")).toBeInTheDocument();

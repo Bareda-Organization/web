@@ -129,7 +129,7 @@ export type MarkerIconOptions = {
   markerId?: string;
 };
 
-// F01-02 — SDK 는 아이콘 문자열을 그대로 DOM 에 넣는다. 관계자가 입력하는 호차명이 태그로 살아나지 않게
+// SDK 는 아이콘 문자열을 그대로 DOM 에 넣는다. 관계자가 입력하는 호차명이 태그로 살아나지 않게
 // 문자열로 끼우는 값은 전부 이 함수를 거친다.
 const escapeHtml = (raw: string): string =>
   raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");

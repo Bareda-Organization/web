@@ -82,7 +82,7 @@ describe("StopManagement — 목록", () => {
     expect(screen.getByText("1호차 · 월 · 등원")).toHaveAttribute("data-active", "true");
   });
 
-  // L4 — 흐림만으로는 상태를 전할 수 없다(색·농도만으로 말하지 않는다). 비활성 편성에는 글자 "비활성" 이 붙는다.
+  // 흐림만으로는 상태를 전할 수 없다(색·농도만으로 말하지 않는다). 비활성 편성에는 글자 "비활성" 이 붙는다.
   it("비활성 편성 태그에는 '비활성' 글자가 붙고 활성 편성 태그에는 붙지 않는다", async () => {
     render(<StopManagement />);
 
@@ -288,7 +288,7 @@ describe("StopManagement — 수정", () => {
     expect(mockMapSurface.mock.lastCall![0].markers[0]).toMatchObject({ lat: 37.52, lng: 126.83 });
   });
 
-  // L3 — QA-STF-26: 50m 안 다른 승하차지는 주소를 고를 때도, 핀만 끌어 옮길 때도 저장 전에 알린다.
+  // QA-STF-26: 50m 안 다른 승하차지는 주소를 고를 때도, 핀만 끌어 옮길 때도 저장 전에 알린다.
   it("주소를 고르지 않고 핀만 다른 승하차지 50m 안으로 끌어도 저장 전에 알린다", async () => {
     mockGetAllStops.mockResolvedValue([
       stop(),

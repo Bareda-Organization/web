@@ -19,8 +19,8 @@ describe("usePagedList", () => {
     expect(fetchPage).toHaveBeenLastCalledWith(1);
   });
 
-  // F03-04 — 서버는 첫 쪽 20건만 준다. 화면이 total_count·has_next 를 그대로 받아야 다음 쪽으로 갈 수 있다.
-  it("resetKey 가 바뀌면 0쪽으로 돌아가며 요청은 한 번만 나간다(F03-17)", async () => {
+  // 서버는 첫 쪽 20건만 준다. 화면이 total_count·has_next 를 그대로 받아야 다음 쪽으로 갈 수 있다.
+  it("resetKey 가 바뀌면 0쪽으로 돌아가며 요청은 한 번만 나간다", async () => {
     const fetchPage = vi.fn(async (page: number) => pageOf([`p${page}`], true, 60));
     const { result, rerender } = renderHook(({ key }) => usePagedList(fetchPage, { ...OPTIONS, resetKey: key }), {
       initialProps: { key: "a" },
@@ -38,7 +38,7 @@ describe("usePagedList", () => {
     expect(fetchPage).toHaveBeenCalledWith(0);
   });
 
-  // F03-17 — 응답 순서가 뒤바뀌어도 마지막에 보낸 요청의 응답이 남아야 한다.
+  // 응답 순서가 뒤바뀌어도 마지막에 보낸 요청의 응답이 남아야 한다.
   it("먼저 보낸 요청의 응답이 늦게 와도 마지막 요청의 결과를 덮지 않는다", async () => {
     const resolvers: Array<(value: ReturnType<typeof pageOf>) => void> = [];
     const fetchPage = vi.fn(() => new Promise<ReturnType<typeof pageOf>>((resolve) => resolvers.push(resolve)));
@@ -58,7 +58,7 @@ describe("usePagedList", () => {
     expect(result.current.items).toEqual(["b"]);
   });
 
-  // F03-06 — 폴링 한 번이 실패해도 이미 보이던 목록을 비우고 "없습니다" 로 그리지 않는다.
+  // 폴링 한 번이 실패해도 이미 보이던 목록을 비우고 "없습니다" 로 그리지 않는다.
   it("주기 갱신이 실패하면 직전 목록을 유지하고 오류만 알린다", async () => {
     vi.useFakeTimers();
     try {
