@@ -186,10 +186,10 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
           <>
             {namesOf(summary.emptyRoute)}
             <br />
-            편성에 정차지 0곳
+            편성에 승하차지 0곳
           </>
         ) : (
-          "모든 활성 스케줄의 편성에 정차지가 있음"
+          "모든 활성 스케줄의 편성에 승하차지가 있음"
         ),
     },
   ];
@@ -283,7 +283,7 @@ export const ScheduleList = ({ creating: creatingProp, onCreatingChange }: Sched
               </span>
               <span>
                 <span data-swatch="empty" />
-                노선 편성의 정차지가 0곳
+                노선 편성의 승하차지가 0곳
               </span>
             </StyledGridLegend>
           </>
@@ -349,11 +349,11 @@ const GridBusRows = ({ row, today, onOpen }: GridBusRowsProps) => (
                     <StyledScheduleCell
                       type="button"
                       $kind={!schedule.active ? "off" : schedule.routeStopCount === 0 ? "empty" : "normal"}
-                      aria-label={`${row.bus.busNo} ${WEEKDAY_LABEL[day]}요일 ${DIRECTION_LABEL[direction]} ${hhmm(schedule.departTime)} 스케줄${schedule.active ? "" : " · 비활성"}${schedule.routeStopCount === 0 ? " · 노선 정차지 0곳" : ""}`}
+                      aria-label={`${row.bus.busNo} ${WEEKDAY_LABEL[day]}요일 ${DIRECTION_LABEL[direction]} ${hhmm(schedule.departTime)} 스케줄${schedule.active ? "" : " · 비활성"}${schedule.routeStopCount === 0 ? " · 노선 승하차지 0곳" : ""}`}
                       onClick={() => onOpen(schedule)}
                     >
                       {hhmm(schedule.departTime)}
-                      <small>{!schedule.active ? "비활성" : schedule.routeStopCount === 0 ? "정차지 0곳" : schedule.estDurationMin != null ? `${schedule.estDurationMin}분` : "-"}</small>
+                      <small>{!schedule.active ? "비활성" : schedule.routeStopCount === 0 ? "승하차지 0곳" : schedule.estDurationMin != null ? `${schedule.estDurationMin}분` : "-"}</small>
                     </StyledScheduleCell>
                   ) : null}
                 </StyledDayCell>

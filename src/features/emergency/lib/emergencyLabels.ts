@@ -4,7 +4,7 @@ import type { EmergencyType } from "../types";
 export const EMERGENCY_TYPE_LABEL: Record<EmergencyType, string> = {
   accident: "사고",
   vehicle_fault: "차량 고장",
-  student_emergency: "학생 응급상황",
+  student_emergency: "학생 응급",
   etc: "기타",
 };
 

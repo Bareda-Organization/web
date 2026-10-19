@@ -246,6 +246,16 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
     expect(screen.queryByText(/등원 회차 기준/)).not.toBeInTheDocument();
   });
 
+  it("미승차 지표의 보조 문장은 「승하차지」 말로 말한다", async () => {
+    mockGetDashboard.mockResolvedValue(baseDashboard);
+    mockGetRunsLive.mockResolvedValue(emptyLive);
+    render(<DashboardPage />);
+
+    await screen.findByText("1호차 · 등원");
+    expect(screen.getByText("승하차지를 지나고도 타지 않은 학생")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
   // Ruling 879 — 회차 표의 건수는 탑승 완료 누계(boarded + alighted)다. 머리글과 보조 문장이 '현재 탑승' 으로 읽히지 않는다.
   it("회차 표 머리글과 지표 보조 문장이 탑승 완료(하차 포함) 기준이다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);

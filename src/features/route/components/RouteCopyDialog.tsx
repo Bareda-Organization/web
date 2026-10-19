@@ -70,7 +70,7 @@ export const RouteCopyDialog = ({ route, onClose, onDone }: RouteCopyDialogProps
       }
     >
       <p>
-        {route.busNo} · 정차지 {route.stops.length}곳을 고른 요일에 같은 순서로 만듭니다.
+        {route.busNo} · 승하차지 {route.stops.length}곳을 고른 요일에 같은 순서로 만듭니다.
       </p>
       <WeekdayPicker
         label="복사할 요일"

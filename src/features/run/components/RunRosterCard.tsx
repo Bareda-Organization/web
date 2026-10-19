@@ -24,7 +24,7 @@ type Props = {
   onCancelTransfer: (row: RosterItemResponseTypes & { transferId: string }) => void;
 };
 
-const PASSAGE_LABEL = { passed: "통과", current: "현재 정차지", next: "다음 정차지" } as const;
+const PASSAGE_LABEL = { passed: "통과", current: "현재 승하차지", next: "다음 승하차지" } as const;
 
 // 탑승 명단 — 상태 칩 건수 · 정차지 묶음. 미승차 행은 위험색 + [보호자 전화](U-08), 미등원은 회색(Ruling 811).
 export const RunRosterCard = ({
@@ -101,7 +101,7 @@ export const RunRosterCard = ({
     <StyledRosterCard aria-label="탑승 명단" aria-busy={loading}>
       <StyledRosterCardHead>
         <h2>탑승 명단 {roster.length}명</h2>
-        <p>{isIdle ? "정차지 순" : "정차지 순 · 위쪽이 이미 지난 정차지"}</p>
+        <p>{isIdle ? "승하차지 순" : "승하차지 순 · 위쪽이 이미 지난 승하차지"}</p>
       </StyledRosterCardHead>
       <FilterBar style={{ marginBottom: 16 }}>
         <FilterGroup label="상태">
