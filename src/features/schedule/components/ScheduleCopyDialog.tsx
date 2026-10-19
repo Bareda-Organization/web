@@ -15,7 +15,7 @@ type ScheduleCopyDialogProps = {
   onDone: () => void;
 };
 
-// B1 #7 — 이 스케줄(차량·방향·출발 시각·출발지·도착지·소요시간)을 다른 요일로 복사한다.
+// 이 스케줄(차량·방향·출발 시각·출발지·도착지·소요시간)을 다른 요일로 복사한다.
 // 요일마다 1건씩 만들며 한 요일이 실패해도 나머지는 이어 간다(Ruling 490).
 export const ScheduleCopyDialog = ({ schedule, onClose, onDone }: ScheduleCopyDialogProps) => {
   const [weekdays, setWeekdays] = useState<ScheduleWeekday[]>([]);

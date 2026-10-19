@@ -40,7 +40,7 @@ describe("메인 관리자 EmergencyDetailPanel — 조치 메모", () => {
     expect(screen.queryByText(/조치 메모/)).not.toBeInTheDocument();
   });
 
-  // R48 시안 `emergency-alerts` — 오른쪽 상시 칸의 [바로 연락]: 발신자 · 동승자 · 학원 대표에 전화 단추(tel:).
+  // 오른쪽 상시 칸의 [바로 연락]: 발신자 · 동승자 · 학원 대표에 전화 단추(tel:).
   it("바로 연락에 발신자와 연락처 목록, 학원 대표 번호를 전화 링크로 둔다", () => {
     render(
       <EmergencyDetailPanel
@@ -67,7 +67,7 @@ describe("메인 관리자 EmergencyDetailPanel — 조치 메모", () => {
     expect(screen.getByText("미확인 · 1분 미만")).toBeInTheDocument();
   });
 
-  // R50 M7 — 사양 용어는 동승자(`escort`)다. '동승 매니저' 와 섞어 쓰지 않는다.
+  // 사양 용어는 동승자(`escort`)다. '동승 매니저' 와 섞어 쓰지 않는다.
   it("연락처의 동승자는 사양 용어 '동승자' 로 적는다", () => {
     render(<EmergencyDetailPanel emergency={{ ...EMERGENCY, contacts: [{ name: "윤미경", role: "escort", phone: "010-0000-2013" }] }} />);
 
@@ -76,7 +76,7 @@ describe("메인 관리자 EmergencyDetailPanel — 조치 메모", () => {
   });
 });
 
-// R47 Ruling 744 — 단말이 누른 시각은 참고값이다. 접수 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.
+// Ruling 744 — 단말이 누른 시각은 참고값이다. 접수 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.
 describe("메인 관리자 EmergencyDetailPanel — 단말 기록 시각", () => {
   const RAISED = "2026-09-12T08:10:00+09:00";
 
@@ -105,7 +105,7 @@ describe("메인 관리자 EmergencyDetailPanel — 단말 기록 시각", () =>
   });
 });
 
-// R52 M10 · API_SPEC §6.11 — 학원이 대표 연락처를 등록하지 않으면 `contact` 는 키는 있고 값이 null 이다. `tel:null` 링크를 만들지 않는다.
+// API_SPEC §6.11 — 학원이 대표 연락처를 등록하지 않으면 `contact` 는 키는 있고 값이 null 이다. `tel:null` 링크를 만들지 않는다.
 describe("메인 관리자 EmergencyDetailPanel — 학원 연락처 미등록", () => {
   it("contact 가 null 이면 '연락처 미등록' 을 적고 학원 대표 전화 링크를 두지 않는다", () => {
     render(<EmergencyDetailPanel emergency={{ ...EMERGENCY, academy: { ...EMERGENCY.academy, contact: null } }} />);

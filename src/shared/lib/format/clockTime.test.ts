@@ -18,7 +18,7 @@ describe("formatClockTime", () => {
   });
 });
 
-// R21-B 목표 3 — 운행 시각(출발·도착)만 초까지 보여준다. `formatClockTime` 과 같은 파일에
+// 운행 시각(출발·도착)만 초까지 보여준다. `formatClockTime` 과 같은 파일에
 // 두어 "이 화면은 분까지, 저 화면은 초까지"가 한눈에 비교되게 한다.
 describe("formatClockTimeWithSeconds", () => {
   it("같은 초 안의 밀리초 차이는 결과에 영향을 주지 않는다(시:분:초까지 남긴다)", () => {
@@ -54,8 +54,7 @@ describe("서울 시간대 고정", () => {
     }
   });
 
-  // R46-CIFIX — 오프셋이 없는 값은 `formatDateTime` 처럼 한국 시간으로 읽는다. 예전에는 PC 시간대로 읽어
-  // GitHub Actions(UTC)에서 `08:00` 이 `17:00` 으로 나왔다.
+  // 오프셋이 없는 값은 `formatDateTime` 처럼 한국 시간으로 읽는다. PC 시간대에 기대면 UTC 환경(GitHub Actions)에서 `08:00` 이 `17:00` 으로 어긋난다.
   it("오프셋 없는 날짜시각은 PC 시간대와 무관하게 서울 벽시계 그대로 낸다", () => {
     for (const tz of ["UTC", "America/Los_Angeles", "Asia/Seoul"]) {
       process.env.TZ = tz;

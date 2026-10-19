@@ -14,8 +14,8 @@ import { StyledBrand, StyledContainer, StyledFooter, StyledForm, StyledLayout, S
 // 관계자 웹의 가입 대상은 학원 관계자(staff) 뿐이다 — `IMPLEMENTATION_PLAN §1` 이 이 제품의
 // 사용자를 "학원 관계자 + 메인 관리자"로만 못박고, 학부모·학생·기사·동승자는 별도 앱(Flutter)
 // 몫이라 이 화면에 그 4개를 보여주면 잘못된 제품으로 유도하는 셈이 된다. 그래서 §2.2 가 여는
-// 5개 역할 중 이 폼은 `staff` 하나로 고정하고 선택 UI 자체를 두지 않는다 — 판단 근거는
-// 보고서 1항, 확신 90%로 적어 둔다(반대 근거가 나오면 뒤집을 여지가 있다는 뜻).
+// 5개 역할 중 이 폼은 `staff` 하나로 고정하고 선택 UI 자체를 두지 않는다 —
+// 관계자 웹이 다른 역할의 가입도 받게 되면 이 고정을 푼다.
 const SIGNUP_ROLE = "staff" as const;
 
 // §2.2 — login_id 50자 이하 · 비밀번호 UTF-8 72바이트 이하(한글 24자). 넘으면 서버가 422 를 낸다.

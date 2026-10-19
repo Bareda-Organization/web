@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/shared/lib/http";
 import { runPerWeekday } from "./weekdayBatch";
 
-// B1 #7 — 요일마다 1건씩 만들 때 한 요일이 실패해도 나머지는 계속 만들고, 어느 요일이 왜 실패했는지 돌려준다.
+// 요일마다 1건씩 만들 때 한 요일이 실패해도 나머지는 계속 만들고, 어느 요일이 왜 실패했는지 돌려준다.
 describe("runPerWeekday", () => {
   it("요일 순서대로 실행하고 실패한 요일만 사유와 함께 돌려준다", async () => {
     const called: string[] = [];

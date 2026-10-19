@@ -46,7 +46,7 @@ const afterNotice = (account: BlockedAccountItemResponseTypes) => {
   };
 };
 
-// §6.12 POST /admin/blocked-accounts/{id}/unblock (O-03). BRIEF-a1.md §4.2 — 차단 사유·
+// §6.12 POST /admin/blocked-accounts/{id}/unblock (O-03). 차단 사유·
 // 실패 횟수를 목록에서 이미 보여줬어도, 해제는 계정을 다시 로그인 가능하게 만드는 조작이라
 // 그 맥락을 확인 단계에서 한 번 더 보여준 뒤 명시적으로 확정하게 한다.
 export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfirmDialogProps) => {

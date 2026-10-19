@@ -4,11 +4,10 @@ import { MemberApprovalsPage } from "./MemberApprovalsPage";
 import { decideStaffSignupRequest, getStaffSignupRequests } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
-// A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 가입 요청 목록 조회가
-// 실패했을 때 오류 문구가 뜨는지를 본다.
+// 가입 요청 목록 조회가 실패했을 때 오류 문구가 뜨는지를 본다.
 //
-// FE-R2 W 목표 1 — 조회가 실패하면 requests 가 []로 떨어져 EmptyState("처리할 가입
-// 요청이 없습니다")가 오류 배너와 동시에 뜨던 것을 고쳤다(MemberApprovalsPage.tsx
+// 조회가 실패하면 requests 가 []로 떨어져 EmptyState("처리할 가입
+// 요청이 없습니다")가 오류 배너와 동시에 뜨지 않아야 한다(MemberApprovalsPage.tsx
 // !error 가드). 아래 두 번째 검사가 그 가드를 고정한다 — 가드를 지우면 이 검사만
 // 실패해야 한다.
 vi.mock("../api", () => ({
@@ -55,8 +54,8 @@ describe("MemberApprovalsPage — 목록 조회 실패", () => {
   });
 });
 
-// R50 M6 — O-02 · UF-O-06 "처리 대기 요청에 붙여 오래 기다린 요청을 구분". 신청 일시 옆에 서울 날짜 기준 N일째를 보인다(신청 당일 = 1일째).
-describe("MemberApprovalsPage — 대기 일수(R50 M6)", () => {
+// O-02 · UF-O-06 "처리 대기 요청에 붙여 오래 기다린 요청을 구분". 신청 일시 옆에 서울 날짜 기준 N일째를 보인다(신청 당일 = 1일째).
+describe("MemberApprovalsPage — 대기 일수", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -137,7 +136,7 @@ describe("MemberApprovalsPage — 처리 직후 사이드바 배지 갱신", () 
   });
 });
 
-// R48 시안 `member-approvals` — 목록 + 오른쪽 처리 칸. 처음에는 첫 요청이 선택돼 있고, 행의 [처리] 로 다른 요청을 고른다.
+// 목록 + 오른쪽 처리 칸. 처음에는 첫 요청이 선택돼 있고, 행의 [처리] 로 다른 요청을 고른다.
 describe("MemberApprovalsPage — 오른쪽 처리 칸", () => {
   afterEach(() => vi.clearAllMocks());
 

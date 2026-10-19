@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-// F4-B W 목표 4 — 지도 SDK(네이버 지도 v3, `naver.maps.*`)는 포트/어댑터 뒤에 숨겨야
+// 지도 SDK(네이버 지도 v3, `naver.maps.*`)는 포트/어댑터 뒤에 숨겨야
 // 한다(`IMPLEMENTATION_PLAN.md §8.3.1`). 화면(features/admin·features/run)이 SDK
 // 타입을 직접 알게 되면 지도 공급자를 바꿀 때 화면 코드까지 고쳐야 한다 — 이 검사는
 // `features/map/naver/` 바깥의 소스 어디에도 SDK 참조가 없는지를 파일을 직접 읽어 확인한다.

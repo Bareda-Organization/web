@@ -95,8 +95,8 @@ const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Respons
 };
 
 // pending·rejected 계정이 허용 밖을 불러 받는 코드 (§1.4). 이 두 코드를 만나면
-// 화면이 아니라 이 계층에서 대기 화면 이동을 트리거한다 — BRIEF-web §3 "판정은
-// 한 곳에서, 화면은 결과만 받는다"를 만족하려면 http 계층이 이걸 알아야 한다.
+// 화면이 아니라 이 계층에서 대기 화면 이동을 트리거한다 — 판정은 한 곳에서 하고
+// 화면은 결과만 받는 구조라서 http 계층이 이걸 알아야 한다.
 // PASSWORD_CHANGE_REQUIRED(임시 비밀번호 강제 변경, Ruling 540)도 같은 길이다 — 세션을 다시 확인하면 `/me` 의
 // must_change_password 가 참으로 내려와 가드가 변경 화면을 띄운다.
 const isAccountGateCode = (code: string): boolean =>

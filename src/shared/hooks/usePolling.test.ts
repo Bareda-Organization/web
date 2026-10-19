@@ -90,7 +90,7 @@ describe("usePolling", () => {
     await advance(INTERVAL);
     expect(task).toHaveBeenCalledTimes(4);
   });
-  // R46-FIXCONN C-1 ② — 비상 폴링은 탭이 숨어도 멈추면 안 된다. 느린 간격으로 계속 돌고, 다시 보이면 즉시 1회 받는다.
+  // 비상 폴링은 탭이 숨어도 멈추면 안 된다. 느린 간격으로 계속 돌고, 다시 보이면 즉시 1회 받는다.
   it("숨은 탭 간격을 주면 탭이 숨어도 그 간격으로 계속 요청하고, 다시 보이면 즉시 1회 요청한다", async () => {
     const task = vi.fn(async () => {});
     renderHook(() => usePolling(task, INTERVAL, true, INTERVAL * 5));

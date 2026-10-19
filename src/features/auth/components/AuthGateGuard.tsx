@@ -15,12 +15,12 @@ export type AuthGateGuardProps = {
 };
 
 // (auth)·(staff)·(admin) 레이아웃 3곳이 전부 이 컴포넌트 하나만 부른다 — 계정 상태·역할
-// 판정은 `decideAuthRedirect` 한 곳에서만 하고, 화면은 그 결과(리다이렉트 여부)만 받는다
-// (BRIEF-web §3). `AuthSessionProvider` 가 authGate 이벤트로 세션을 갱신하면 이 컴포넌트가
+// 판정은 `decideAuthRedirect` 한 곳에서만 하고, 화면은 그 결과(리다이렉트 여부)만 받는다.
+// `AuthSessionProvider` 가 authGate 이벤트로 세션을 갱신하면 이 컴포넌트가
 // 다시 렌더돼 같은 판정 함수로 자동 이동한다 — 화면마다 403 을 따로 잡을 필요가 없다.
 //
 // bootstrapStatus 가 "loading" 인 동안은 자식도, 리다이렉트도 하지 않는다 — 로그인 폼이
-// 잠깐 보였다가 홈으로 튀는 결함(BRIEF-web §2)은 여기서 막는다.
+// 잠깐 보였다가 홈으로 튀는 결함은 여기서 막는다.
 export const AuthGateGuard = ({ children, requiredRole }: AuthGateGuardProps) => {
   const { bootstrapStatus, session } = useAuthSession();
   const pathname = usePathname();

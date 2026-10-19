@@ -24,14 +24,12 @@ import {
 // 미리보기 플래그가 없어 호출 즉시 정차 순서를 커밋하는 비가역 동작이고(api/index.ts
 // 주석), 전용 노선이면 그 커밋이 삭제와 함께 사라져 안전하다.
 //
-// 확정 노선 경유 지점(RTE-10)의 계약 검사는 2026-09-23 편성 화면에서 그 기능을 뺄 때 함께 뺐다 —
-// 웹이 그 엔드포인트를 더는 부르지 않는다(백엔드 자체 검사는 남아 있다).
+// 확정 노선 경유 지점(RTE-10)의 계약 검사는 두지 않는다 — 웹이 그 엔드포인트를 부르지 않는다(백엔드 자체 검사는 남아 있다).
 //
-// 최적화 계약 검사는 실제 네이버 Directions API 를 부를 수 있다. 한 시험 안에서 짧게 이어 부르면(이 파일이 이미 optimizeRoute 로 1회 부른 뒤라
-// 통틀어 3~4회째) 드물게 개별 호출이 실패하고, 그 실패가 `mapRoute` 서킷(resilience4j,
+// 최적화 계약 검사는 실제 네이버 Directions API 를 부를 수 있다. 한 시험 안에서 짧게 이어 부르면 드물게 개별 호출이 실패하고, 그 실패가 `mapRoute` 서킷(resilience4j,
 // sliding-window=10·최소표본=5·임계 50%)의 재시도 3회와 겹쳐 열림으로 넘어가
-// `MAP_ROUTE_UNAVAILABLE`(503)로 확정된다 — R14-T3 실측(보고서 §2, 인프라성 불안정으로
-// 분류, 코드 결함 아님). 즉시 재시도(예: vitest `retry`)는 같은 요청을 같은 순간에 한 번 더
+// `MAP_ROUTE_UNAVAILABLE`(503)로 확정된다 — 인프라성 불안정이며 코드 결함이 아니다.
+// 즉시 재시도(예: vitest `retry`)는 같은 요청을 같은 순간에 한 번 더
 // 두드릴 뿐이라 열린 서킷 앞에서 무력하다 — 아래 `retryOnMapRouteUnavailable` 로 서킷의
 // `wait-duration-in-open-state`(10s)보다 긴 실제 지연을 두고 재시도한다.
 const MAP_ROUTE_RETRY_DELAY_MS = 11_000;
@@ -85,8 +83,7 @@ describe("route api — 실서버 계약", () => {
     expect(result.stops.length).toBeGreaterThan(0);
   });
 
-  // 등록→삭제를 한 시험 안에서 마쳐 시드를 원상태로 되돌린다(2026-09-14 curl 로
-  // 먼저 확인한 안전한 자체 정리 경로).
+  // 등록→삭제를 한 시험 안에서 마쳐 시드를 원상태로 되돌린다(안전한 자체 정리 경로).
   it("createRoute 로 등록한 노선을 deleteRoute 로 지우면 목록에서 사라진다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -154,7 +151,7 @@ describe("route api — 실서버 계약", () => {
     });
 
     try {
-      // 기준점을 보내지 않는다 — 서버가 방향 규칙으로 정한다(2026-09-23).
+      // 기준점을 보내지 않는다 — 서버가 방향 규칙으로 정한다.
       const optimized = await retryOnMapRouteUnavailable(() => optimizeRoute(created.id));
       const orderedIds = optimized.stops.map((s) => s.stopId);
 
@@ -169,7 +166,7 @@ describe("route api — 실서버 계약", () => {
     }
   });
 
-  // 2026-09-23 — 저장 한 번에 수정·추가·순서가 반영된다. 전용 노선 위에서만(비가역).
+  // 저장 한 번에 수정·추가·순서가 반영된다. 전용 노선 위에서만(비가역).
   // 수정 대상은 이 시험이 새로 만든 승하차지다 — 시드 승하차지를 고치면 그것을 쓰는 다른 노선의 표시가 따라 바뀐다.
   it("saveRouteStops 는 새 승하차지를 만들고 순서·이름 수정까지 한 번에 반영한다", async ({ skip }) => {
     if (!backendReachable) skip();

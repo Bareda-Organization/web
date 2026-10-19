@@ -23,7 +23,7 @@ const STEPS: { label: string; href: string; countOf: (progress: SetupProgressRes
   { label: "운행 스케줄 등록", href: "/schedule", countOf: (progress) => progress.scheduleCount },
 ];
 
-// B1 #9 — 새 학원 대시보드의 시작 체크리스트. 다섯 단계를 다 끝내면 사라지고, 스케줄에 짝이 맞는 노선이 없으면
+// 새 학원 대시보드의 시작 체크리스트. 다섯 단계를 다 끝내면 사라지고, 스케줄에 짝이 맞는 노선이 없으면
 // 단계를 다 끝낸 뒤에도 경고만 남는다. 조회가 실패해도 대시보드를 막지 않는다(보조 안내라 오류를 화면에 올리지 않는다).
 export const SetupChecklist = () => {
   const [progress, setProgress] = useState<SetupProgressResponseTypes | null>(null);

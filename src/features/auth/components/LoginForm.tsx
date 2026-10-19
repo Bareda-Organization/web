@@ -11,7 +11,7 @@ import { StyledBrand, StyledContainer, StyledFooter, StyledForm, StyledLayout, S
 
 // 로그인 실패 상태 — 화면에 보일 문구까지 여기서 결정한다. AUTH_ACCOUNT_BLOCKED 는
 // 별도 라우트를 만들지 않고 이 화면 안에서 차단 안내(UF-X-04)를 인라인으로 보여준다
-// (판단 근거는 보고서 1항 — 로그인 자체가 실패하는 사건이라 화면 전환이 아니라
+// (로그인 자체가 실패하는 사건이라 화면 전환이 아니라
 // 같은 폼 위에서 이유를 밝히는 쪽이 §1.4 의 "로그인 자체가 실패" 설명과 더 맞는다).
 type LoginFormState =
   | { kind: "idle" }

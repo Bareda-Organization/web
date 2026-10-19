@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui";
 import { useAuthSession } from "../hooks/useAuthSession";
 
 /**
- * 로그아웃(§2.7, 2026-09-23 사용자 지시) — 세션이 비면 `AuthGateGuard` 가 로그인 화면으로 보낸다. 이동을 여기서
+ * 로그아웃(§2.7) — 세션이 비면 `AuthGateGuard` 가 로그인 화면으로 보낸다. 이동을 여기서
  * 따로 하지 않는 이유는 "세션이 없으면 로그인 화면" 판정이 가드 한 곳에만 있어야 하기 때문이다.
  */
 export const LogoutButton = () => {

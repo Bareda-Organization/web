@@ -47,11 +47,10 @@ describe("schedule api — 실서버 계약", () => {
   });
 
   // 임시 추가→취소를 한 시험 안에서 마친다. 취소는 행을 지우지 않고 canceled_at 만
-  // 채우므로(2026-09-14 curl 로 먼저 확인) 시드를 해치지 않는다. service_date 를
+  // 채우므로 시드를 해치지 않는다. service_date 를
   // 먼 미래로 둬 다른 시험·화면의 오늘 회차 조회와 겹치지 않게 한다.
-  // depart_time 은 (bus_id, service_date, direction, depart_time) 조합이 취소된
-  // 행과 겹쳐도 DUPLICATE 로 거부됨을 실행 중 발견해(고정값 "08:00" 이 이전 회차의
-  // curl 검증 잔재와 충돌) 실행마다 달라지는 시각을 써서 재실행 시 충돌을 피한다.
+  // depart_time 은 (bus_id, service_date, direction, depart_time) 조합이 취소된 행과 겹쳐도 DUPLICATE 로 거부된다.
+  // 고정 시각("08:00")을 쓰면 같은 조합의 기존 행과 겹칠 수 있어, 실행마다 달라지는 시각을 써서 재실행 시 충돌을 피한다.
   it("createRun 으로 만든 임시 회차를 cancelRun 으로 취소하면 canceled_at 이 채워진다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));

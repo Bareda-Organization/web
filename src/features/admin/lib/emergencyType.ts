@@ -1,7 +1,7 @@
 import type { EmergencyType } from "../types";
 
-// §5.16 이 정의한 실제 type 값(소문자 스네이크케이스). 서버 직렬화 정정(BE-R1 목표 3)
-// 이후로는 항상 이 형태로 내려오므로 소문자 정규화 없이 그대로 조회한다.
+// §5.16 이 정의한 실제 type 값(소문자 스네이크케이스). 서버는 항상 이 형태로 내려주므로
+// 소문자 정규화 없이 그대로 조회한다.
 const TYPE_LABEL: Record<string, string> = {
   accident: "사고",
   vehicle_fault: "차량 고장",

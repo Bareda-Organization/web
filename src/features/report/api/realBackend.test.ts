@@ -22,7 +22,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("report api — 실서버 계약", () => {
-  // 로컬 시드(V2) 기준 — staffA(academy_id=1) 학원은 보고 1건(2026-09-26 R31 BE-B2 가 Swagger 예시용으로 추가).
+  // 로컬 시드(V2) 기준 — staffA(academy_id=1) 학원은 보고 1건(Swagger 예시용 시드 데이터).
   // 개수는 단언하지 않는다 — 봉투 형태만 본다.
   // §5.20 은 §1.8 페이징을 안 쓴다(items 만) — 이 봉투 형태 자체가 검증 대상이다.
 

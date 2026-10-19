@@ -113,7 +113,7 @@ describe("ScheduleForm — F02-08 수정 반영 안내", () => {
   });
 });
 
-describe("ScheduleForm — R46-SCREEN 창 폭", () => {
+describe("ScheduleForm — 창 폭", () => {
   afterEach(() => vi.clearAllMocks());
 
   // 420px 기본 폭에서는 요일 7칸 중 '일'이 둘째 줄에 혼자 내려갔다(화면 확인 1440) — 노선 편성 등록 창(480px)과 같은 폭이면 한 줄에 들어간다.
@@ -191,8 +191,8 @@ describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
   });
 });
 
-// B1 #7 — 월~금 운영 학원이 스케줄 폼을 요일마다 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
-describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
+// 월~금 운영 학원이 스케줄 폼을 요일마다 다섯 번 열지 않도록 요일을 여러 개 골라 한 번에 만든다.
+describe("ScheduleForm — 요일 여러 개 한 번에", () => {
   afterEach(() => vi.clearAllMocks());
 
   const fillAndSubmit = async (container: HTMLElement, weekdayLabels: string[]) => {
@@ -241,7 +241,7 @@ describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
   });
 });
 
-// R48 — 수정 옆 패널의 "이 수정이 반영되는 회차" 미리보기(§5.10 Ruling 366 · 화면 계산 Ruling 827). 오늘 회차는 불변, 내일은 요일이 맞을 때만 반영.
+// 수정 옆 패널의 "이 수정이 반영되는 회차" 미리보기(§5.10 Ruling 366 · 화면 계산 Ruling 827). 오늘 회차는 불변, 내일은 요일이 맞을 때만 반영.
 describe("ScheduleForm — 수정 미리보기", () => {
   afterEach(() => vi.clearAllMocks());
   const base = { id: "9", busId: "1", busNo: "1호차", weekday: "sat" as const, direction: "to_academy" as const, departTime: "12:41", originName: "중동 마을", destinationName: "학원", estDurationMin: 30, active: true };

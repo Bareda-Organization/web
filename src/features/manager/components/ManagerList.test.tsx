@@ -22,7 +22,7 @@ const manager = (id: string, name: string, over: Record<string, unknown> = {}) =
 });
 const page = (items: ReturnType<typeof manager>[]) => ({ items, counts: null, page: 0, size: 20, totalCount: items.length, hasNext: false });
 
-// B1 #8 — 매니저를 등록해도 앱에서 가입 승인을 받기 전에는 앱에 들어올 수 없다. 목록이 그 상태를 말해 줘야 한다.
+// 매니저를 등록해도 앱에서 가입 승인을 받기 전에는 앱에 들어올 수 없다. 목록이 그 상태를 말해 줘야 한다.
 describe("ManagerList — 앱 계정 연결 상태", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -37,7 +37,7 @@ describe("ManagerList — 앱 계정 연결 상태", () => {
   });
 });
 
-// R48 — 역할 탭 · 오늘 배치 필터는 서버 쿼리(§5.13 Ruling 817)로 간다. 화면이 받은 쪽을 가려내지 않는다.
+// 역할 탭 · 오늘 배치 필터는 서버 쿼리(§5.13 Ruling 817)로 간다. 화면이 받은 쪽을 가려내지 않는다.
 describe("ManagerList — 탭 · 필터 쿼리", () => {
   beforeEach(() => mockGetManagers.mockResolvedValue(page([manager("1", "김기사")])));
   afterEach(() => vi.clearAllMocks());
@@ -54,8 +54,8 @@ describe("ManagerList — 탭 · 필터 쿼리", () => {
   });
 });
 
-// R50 S9 — MGR-01 계정 연결 여부 필터. 역할 탭 · 오늘 배치 필터와 함께 서버 쿼리(`linked`)로 간다.
-describe("ManagerList — 계정 연결 필터(R50)", () => {
+// MGR-01 계정 연결 여부 필터. 역할 탭 · 오늘 배치 필터와 함께 서버 쿼리(`linked`)로 간다.
+describe("ManagerList — 계정 연결 필터", () => {
   beforeEach(() => mockGetManagers.mockResolvedValue(page([manager("1", "김기사")])));
   afterEach(() => vi.clearAllMocks());
 
@@ -74,7 +74,7 @@ describe("ManagerList — 계정 연결 필터(R50)", () => {
   });
 });
 
-// R48 — 기사 미배치 회차 띠: 페이지가 넘긴 회차에, 오늘 배치가 없고 그 시각이 근무 시간 안인 기사를 이름으로 짚는다.
+// 기사 미배치 회차 띠: 페이지가 넘긴 회차에, 오늘 배치가 없고 그 시각이 근무 시간 안인 기사를 이름으로 짚는다.
 describe("ManagerList — 기사 미배치 띠 · 오늘 배치 열", () => {
   afterEach(() => vi.clearAllMocks());
   const wholeWeek = { sun: [{ start: "09:00", end: "23:00" }], mon: [{ start: "09:00", end: "23:00" }], tue: [{ start: "09:00", end: "23:00" }], wed: [{ start: "09:00", end: "23:00" }], thu: [{ start: "09:00", end: "23:00" }], fri: [{ start: "09:00", end: "23:00" }], sat: [{ start: "09:00", end: "23:00" }] };

@@ -12,7 +12,7 @@ import { parseWsEventType, type WsEventType } from "./wsEventType";
 // MonitoringPage)은 지연·경과 시간을 클라이언트에서 계산하지 않고 서버가 이미
 // 계산해 준 필드(`delayMinutes` 등)를 그대로 표시하므로, `occurredAt` 은 화면에
 // 노출조차 되지 않는다 — 파싱 실패 가능성(타임존·포맷 오류)만 늘리는 변환을
-// 소비하지 않을 값에 미리 적용할 이유가 없다(판단 근거, 보고서 §1).
+// 소비하지 않을 값에 미리 적용할 이유가 없다.
 export type WebSocketEnvelope = {
   event: WsEventType | null;
   eventWireValue: string | undefined;

@@ -11,7 +11,7 @@ const progress = (overrides: Partial<Awaited<ReturnType<typeof getSetupProgress>
   busCount: 0, managerCount: 0, studentCount: 0, routeCount: 0, scheduleCount: 0, schedulesWithoutRoute: 0, ...overrides,
 });
 
-// B1 #9 — 새 학원 대시보드는 0 과 빈 표뿐이라 어디부터 하는지 알 수 없었다. 차량 → 매니저 → 학생 → 노선 → 스케줄 순서를 알려 준다.
+// 새 학원 대시보드는 0 과 빈 표뿐이므로, 어디부터 하는지 차량 → 매니저 → 학생 → 노선 → 스케줄 순서로 알려 준다.
 describe("SetupChecklist", () => {
   afterEach(() => vi.clearAllMocks());
 

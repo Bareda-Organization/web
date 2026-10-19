@@ -4,9 +4,7 @@ import { AcademiesPage } from "./AcademiesPage";
 import { getAcademies } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
-// A1 수정 라운드(조건 ②) — features/admin 27개 프로덕션 파일 중 검사가 3개뿐이라, 이
-// 화면은 실패 갈래를 확인하는 검사가 하나도 없었다. 조회 실패 시 오류 문구가 뜨는지,
-// 목록이 빈 상태로 안전하게 떨어지는지를 본다.
+// 조회 실패 시 오류 문구가 뜨는지, 목록이 빈 상태로 안전하게 떨어지는지를 본다.
 vi.mock("../api", () => ({
   getAcademies: vi.fn(),
 }));
@@ -27,8 +25,8 @@ describe("AcademiesPage — 목록 조회 실패", () => {
   });
 });
 
-// R50 M3 — 서버 `summary` 에는 주소 미등록 · 정원 찬 학원 값이 없어 지금 쪽(20곳)만 센다. 표기가 전체 합계처럼 읽히지 않게 "이 쪽" 을 밝힌다.
-describe("AcademiesPage — 쪽 단위 지표 표기(R50 M3)", () => {
+// 서버 `summary` 에는 주소 미등록 · 정원 찬 학원 값이 없어 지금 쪽(20곳)만 센다. 표기가 전체 합계처럼 읽히지 않게 "이 쪽" 을 밝힌다.
+describe("AcademiesPage — 쪽 단위 지표 표기", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

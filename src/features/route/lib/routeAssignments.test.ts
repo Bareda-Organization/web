@@ -29,7 +29,7 @@ describe("weekdayOfDate · addDays — 날짜 문자열만으로 계산한다", 
   });
 });
 
-// R50 S10 — A-08 고정 노선 배치 매니저. 고정 노선에는 배치가 없어서 "그 편성(차량 × 요일 × 방향)과 같은 회차" 의 배치를 보인다.
+// A-08 고정 노선 배치 매니저. 고정 노선에는 배치가 없어서 "그 편성(차량 × 요일 × 방향)과 같은 회차" 의 배치를 보인다.
 describe("runsOfRoute — 같은 편성의 회차만 고른다", () => {
   const route = { busId: "3", weekday: "mon" as const, direction: "to_academy" as const };
 

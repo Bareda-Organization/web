@@ -21,7 +21,7 @@ const source = {
   active: true,
 };
 
-// B1 #7 — 월요일 스케줄을 다른 요일로 복사한다. 출발 시각·출발지·도착지·소요시간이 그대로 간다.
+// 월요일 스케줄을 다른 요일로 복사한다. 출발 시각·출발지·도착지·소요시간이 그대로 간다.
 describe("ScheduleCopyDialog", () => {
   afterEach(() => vi.clearAllMocks());
 

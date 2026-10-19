@@ -4,7 +4,7 @@ import { registerAuthGateListener } from "./authGate";
 import { ApiError, NetworkError } from "./apiError";
 import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
-// 게이트 리뷰 Important 1건 — TOKEN_EXPIRED → refreshAccessToken() → 재요청 경로.
+// TOKEN_EXPIRED → refreshAccessToken() → 재요청 경로.
 // 이 경로는 앱의 모든 API 호출이 거치는 공통 관문이라, 재발급 성공인데 session-expired 를
 // 잘못 쏘거나 재시도를 빠뜨리면 "정상 로그인 상태에서 갑자기 로그아웃" 으로 나타난다.
 vi.mock("./refreshClient", () => ({

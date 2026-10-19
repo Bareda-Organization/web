@@ -13,7 +13,7 @@ const readPage = <T>(path: string, size: number) => apiFetch<WirePage<T>>(path, 
 // 서버 id 는 숫자 — 짝 맞추기(countSchedulesWithoutRoute)는 문자열 id 를 쓴다
 const toKeyed = (raw: WireKeyed) => ({ ...raw, busId: asIdString(raw.busId) });
 
-// GET /staff/buses · /managers · /students · /routes · /schedules — 시작 체크리스트용(B1 #9, Ruling 493).
+// GET /staff/buses · /managers · /students · /routes · /schedules — 시작 체크리스트용(Ruling 493).
 // 노선·스케줄은 짝 맞추기에 쓰려고 100건(§1.8 최대)까지 읽는다. 그보다 많은 학원이면 앞 100건 기준의 경고다.
 export const getSetupProgress = async (): Promise<SetupProgressResponseTypes> => {
   const [buses, managers, students, routes, schedules] = await Promise.all([

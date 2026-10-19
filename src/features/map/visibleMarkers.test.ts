@@ -5,7 +5,7 @@ import type { MapMarker } from "./types";
 const bus = (id: string): MapMarker => ({ id, lat: 37.5, lng: 127, kind: "bus", busNo: `${id}호차` });
 const stop = (id: string): MapMarker => ({ id, lat: 37.5, lng: 127, kind: "stop" });
 
-// R23 목표 4 — 버스를 고르면 그 버스와 그 노선만 남긴다(사용자 지시 — 여러 대가 동시에
+// 버스를 고르면 그 버스와 그 노선만 남긴다(여러 대가 동시에
 // 움직이면 고른 버스의 경로가 다른 마커에 가린다).
 describe("visibleMarkers", () => {
   it("고른 버스가 없으면 버스를 전부 보여 준다", () => {

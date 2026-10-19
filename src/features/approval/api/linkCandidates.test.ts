@@ -39,7 +39,7 @@ describe("searchManagerCandidates — 서버 필터로 연결 가능한 매니�
   });
 });
 
-// B1 #14 — 같은 이름 학생을 가르는 정보. 반이 같아도 보호자 연락처(서버가 목록에 주는 값)가 다르다.
+// 같은 이름 학생을 가르는 정보. 반이 같아도 보호자 연락처(서버가 목록에 주는 값)가 다르다.
 describe("searchStudentCandidates — 동명이인 구분 정보", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

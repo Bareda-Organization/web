@@ -33,7 +33,7 @@ const ITEM = {
   ackedBy: null,
 };
 
-// R47 Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발생 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
+// Ruling 744 — 단말이 누른 시각은 접수 시각과 1분 넘게 다를 때만 "발생 시각" 아래에 참고로 덧붙는다(오프라인 큐로 늦게 도착한 비상 — Ruling 616).
 describe("EmergencyList — 단말 기록 시각 병기", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -95,7 +95,7 @@ describe("EmergencyList — 확인(ack) 실패 갈래", () => {
   });
 });
 
-// R32-W6 — 관계자 비상 목록에 연락처가 없고, 자동 갱신이 없고, 위치가 좌표 숫자뿐이었다.
+// 관계자 비상 목록은 연락처를 보여 주고, 자동 갱신하고, 위치를 좌표 숫자가 아닌 지도 링크로 보여 줘야 한다.
 describe("EmergencyList — 연락처·자동 갱신·위치", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -149,7 +149,7 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
     expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  // R46-FUWEB — 응답을 받은 뒤 다음 갱신을 예약한다(`usePolling`) — 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
+  // 응답을 받은 뒤 다음 갱신을 예약한다(`usePolling`) — 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
   it("갱신 응답이 오기 전에는 다음 갱신 요청을 내지 않는다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockGet.mockResolvedValueOnce({ items: [], unackedCount: 0 });
@@ -228,7 +228,7 @@ describe("EmergencyList — 발신 위치가 없는 건", () => {
   });
 });
 
-// R53 t5 A3 · Ruling 885 ① — 발신자가 철회한 신고는 확인할 수 없다. 서버가 409 EMERGENCY_CANCELED 로 거절하므로 화면도 [확인] 을 그리지 않는다.
+// Ruling 885 ① — 발신자가 철회한 신고는 확인할 수 없다. 서버가 409 EMERGENCY_CANCELED 로 거절하므로 화면도 [확인] 을 그리지 않는다.
 describe("EmergencyList — 취소된 건", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -270,7 +270,7 @@ describe("EmergencyList — 취소된 건", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // R53 최종 대조 — 철회 안내는 5초 폴링 성공이 지우지 않는다. 사용자가 닫거나 다음 조작을 할 때까지 남는다.
+  // 철회 안내는 5초 폴링 성공이 지우지 않는다. 사용자가 닫거나 다음 조작을 할 때까지 남는다.
   it("철회 안내는 다음 5초 폴링이 성공해도 지워지지 않고 [닫기] 로 치운다", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

@@ -8,7 +8,7 @@ const item = (academyId: string, academyName: string, extra: Partial<{ staffAcke
   ...extra,
 });
 
-// B1 #24 — 13개 학원 중 어디에 비상이 있는지 한눈에 보려면 학원별 미확인 건수가 필요하다.
+// 13개 학원 중 어디에 비상이 있는지 한눈에 보려면 학원별 미확인 건수가 필요하다.
 describe("countOpenEmergenciesByAcademy", () => {
   it("관계자가 아직 확인하지 않은 비상만 학원별로 센다", () => {
     const counts = countOpenEmergenciesByAcademy([

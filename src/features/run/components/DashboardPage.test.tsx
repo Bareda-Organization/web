@@ -161,8 +161,8 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
   // 출발·도착 컬럼이 표에 실제로 그려지는지 본다. "예정"·"실제" 문구가
   // `<br/>` 로 나뉜 형제 텍스트 노드라 `getByText` 단일 매치가 아니라 `container.textContent`
-  // 포함 여부로 본다(판단 근거, 보고서 §1).
-  // A #3 — 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
+  // 포함 여부로 본다.
+  // 기사·동승자가 노선 확인 버튼을 눌렀는지 관계자 화면에 그린다(MON-05). ack 는 확정·운행 중 회차에서만 뜻이 있다.
   it("확정·운행 중 회차는 기사·동승자 옆에 노선 확인 여부를 보여 준다", async () => {
     mockGetDashboard.mockResolvedValue({
       ...baseDashboard,
@@ -442,7 +442,7 @@ describe("DashboardPage — 지표·회차 목록·미탑승 배너", () => {
 
 // Goal 7 — `/topic/academy/{academyId}/live` 이벤트 배선. `position` 은 payload 를
 // 그대로 병합하고, 나머지 회차 상태 변화는 `loadLive()`(getRunsLive) 재조회로
-// 반영한다는 판단(보고서 §1)을 고정한다.
+// 반영한다는 규칙을 고정한다.
 describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   beforeEach(() => {
     mockUseAuthSession.mockReturnValue({
@@ -484,7 +484,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   });
 
   // 화면 값보다 오래된 위치(`received_at`)는 버린다.
-  it("R57 W-7: 화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
+  it("화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<DashboardPage />);
@@ -617,7 +617,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
     },
   );
 
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 빈 목록 문구가 연결 상태와 같은 조건으로 묶여도 기존 시험은 전부 liveRuns 가
+  // 빈 목록 문구가 연결 상태와 같은 조건으로 묶여도 기존 시험은 전부 liveRuns 가
   // 빈 목록이라 못 잡는다. 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 둘이 서로 무관함을 고정한다.
   it("목록에 항목이 있으면(runs 비어있지 않음) 연결이 끊겨도 목록이 보이고 빈 목록 문구는 뜨지 않는다", async () => {
     mockUseAuthSession.mockReturnValue({ session });
@@ -634,7 +634,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
 
 // 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
 // 버스를 고르면 §5.19 노선을 지도에 그린다(선택 해제·근사 경로 표시 포함).
-describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", () => {
+describe("DashboardPage — 버스 목록 4종 상태·노선 선택", () => {
   const fourStatusDashboard: DashboardResponseTypes = {
     metrics: baseDashboard.metrics,
     runs: [
@@ -672,10 +672,10 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(screen.getAllByText("종료").length).toBeGreaterThan(0);
   });
 
-  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
-  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
-  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
-  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  // 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 숫자로 읽히는 마커만
+  // 회차로 고르는 방식(`Number(markerId)` + `Number.isInteger`)은 문자열 id 에서 선택을 놓친다.
+  // 이 검사가 그 회귀를 잡는다.
   it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [{ ...baseLiveRun, runId: "run-a1", position: { lat: 37.1, lng: 127.1, recordedAt: "2026-09-13T00:00:01Z" } }],
@@ -844,7 +844,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 });
 
 // F01-01·F01-05·F01-09·C00-03 — 지표·표의 자동 갱신 · 늦은 노선 응답 차단 · 승인 요청 배너 처리 경로.
-describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", () => {
+describe("DashboardPage — 갱신·경합·승인 배너", () => {
   const runOf = (runId: string, overrides: Partial<DashboardResponseTypes["runs"][number]> = {}) => ({
     ...baseDashboard.runs[0],
     runId,

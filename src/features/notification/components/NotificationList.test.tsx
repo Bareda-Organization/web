@@ -32,7 +32,7 @@ describe("NotificationList — 조회 갈래", () => {
     await waitFor(() => expect(container.querySelector('[aria-busy="false"]')).toBeTruthy());
 
     expect(screen.getByText(/총 0건 · 수신자 미확인 0건/)).toBeInTheDocument();
-    // 데이터 행은 없고, 머리글 아래에 빈 목록 문구(R32-W10)가 한 줄 있다.
+    // 데이터 행은 없고, 머리글 아래에 빈 목록 문구가 한 줄 있다.
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("표시할 내용이 없습니다")).toBeInTheDocument();
   });
@@ -46,8 +46,8 @@ describe("NotificationList — 조회 갈래", () => {
   });
 });
 
-// R32-W9 — 발송 시각이 서버의 ISO 원문으로 보였다.
-describe("NotificationList — 시각 표기(R32-W9)", () => {
+// 발송 시각은 서버의 ISO 원문이 아니라 한국 시간으로 보인다.
+describe("NotificationList — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("발송 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
@@ -103,14 +103,14 @@ describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", ()
 
     expect(await screen.findByText("수신1")).toBeInTheDocument();
     expect(screen.getAllByText(/미승차 무응답/).length).toBeGreaterThan(0);
-    // R50 S15 — 미승차 대기 시간은 학원마다 1~30분(A-17)이라 종류 이름에 3분을 박지 않는다.
+    // 미승차 대기 시간은 학원마다 1~30분(A-17)이라 종류 이름에 3분을 박지 않는다.
     expect(screen.queryByText(/3분/)).not.toBeInTheDocument();
     expect(screen.queryByText(/escalation/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(parent\)/)).not.toBeInTheDocument();
   });
 });
 
-// R46-FUWEB B1 #20 — "수신자 확인" 의 수신자가 학부모·동승자면 학원이 볼 일이 아니다. 관계자 본인에게 간 알림만
+// "수신자 확인" 의 수신자가 학부모·동승자면 학원이 볼 일이 아니다. 관계자 본인에게 간 알림만
 // 학원 관계자가 직접 확인해야 하므로 수신자가 관계자인 행에는 "관계자 알림" 표시를 달아 구분한다.
 describe("NotificationList — 관계자 알림 구분", () => {
   afterEach(() => vi.clearAllMocks());
@@ -138,7 +138,7 @@ describe("NotificationList — 관계자 알림 구분", () => {
   });
 });
 
-// R46-FUWEB B1 #11 — 쪽 조회 훅(usePagedList)을 쓰는 목록도 [다시 시도] 로 같은 쪽을 다시 읽는다.
+// 쪽 조회 훅(usePagedList)을 쓰는 목록도 [다시 시도] 로 같은 쪽을 다시 읽는다.
 describe("NotificationList — 다시 시도", () => {
   afterEach(() => vi.clearAllMocks());
 

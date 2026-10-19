@@ -6,7 +6,7 @@
 // `shared/hooks/useRealtimeChannel.ts` 의 모듈 단위 공유 상태와 같은 관용구다.
 //
 // URL 파라미터 `ncpKeyId` — 공식 문서(`https://navermaps.github.io/maps.js.ncp/`)
-// 예제 스크립트 태그를 직접 받아 확인했다(보고서 §1). 폐기된 옛 파라미터
+// 예제 스크립트 태그를 직접 받아 확인했다. 폐기된 옛 파라미터
 // `ncpClientId` 가 아니다.
 const NAVER_MAPS_SCRIPT_SRC = "https://oapi.map.naver.com/openapi/v3/maps.js";
 
@@ -16,7 +16,7 @@ declare global {
   interface Window {
     naver?: typeof naver;
     // 네이버 지도 v3 SDK 가 인증에 실패하면 이 전역 함수를 찾아 **인자 없이** 호출한다
-    // (`oapi.map.naver.com/openapi/v3/maps.js` 를 직접 받아 실측 — 보고서 §1).
+    // (`oapi.map.naver.com/openapi/v3/maps.js` 를 직접 받아 실측).
     // 구글 지도의 `gm_authFailure` 와 같은 자리이지만 에러 코드·예외 객체를 전혀
     // 넘기지 않는다 — "인증에 실패했다"는 신호만 온다.
     navermap_authFailure?: NaverAuthFailureCallback;

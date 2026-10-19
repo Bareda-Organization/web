@@ -1,6 +1,6 @@
 import { ApiError } from "@/shared/lib/http";
 
-// §5.6 구간 변경 결정이 서버에서 거절되는 네 갈래 — 화면이 예전 상태라서 생긴 거절이므로, 알린 뒤 상세를 다시 불러와
+// §5.6 구간 변경 결정이 서버에서 거절되는 네 갈래 — 화면이 낡은 상태라서 생긴 거절이므로, 알린 뒤 상세를 다시 불러와
 // 승인·거절 버튼이 최신 상태(이미 결정됨)를 따르게 한다. 서버 문구를 그대로 내면 사유가 안 드러나 코드별 한국어로 바꾼다.
 const STALE_DECISION_MESSAGE: Record<string, string> = {
   APPROVAL_ALREADY_DECIDED: "이미 다른 관계자가 처리한 요청입니다 — 최신 상태로 새로 불러옵니다",
@@ -12,7 +12,7 @@ const STALE_DECISION_MESSAGE: Record<string, string> = {
 
 export type DecideFailure = {
   message: string;
-  /** true 면 화면이 예전 상태이므로 상세를 다시 불러온다. */
+  /** true 면 화면이 낡은 상태이므로 상세를 다시 불러온다. */
   shouldReload: boolean;
 };
 

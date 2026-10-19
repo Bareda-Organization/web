@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-// 좌우 여백은 화면 레이아웃(padding 24px)이 이미 준다 — 여기서 또 주면 제목이 표·카드보다 안쪽에서 시작한다(B1 #30).
+// 좌우 여백은 화면 레이아웃(padding 24px)이 이미 준다 — 여기서 또 주면 제목이 표·카드보다 안쪽에서 시작한다.
 export const StyledPageHeader = styled.div`
   padding: 26px 0 0;
 `;

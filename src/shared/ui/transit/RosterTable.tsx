@@ -41,8 +41,7 @@ export type RosterTableProps<T = Record<string, unknown>> = HTMLAttributes<HTMLD
    * 행 고유 키 추출자. 원본은 `key={r.id || i}` 로 id 가 없으면 인덱스를 썼는데,
    * rows 가 제네릭이라 컴포넌트 스스로 내용 기반 키를 보장할 수 없다 — 호출자가
    * 실제 고유 필드를 넘기도록 훅을 열어 두고, 안 주면 원본과 같은 동작(id 우선,
-   * 없으면 인덱스)으로 fallback 한다. 인덱스 fallback 이 남는 유일한 자리이며
-   * 보고서에 그대로 적는다.
+   * 없으면 인덱스)으로 fallback 한다. 인덱스 fallback 이 남는 유일한 자리다.
    */
   getRowKey?: (row: T, index: number) => string | number;
   /**

@@ -1,8 +1,7 @@
 // 학원 관계자(A-01~17). (admin) 과 레이아웃·내비게이션을 공유하지 않는다 — 두 역할은
 // 권한 범위가 완전히 다르다(`docs/frontend/IMPLEMENTATION_PLAN.md` §1).
-// 사이드바 248 · 헤더 56 골격을 F3 에서 이 자리에 채운다(`§8.1`). F3-W1 이 화면 4개를
-// 먼저 등재했고, F3-W2(이 라운드)가 학생·차량·매니저·노선·알림 로그·학원 설정·비상 알림·
-// 운행 리포트·운행 스케줄 화면을 만들며 이어 등재했다 — F3-W2 담당 9개 전부 등재 완료.
+// 사이드바 248 · 헤더 56 골격을 이 자리에 채운다(`docs/frontend/IMPLEMENTATION_PLAN.md §8.1`).
+// 관계자 화면 전체가 이 레이아웃을 쓴다 — 메뉴 구성은 아래 목록이 정한다.
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -79,7 +78,7 @@ const resolveActiveValue = (pathname: string): string => {
 
 // SideNav 원본(kit.jsx)은 로컬 state 로 화면을 전환하는 SPA 스위치 방식이지만, 이 앱은
 // Next.js 라우팅을 쓴다 — value 를 현재 경로에서 계산하고 onChange 는 router.push 로
-// 바꾼다(판단 근거, 보고서 §1).
+// 바꾼다.
 const StaffShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();

@@ -31,7 +31,7 @@ const bus = (id: string, busNo: string, over: Record<string, unknown> = {}) => (
   ...over,
 });
 
-// R46-FUWEB B1 #11·#12·#19 — 차량 목록: 조회 실패 다시 시도 · 빈 상태 행동 · 저장한 차량 행 강조.
+// 차량 목록: 조회 실패 시 다시 시도 · 빈 상태 행동 · 저장한 차량 행 강조.
 describe("BusList — 다시 시도 · 빈 상태 행동 · 저장 행 강조", () => {
   beforeEach(() => mockGetBuses.mockReset());
 
@@ -60,7 +60,7 @@ describe("BusList — 다시 시도 · 빈 상태 행동 · 저장 행 강조", 
   });
 });
 
-// R48-WEB-STAFF — 지표 4칸 · 상태 필터 · 연결 링크 · 기사 미배치(오늘 현황 값을 페이지가 넘겨 준다).
+// 지표 4칸 · 상태 필터 · 연결 링크 · 기사 미배치(오늘 현황 값을 페이지가 넘겨 준다).
 describe("BusList — 지표 · 필터 · 연결", () => {
   beforeEach(() => mockGetBuses.mockReset());
   const run = (runId: string) => ({ runId, direction: "to_academy", departTime: "2026-10-03T11:08:00+09:00", status: "idle" });

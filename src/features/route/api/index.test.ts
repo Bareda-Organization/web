@@ -217,7 +217,7 @@ describe("route api — snake_case ↔ camelCase 변환", () => {
 
   // stops[] 도 다른 정차지 조회(getRouteDetail)와 같은 규칙(stop_id→stopId)
   // 으로 camelCase 로 바꾼다. id 값 자체를 대조해 "몇 개인가" 가 아니라 "어느 정차지인가"
-  // 를 확인한다(phase-goal-loop — 개수만 세는 단언은 범위 조건을 못 잡는다).
+  // 를 확인한다(개수만 세는 단언은 범위 조건을 못 잡는다).
   it("getRunRoute 는 stops[] 를 정차지 마커용으로 camelCase 로 바꾼다", async () => {
     vi.stubGlobal(
       "fetch",

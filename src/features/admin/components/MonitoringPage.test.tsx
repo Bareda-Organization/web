@@ -24,12 +24,11 @@ vi.mock("@/features/map", async (importOriginal) => {
   };
 });
 
-// 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
-// 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
+// 학원 목록 조회(진입점)가 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
 // — academyId 가 정해지지 않은 채로 회차 조회를 시도하면 안 된다.
 //
-// FE-R2 W 목표 1 — 조회 실패 시 EmptyState("등록된 학원이 없습니다" · "지금 운행 중인
-// 회차가 없습니다")가 오류 배너와 동시에 뜨던 것을 고쳤다(MonitoringPage.tsx !error
+// 조회 실패 시 EmptyState("등록된 학원이 없습니다" · "지금 운행 중인
+// 회차가 없습니다")가 오류 배너와 동시에 뜨지 않아야 한다(MonitoringPage.tsx !error
 // 가드, 두 갈래 모두). 아래 두 검사가 그 가드를 고정한다 — 가드를 지우면 이 검사들만
 // 실패해야 한다.
 vi.mock("../api", () => ({
@@ -224,7 +223,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
 
   // 관제 채널은 전 학원 위치를 방송한다. 지금 보는 학원 목록에 없는 회차의 위치는 화면을 바꾸지 않으므로 다시 그리지도 않는다
   // (새 배열을 돌려주면 위치 방송마다 지도·표 전체가 다시 그려졌다). 그리기 횟수는 지도 목(`mockMapSurface`) 호출 수로 센다.
-  it("R57 W-2: 목록에 없는 회차의 position 이벤트는 화면을 다시 그리지 않는다", async () => {
+  it("목록에 없는 회차의 position 이벤트는 화면을 다시 그리지 않는다", async () => {
     render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
 
@@ -244,7 +243,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
 
   // 화면에 있는 값보다 오래된 위치(`received_at`)는 버린다. 순서 보장이 없는 경로(재접속 직후 REST 스냅샷 · 두 연결 겹침)에서
   // 늦게 온 옛 좌표가 새 좌표를 덮어 버스가 뒤로 점프하던 것을 막는다.
-  it("R57 W-7: 화면 값보다 오래된 position 이벤트는 무시하고, 같거나 새로우면 반영한다", async () => {
+  it("화면 값보다 오래된 position 이벤트는 무시하고, 같거나 새로우면 반영한다", async () => {
     render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
 
@@ -393,7 +392,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
     },
   );
 
-  // 게이트 판정(verdict-W.md) 이 지적한 빈틈 — 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
+  // 목록에 항목이 있는 상태에서 연결이 끊긴 경우를 더해 EmptyState 가 연결 상태와
   // 같은 조건으로 묶이지 않았음을 고정한다.
   it("목록에 항목이 있어도(runs 비어있지 않음) 연결이 끊기면 목록은 보이고 EmptyState 는 뜨지 않는다", async () => {
     mockConnectionState = "reconnecting";
@@ -409,7 +408,7 @@ describe("MonitoringPage — WS 연결 상태와 무관한 목록(Goal 9 → C-1
 
 // 이 화면은 layout 만 바뀐다(Ruling 313, moving 전용
 // 유지). 버스를 고르면 그 노선을 지도에 그리고, 근사 경로면 안내한다.
-describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () => {
+describe("MonitoringPage — 버스 목록 클릭·노선 표시", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
@@ -422,10 +421,10 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     vi.clearAllMocks();
   });
 
-  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
-  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
-  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
-  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  // 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. `Number(markerId)` +
+  // `Number.isInteger` 로 숫자로 읽히는 마커만 고르면 문자열 id 에서 선택이 조용히 실패한다
+  // — 이 검사가 그 회귀를 잡는다.
   it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
     const stringIdRun: RunLiveItemResponseTypes = {
       ...baseLiveRun,
@@ -625,7 +624,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
 
 // 사용자가 직접 시연해 지적한 두 가지. 버스를 골라도 우측 목록
 // 카드가 그대로였고(무엇을 눌렀는지 모름), 확정·대기 태그가 같은 색이었다.
-describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
+describe("MonitoringPage — 선택 표시·상태 색 구분", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
@@ -680,7 +679,7 @@ describe("MonitoringPage — 선택 표시·상태 색 구분(R20-C)", () => {
 // §6.8 이 오늘 회차 4종 상태를 전부 주도록 넓혀졌다(Ruling 315).
 // 이 화면은 받은 것을 거르지 않고 그대로 그려야 한다. ⚠ 특히 `finished` 는
 // 사용자가 "운행종료 버스도 목록에 남긴다" 로 확정한 항목이라(Ruling 310) 단독으로 못박는다.
-describe("MonitoringPage — 버스 상태 목록 4종(R16)", () => {
+describe("MonitoringPage — 버스 상태 목록 4종", () => {
   beforeEach(() => {
     capturedOnEnvelope = undefined;
     mockConnectionState = "connected";
@@ -1062,8 +1061,8 @@ describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09
   });
 });
 
-// B1 #24 — 학원 선택으로 한 곳씩만 보이던 전체 관제에서 어느 학원에 미확인 비상이 있는지 한눈에 보인다.
-describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
+// 전체 관제는 학원 선택으로 한 곳씩만 보여도 어느 학원에 미확인 비상이 있는지 한눈에 보인다.
+describe("MonitoringPage — 학원별 미확인 비상 요약", () => {
   const academies = [
     { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
     { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
@@ -1111,7 +1110,7 @@ describe("MonitoringPage — 학원별 미확인 비상 요약(B1 #24)", () => {
 });
 
 // 전체 관제에서 어느 학원에 오늘 지연·확정 실패가 있는지도 한눈에 보인다.
-describe("MonitoringPage — 학원별 지연·확정 실패 요약(R46-FUFEAT ④)", () => {
+describe("MonitoringPage — 학원별 지연·확정 실패 요약", () => {
   const academies = [
     { id: "1", code: "A001", name: "강동학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },
     { id: "2", code: "A002", name: "송파학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const },

@@ -1,8 +1,8 @@
 import styled from "@emotion/styled";
 
 // (staff)/layout.styled.ts 와 같은 골격(사이드바+헤더)을 쓰되 별도 파일로 둔다 — 두 레이아웃이
-// 같은 스타일 객체를 공유하면 한쪽만 바꿔야 할 때 서로 얽힌다(BRIEF-a1.md §2.1).
-// R48: 화이트 셸 — 크롬(머리줄·사이드바)은 색이 아니라 얇은 선으로 본문과 가른다.
+// 같은 스타일 객체를 공유하면 한쪽만 바꿔야 할 때 서로 얽힌다.
+// 화이트 셸 — 크롬(머리줄·사이드바)은 색이 아니라 얇은 선으로 본문과 가른다.
 export const StyledAdminShell = styled.div`
   display: flex;
   min-height: 100vh;

@@ -4,8 +4,7 @@ import { MemberAccountsPage } from "./MemberAccountsPage";
 import { getAllAcademies, getStaffAccounts } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
-// A1 수정 라운드(조건 ②) — 이 화면도 실패 갈래 검사가 없었다. 계정 목록 조회 실패 시
-// 오류 문구가 뜨는지를 본다.
+// 계정 목록 조회 실패 시 오류 문구가 뜨는지를 본다.
 vi.mock("../api", () => ({
   getStaffAccounts: vi.fn(),
   getAllAcademies: vi.fn(),
@@ -64,7 +63,7 @@ describe("MemberAccountsPage — 최근 로그인 시각 표기", () => {
   });
 });
 
-// R48 Ruling 807 — 탭 건수는 서버 counts, 학원 · 검색 · 재직 상태는 요청 쿼리로 간다.
+// Ruling 807 — 탭 건수는 서버 counts, 학원 · 검색 · 재직 상태는 요청 쿼리로 간다.
 describe("MemberAccountsPage — 탭 건수와 필터(Ruling 807)", () => {
   beforeEach(() => {
     mockGetAllAcademies.mockResolvedValue([{ id: "7", code: "C7", name: "새봄영어학원", region: "부천", staffCount: 1, userCount: 3, status: "active" }]);

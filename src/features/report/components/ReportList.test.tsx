@@ -37,12 +37,12 @@ describe("ReportList — 조회 갈래", () => {
     await waitFor(() => expect(container.querySelector('[aria-busy="false"]')).toBeTruthy());
 
     expect(screen.getByText(/총 0건/)).toBeInTheDocument();
-    // 데이터 행은 없고, 머리글 아래에 빈 목록 문구(R32-W10)가 한 줄 있다.
+    // 데이터 행은 없고, 머리글 아래에 빈 목록 문구가 한 줄 있다.
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("조건에 맞는 신고가 없습니다")).toBeInTheDocument();
   });
 
-  // R34-W2 — 응답이 오기 전에는 빈 목록 문구가 아니라 불러오는 중 문구가 보여야 한다.
+  // 응답이 오기 전에는 빈 목록 문구가 아니라 불러오는 중 문구가 보여야 한다.
   it("응답이 오기 전에는 빈 목록 문구 대신 불러오는 중 문구를 보여준다", async () => {
     mockGet.mockReturnValue(new Promise(() => {}));
 
@@ -75,8 +75,8 @@ describe("ReportList — 조회 갈래", () => {
   });
 });
 
-// R32-W9 — 신고 시각이 서버의 ISO 원문으로 보였다.
-describe("ReportList — 시각 표기(R32-W9)", () => {
+// 신고 시각은 서버의 ISO 원문이 아니라 사람이 읽는 형식으로 보여야 한다.
+describe("ReportList — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("신고 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
@@ -121,7 +121,7 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
     expect(mockGet).toHaveBeenLastCalledWith(expect.objectContaining({ date: "2026-09-12" }));
   });
 
-  // R50 S16 — 회차 후보가 늘 오늘 회차였다. 고른 날짜의 회차(§5.3 `date`)를 후보로 쓴다.
+  // 회차 후보는 고른 날짜의 회차(§5.3 `date`)를 쓴다.
   it("날짜를 고르면 회차 후보를 그 날짜의 회차로 다시 읽고, 앞서 고른 회차는 비운다", async () => {
     mockGet.mockResolvedValue({ items: [], counts: null });
     mockGetDashboard.mockImplementation(async (date?: string) =>
@@ -162,7 +162,7 @@ describe("ReportList — 필터·경합(F01-05·F01-14)", () => {
   });
 });
 
-// Ruling 848 ⑦ · T9 — 사양에 보호자 인계 정책이 없다(STU-08 · `alighted` 가 최종 상태). 유형별 요약 설명은 EXC-02 문면을 따른다.
+// Ruling 848 ⑦ — 사양에 보호자 인계 정책이 없다(STU-08 · `alighted` 가 최종 상태). 유형별 요약 설명은 EXC-02 문면을 따른다.
 describe("ReportList — 유형별 요약 설명", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -176,7 +176,7 @@ describe("ReportList — 유형별 요약 설명", () => {
   });
 });
 
-// R46-FUWEB B1 #11 — 목록을 못 읽으면 새로고침 말고는 되돌릴 길이 없었다. 조회 조건은 그대로 두고 같은 조회를 다시 낸다.
+// 목록을 못 읽을 때 새로고침 말고 되돌릴 수단을 둔다. 조회 조건은 그대로 두고 같은 조회를 다시 낸다.
 describe("ReportList — 다시 시도", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -254,9 +254,9 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
   });
 });
 
-// R53 t5 A5 — "미처리 N" 카드의 숫자는 서버 counts 인데 보조 문구는 지금 목록 계수라, 처리 필터를 "처리됨" 으로 두면
-// "미처리 3건 / 미처리 신고가 없습니다" 처럼 모순이었다. 같은 원천(counts)으로 맞춘다.
-describe("ReportList — 미처리 카드와 필터의 일관성(R53 A5)", () => {
+// "미처리 N" 카드의 숫자는 서버 counts 이므로 보조 문구도 같은 counts 로 맞춘다.
+// 처리 필터를 "처리됨" 으로 둬도 "미처리 3건 / 미처리 신고가 없습니다" 처럼 모순되면 안 된다.
+describe("ReportList — 미처리 카드와 필터의 일관성", () => {
   afterEach(() => vi.clearAllMocks());
 
   const base = {

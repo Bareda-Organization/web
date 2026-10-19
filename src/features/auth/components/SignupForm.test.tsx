@@ -58,7 +58,7 @@ describe("SignupForm", () => {
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
-  // R50 S11 · UF-X-01 — 제출 버튼 아래에 아직 비어 있는 항목 이름을 보인다. 채우는 만큼 줄고, 다 채우면 사라진다.
+  // UF-X-01 — 제출 버튼 아래에 아직 비어 있는 항목 이름을 보인다. 채우는 만큼 줄고, 다 채우면 사라진다.
   it("버튼 아래에 아직 채우지 않은 항목 이름을 보이고, 채우는 만큼 줄어든다", async () => {
     setup();
     expect(screen.getByText("아직 채우지 않은 항목 · 이름 · 연락처 · 아이디 · 비밀번호 · 학원")).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe("SignupForm", () => {
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
-  // Ruling 848 · T5 — 제출 버튼은 학원만 고르면 켜진다(UF-X-01). 아이디·비밀번호가 비어 있으면 서버로 보내지 않고 알린다 —
+  // Ruling 848 — 제출 버튼은 학원만 고르면 켜진다(UF-X-01). 아이디·비밀번호가 비어 있으면 서버로 보내지 않고 알린다 —
   // `Input` 은 required 를 DOM 에 싣지 않아 브라우저 검사가 막아 주지 않는다.
   it.each([
     ["아이디가 비어 있으면", { 아이디: "" }, "아직 채우지 않은 항목 · 아이디"],

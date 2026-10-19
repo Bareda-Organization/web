@@ -14,7 +14,7 @@ const SEOUL_PARTS = new Intl.DateTimeFormat("en-CA", {
   hourCycle: "h23",
 });
 
-// R32-W9 — 목록·상세에서 사람에게 보이는 "날짜 + 시각" 은 전부 이 함수 하나를 거친다(`2026-09-30 09:07`).
+// 목록·상세에서 사람에게 보이는 "날짜 + 시각" 은 전부 이 함수 하나를 거친다(`YYYY-MM-DD HH:mm`).
 // 표시 시간대는 브라우저 설정과 무관하게 한국 시간이고, 초·소수점·ISO 의 `T`·`Z` 는 보이지 않는다.
 // 값이 없거나 읽을 수 없으면 원문을 내지 않고 `-` 로 보여 준다. (시각만 필요한 곳은 `clockTime.ts`)
 export const formatDateTime = (raw: string | null | undefined): string => {

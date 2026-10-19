@@ -62,7 +62,7 @@ describe("BlockedAccountsPage — 해제 직후 사이드바 배지 갱신", () 
   });
 });
 
-// R48 시안 `blocked-accounts` — 상단 안내 띠(Ruling 328) · 빈 상태.
+// 시안 `blocked-accounts` — 상단 안내 띠(Ruling 328) · 빈 상태.
 describe("BlockedAccountsPage — 안내 띠와 빈 상태", () => {
   afterEach(() => vi.clearAllMocks());
 

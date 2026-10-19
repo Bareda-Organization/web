@@ -35,7 +35,7 @@ describe("bus api — 실서버 계약", () => {
   });
 
   // DUPLICATE_BUS_NO 실제 재현 — 이미 등록된 "1호차" 로 재등록을 시도하면 409 로
-  // 거부된다(2026-09-14 curl 로 먼저 확인). 등록이 거부되므로 되돌릴 부작용이 없다.
+  // 거부된다. 등록이 거부되므로 되돌릴 부작용이 없다.
   it("createBus — 이미 있는 bus_no(1호차)로 등록하면 409 DUPLICATE_BUS_NO 로 거부된다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));

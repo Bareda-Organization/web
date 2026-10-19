@@ -112,7 +112,7 @@ export const StyledMapCard = styled.section`
   }
 `;
 
-// 지도는 위치 확인용 — 높이는 모든 지도와 같은 `MAP_SURFACE_HEIGHT`(2026-10-06 사용자 지시 · 화면의 50%).
+// 지도는 위치 확인용 — 높이는 모든 지도와 같은 `MAP_SURFACE_HEIGHT`(화면의 50%).
 export const StyledMapSurface = styled.div`
   position: relative;
   height: ${MAP_SURFACE_HEIGHT};
@@ -334,7 +334,7 @@ export const StyledGroupLabel = styled.span`
   }
 `;
 
-/* 명단이 화면을 넘어가면 이 상자 안에서 스크롤한다(사용자 지시 2026-09-22).
+/* 명단이 화면을 넘어가면 이 상자 안에서 스크롤한다.
    높이를 화면에 맞춰 잡아 두는 이유 — 고정 px 로 두면 큰 화면에서 표가 늘 잘린다. */
 export const StyledRosterScroll = styled.div`
   max-height: min(60vh, 720px);
@@ -347,7 +347,7 @@ export const StyledRosterScroll = styled.div`
   }
 `;
 
-// R24 — 지도에서 승하차지를 고르면 그 자리에서 타고 내리는 학생만 보여 준다(사용자 지시). 한 줄에 이름·학급·상태만 둔다.
+// 지도에서 승하차지를 고르면 그 자리에서 타고 내리는 학생만 보여 준다. 한 줄에 이름·학급·상태만 둔다.
 export const StyledStopRosterRow = styled.div`
   display: flex;
   align-items: center;

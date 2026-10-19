@@ -130,7 +130,7 @@ describe("ManagerForm — 수정 폼의 빈 값", () => {
   });
 });
 
-// B1 #8 — 등록 폼에는 아이디·비밀번호가 없다. 앱 연결이 어떻게 이뤄지는지 한 줄로 알려 줘야 첫날 막히지 않는다.
+// 등록 폼에는 아이디·비밀번호가 없다. 앱 연결이 어떻게 이뤄지는지 한 줄로 알려 줘야 첫날 막히지 않는다.
 describe("ManagerForm — 앱 연결 안내", () => {
   it("등록 폼에는 앱에서 가입 신청하면 승인 때 이 기록에 연결된다는 안내가 있다", () => {
     render(<ManagerForm onClose={vi.fn()} onDone={vi.fn()} />);
@@ -143,7 +143,7 @@ describe("ManagerForm — 앱 연결 안내", () => {
   });
 });
 
-// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 매니저의 id 를 onDone 에 실어 보낸다.
+// 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 매니저의 id 를 onDone 에 실어 보낸다.
 describe("ManagerForm — 저장한 매니저 id 전달", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -169,7 +169,7 @@ describe("ManagerForm — 저장한 매니저 id 전달", () => {
 });
 
 
-// R48 매니저 상세 옆 패널 — 배치 중이면 서버가 409 로 막기 전에 화면이 먼저 잠그고 이유를 말한다(§5.13 Ruling 817 · G2).
+// 매니저 상세 옆 패널 — 배치 중이면 서버가 409 로 막기 전에 화면이 먼저 잠그고 이유를 말한다(§5.13 Ruling 817).
 describe("ManagerForm — 배치 중 잠금", () => {
   afterEach(() => vi.clearAllMocks());
   const assigned: ManagerItemResponseTypes = {

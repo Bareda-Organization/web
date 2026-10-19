@@ -9,7 +9,7 @@ import type { AuthSession } from "../types";
 export type AuthSessionContextValue = {
   // "loading" 인 동안은 세션을 아직 모른다 — 이 값을 보고 화면이 로그인 폼도
   // 대시보드도 아닌 중립 상태를 그려야 "폼이 잠깐 보였다 튀는" 결함을 막는다
-  // (BRIEF-web §2). 부트스트랩(새로고침 직후 재발급 + /me)이 끝나야 "ready" 가 된다.
+  // 부트스트랩(새로고침 직후 재발급 + /me)이 끝나야 "ready" 가 된다.
   bootstrapStatus: "loading" | "ready";
   session: AuthSession | null;
   login: (loginId: string, password: string) => Promise<AuthSession>;

@@ -6,7 +6,7 @@ import { AppOnlyRoleError } from "../lib/appOnlyRole";
 import { useAuthSession } from "../hooks/useAuthSession";
 
 // `useAuthSession` 을 모킹해 login() 이 던지는 ApiError 코드별로 화면이 다른 문구를
-// 그리는지 확인한다 — 보고서 4항이 지목한 "LoginForm 의 에러 코드별 분기" 그 자리다.
+// 그리는지 확인한다 — "LoginForm 의 에러 코드별 분기" 그 자리다.
 // 여기서 다루는 3종(INVALID_CREDENTIALS·AUTH_ACCOUNT_BLOCKED·AUTH_STAFF_INACTIVE)은
 // LoginForm.tsx 가 이름을 걸고 처리하는 코드 전부다.
 vi.mock("../hooks/useAuthSession", () => ({
@@ -60,7 +60,7 @@ describe("LoginForm — 에러 코드별 분기", () => {
   it("AUTH_STAFF_INACTIVE 는 퇴사 안내를 보여준다", async () => {
     await submitLoginForm(new ApiError(403, "AUTH_STAFF_INACTIVE", "퇴사 처리됨"));
     expect(await screen.findByText("퇴사 처리된 계정입니다")).toBeInTheDocument();
-    // R52 A-10 — 퇴사 처리는 메인 관리자가 한다(API_SPEC §6.7). 문의처를 학원 데스크로 적지 않는다.
+    // 퇴사 처리는 메인 관리자가 한다(API_SPEC §6.7). 문의처를 학원 데스크로 적지 않는다.
     expect(screen.getByText(/메인 관리자에게 문의해 주세요/)).toBeInTheDocument();
     expect(screen.queryByText(/학원 데스크/)).not.toBeInTheDocument();
   });
@@ -99,7 +99,7 @@ describe("LoginForm — 빠른 로그인 없음", () => {
   });
 });
 
-// R32-W1 — 학부모·학생·매니저 계정은 웹 대신 앱 이용을 안내한다.
+// 학부모·학생·매니저 계정은 웹 대신 앱 이용을 안내한다.
 describe("LoginForm — 앱 전용 계정 안내", () => {
   it("AppOnlyRoleError 는 앱 이용 안내를 보여준다", async () => {
     await submitLoginForm(new AppOnlyRoleError() as unknown as ApiError);

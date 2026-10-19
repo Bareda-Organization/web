@@ -34,8 +34,8 @@ describe("manager api — 실서버 계약", () => {
     expect(["driver", "escort"]).toContain(result.items[0].role);
   });
 
-  // 등록→수정→삭제를 한 시험 안에서 마쳐 시드를 원상태로 되돌린다(2026-09-14 curl 로
-  // 먼저 확인한 안전한 자체 정리 경로 — 등록 직후 같은 id 로 삭제하면 200). 시드 매니저
+  // 등록→수정→삭제를 한 시험 안에서 마쳐 시드를 원상태로 되돌린다.
+  // 등록 직후 같은 id 로 삭제하면 200 — 안전한 자체 정리 경로다. 시드 매니저
   // 4명을 건드리지 않고 이 시험이 만든 매니저에만 updateManager 를 적용한다.
   it("createManager 로 등록한 매니저를 updateManager 로 고치고 deleteManager 로 지우면 목록에서 사라진다", async ({
     skip,
@@ -63,7 +63,7 @@ describe("manager api — 실서버 계약", () => {
     expect(afterDelete.items.some((m) => m.id === created.id)).toBe(false);
   });
 
-  // r12-t1 목표4 — 왕복 검사의 try/finally 가 "중간 단언 실패에도 정리가 실행되는가"를
+  // 왕복 검사의 try/finally 가 "중간 단언 실패에도 정리가 실행되는가"를
   // 실제로 고정한다. globalSetup 은 npm test 실행 1회의 맨 처음에만 리셋을 돈다
   // (vitest.globalSetup.ts 확인) — fileParallelism:false 라 같은 실행 안에서 앞 파일이
   // 고아 행을 남기면 뒤 파일이 그 상태를 그대로 본다. 그래서 "다음 실행이 리셋해 주니

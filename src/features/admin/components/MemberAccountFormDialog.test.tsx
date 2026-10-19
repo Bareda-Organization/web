@@ -34,7 +34,7 @@ describe("MemberAccountFormDialog — 확인·성공 표시·빈 값", () => {
     expect(screen.getByRole("button", { name: "퇴사 처리" })).toBeInTheDocument();
   });
 
-  // R48 Ruling 807 — 퇴사 처리하면 그 학원의 관계자 자리가 비어 대기 중인 가입 요청을 승인할 수 있게 된다. 확인 창이 그 사실과 건수를 먼저 말한다.
+  // Ruling 807 — 퇴사 처리하면 그 학원의 관계자 자리가 비어 대기 중인 가입 요청을 승인할 수 있게 된다. 확인 창이 그 사실과 건수를 먼저 말한다.
   it("퇴사 확인 창은 자리가 비게 된다는 것과 승인 대기 가입 요청 건수를 알린다", () => {
     setup({ academyPendingSignupCount: 1 });
     fireEvent.click(screen.getByRole("button", { name: "퇴사 처리" }));

@@ -15,7 +15,7 @@ type RouteCopyDialogProps = {
   onDone: () => void;
 };
 
-// B1 #7 — 이 노선(차량·방향·이름·활성·정차 순서)을 다른 요일로 복사한다. 정차지는 요일 사이에 공유되는
+// 이 노선(차량·방향·이름·활성·정차 순서)을 다른 요일로 복사한다. 정차지는 요일 사이에 공유되는
 // 승하차지 기록이라 새로 만들지 않고 같은 stop_id 순서를 그대로 잇는다. 요일마다 1건씩 만들며 한 요일이 실패해도
 // 나머지는 이어 간다(Ruling 490).
 export const RouteCopyDialog = ({ route, onClose, onDone }: RouteCopyDialogProps) => {

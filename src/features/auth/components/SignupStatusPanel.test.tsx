@@ -5,7 +5,7 @@ import { getSignupStatus, reapplySignup, searchAcademies } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 import type { SignupStatusResponseTypes } from "../types";
 
-// 보고서 4항의 오타 예시("status === 'rejected' 를 'pending' 으로") 그 자체를 겨냥한다.
+// 상태값 오타 예시("status === 'rejected' 를 'pending' 으로") 그 자체를 겨냥한다.
 // pending 과 rejected 는 같은 컴포넌트 안에서 완전히 다른 블록(거절 사유·재신청 진입점)을
 // 켜고 끄므로, 상태값 하나만 틀려도 화면이 반대로 나온다 — 그 갈림을 여기서 고정한다.
 vi.mock("../api", () => ({
@@ -94,8 +94,8 @@ describe("SignupStatusPanel — 학원 문의처(BR-301)", () => {
   });
 });
 
-// R32-W14 — 승인 상태를 불러오지 못했을 때 화면에 누를 것이 없어, 새로고침 말고는 복구 수단이 없었다.
-describe("SignupStatusPanel — 불러오기 실패(R32-W14)", () => {
+// 승인 상태 조회가 실패하면 화면에 다시 불러오기 수단을 둔다 — 새로고침 말고도 복구할 수 있어야 하기 때문이다.
+describe("SignupStatusPanel — 불러오기 실패", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

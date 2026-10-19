@@ -76,7 +76,7 @@ const resolveActiveValue = (pathname: string): string => {
 };
 
 // 메인 관리자는 학원 경계를 넘는 유일한 역할이라 session.academy 가 null 이다 — SideNav 의
-// academy prop 에 학원 이름 대신 "전체 학원" 을 고정으로 넣는다(BRIEF-a1.md §2.2).
+// academy prop 에 학원 이름 대신 "전체 학원" 을 고정으로 넣는다.
 const AdminShell = ({ children }: { children: React.ReactNode }) => {
   const emergencyUnackedCount = useEmergencyUnackedCount();
   const { signupCount, blockedCount, isReady } = useAdminPending();

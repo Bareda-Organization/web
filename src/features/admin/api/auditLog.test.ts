@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAuditActors, getAuditLogs, getLoginHistory } from "./auditLog";
 
-// R37-IT — API_SPEC 전역 규약(§1, "ISO-8601 + 오프셋")상 from·to 는 시각이다. 화면의 날짜 칸이 주는
-// `YYYY-MM-DD` 를 그대로 보내면 서버가 422 로 거절한다(실서버로 확인: 접속 이력 화면이 열자마자 오류).
+// API_SPEC 전역 규약(§1, "ISO-8601 + 오프셋")상 from·to 는 시각이다. 화면의 날짜 칸이 주는
+// `YYYY-MM-DD` 를 그대로 보내면 서버가 422 로 거절한다.
 // 날짜는 서울 기준 그날의 시작·끝으로 바꿔 보낸다.
 const emptyPage = { success: true, data: { items: [], page: 0, size: 20, total_count: 0, has_next: false } };
 const okResponse = () => ({ ok: true, status: 200, json: async () => emptyPage }) as Response;
@@ -40,7 +40,7 @@ describe("auditLog api — 날짜 조건을 ISO-8601 오프셋 시각으로 보�
   });
 });
 
-// R46 감사 화면(Ruling 446·447)
+// 감사 화면(Ruling 446·447)
 describe("auditLog api — 동작 필터와 행위자 찾기", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

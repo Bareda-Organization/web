@@ -22,7 +22,7 @@ const source = {
   ],
 };
 
-// B1 #7 — 월요일에 정차지까지 편성해 둔 노선을 다른 요일로 복사한다. 정차지 순서까지 같이 간다.
+// 월요일에 정차지까지 편성해 둔 노선을 다른 요일로 복사한다. 정차지 순서까지 같이 간다.
 describe("RouteCopyDialog", () => {
   afterEach(() => vi.clearAllMocks());
 

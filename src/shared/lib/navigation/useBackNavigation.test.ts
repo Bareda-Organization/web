@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// 뒤로가기(2026-09-23 사용자 지시) — 이 앱 안에서 지나온 화면으로 돌아간다. 앱 밖(로그인 화면·다른 사이트)
+// 뒤로가기 — 이 앱 안에서 지나온 화면으로 돌아간다. 앱 밖(로그인 화면·다른 사이트)
 // 으로는 나가지 않는다. 처음 들어온 화면이면 상세 → 목록처럼 한 단계 위로 간다.
 const router = { back: vi.fn(), push: vi.fn() };
 let pathname = "/dashboard";

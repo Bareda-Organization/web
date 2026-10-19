@@ -29,7 +29,7 @@ import {
 // (admin) 9화면(academies·audit-log·blocked-accounts·emergency-alerts·
 // force-confirm·stale-runs·member-accounts·member-approvals·monitoring)이 쓰는 §6 엔드포인트
 // 전부를 F5-W2 전용 백엔드에 붙여 확인한다. 이 라우트 그룹은 전부 sysadmin
-// 전용이다(판단 근거, 보고서 §1).
+// 전용이다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
 let backendReachable = false;
@@ -66,7 +66,7 @@ describe("admin api — 실서버 계약", () => {
   });
 
   // 시드 학원(1·2·3)을 건드리지 않도록 매 실행마다 고유한 이름으로 새 학원을
-  // 만들고, 그 학원만 수정한다(판단 근거, 보고서 §1).
+  // 만들고, 그 학원만 수정한다.
   it("createAcademy·updateAcademy 는 새 학원을 만들고 수정한다(§6.2·§6.3 PATCH)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -94,8 +94,7 @@ describe("admin api — 실서버 계약", () => {
   });
 
   // request_id=1(시드 "박대기")은 academy_id=1 에 이미 재직 중인 staff 가 있어
-  // accept=true 를 줘도 상태를 바꾸지 않고 항상 409 로 거부된다(2026-09-14 curl
-  // 로 확인) — 시드를 훼손하지 않는 안전한 재현이다(판단 근거, 보고서 §1).
+  // accept=true 를 줘도 상태를 바꾸지 않고 항상 409 로 거부된다 — 시드를 훼손하지 않는 안전한 재현이다.
   it("STAFF_QUOTA_EXCEEDED — 학원당 staff 1명 정원을 넘기면 409 로 거부된다(§6.5)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -117,7 +116,7 @@ describe("admin api — 실서버 계약", () => {
   });
 
   // staffC(account_id=20)의 이름을 원래 값 그대로 다시 써 넣는 멱등 왕복 —
-  // 시드를 실제로는 바꾸지 않으면서 PATCH 를 실백엔드로 검증한다(판단 근거, 보고서 §1).
+  // 시드를 실제로는 바꾸지 않으면서 PATCH 를 실백엔드로 검증한다.
   it("updateStaffAccount 는 staffC 의 이름을 원래 값으로 왕복 수정한다(§6.7)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -138,7 +137,7 @@ describe("admin api — 실서버 계약", () => {
     expect(result.runs.length).toBeGreaterThan(0);
   });
 
-  // R46-FUFEAT ④ — §6.15. 시드 상태에서 값이 얼마인지는 고정하지 않는다(문제 학원만 오므로 비어 있을 수 있다).
+  // §6.15. 시드 상태에서 값이 얼마인지는 고정하지 않는다(문제 학원만 오므로 비어 있을 수 있다).
   it("getRunAttention 은 학원별 오늘 지연·확정 실패 집계의 형태를 지킨다(§6.15 · Ruling 543)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -154,7 +153,7 @@ describe("admin api — 실서버 계약", () => {
     }
   });
 
-  // R46-FUFEAT ① — 초기화 → 임시 비밀번호 로그인 표식 → 다른 API 403 → 본인 변경 → 표식 해제를 서버에 끝까지 붙인다.
+  // 초기화 → 임시 비밀번호 로그인 표식 → 다른 API 403 → 본인 변경 → 표식 해제를 서버에 끝까지 붙인다.
   // staffC(account_id=20)의 비밀번호를 초기화했다가 같은 시험 안에서 원래 값("password")으로 되돌린다.
   it("임시 비밀번호 강제 변경 — 초기화한 계정은 변경 전까지 다른 API 가 403 이고 변경하면 풀린다(§1.4·§6.7·§2.8 · Ruling 540)", async ({
     skip,
@@ -216,7 +215,7 @@ describe("admin api — 실서버 계약", () => {
   // 채로 남는다(해제는 되돌릴 수 없고 재차단 경로가 없다 — 아래 주석과 동일한
   // 판단 근거). 그래서 이 시험은 "그 계정이 반드시 있다"가 아니라 "그 계정이
   // 있으면 §6.10 응답 형태가 맞는다"만 확인해 반복 실행에서도 항상 통과한다
-  // (판단 근거, 보고서 §2 — 재실행 시 실패 0·건너뜀 0 을 위한 조정).
+  // (재실행 시 실패 0·건너뜀 0 을 위한 조정).
   it("getBlockedAccounts 는 차단된 계정 목록을 돌려준다(§6.10)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -240,23 +239,23 @@ describe("admin api — 실서버 계약", () => {
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
-    // R47 Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
+    // Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
     expect(typeof result.items[0].occurredAt).toBe("string");
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) 재현 — 2026-09-14 Ruling 282 수정 병합 후
+  // AUTH_ACCOUNT_BLOCKED 재현 — Ruling 282
   // auth 쪽 시험(features/auth/api/realBackend.test.ts)은 새로 만든 계정으로
   // 실패 5회 누적 차단을 직접 재현한다. 이 시험이 굳이 시드 계정
   // driverBlocked(account_id=15, failed_attempts=5)를 쓰는 이유는 그것과
   // 별개다 — 재차단(reblock) API 가 없어, unblockAccount(§6.12)로 해제한 계정을
   // 이 시험 안에서 다시 차단 상태로 되돌릴 수단이 부재하다. 그래서 이미
   // 차단 상태로 고정된 시드 계정을 그대로 재사용해 AUTH_ACCOUNT_BLOCKED 재현과
-  // unblockAccount(§6.12) 확인을 한 시험에서 같이 다룬다(판단 근거, 보고서 §1).
+  // unblockAccount(§6.12) 확인을 한 시험에서 같이 다룬다.
   //
   // unblockAccount 는 멱등이 아니고 재차단 API 도 없어, 이 시드 계정은 전체
   // 실행에서 딱 한 번만 "차단 → 해제"를 겪을 수 있다. 재실행마다 실패 0·건너뜀 0
-  // 을 요구받아(보고서 §2), 첫 실행 이후에는 계정이 이미 active 상태로 남는다는
-  // 사실 자체를 검사 대상으로 바꿨다 — 현재 상태를 먼저 조회해 분기하고, 두
+  // 이어야 하므로, 첫 실행 이후에는 계정이 이미 active 상태로 남는다는
+  // 사실 자체를 검사 대상으로 한다 — 현재 상태를 먼저 조회해 분기하고, 두
   // 분기 모두 §6.12 의 실제 응답(성공 또는 409 ACCOUNT_NOT_BLOCKED)을 확인한다.
   it("AUTH_ACCOUNT_BLOCKED 재현 후 unblockAccount 로 해제한다(§1.4·§6.12·§8)", async ({ skip }) => {
     if (!backendReachable) skip();
@@ -325,7 +324,7 @@ describe("admin api — 실서버 계약", () => {
   });
 
   // run 3 은 시드 기준 "moving" 상태다 — force-confirm 은 idle 회차에만 허용되므로
-  // 되돌릴 수 없는 성공 경로 대신 안전한 오류 경로만 재현한다(판단 근거, 보고서 §1).
+  // 되돌릴 수 없는 성공 경로 대신 안전한 오류 경로만 재현한다.
   it("RUN_NOT_IDLE — idle 이 아닌 회차를 강제 확정하면 409 로 거부된다(§6.14)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -346,7 +345,7 @@ describe("admin api — 실서버 계약", () => {
     });
   });
 
-  // R47 Ruling 724 — §6.16. 시드에는 운행일이 이틀 넘게 지난 이동 중 회차가 없어(회차는 전부 적용일 당일) 대개 빈 목록이다.
+  // Ruling 724 — §6.16. 시드에는 운행일이 이틀 넘게 지난 이동 중 회차가 없어(회차는 전부 적용일 당일) 대개 빈 목록이다.
   // 그래서 "비어 있어도 형태가 맞고, 있으면 항목 형태·정렬·상한이 맞는다" 만 고정한다(§6.15 와 같은 방식).
   it("getStaleMovingRuns 는 끝나지 않은 이동 중 회차 목록의 형태를 지킨다(§6.16 · Ruling 724)", async ({ skip }) => {
     if (!backendReachable) skip();

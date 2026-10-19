@@ -127,7 +127,7 @@ describe("BusForm — 등록 실패 갈래", () => {
   });
 });
 
-// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 차량의 id 를 onDone 에 실어 보낸다.
+// 목록이 방금 저장한 행을 강조하도록, 저장이 끝나면 그 차량의 id 를 onDone 에 실어 보낸다.
 describe("BusForm — 저장한 차량 id 전달", () => {
   afterEach(() => {
     vi.clearAllMocks();

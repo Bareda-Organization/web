@@ -137,7 +137,7 @@ describe("StaleMovingRunsPage — 끝나지 않은 회차 강제 종료", () => 
   });
 });
 
-// R48 시안 `stale-runs` — 지표 3칸 · 학원에 먼저 전화(Ruling 808 academy_contact)한 뒤 강제 종료하는 순서.
+// 지표 3칸 · 학원에 먼저 전화(Ruling 808 academy_contact)한 뒤 강제 종료하는 순서.
 describe("StaleMovingRunsPage — 지표와 학원 전화(Ruling 808)", () => {
   afterEach(() => vi.clearAllMocks());
 

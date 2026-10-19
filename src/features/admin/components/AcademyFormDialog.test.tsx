@@ -25,7 +25,7 @@ const DETAIL = {
   stats: { movingBusCount: 0 },
 };
 
-// R48 Ruling 828 D5 — 운영 상태 스위치는 누르면 확인 대화상자가 먼저 뜬다(되돌릴 수 없는 1단계가 아니라 영향이 큰 동작이라서).
+// Ruling 828 D5 — 운영 상태 스위치는 누르면 확인 대화상자가 먼저 뜬다(되돌릴 수 없는 1단계가 아니라 영향이 큰 동작이라서).
 // 확인하면 상태만 바로 저장하고(다른 입력칸의 미저장 수정은 건드리지 않는다) 옆 패널은 그대로 열어 둔다.
 const openInactiveConfirm = async () => {
   mockGet.mockResolvedValue(DETAIL);
@@ -37,8 +37,8 @@ const openInactiveConfirm = async () => {
   return { onDone, onChanged };
 };
 
-// R32-W12 — 학원을 비활성으로 바꿀 때 확인 없이 바로 저장돼 되돌릴 수 없는 실수가 났다(UF-O-04 는 확인 창을 요구).
-describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () => {
+// 학원을 비활성으로 바꿀 때 확인 창을 거친다 — 확인 없이 바로 저장하면 되돌릴 수 없는 실수가 난다(UF-O-04 는 확인 창을 요구).
+describe("AcademyFormDialog — 비활성화 전 확인", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("운영 중 → 비활성으로 스위치를 누르면 소속 인원과 영향을 알리는 확인 창이 먼저 뜨고 요청은 나가지 않는다", async () => {
@@ -86,8 +86,8 @@ describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () 
   });
 });
 
-// R50 M1 — §6.3 `staff_accounts[]` 는 퇴사 이력까지 섞인 목록이라 첫 행이 퇴사자일 수 있다. 소속 관계자는 재직(`active`)만 보인다.
-describe("AcademyFormDialog — 소속 관계자는 재직자만(R50 M1)", () => {
+// §6.3 `staff_accounts[]` 는 퇴사 이력까지 섞인 목록이라 첫 행이 퇴사자일 수 있다. 소속 관계자는 재직(`active`)만 보인다.
+describe("AcademyFormDialog — 소속 관계자는 재직자만", () => {
   afterEach(() => vi.clearAllMocks());
 
   const staffRef = (accountId: string, name: string, status: "active" | "inactive") => ({
@@ -204,8 +204,8 @@ describe("AcademyFormDialog — 주소 필수(Ruling 450)", () => {
   });
 });
 
-// 조율자 결정(2026-10-01 02:10) — 주소 없는 옛 학원을 운영에서 내리는 조작을 주소 입력이 막으면 안 된다.
-// 원래 비었고 그대로면 상태만 바꾸는 저장에 한해 `address` 키를 보내지 않는다(서버는 키 없음 = 유지로 이미 허용).
+// 주소 없는 옛 학원을 운영에서 내리는 조작을 주소 입력이 막으면 안 된다.
+// 주소가 비어 있고 그대로인 학원은 상태만 바꾸는 저장에서 `address` 키를 보내지 않는다(서버는 키 없음 = 유지로 이미 허용).
 describe("AcademyFormDialog — 주소 없는 옛 학원의 상태 변경(Ruling 496)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -236,8 +236,8 @@ describe("AcademyFormDialog — 주소 없는 옛 학원의 상태 변경(Ruling
 });
 
 
-// R53 t5 A4 · Ruling 885 ⑤ — 수정에서 내부 메모 "" 는 지움, 대표 연락처는 비울 수 없다(서버 빈 값 422).
-// 비우고 저장해도 서버에 남던 것(`|| undefined` 로 키를 안 보냄)을 막는다.
+// Ruling 885 ⑤ — 수정에서 내부 메모 "" 는 지움, 대표 연락처는 비울 수 없다(서버 빈 값 422).
+// 메모를 비운 저장이 서버의 옛 메모를 그대로 두지 않도록 빈 문자열도 키로 보낸다(`|| undefined` 로 키를 빼면 옛 메모가 남는다).
 describe("AcademyFormDialog — 연락처 필수 · 메모 지우기(Ruling 885 ⑤)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -282,7 +282,7 @@ describe("AcademyFormDialog — 연락처 필수 · 메모 지우기(Ruling 885 
   });
 });
 
-// R53 t5 A4 · Ruling 885 ⑤ — 수정에서 연락처를 비우면 칸 아래에 이유를 보이고, 앞뒤 공백은 저장 전에 뺀다.
+// Ruling 885 ⑤ — 수정에서 연락처를 비우면 칸 아래에 이유를 보이고, 앞뒤 공백은 저장 전에 뺀다.
 describe("AcademyFormDialog — 연락처 오류 문구 · 공백 제거(Ruling 885 ⑤)", () => {
   afterEach(() => vi.clearAllMocks());
 

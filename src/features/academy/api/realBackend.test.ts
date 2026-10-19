@@ -32,8 +32,7 @@ describe("academy api — 실서버 계약", () => {
     expect(result.noShowWaitMinutes).toBe(3);
   });
 
-  // 3→5→3 왕복으로 시드를 원상태로 되돌린다(2026-09-14 curl 로 먼저 확인한
-  // 가역 경로).
+  // 3→5→3 왕복으로 시드를 원상태로 되돌린다(가역 경로).
   it("updateAcademySettings 로 바꾼 값을 다시 원래대로 되돌릴 수 있다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));

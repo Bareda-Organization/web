@@ -23,9 +23,9 @@ const AfterStatusChip = ({ status }: { status: BlockedAccountItemResponseTypes["
 
 const PAGE_SIZE = 20;
 
-// §6.10·§6.12 차단 계정 해제(O-03). BRIEF-a1.md §4.2 대로 failedAttempts·reason 열을
+// §6.10·§6.12 차단 계정 해제(O-03). failedAttempts·reason 열을
 // 목록에 그대로 두고, 확인 다이얼로그에서 같은 정보를 한 번 더 보여준다.
-// R48 시안: 상단 안내 띠(해제는 로그인 차단만 푼다, Ruling 328) · 해제 뒤 상태 칩 · 해제하면 처리 완료 토스트 + 사이드바 배지 갱신(S-04).
+// 상단 안내 띠(해제는 로그인 차단만 푼다, Ruling 328) · 해제 뒤 상태 칩 · 해제하면 처리 완료 토스트 + 사이드바 배지 갱신(S-04).
 export const BlockedAccountsPage = () => {
   const [target, setTarget] = useState<BlockedAccountItemResponseTypes | null>(null);
   const { refresh: refreshPending } = useAdminPending();

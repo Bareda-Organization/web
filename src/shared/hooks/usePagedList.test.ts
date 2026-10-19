@@ -83,7 +83,7 @@ describe("usePagedList", () => {
     }
   });
 
-  // R46-FUWEB — 주기 갱신은 응답을 받은 뒤 다음 요청을 예약한다(`usePolling`). 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
+  // 주기 갱신은 응답을 받은 뒤 다음 요청을 예약한다(`usePolling`). 응답 없는 서버에 요청이 겹쳐 쌓이지 않는다.
   it("주기 갱신 응답이 오기 전에는 다음 요청을 내지 않는다", async () => {
     vi.useFakeTimers();
     try {

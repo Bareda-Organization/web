@@ -122,7 +122,7 @@ describe("ForceConfirmPage — 늦은 응답이 새 학원 선택을 덮지 않�
   });
 });
 
-// R48 시안 `force-confirm` — 확정 예정 시각(confirm_at)이 지난 회차만 강제 확정 대상이고, 아직이면 단추가 꺼진 채 "HH:mm 부터 가능"(U-03).
+// 확정 예정 시각(confirm_at)이 지난 회차만 강제 확정 대상이고, 아직이면 단추가 꺼진 채 "HH:mm 부터 가능"(U-03).
 describe("ForceConfirmPage — 대상과 대기 두 묶음(U-03)", () => {
   const academy = { id: "1", code: "A001", name: "테스트 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
 
@@ -155,7 +155,7 @@ describe("ForceConfirmPage — 대상과 대기 두 묶음(U-03)", () => {
     expect(await screen.findByText(/확정이 3회 연속 실패한 회차 1건/)).toBeInTheDocument();
   });
 
-  // R50 M7 — "7분 지남했습니다" 처럼 '지남' 에 '했습니다' 가 붙던 문장. 지난 시간을 괄호로 적는다.
+  // 지난 시간은 괄호로 적는다("(7분 지남)"). '지남' 에 '했습니다' 를 붙이지 않는다.
   it("상단 띠는 확정 예정 시각이 얼마나 지났는지 어색한 활용 없이 적는다", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-03T07:37:00+09:00"));

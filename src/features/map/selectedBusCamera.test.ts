@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SELECTED_BUS_MAP_ZOOM, anchorForSelection, cameraForSelectedBus } from "./selectedBusCamera";
 
-// R18-B2 목표 3 — 세 화면이 같은 확대 수준을 쓴다는 것을 이 공유 함수 하나로 고정한다.
+// 세 화면이 같은 확대 수준을 쓴다는 것을 이 공유 함수 하나로 고정한다.
 describe("cameraForSelectedBus", () => {
   it("선택된 마커가 있으면 그 좌표로 확대한다", () => {
     const fallback = { lat: 0, lng: 0, zoom: 12 };
@@ -18,7 +18,7 @@ describe("cameraForSelectedBus", () => {
   });
 });
 
-// R21-A 목표 4 — 실시간 위치가 없는 회차(idle·확정·종료)를 골라도 정차지가 보이도록
+// 실시간 위치가 없는 회차(idle·확정·종료)를 골라도 정차지가 보이도록
 // 카메라 중심 후보를 정한다.
 describe("anchorForSelection", () => {
   it("실시간 버스 위치가 있으면 그 좌표를 그대로 쓴다(정차지 유무와 무관)", () => {

@@ -5,7 +5,7 @@
 //    `ws://`, `https://` → `wss://` 로 바꾼다.
 // 2. 경로 접두사 — REST 는 `/api/v1` 이 붙지만 WS 엔드포인트는 붙지 않는다.
 //    `backend/src/main/resources/application.yml` 에 `server.servlet.context-path`
-//    가 설정돼 있지 않아(직접 확인, 2026-09-13) `/ws/location` 이 애플리케이션
+//    가 설정돼 있지 않아 `/ws/location` 이 애플리케이션
 //    루트에 그대로 등록된다 — `API_BASE_URL` 을 이어붙이면 존재하지 않는
 //    `/api/v1/ws/location` 을 가리키게 된다.
 const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
