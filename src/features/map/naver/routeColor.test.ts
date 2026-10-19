@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { routeColorFor } from "./routeColor";
 
-// R20-C 목표 3 — 회차 상태 3종(운행 중·운행 종료·확정)의 경로 색이 서로 다르다.
+// 회차 상태 3종(운행 중·운행 종료·확정)의 경로 색이 서로 다르다.
 // idle 은 노선 자체가 없어(routeDisplayState.ts) kind 목록에 없다.
 describe("routeColorFor — 상태별 경로 색(R20-C 목표 3)", () => {
   it("moving·finished·confirmed 색이 서로 다르다", () => {

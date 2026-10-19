@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildRouteDisplayState } from "./routeDisplayState";
 
-// R18-B2 목표 3 — 세 화면이 §5.19 응답을 같은 규칙으로 지도에 옮긴다.
+// 세 화면이 §5.19 응답을 같은 규칙으로 지도에 옮긴다.
 describe("buildRouteDisplayState", () => {
   it("좌표가 있으면 그 경로를 그리고, 근사 경로면 안내를 켠다", () => {
     const state = buildRouteDisplayState("9", "moving", {
@@ -42,11 +42,11 @@ describe("buildRouteDisplayState", () => {
     expect(state.polylines).toEqual([]);
     expect(state.missing).toBe(true);
     expect(state.noPlannedRoute).toBe(false);
-    // 좌표 0개인데 "근사 경로" 를 동시에 띄우는 모순을 막는다(R18-B 조율자 판정).
+    // 좌표 0개인데 "근사 경로" 를 동시에 띄우는 모순을 막는다.
     expect(state.fallback).toBe(false);
   });
 
-  // Ruling 321 — idle 회차도 이제 고정 노선 기반 "예정" 경로를 받을 수 있어, 좌표
+  // Ruling 321 — idle 회차도 고정 노선 기반 "예정" 경로를 받을 수 있어, 좌표
   // 유무가 아니라 백엔드가 보내는 `confirmed` 플래그로 "확정 전"과 "예정도 없음"을 가른다.
   it("idle 회차인데 고정 노선(예정)도 없으면 noPlannedRoute 를 켠다 — missing 이 아니다", () => {
     const state = buildRouteDisplayState("1", "idle", {
@@ -81,7 +81,7 @@ describe("buildRouteDisplayState", () => {
     expect(state.noPlannedRoute).toBe(false);
   });
 
-  // R20-C 목표 3 — 확정된 폴리라인의 kind 가 회차 상태를 그대로 따라간다(운행
+  // 확정된 폴리라인의 kind 가 회차 상태를 그대로 따라간다(운행
   // 중·운행 종료·확정). `routeColor.ts` 가 이 kind 로 색을 고른다.
   it.each([
     ["moving", "moving"],
@@ -98,9 +98,9 @@ describe("buildRouteDisplayState", () => {
     expect(state.polylines[0]?.kind).toBe(expectedKind);
   });
 
-  // R19 목표 1 — stops[] 를 kind:"stop" 마커로 바꾼다. id 로 어느 정차지인지까지
+  // stops[] 를 kind:"stop" 마커로 바꾼다. id 로 어느 정차지인지까지
   // 대조한다(개수만 세는 단언은 범위 조건을 못 잡는다).
-  // 2026-09-23 — 순번도 싣는다(핀 안에 숫자, 사용자 지시). 정차지 id 와 순번은 다른 값이라
+  // 순번도 싣는다(핀 안에 숫자). 정차지 id 와 순번은 다른 값이라
   // 둘을 일부러 다르게 둔다 — 섞어 넣어도 통과하면 이 시험은 아무것도 못 가린다.
   it('stops[] 를 kind:"stop" 마커로 바꾸고 순번을 싣는다', () => {
     const state = buildRouteDisplayState("9", "moving", {
@@ -113,14 +113,14 @@ describe("buildRouteDisplayState", () => {
       confirmed: true,
     });
 
-    // R39 Ruling 400 — 번호는 서버 seq 값이 아니라 seq 순서의 순위다(경유 지점을 뺀 연속 번호). 순서대로 나온다.
+    // Ruling 400 — 번호는 서버 seq 값이 아니라 seq 순서의 순위다(경유 지점을 뺀 연속 번호). 순서대로 나온다.
     expect(state.stopMarkers).toEqual([
       { id: "stop-4", lat: 37.5695, lng: 126.981, kind: "stop", seq: 1 },
       { id: "stop-1", lat: 37.5665, lng: 126.978, kind: "stop", seq: 2 },
     ]);
   });
 
-  // R22 목표 2 — 출발지·도착지가 지도에 안 나온다(사용자 지시). §5.19 응답에 그 필드가
+  // 출발지·도착지를 지도에 찍는다. §5.19 응답에 그 필드가
   // 없으므로 road_path 의 양 끝을 쓴다 — 좌표까지 대조해야 "양 끝"을 실제로 집었는지
   // 판정된다(첫 점·끝 점을 바꿔 넣어도 개수는 그대로다).
   it("road_path 의 첫 점과 끝 점을 출발지·도착지 마커로 만든다", () => {
@@ -142,9 +142,9 @@ describe("buildRouteDisplayState", () => {
     ]);
   });
 
-  // W7 — API_SPEC §4.3·§5.19 `stops[].is_destination`(등원 회차의 마지막 항목,
+  // API_SPEC §4.3·§5.19 `stops[].is_destination`(등원 회차의 마지막 항목,
   // 학원). road_path 끝점(destination 마커)과 같은 자리라 정차지 마커로 한 번 더
-  // 찍으면 겹친다(`FIX-H.md §2` 관측) — 학원 항목은 정차지 마커 산출에서 뺀다.
+  // 찍으면 겹친다 — 학원 항목은 정차지 마커 산출에서 뺀다.
   it("stops[] 의 is_destination=true 항목(학원)은 정차지 마커에서 뺀다", () => {
     const state = buildRouteDisplayState("9", "moving", {
       roadPath: [],
@@ -179,7 +179,7 @@ describe("buildRouteDisplayState", () => {
   });
 });
 
-// R39 Ruling 400 — 강제 경유 지점·미경유 표기와 번호 규칙.
+// Ruling 400 — 강제 경유 지점·미경유 표기와 번호 규칙.
 describe("buildRouteDisplayState — 경유 지점 · 미경유 · 번호", () => {
   const route = (stops: Parameters<typeof buildRouteDisplayState>[2]["stops"]) => ({
     roadPath: [],

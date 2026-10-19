@@ -1,4 +1,4 @@
-// R20-C 목표 3 — 노선 색도 상태별로 다르게(사용자 지시). `StatusPill`(shared/ui)이
+// 노선 색도 상태별로 다르게 한다. `StatusPill`(shared/ui)이
 // 쓰는 상태-색 매핑과 같은 값을 쓴다(semantic.css `--status-boarded`·`--status-moving`·
 // `--status-missed`) — 같은 회차가 목록 태그와 지도 위 선에서 같은 색으로 보이게
 // 한다. naver.maps.Polyline 이 실제 hex 문자열만 받아 CSS 변수 대신 값을 그대로
