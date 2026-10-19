@@ -241,7 +241,7 @@ describe("ScheduleForm — B1 #7 요일 여러 개 한 번에", () => {
   });
 });
 
-// R48 — 수정 옆 패널의 "이 수정이 반영되는 회차" 미리보기(§5.10 Ruling 366 · 화면 계산 Ruling 827). 오늘 회차는 불변, 내일은 요일이 맞을 때만 반영.
+// 수정 옆 패널의 "이 수정이 반영되는 회차" 미리보기(§5.10 Ruling 366 · 화면 계산 Ruling 827). 오늘 회차는 불변, 내일은 요일이 맞을 때만 반영.
 describe("ScheduleForm — 수정 미리보기", () => {
   afterEach(() => vi.clearAllMocks());
   const base = { id: "9", busId: "1", busNo: "1호차", weekday: "sat" as const, direction: "to_academy" as const, departTime: "12:41", originName: "중동 마을", destinationName: "학원", estDurationMin: 30, active: true };

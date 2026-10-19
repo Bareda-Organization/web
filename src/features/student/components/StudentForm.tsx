@@ -140,7 +140,7 @@ export const StudentForm = ({
 
   const canSubmit = name.trim().length > 0 && !loading;
 
-  // 저장하지 않은 입력이 있으면 앱 안 이동·창 닫기·이 대화상자 닫기에서 묻는다(R32-W13).
+  // 저장하지 않은 입력이 있으면 앱 안 이동·창 닫기·이 대화상자 닫기에서 묻는다.
   const { dirty } = useLeaveWarning(
     JSON.stringify([
       name,

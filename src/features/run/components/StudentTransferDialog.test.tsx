@@ -105,7 +105,7 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     vi.clearAllMocks();
   });
 
-  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  // Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
   it("비고 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
     renderDialog();
 
@@ -122,7 +122,7 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
     expect(screen.queryByRole("option", { name: "학원" })).not.toBeInTheDocument();
   });
 
-  // R39 Ruling 400 — 노선(§5.19)의 stops[] 는 경유 지점도 싣는다. 태울 학생이 없는 지점이라 승하차지 선택지가 아니다.
+  // Ruling 400 — 노선(§5.19)의 stops[] 는 경유 지점도 싣는다. 태울 학생이 없는 지점이라 승하차지 선택지가 아니다.
   it("경유 지점은 승하차지 선택지에서 빠진다", async () => {
     mockGetRunRoute.mockResolvedValue({
       ...routeWithStops,
@@ -260,8 +260,8 @@ describe("StudentTransferDialog — 배타 입력·대기 저장·에러", () =>
   });
 });
 
-// C00-02 — 도착 회차에 고정 노선이 없으면 §5.19 가 `409 RUN_NOT_CONFIRMED` 를 준다. 예전엔 catch 가
-// 목록을 말없이 비워, 관계자는 목록이 고장 난 줄 알았다.
+// 도착 회차에 고정 노선이 없으면 §5.19 가 `409 RUN_NOT_CONFIRMED` 를 준다.
+// 이때 목록을 말없이 비우지 않고, 이유를 알리고 주소 입력으로 바꾼다.
 describe("StudentTransferDialog — 도착 회차의 승하차지 조회 실패(C00-02)", () => {
   afterEach(() => vi.clearAllMocks());
 

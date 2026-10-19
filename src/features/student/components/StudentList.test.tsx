@@ -67,7 +67,7 @@ describe("StudentList — 보호자 연결 열", () => {
     expect(screen.getByText("2명 연결")).toBeInTheDocument();
   });
 
-  // R52 t5-sonnet A-8 — 사양 용어는 '혼자 귀가'(STU-08)다. 열 머리와 요약 칸이 '혼자 하차' 로 적히지 않는다.
+  // A-8 — 사양 용어는 '혼자 귀가'(STU-08)다. 열 머리와 요약 칸이 '혼자 하차' 로 적히지 않는다.
   it("혼자 귀가 열 머리와 요약 칸 이름은 사양 용어를 쓴다", async () => {
     mockGetStudents.mockResolvedValue({ items: [], page: 0, size: 20, totalCount: 0, hasNext: false });
 
@@ -79,7 +79,7 @@ describe("StudentList — 보호자 연결 열", () => {
   });
 });
 
-// R50 S8 — A-10 학생 목록 학년 열. 항목의 grade(null 가능)를 반 옆에 그린다.
+// A-10 학생 목록 학년 열. 항목의 grade(null 가능)를 반 옆에 그린다.
 describe("StudentList — 학년 열(A-10)", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -190,7 +190,7 @@ describe("StudentList — 검색 결과 없음", () => {
   });
 });
 
-// R46-FUWEB B1 #11 — 목록을 못 읽으면 새로고침 말고는 되돌릴 길이 없었다.
+// 목록을 못 읽으면 새로고침 없이 다시 시도할 수 있어야 한다.
 describe("StudentList — 다시 시도", () => {
   beforeEach(() => mockGetStudents.mockReset());
 
@@ -211,7 +211,7 @@ describe("StudentList — 다시 시도", () => {
   });
 });
 
-// R46-FUWEB B1 #12·#19 — 학생이 없을 때 다음 행동을 알려 주고, 저장한 학생의 행을 잠깐 강조한다.
+// 학생이 없을 때 다음 행동을 알려 주고, 저장한 학생의 행을 잠깐 강조한다.
 describe("StudentList — 빈 상태 행동과 저장 행 강조", () => {
   it("학생이 한 명도 없으면 학생 등록 버튼이 보이고, 저장하면 새로 생긴 그 행이 강조된다", async () => {
     mockGetStudents.mockResolvedValue(emptyPage);

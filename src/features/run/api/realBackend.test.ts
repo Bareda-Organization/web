@@ -26,7 +26,7 @@ beforeAll(async () => {
 
 describe("run api — 실서버 계약", () => {
   // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1)·staffB(academy_id=2).
-  // run_id=2 는 staffA 학원 소속 확정 회차(2026-09-12 curl 실측 — roster 2명).
+  // run_id=2 는 staffA 학원 소속 확정 회차다(roster 2명).
 
   it("getDashboard 는 staffA 학원의 지표·회차 목록을 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();
@@ -70,9 +70,8 @@ describe("run api — 실서버 계약", () => {
     expect(Array.isArray(result.items)).toBe(true);
   });
 
-  // 목표 4 — ACADEMY_SCOPE_VIOLATION 실제 재현. staffB(학원 2)가 학원 1 소속
-  // run_id=2 의 명단을 조회하면 403 로 거부된다(2026-09-14 curl 로 먼저 확인한
-  // 반응을 그대로 자동화한 것 — 조회 전용이라 되돌릴 부작용이 없다).
+  // ACADEMY_SCOPE_VIOLATION 실제 재현. staffB(학원 2)가 학원 1 소속
+  // run_id=2 의 명단을 조회하면 403 로 거부된다. 조회 전용이라 되돌릴 부작용이 없다.
   it("ACADEMY_SCOPE_VIOLATION — staffB(학원 2)가 남의 학원 회차 명단을 조회하면 403 로 거부된다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffB"));
@@ -86,15 +85,14 @@ describe("run api — 실서버 계약", () => {
     });
   });
 
-  // r11-t1 — patchRunAssignment(§5.14, A-06) 실제 재현. run_id=6(R6)은 idle·미배치
-  // (V2__seed_data.sql 시드 기준, curl 실측). 배치 해제 API 가 부재해(되돌릴 수단이
+  // patchRunAssignment(§5.14, A-06) 실제 재현. run_id=6 은 idle·미배치
+  // (V2__seed_data.sql 시드 기준). 배치 해제 API 가 부재해(되돌릴 수단이
   // 없는 편도 전이 — `AssignmentCommandService.place`), 이미 채워진 자리는 REPLACE
   // 만 가능하다. 하지만 <b>같은 managerId 로 다시 보내는 것은 멱등</b>이다(`reassign`
-  // 이 같은 값으로 다시 저장할 뿐 새 행도 충돌도 만들지 않음, 서버 코드 확인) —
-  // 그래서 반복 실행에도 항상 같은 응답을 낸다. 또한 이 파일 끝의 afterAll 이 이
-  // run_id=6 을 포함해 전체를 시드로 되돌리므로(위 postForcedAdd 때문에 이미
-  // 걸려 있음), 다음 라운드에서도 "미배치" 상태로 다시 시작한다 — 새 되돌림 장치를
-  // 만들지 않고 이미 있는 것을 그대로 쓴 것.
+  // 이 같은 값으로 다시 저장할 뿐 새 행도 충돌도 만들지 않음) —
+  // 그래서 반복 실행에도 항상 같은 응답을 낸다. 이 파일 끝의 afterAll 이
+  // run_id=6 을 포함해 전체를 시드로 되돌리므로(위 postForcedAdd 가 이미 상태를 바꿔 둔다),
+  // 매 실행마다 "미배치" 상태로 시작한다. 새 되돌림 장치는 두지 않고 기존 afterAll 을 쓴다.
   it("patchRunAssignment 는 기사·동승자를 배치하고 배치 결과를 돌려준다(run_id=6)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -108,8 +106,8 @@ describe("run api — 실서버 계약", () => {
     expect(escort?.managerId).toBe("3");
   });
 
-  // r7-t2 목표 4 — CAPACITY_EXCEEDED 실제 재현. run_id=6(R6)은 idle·출발 4시간 전
-  // 전용 ①구간 시나리오로 시드에 마련돼 있다(V2__seed_data.sql 주석 — R1 과 같은
+  // CAPACITY_EXCEEDED 실제 재현. run_id=6 은 idle·출발 4시간 전
+  // 전용 ①구간 시나리오로 시드에 마련돼 있다(V2__seed_data.sql 주석 — run_id=1 과 같은
   // 학원·버스·방향이라 같은 고정 노선(route 1)이 매칭된다). bus 1 의
   // student_capacity=14, route 1 이 매칭하는 승하차지(stop 1·2)를 쓰는 학생은
   // student 1·2 뿐이라 projected=2. `projected + staged + 1 > 14` 이므로 12번
@@ -147,8 +145,8 @@ describe("run api — 실서버 계약", () => {
   });
 });
 
-// R56 · Ruling 893 — §5.15 경유 지점 지정·삭제 계약(A-15). Ruling 325 때 뺀 검사를 되살린 것이다.
-// run_id=8(R8)은 R14-T3 가 이 검사용으로 시드에 둔 확정 회차(정차 2곳, V2__seed_data.sql)라 다른 시험을 건드리지 않는다.
+// Ruling 893 — §5.15 경유 지점 지정·삭제 계약(A-15).
+// run_id=8 은 이 검사용으로 시드에 둔 확정 회차(정차 2곳, V2__seed_data.sql)라 다른 시험을 건드리지 않는다.
 //
 // ⚠ 네이버 Directions 를 부르는 요청은 **미리보기 2회**(추가 1 · 삭제 1)뿐이다 — 배포(apply=true)는 미리보기의 계산을 그대로 쓰고
 // 지도 API 를 다시 부르지 않는다(§5.15). 503 MAP_ROUTE_UNAVAILABLE 재시도를 한 번씩 허용해도 통틀어 4회 이하다.
@@ -224,12 +222,12 @@ describe("run api — 경유 지점 실서버 계약(§5.15)", () => {
   });
 });
 
-// r7-t2 목표 6 — 위 강제 추가 12건은 되돌릴 API 가 없다(§5.7 은 저장만 하고 끝나며
+// 위 강제 추가 12건은 되돌릴 API 가 없다(§5.7 은 저장만 하고 끝나며
 // 취소 엔드포인트가 부재). 유일한 되돌림 수단은 시드 전체 재구성(`POST /dev/reset`)
 // 뿐이라 이 파일이 끝난 뒤 무조건 돌린다 — `resetRealBackendSeedIfConfigured` 는
-// 이미 있는 헬퍼를 그대로 재사용한 것(새 되돌림 장치를 만들지 않음). 이 파일은
+// 이미 있는 헬퍼를 그대로 재사용한다(새 되돌림 장치를 만들지 않음). 이 파일은
 // 이 강제 추가 시나리오 때문에 항상 상태를 남기므로 "값싸게 먼저 확인" 분기를
-// 두지 않고 매번 돈다 — 판단 근거는 보고서 §1.
+// 두지 않고 매번 돈다.
 afterAll(async () => {
   await resetRealBackendSeedIfConfigured();
 });

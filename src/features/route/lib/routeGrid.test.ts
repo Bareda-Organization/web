@@ -15,7 +15,7 @@ const r = (id: string, busId: string, weekday: RouteListItemResponseTypes["weekd
 });
 const bus = (id: string, over: Record<string, unknown> = {}) => ({ id, busNo: `${id}호차`, plateNo: `99가${id}`, operable: true, ...over });
 
-// R48-WEB-STAFF 고정 노선 편성 — 요일표(차량 × 방향 × 요일)는 서버 목록 전량에서 만든다. 칸 하나 = (bus_id, weekday, direction) 한 편성(uk_route_bus_weekday_direction).
+// 고정 노선 편성 — 요일표(차량 × 방향 × 요일)는 서버 목록 전량에서 만든다. 칸 하나 = (bus_id, weekday, direction) 한 편성(uk_route_bus_weekday_direction).
 describe("buildRouteGrid — 요일표", () => {
   const routes = [r("1", "1", "mon", "to_academy"), r("2", "1", "mon", "from_academy", { stopCount: 0 }), r("3", "2", "wed", "to_academy", { active: false })];
 

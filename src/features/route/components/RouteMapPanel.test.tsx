@@ -5,7 +5,7 @@ import { RouteMapPanel } from "./RouteMapPanel";
 import { getRoutePath } from "../api";
 import type { RoutePathResponseTypes } from "../types";
 
-// §5.9 GET /staff/routes/{id}/path(R27-B 신설) — jsdom 은 실제 네이버 지도 SDK 를 못 그리므로
+// §5.9 GET /staff/routes/{id}/path — jsdom 은 실제 네이버 지도 SDK 를 못 그리므로
 // (ChangeApprovalDetail.test.tsx 와 같은 한계) MapSurface 를 목으로 바꿔 이 패널이 계산한
 // markers·polylines·camera 만 검증한다.
 vi.mock("../api", () => ({

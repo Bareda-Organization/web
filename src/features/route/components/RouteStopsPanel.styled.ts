@@ -5,7 +5,7 @@ import { MAP_SURFACE_HEIGHT } from "@/features/map";
 // 목록 칸의 폭 — 이름·배지·버튼 네 개가 한 줄에 들어가는 만큼만(지시 1: 가로로 길 필요 없다).
 const LIST_COLUMN_WIDTH_PX = 380;
 
-/* 2026-09-23 사용자 지시 1 — 목록은 왼쪽 고정 폭 칸, 지도는 나머지. 좁은 화면에서는 위아래로 쌓는다. */
+/* 목록은 왼쪽 고정 폭 칸, 지도는 나머지. 좁은 화면에서는 위아래로 쌓는다. */
 export const StyledEditor = styled.div`
   display: grid;
   grid-template-columns: ${LIST_COLUMN_WIDTH_PX}px minmax(0, 1fr);

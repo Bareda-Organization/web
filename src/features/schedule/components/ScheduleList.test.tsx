@@ -22,7 +22,7 @@ beforeEach(() => {
   vi.mocked(getSchedules).mockResolvedValue({ items: [s("1", "mon"), s("2", "sun", { routeStopCount: 0 }), s("3", "wed", { active: false })], page: 0, size: 500, totalCount: 3, hasNext: false });
 });
 
-// R48 요일표 — 전량(size=500)을 읽어 칸에 출발 시각 · 예상 소요를 그리고, 비활성 · 노선이 빈 스케줄은 칸에서 따로 말한다.
+// 요일표 — 전량(size=500)을 읽어 칸에 출발 시각 · 예상 소요를 그리고, 비활성 · 노선이 빈 스케줄은 칸에서 따로 말한다.
 describe("ScheduleList — 요일표", () => {
   it("칸마다 출발 시각과 상태를 보이고, 칸을 누르면 그 스케줄의 수정 창이 열린다", async () => {
     render(<ScheduleList />);
@@ -46,7 +46,7 @@ describe("ScheduleList — 요일표", () => {
   });
 });
 
-// R50 S12 — "내일 회차도 생성 완료" 는 조회 없는 고정 문구였다. 내일 날짜로 회차를 읽어 실제 건수를 보이고, "노선 편성도 비활성" 단정은 없앴다.
+// 내일 날짜로 회차를 읽어 실제 건수를 보인다. "내일 회차도 생성 완료" 같은 조회 없는 고정 문구와 "노선 편성도 비활성" 같은 단정은 쓰지 않는다.
 describe("ScheduleList — 오늘 · 내일 회차 지표(R50)", () => {
   const runOf = (id: string, over: Record<string, unknown> = {}) =>
     ({ id, busId: "3", busNo: "3호차", serviceDate: "x", direction: "to_academy", departTime: "08:00", canceledAt: null, assignments: [], ...over }) as never;

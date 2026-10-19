@@ -672,10 +672,10 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
     expect(screen.getAllByText("종료").length).toBeGreaterThan(0);
   });
 
-  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
-  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
-  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
-  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  // 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 숫자로 읽히는 마커만
+  // 회차로 고르는 방식(`Number(markerId)` + `Number.isInteger`)은 문자열 id 에서 선택을 놓친다.
+  // 이 검사가 그 회귀를 잡는다.
   it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [{ ...baseLiveRun, runId: "run-a1", position: { lat: 37.1, lng: 127.1, recordedAt: "2026-09-13T00:00:01Z" } }],

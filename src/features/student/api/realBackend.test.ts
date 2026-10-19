@@ -17,7 +17,7 @@ import {
 // 성립한다(`StudentUpsertRequestTypes.photo` 는 선택) — 사진 업로드 자체까지
 // 실측하려면 실제 파일이 필요해 그 부분만 이 계약 시험의 범위를 벗어난다.
 // 등록으로 만든 학생을 같은 시험 안에서 퇴원(soft delete)시켜 정리한다 —
-// 퇴원은 즉시 목록·상세 조회에서 빠지므로(2026-09-17 curl 로 확인, 상세는
+// 퇴원은 즉시 목록·상세 조회에서 빠지므로(상세는
 // 404 STUDENT_NOT_FOUND) 반복 실행에 안전하고 시드 학생 5명을 건드리지 않는다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 

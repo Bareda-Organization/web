@@ -264,7 +264,7 @@ export const StyledMapPane = styled.div`
   padding: 0 20px 16px;
 `;
 
-// 지도는 위치 확인용이다(판단은 위 표·처리 목록) — 높이는 모든 지도와 같은 `MAP_SURFACE_HEIGHT`(2026-10-06 사용자 지시 · 화면의 50%).
+// 지도는 위치 확인용이다(판단은 위 표·처리 목록) — 높이는 모든 지도와 같은 `MAP_SURFACE_HEIGHT`(화면의 50%).
 export const StyledMapSurface = styled.div`
   position: relative;
   height: ${MAP_SURFACE_HEIGHT};

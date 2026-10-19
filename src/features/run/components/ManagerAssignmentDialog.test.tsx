@@ -40,7 +40,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     expect(screen.getByText("박매니저")).toBeInTheDocument();
   });
 
-  // R52 M9 — 앞 20명만 오고 안내가 없던 것. 역할별로 받고, 한쪽이라도 상한을 넘으면 일부만 보인다고 알린다.
+  // 후보는 역할별로 받는다. 한쪽이라도 상한을 넘으면 일부만 보인다고 안내한다.
   it("기사·동승자를 역할별로 따로 조회한다", async () => {
     mockCandidates(managers);
     render(<ManagerAssignmentDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);

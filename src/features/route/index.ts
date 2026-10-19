@@ -3,10 +3,10 @@ export { RouteList } from "./components/RouteList";
 export { RouteDetail } from "./components/RouteDetail";
 export { StopManagement } from "./components/StopManagement";
 export * from "./types";
-// R15-T2 — §5.19 노선 조회는 RTE 도메인(route) 소유이지만 지도에 그리는 화면은
+// §5.19 노선 조회는 RTE 도메인(route) 소유이지만 지도에 그리는 화면은
 // run·admin 쪽이다. `features/map` 이 이미 같은 이유로 기능 경계를 넘어 쓰이는
 // 전례(`docs/frontend/web/CONVENTIONS_REACT.md` "기능끼리 서로 import 하지 않는다"의 유일한 기존
-// 예외)를 따라 이 함수 하나만 공개 창구에 얹는다(보고서 §2, 확신 없는 지점).
+// 예외)를 따라 이 함수 하나만 공개 창구에 얹는다.
 export { getRunRoute } from "./api";
-// 주소 자동완성 입력 — 강제 승하차지 추가(run)도 노선 편성과 같은 후보 목록에서 주소를 고른다(R46-FUWEB B1 #25).
+// 주소 자동완성 입력 — 강제 승하차지 추가(run)도 노선 편성과 같은 후보 목록에서 주소를 고른다.
 export { StopAddressSearch } from "./components/StopAddressSearch";

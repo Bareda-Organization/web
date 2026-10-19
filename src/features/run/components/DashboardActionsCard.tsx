@@ -35,7 +35,7 @@ export const DashboardActionsCard = ({ runs, unassignedManagers, approvals, nowM
   if (noShowTotal > 0) {
     const first = noShowRuns[0];
     const nearestExpiry = Math.min(...noShowRuns.flatMap((run) => run.noShowCases.map((c) => Date.parse(c.expiresAt))));
-    // 만료가 지났으면 '1분 안' 으로 붙잡지 않고 끝났다고 알린다 — 운행 상세 띠(TodayRunAlerts)와 같은 판단(R53 A8).
+    // 만료가 지났으면 '1분 안' 으로 붙잡지 않고 끝났다고 알린다 — 운행 상세 띠(TodayRunAlerts)와 같은 판단.
     const minutesLeft = formatMinutesLeft(nearestExpiry, nowMs);
     items.push({
       key: "no-show",

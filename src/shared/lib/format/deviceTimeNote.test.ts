@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { deviceTimeNote } from "./deviceTimeNote";
 
 // 비상 목록의 "발생 시각" 은 서버 접수 시각이다. 단말이 누른 시각(occurred_at)은 오프라인 큐로 늦게 도착한 비상에서만 벌어지므로
-// 1분을 넘게 다를 때만 참고로 덧붙인다(R47 Ruling 744 · Ruling 616).
+// 1분을 넘게 다를 때만 참고로 덧붙인다(Ruling 744 · Ruling 616).
 const RAISED = "2026-09-12T08:10:00+09:00";
 
 describe("deviceTimeNote — 단말 기록 시각 병기", () => {

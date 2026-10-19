@@ -28,7 +28,7 @@ describe("StudentWithdrawDialog — 퇴원 미리보기", () => {
     expect(screen.getByText("명단 제외")).toBeInTheDocument();
   });
 
-  // Ruling 848 ⑦ · T3 — "탑승 · 알림 기록은 그대로 보존" 은 사양과 달랐다. STU-04: 퇴원 90일 뒤 개인정보 파기, 승하차 이력은 이름 없이 남는다(알림 보관은 14일).
+  // Ruling 848 ⑦ — STU-04: 퇴원 90일 뒤 개인정보 파기, 승하차 이력은 이름 없이 남는다(알림 보관은 14일). 알림 기록 보존은 말하지 않는다.
   it("지난 기록 줄은 STU-04 대로 90일 뒤 개인정보 파기와 이름 없는 이력 보존을 적고, 알림 기록 보존은 말하지 않는다", async () => {
     mockPreview.mockResolvedValue({ todayRuns: [], tomorrowRuns: [] });
     render(<StudentWithdrawDialog student={student} onClose={vi.fn()} onDone={vi.fn()} />);

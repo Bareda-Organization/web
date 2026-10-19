@@ -7,7 +7,7 @@ import type { RouteDetailResponseTypes, RoutePathResponseTypes } from "../types"
 import { confirmLeave } from "@/shared/lib/navigation/leaveGuard";
 import { ApiError } from "@/shared/lib/http";
 
-// 고정 노선 편성 — 승하차지 목록·추가·수정·삭제·저장(2026-09-23 사용자 지시 11건 중 1·2·3·4·5·7·8·10).
+// 고정 노선 편성 — 승하차지 목록·추가·수정·삭제·저장.
 // jsdom 에는 지도가 없어 MapSurface 를 목으로 바꾸고, 넘어간 props 로 "지도에 무엇을 그리라고 했는가" 를 본다.
 vi.mock("../api", () => ({
   getRouteDetail: vi.fn(),
@@ -184,7 +184,7 @@ describe("RouteStopsPanel — 주소 자동완성과 핀 끌기(지시 2·3·10)
     expect(마지막_지도().onMapClick).toBeUndefined();
   });
 
-  // 2026-09-23 — 장소 검색 후보는 장소 이름을 표시명 기본값으로, 주소는 도로명으로 보낸다.
+  // 장소 검색 후보는 장소 이름을 표시명 기본값으로, 주소는 도로명으로 보낸다.
   it("장소 후보를 고르면 장소 이름이 표시명, 도로명이 주소가 된다", async () => {
     mockSuggest.mockResolvedValue([
       { placeName: "신정역 5호선", lat: 37.52, lng: 126.85, displayName: "서울특별시 양천구 오목로 179", nearby: [] },
@@ -245,7 +245,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     expect(screen.getByRole("button", { name: "순서 최적화" })).toBeDisabled();
   });
 
-  // 2026-09-23 사용자 지시 — "특정 순서나 시점, 종점을 고정". 고정은 저장 대상이 아니라 최적화에 넘기는 조건이다.
+  // 특정 순서나 시점, 종점을 고정할 수 있다. 고정은 저장 대상이 아니라 최적화에 넘기는 조건이다.
   it("자물쇠를 채운 승하차지를 실어 최적화하고, 고정은 저장할 변경으로 세지 않는다", async () => {
     mockOptimize.mockResolvedValue(detail);
     await 띄운다();

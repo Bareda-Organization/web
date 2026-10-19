@@ -30,7 +30,7 @@ describe("useSavedNotice", () => {
     expect(result.current.notice).toBe("둘째");
   });
 
-  // R46-FUWEB B1 #19 — 저장한 행이 어디 있는지 알 수 없어, 알림과 같은 시간만큼 그 행의 키를 함께 들고 있는다.
+  // 저장한 행이 어디 있는지 알 수 없어, 알림과 같은 시간만큼 그 행의 키를 함께 들고 있는다.
   it("저장한 행의 키를 주면 알림과 같은 시간 동안 그 키를 돌려주고, 안 주면 비운다", () => {
     const { result } = renderHook(() => useSavedNotice());
 

@@ -42,7 +42,7 @@ describe("StudentForm — 등록 실패 갈래", () => {
   });
 });
 
-// 2026-09-23 사용자 지시(Ruling 326) — 좌석은 없고, 연결된 보호자의 연락처를 고칠 수 있다.
+// Ruling 326 — 좌석은 없고, 연결된 보호자의 연락처를 고칠 수 있다.
 describe("StudentForm — 보호자 연락처 수정", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -120,7 +120,7 @@ describe("StudentForm — 비밀번호 초기화 진입점", () => {
   });
 });
 
-// R32-W13 — 학생 등록·수정 폼도 저장하지 않은 채 앱 안에서 떠나면 입력이 조용히 사라졌다.
+// 학생 등록·수정 폼도 저장하지 않은 채 앱 안에서 떠날 때 입력이 조용히 사라지지 않게 막는다.
 describe("StudentForm — 이탈 경고(R32-W13)", () => {
   afterEach(() => {
     setLeaveWarning(null);
@@ -239,7 +239,7 @@ describe("StudentForm — 특이사항 길이", () => {
   });
 });
 
-// R46-FUWEB B1 #19 — 목록이 방금 저장한 행을 강조하도록, 등록을 마치면 서버가 만든 학생 id 를 onDone 에 실어 보낸다.
+// 목록이 방금 저장한 행을 강조하도록, 등록을 마치면 서버가 만든 학생 id 를 onDone 에 실어 보낸다.
 describe("StudentForm — 저장한 학생 id 전달", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -257,7 +257,7 @@ describe("StudentForm — 저장한 학생 id 전달", () => {
   });
 });
 
-// R56 K2 · Ruling 894③ — 수정 화면의 저장된 사진 [제거] 는 서버 삭제(DELETE …/photo)를 부르고 사진 없음이 된다. 등록 화면에는 지울 사진이 없다.
+// Ruling 894③ — 수정 화면의 저장된 사진 [제거] 는 서버 삭제(DELETE …/photo)를 부르고 사진 없음이 된다. 등록 화면에는 지울 사진이 없다.
 describe("StudentForm — 저장된 사진 [제거]", () => {
   afterEach(() => {
     vi.clearAllMocks();

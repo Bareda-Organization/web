@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PhotoUploadField } from "./PhotoUploadField";
 import { setAccessToken } from "../../lib/http";
 
-// FE-R2 W 목표 2 — PhotoUploadField 가 미리보기용 blob: URL 을 해제하지 않아 화면을 오래
-// 쓰면 메모리가 쌓이던 것을 고쳤다. jsdom 은 URL.createObjectURL/revokeObjectURL 을
+// PhotoUploadField 는 미리보기용 blob: URL 을 해제한다. 해제하지 않으면 화면을 오래
+// 쓰면 메모리가 쌓인다. jsdom 은 URL.createObjectURL/revokeObjectURL 을
 // 구현하지 않아 여기서 직접 스텁한다.
 const jpegFile = () => new File(["fake-image-bytes"], "photo.jpg", { type: "image/jpeg" });
 
@@ -150,7 +150,7 @@ describe("PhotoUploadField — 보호된 기존 사진", () => {
   });
 });
 
-// R56 K2 · Ruling 894③ — 874⑦ 이 숨겼던 저장된 사진의 [제거] 를 되살린다(서버 `DELETE /staff/students/{id}/photo`).
+// Ruling 894③ — 저장된 사진의 [제거] 는 서버 `DELETE /staff/students/{id}/photo` 를 부른다.
 // 새로 고른(아직 저장 전) 사진을 취소하는 [제거] 는 그대로이고, 취소하면 저장된 사진이 다시 보인다.
 describe("PhotoUploadField — 저장된 사진 [제거]", () => {
   const okImage = () =>

@@ -21,7 +21,7 @@ describe("buildScheduleGrid · summarizeSchedules — 요일표", () => {
   });
 });
 
-// R48-WEB-STAFF 스케줄 수정 미리보기 — §5.10 반영 규칙(Ruling 366)을 화면이 계산한다(Ruling 827). G2: 오늘 회차 불변 · 내일 요일 일치 시 반영.
+// 스케줄 수정 미리보기 — §5.10 반영 규칙(Ruling 366)을 화면이 계산한다(Ruling 827). 오늘 회차 불변 · 내일 요일 일치 시 반영.
 describe("previewScheduleChange — 이 수정이 반영되는 회차", () => {
   const sat = s("9", "3", "sat", "to_academy");
   const todayRun = { id: "r1", scheduleId: "9", serviceDate: TODAY, direction: "to_academy", departTime: "2026-10-03T12:41:00+09:00", status: "confirmed", canceledAt: null } as unknown as RunItemResponseTypes;

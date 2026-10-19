@@ -12,7 +12,7 @@ vi.mock("../api", () => ({
   searchStudents: vi.fn(),
 }));
 
-// R46-FUWEB B1 #25 — 승하차 주소는 노선 편성과 같은 주소 검색에서 후보를 골라 정한다(직접 입력해 확정 단계에서 틀렸다고 알게 되던 흐름을 없앤다).
+// 승하차 주소는 노선 편성과 같은 주소 검색에서 후보를 골라 정한다(직접 입력하면 확정 단계에서야 주소 오류를 알게 된다).
 // 검색 상자 자체는 `StopAddressSearch.test.tsx` 가 본다 — 여기서는 고른 후보의 주소가 서버로 가는 흐름만 본다.
 vi.mock("@/features/route", () => ({
   StopAddressSearch: ({ onPick }: { onPick: (suggestion: { displayName: string; lat: number; lng: number; nearby: [] }) => void }) => (
@@ -38,7 +38,7 @@ describe("ForcedAddDialog — 배타 모드·확정 흐름", () => {
     vi.clearAllMocks();
   });
 
-  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  // Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
   it("메모 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
     render(<ForcedAddDialog runId="7" open onClose={vi.fn()} onDone={vi.fn()} />);
 

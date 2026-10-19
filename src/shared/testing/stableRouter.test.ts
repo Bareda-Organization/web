@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 // 렌더마다 새 `useRouter` 객체를 주는 가짜를 시험 파일에 다시 쓰면 실패한다 — 공용 `createStableRouter` 를 쓴다.
-// (고정하지 않은 가짜는 `router` 를 의존성에 둔 effect 를 렌더마다 다시 예약해 간헐 실패를 만든다 — R46-ADDR)
+// (고정하지 않은 가짜는 `router` 를 의존성에 둔 effect 를 렌더마다 다시 예약해 간헐 실패를 만든다)
 const SRC_DIR = path.resolve(__dirname, "../..");
 const FRESH_ROUTER_PATTERN = /useRouter:\s*\(\)\s*=>\s*\(\{/;
 

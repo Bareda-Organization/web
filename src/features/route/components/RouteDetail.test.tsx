@@ -70,7 +70,7 @@ describe("RouteDetail — F02-11 편성 정보 수정 뒤에도 승하차지 편
   });
 });
 
-// R48 — 지표 4칸: 이용 학생(정차지 rider_count 합) · 예상 소요(path) · 연결된 스케줄(같은 차량·요일·방향). 보조 재료를 못 받으면 `-`.
+// 지표 4칸: 이용 학생(정차지 rider_count 합) · 예상 소요(path) · 연결된 스케줄(같은 차량·요일·방향). 보조 재료를 못 받으면 `-`.
 describe("RouteDetail — 지표 · 요일 탭", () => {
   const withStops: RouteDetailResponseTypes = {
     ...detail,

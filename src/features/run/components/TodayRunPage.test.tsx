@@ -62,7 +62,7 @@ vi.mock("@/shared/hooks/useRealtimeChannel", async (importOriginal) => ({
     return { connectionState: mockConnectionState };
   },
 }));
-// 목표 3 — jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
+// jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
 // 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
 // `MapSurface` 자체를 목으로 바꿔 TodayRunPage 가 계산한 markers·camera 값이 그 컴포넌트에
@@ -84,7 +84,7 @@ const mockGetRunsLive = vi.mocked(getRunsLive);
 const mockGetRunRoute = vi.mocked(getRunRoute);
 const mockDeleteTransfer = vi.mocked(deleteTransfer);
 
-// T2 이전 시험은 getRunRoute 를 모른다 — 기본값을 비워 두어 기존 시험이
+// getRunRoute 의 기본값을 비워 둔다 — 노선을 따로 정하지 않은 시험이
 // "노선을 불러오지 못했습니다" 오류로 오염되지 않게 한다.
 beforeEach(() => {
   mockGetRunRoute.mockResolvedValue({ roadPath: [], fallbackUsed: false, stops: [], confirmed: true });
@@ -461,7 +461,7 @@ describe("TodayRunPage — 명단을 승하차지별로 묶는다", () => {
   });
 });
 
-// 목표 2 — §5.18 position 이 지도 마커·"현재 위치" 카드에 정확히 반영되는지 검증한다.
+// §5.18 position 이 지도 마커·"현재 위치" 카드에 정확히 반영되는지 검증한다.
 describe("TodayRunPage — 버스 위치(§5.18)", () => {
   afterEach(() => {
     mockRunIdParam = null;
@@ -711,7 +711,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
 });
 
 // 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 "현재 위치" 아래에
-// 나온다(사용자 지시). 명단은 승하차지를 이름 문자열로만 싣기 때문에, 지도 마커 id
+// 나온다. 명단은 승하차지를 이름 문자열로만 싣기 때문에, 지도 마커 id
 // (`stop-{stopId}`) → 노선 응답의 정차지 이름 → 명단의 `stopName` 순으로 이어야 한다.
 describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(R24)", () => {
   const 두정차지_노선 = {
@@ -1209,7 +1209,7 @@ describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () =
     expect(within(card).getByText(/출발 30분 전/)).toBeInTheDocument();
   });
 
-  // Ruling 848 · T2 — `recipient_count` 는 관계자 · 학부모 · 학생 전체의 수신 건수(§5.3 "적재된 수신 건수")다. 학부모 수가 아니다.
+  // Ruling 848 — `recipient_count` 는 관계자 · 학부모 · 학생 전체의 수신 건수(§5.3 "적재된 수신 건수")다. 학부모 수가 아니다.
   it("지연 알림 줄은 학부모 수가 아니라 수신 건수로 보인다", async () => {
     mockRunIdParam = "7";
     mockGetDashboard.mockResolvedValue({
