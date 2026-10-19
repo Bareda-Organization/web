@@ -106,7 +106,7 @@ describe("(admin) 레이아웃 — 알림 인지", () => {
   });
 });
 
-// F03-12 — 접근 판정은 경로 목록이 아니라 라우트 그룹이 맡는다. (admin) 그룹은 system_admin 역할을 요구한다.
+// 접근 판정은 경로 목록이 아니라 라우트 그룹이 맡는다. (admin) 그룹은 system_admin 역할을 요구한다.
 describe("(admin) 레이아웃 — 그룹 역할", () => {
   it("가드에 system_admin 역할을 요구한다", () => {
     render(

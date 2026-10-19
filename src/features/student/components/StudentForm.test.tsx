@@ -157,8 +157,8 @@ describe("StudentForm — 이탈 경고", () => {
   });
 });
 
-// F02-01 — PATCH 는 키가 없으면 "그대로 둔다"(Student.update). 지운 값을 키째 빼면 저장은 성공하는데 값이 남는다.
-describe("StudentForm — F02-01 수정에서 값 지우기", () => {
+// PATCH 는 키가 없으면 "그대로 둔다"(Student.update). 지운 값을 키째 빼면 저장은 성공하는데 값이 남는다.
+describe("StudentForm — 수정에서 값 지우기", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

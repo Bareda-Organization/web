@@ -17,7 +17,7 @@ import {
 } from "./index";
 
 // 고정 노선 편성 화면(§5.9, RTE-01, A-08)이 부르는 조회·등록·수정·삭제·최적화
-// 엔드포인트를 실제 F5-W1 전용 백엔드에 붙여 확인한다.
+// 엔드포인트를 실제 전용 백엔드에 붙여 확인한다.
 //
 // updateRoute(RTE-01)·optimizeRoute(RTE-09)는 시드 노선(route_id=1·2)이 아니라
 // 이 시험이 스스로 만들고 지우는 전용 노선 위에서만 실행한다 — optimizeRoute 는
@@ -59,7 +59,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("route api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 소속 노선 1개(route_id=1, 1호차·mon·to_academy).
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 소속 노선 1개(route_id=1, 1호차·mon·to_academy).
 
   it("getRoutes 는 staffA 학원의 노선 목록을 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();

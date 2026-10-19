@@ -17,7 +17,7 @@ const setup = (overrides: Partial<StaffAccountItemResponseTypes> = {}) => {
   return { onDone };
 };
 
-// F03-08 — 재직 해제(로그인 즉시 차단)·비밀번호 초기화는 되돌릴 수 없는 조작이라 확인 한 단계를 거친다.
+// 재직 해제(로그인 즉시 차단)·비밀번호 초기화는 되돌릴 수 없는 조작이라 확인 한 단계를 거친다.
 describe("MemberAccountFormDialog — 확인·성공 표시·빈 값", () => {
   afterEach(() => vi.clearAllMocks());
 

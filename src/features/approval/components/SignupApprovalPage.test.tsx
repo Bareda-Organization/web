@@ -224,8 +224,8 @@ describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () =>
   });
 });
 
-// F02-04 — 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
-describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
+// 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
+describe("SignupApprovalPage — 늦게 온 옛 응답", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -250,8 +250,8 @@ describe("SignupApprovalPage — F02-04 늦게 온 옛 응답", () => {
   });
 });
 
-// F02-03 — 20건을 넘는 요청은 다음 쪽으로 넘겨 볼 수 있어야 한다(§5.1 페이징).
-describe("SignupApprovalPage — F02-03 페이징", () => {
+// 20건을 넘는 요청은 다음 쪽으로 넘겨 볼 수 있어야 한다(§5.1 페이징).
+describe("SignupApprovalPage — 페이징", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -289,7 +289,7 @@ describe("SignupApprovalPage — 승인 완료 탭 요청 값", () => {
 });
 
 // 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 그 요청이 목록에 남지 않게 닫으면서 목록을 새로 받는다.
-describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침", () => {
+describe("SignupApprovalPage — 결정 실패 뒤 목록 새로 고침", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

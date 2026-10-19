@@ -13,7 +13,7 @@ export type WsEventType =
   | "run_started"
   | "run_ended"
   | "emergency_raised"
-  // W3 — 발신 후 1분 안 취소(`DELETE /runs/{runId}/emergency/{id}`, §4.14).
+  // 발신 후 1분 안 취소(`DELETE /runs/{runId}/emergency/{id}`, §4.14).
   // 학원·관리자 채널 전용, `emergency_raised` 를 받은 화면이 같은 신고를 닫는다.
   | "emergency_canceled"
   | "approval_requested";

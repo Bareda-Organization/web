@@ -25,8 +25,8 @@ vi.mock("@/shared/hooks", async (importOriginal) => ({
   useRealtimeConnection: () => ({ connectionState: "connected" }),
 }));
 
-// F03-04 — 서버는 첫 쪽 20건만 준다. 목록 화면은 total_count 로 머리글을 쓰고 [다음] 으로 다음 쪽을 읽어야 한다.
-// F03-06 — 폴링·재조회 한 번의 실패가 이미 보이던 목록을 지우고 "없습니다" 를 그리면 안 된다.
+// 서버는 첫 쪽 20건만 준다. 목록 화면은 total_count 로 머리글을 쓰고 [다음] 으로 다음 쪽을 읽어야 한다.
+// 폴링·재조회 한 번의 실패가 이미 보이던 목록을 지우고 "없습니다" 를 그리면 안 된다.
 vi.mock("../api", () => ({
   getAcademies: vi.fn(),
   getAllAcademies: vi.fn().mockResolvedValue([]),
@@ -115,7 +115,7 @@ describe("메인 관리자 목록 — 재조회 실패에도 직전 목록 유�
         await vi.advanceTimersByTimeAsync(0);
       });
       expect(screen.getAllByText(/5호차/).length).toBeGreaterThan(0);
-      // F03-11 — 발신 후 경과 시간(elapsed_since_raised 60초)과 역할 한글 표기
+      // 발신 후 경과 시간(elapsed_since_raised 60초)과 역할 한글 표기
       expect(screen.getByText("1분")).toBeInTheDocument();
       expect(screen.getAllByText("김기사").length).toBeGreaterThan(0);
       expect(screen.getAllByText("기사").length).toBeGreaterThan(0);

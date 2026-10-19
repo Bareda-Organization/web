@@ -92,7 +92,7 @@ export const deleteStudent = async (studentId: string): Promise<void> => {
 // GET /staff/students/{id}/weekly-address(STU-06 · Ruling 498) — 주소는 L3 라 서버가 조회마다 감사 기록을 남긴다. 관계자는 읽기만 한다.
 export const getStudentWeeklyAddresses = async (studentId: string): Promise<StudentWeeklyAddressTypes[]> => {
   const raw = await apiFetch<{ entries: StudentWeeklyAddressTypes[] }>(`/staff/students/${studentId}/weekly-address`, { method: "GET" });
-  // L3 — 서버가 함께 보내는 좌표 · 승하차지 id 는 화면이 쓰지 않아 옮기지 않는다.
+  // 서버가 함께 보내는 좌표 · 승하차지 id 는 화면이 쓰지 않아 옮기지 않는다.
   return raw.entries.map(({ weekday, direction, address, addressDetail, verified }) => ({ weekday, direction, address, addressDetail, verified }));
 };
 

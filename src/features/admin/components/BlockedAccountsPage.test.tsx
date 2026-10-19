@@ -4,7 +4,7 @@ import { BlockedAccountsPage } from "./BlockedAccountsPage";
 import { getBlockedAccounts, unblockAccount } from "../api";
 import type { BlockedAccountItemResponseTypes } from "../types";
 
-// W6 — API_SPEC §6.10 이 목록에 role · status_before_block 을 추가했다(`Ruling
+// API_SPEC §6.10 이 목록에 role · status_before_block 을 추가했다(`Ruling
 // 328`). 해제하면 그 값으로 되돌아간다는 걸 해제 버튼을 누르기 전에 미리
 // 보여줘야 한다(`UF-O-03`).
 vi.mock("../api", () => ({
@@ -33,7 +33,7 @@ const account: BlockedAccountItemResponseTypes = {
   statusBeforeBlock: "pending",
 };
 
-describe("BlockedAccountsPage — W6 역할·해제 후 상태 열", () => {
+describe("BlockedAccountsPage — 역할·해제 후 상태 열", () => {
   it("role·status_before_block 을 목록 열로 보여준다", async () => {
     mockGetBlockedAccounts.mockResolvedValue({ items: [account], page: 1, size: 20, totalCount: 1, hasNext: false });
 

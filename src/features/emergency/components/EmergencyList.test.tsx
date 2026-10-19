@@ -164,8 +164,8 @@ describe("EmergencyList — 연락처·자동 갱신·위치", () => {
   });
 });
 
-// F01-08·F01-05 — 무음 주기 갱신의 실패·늦은 응답이 화면의 목록을 바꾸면 안 된다.
-describe("EmergencyList — 주기 갱신의 실패·경합(F01-08·F01-05)", () => {
+// 무음 주기 갱신의 실패·늦은 응답이 화면의 목록을 바꾸면 안 된다.
+describe("EmergencyList — 주기 갱신의 실패·경합", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();

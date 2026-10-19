@@ -132,7 +132,7 @@ const setupSession = (overrides: Partial<ReturnType<typeof useAuthSession>> = {}
   return value;
 };
 
-// F03-02 — UF-X-02: 대기·거절 화면에서 [상태 다시 확인] 으로 승인 여부를 다시 묻는다.
+// UF-X-02:대기·거절 화면에서 [상태 다시 확인] 으로 승인 여부를 다시 묻는다.
 describe("SignupStatusPanel — 상태 다시 확인", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -161,7 +161,7 @@ describe("SignupStatusPanel — 상태 다시 확인", () => {
   });
 });
 
-// F03-03·F03-14 — 재신청: 검색 오류 처리 · 확인 한 단계 · 키보드 선택 · 로그아웃 오류
+// 재신청: 검색 오류 처리 · 확인 한 단계 · 키보드 선택 · 로그아웃 오류
 describe("SignupStatusPanel — 재신청", () => {
   afterEach(() => vi.clearAllMocks());
 

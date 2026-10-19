@@ -89,8 +89,8 @@ describe("ChangeApprovalList — 상태 필터", () => {
   });
 });
 
-// F02-04 — 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
-describe("ChangeApprovalList — F02-04 늦게 온 옛 응답", () => {
+// 탭을 연달아 눌러 요청이 겹칠 때, 늦게 도착한 옛 응답이 새 탭의 목록을 덮으면 안 된다.
+describe("ChangeApprovalList — 늦게 온 옛 응답", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { LinkCandidateTypes } from "../types";
 import { LinkCandidatePicker } from "./LinkCandidatePicker";
 
-// F02-04 — 검색을 제출했을 때 앞선 요청의 응답이 더 늦게 도착해도 후보 목록이 덮이면 안 된다.
-describe("LinkCandidatePicker — F02-04 늦게 온 옛 응답", () => {
+// 검색을 제출했을 때 앞선 요청의 응답이 더 늦게 도착해도 후보 목록이 덮이면 안 된다.
+describe("LinkCandidatePicker — 늦게 온 옛 응답", () => {
   it("처음 조회 응답이 검색 응답보다 늦게 와도 후보에는 검색 결과가 남는다", async () => {
     let resolveFirst!: (value: LinkCandidateTypes[]) => void;
     const search = vi

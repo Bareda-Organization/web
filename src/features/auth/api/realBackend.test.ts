@@ -14,7 +14,7 @@ import {
 } from "./index";
 
 // (auth) 3화면(login·signup·signup-status) + 화면 없는 §2 나머지 엔드포인트를
-// F5-W2 전용 백엔드에 붙여 확인한다.
+// 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
 let backendReachable = false;
@@ -240,7 +240,7 @@ describe("auth api — 실서버 계약", () => {
   // 병합되어 사양(§1.4) 그대로 재현된다. 실패 1~4회는 401 INVALID_CREDENTIALS 와 함께
   // remaining_attempts 가 4·3·2·1 로 줄고, 5회째부터는 계정이 차단돼 403
   // AUTH_ACCOUNT_BLOCKED 를 반환한다 — 그 뒤 올바른 비밀번호로 시도해도 이미
-  // 차단된 상태라 마찬가지로 403 이다(조율자 실측, BE-A 병합 커밋 기준).
+  // 차단된 상태라 마찬가지로 403 이다(서버 실측 기준).
   it("로그인 실패가 5회 누적되면 계정이 차단돼 403 AUTH_ACCOUNT_BLOCKED 를 반환한다(§1.4·§8)", async ({
     skip,
   }) => {

@@ -39,7 +39,7 @@ describe("MemberAccountsPage — 목록 조회 실패", () => {
   });
 });
 
-// F03-07 — 최근 로그인이 ISO 원문(`…Z`)으로 보였다.
+// 최근 로그인은 ISO 원문(`…Z`)이 아니라 한국 시간으로 그린다.
 describe("MemberAccountsPage — 최근 로그인 시각 표기", () => {
   beforeEach(() => mockGetAllAcademies.mockResolvedValue([]));
   afterEach(() => vi.clearAllMocks());

@@ -12,7 +12,7 @@ import {
   updateStudent,
 } from "./index";
 
-// 학생 관리 화면(§5.11, STU-01~04, A-10)이 부르는 엔드포인트를 실제 F5-W1
+// 학생 관리 화면(§5.11, STU-01~04, A-10)이 부르는 엔드포인트를 실제
 // 전용 백엔드에 붙여 확인한다. 등록·수정·퇴원(STU-02~04)은 사진 없이도 요청이
 // 성립한다(`StudentUpsertRequestTypes.photo` 는 선택) — 사진 업로드 자체까지
 // 실측하려면 실제 파일이 필요해 그 부분만 이 계약 시험의 범위를 벗어난다.
@@ -33,7 +33,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("student api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 소속 학생 5명(student_id 1~5).
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 소속 학생 5명(student_id 1~5).
 
   it("getStudents 는 staffA 학원의 학생 목록을 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();

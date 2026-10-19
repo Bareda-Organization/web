@@ -38,7 +38,7 @@ describe("UnblockConfirmDialog — 차단 근거 노출 후 해제", () => {
     vi.useRealTimers();
 
     expect(screen.getByText("로그인 5회 연속 실패")).toBeInTheDocument();
-    // F03-07 — ISO 원문이 아니라 한국 시간 표기(UTC 09:00 = 서울 18:00)
+    // ISO 원문이 아니라 한국 시간 표기(UTC 09:00 = 서울 18:00)
     expect(screen.getByText(/9월 10일 18:00/)).toBeInTheDocument();
     expect(screen.getByText("5회")).toBeInTheDocument();
     expect(screen.getByText("바래다 학원")).toBeInTheDocument();

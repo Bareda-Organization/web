@@ -69,7 +69,7 @@ const row = (id: number) => ({
 });
 const pageOf = (items: NotificationListItemResponseTypes[], page: number, hasNext: boolean) => ({ items, page, size: 20, totalCount: 45, hasNext, unackedCount: 3 });
 
-describe("NotificationList — 필터·쪽·실패 (F03-06·F03-16·F03-17)", () => {
+describe("NotificationList — 필터·쪽·실패", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("2쪽에서 필터를 바꾸면 조회 요청은 한 번, 0쪽으로 나간다", async () => {
@@ -351,8 +351,8 @@ describe("NotificationList — 수신자 확인됨 탭 건수(M-W4 · Ruling 850
   });
 });
 
-// L5 — 푸터가 "미승차" 라고만 적으면 같은 계열인 '미승차 무응답'(no_show_escalated)도 확인 대상 3종으로 읽힌다.
-describe("NotificationList — 푸터의 확인 대상 설명(L5)", () => {
+// 푸터가 "미승차" 라고만 적으면 같은 계열인 '미승차 무응답'(no_show_escalated)도 확인 대상 3종으로 읽힌다.
+describe("NotificationList — 푸터의 확인 대상 설명", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("확인 대상 3종을 적고 '미승차 무응답' 은 확인 대상이 아님을 같이 적는다", async () => {

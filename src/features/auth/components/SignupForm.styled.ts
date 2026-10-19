@@ -15,7 +15,7 @@ export const StyledResultItem = styled.li`
   list-style: none;
 `;
 
-// 결과 한 줄은 버튼이다 — 마우스 없이 Tab·Enter·Space 로도 고를 수 있다(F03-14).
+// 결과 한 줄은 버튼이다 — 마우스 없이 Tab·Enter·Space 로도 고를 수 있다.
 export const StyledResultButton = styled.button<{ $selected: boolean }>`
   width: 100%;
   text-align: left;

@@ -38,7 +38,7 @@ describe("formatClockTimeWithSeconds", () => {
   });
 });
 
-// F01-10·F04-06 — 브라우저(PC) 시간대가 서울이 아니어도 같은 순간은 같은 서울 시각으로 보여야 한다.
+// 브라우저(PC) 시간대가 서울이 아니어도 같은 순간은 같은 서울 시각으로 보여야 한다.
 describe("서울 시간대 고정", () => {
   const originalTz = process.env.TZ;
   afterEach(() => {

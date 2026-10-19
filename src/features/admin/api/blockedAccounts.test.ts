@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBlockedAccounts } from "./blockedAccounts";
 import { mockJsonResponse } from "@/shared/testing/httpResponse";
 
-// W6 — API_SPEC §6.10 이 목록에 role · status_before_block 을 추가했다(`Ruling 328`).
+// API_SPEC §6.10 이 목록에 role · status_before_block 을 추가했다(`Ruling 328`).
 // 해제하면 그 값으로 되돌아간다는 게 관리자가 해제 전에 미리 알아야 할 정보다
 // (`UF-O-03`).
 describe("blockedAccounts api — snake_case ↔ camelCase 변환", () => {

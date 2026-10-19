@@ -31,7 +31,7 @@ describe("formatDateTime", () => {
   });
 });
 
-// F04-06·F03-07 — 서비스 기준 "오늘" 은 서울 날짜다. `toISOString().slice(0, 10)` 은 UTC 날짜라
+// 서비스 기준 "오늘" 은 서울 날짜다. `toISOString().slice(0, 10)` 은 UTC 날짜라
 // 한국 시간 00:00~09:00 에 어제를 낸다.
 describe("todayInSeoul", () => {
   afterEach(() => {

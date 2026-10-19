@@ -86,9 +86,9 @@ export const EmergencyAlertProvider = ({ children, source }: { children: React.R
     alertsRef.current = alerts;
   });
   const [ackingId, setAckingId] = useState<string | null>(null);
-  // 실패 문구는 실패한 알림 id 에 묶는다 — 그 알림이 사라지면 문구도 함께 사라져 새 비상 건 옆에 남지 않는다(F01-12).
+  // 실패 문구는 실패한 알림 id 에 묶는다 — 그 알림이 사라지면 문구도 함께 사라져 새 비상 건 옆에 남지 않는다.
   const [ackFailedId, setAckFailedId] = useState<string | null>(null);
-  // 요청 번호 — ack 성공 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리지 못하게 한다(F01-12).
+  // 요청 번호 — ack 성공 직전에 나간 폴링의 옛 응답이 방금 닫은 팝업을 되살리지 못하게 한다.
   const requestSeq = useRef(0);
 
   // 서버의 미확인(open) 목록이 기준이다 — 통지를 놓쳤거나 새로고침한 뒤에도 미확인 신고가 다시 뜬다.

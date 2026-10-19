@@ -5,7 +5,7 @@ import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { getNotifications } from "./index";
 
-// 알림 로그 조회 화면(§5.17, NTF-10·11, A-13)이 부르는 엔드포인트를 실제 F5-W1
+// 알림 로그 조회 화면(§5.17, NTF-10·11, A-13)이 부르는 엔드포인트를 실제
 // 전용 백엔드에 붙여 확인한다. 조회 전용 화면이라(쓰기 엔드포인트 없음) 목록
 // 조회만 검증한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
@@ -22,7 +22,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("notification api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 학원에 여러 건의 알림 로그가 실재한다.
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 학원에 여러 건의 알림 로그가 실재한다.
 
   it("getNotifications 는 staffA 학원의 알림 로그와 unacked_count 를 함께 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();

@@ -158,7 +158,7 @@ describe("ManagerAssignmentDialog — 후보 목록·경고 비차단", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  // F01-06 — 부모는 이 대화상자를 항상 마운트해 두고 `open` 만 바꾼다. 닫혔다 다시 열 때 이전 저장의
+  // 부모는 이 대화상자를 항상 마운트해 두고 `open` 만 바꾼다. 닫혔다 다시 열 때 이전 저장의
   // 경고 화면(확인 버튼만)이나 고른 값이 남아 있으면 안 된다.
   it("경고를 확인하고 닫은 뒤 다시 열면 저장 버튼이 있는 새 입력 화면이다", async () => {
     mockCandidates(managers);

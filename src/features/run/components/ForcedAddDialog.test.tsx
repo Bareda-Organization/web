@@ -25,7 +25,7 @@ vi.mock("@/features/route", () => ({
 const mockPostForcedAdd = vi.mocked(postForcedAdd);
 const mockSearchStudents = vi.mocked(searchStudents);
 
-// F01-07 — 기존 학생은 내부 ID 를 외워 입력하지 않고 이름으로 찾아 고른다(USER_FLOWS UF-M-03 "검색·연동이 기본").
+// 기존 학생은 내부 ID 를 외워 입력하지 않고 이름으로 찾아 고른다(USER_FLOWS UF-M-03 "검색·연동이 기본").
 const pickExistingStudent = async () => {
   mockSearchStudents.mockResolvedValue([{ studentId: "101", name: "김철수", className: "1반" }]);
   fireEvent.change(screen.getByLabelText("학생 이름 검색"), { target: { value: "김철" } });

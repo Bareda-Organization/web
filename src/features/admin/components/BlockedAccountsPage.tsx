@@ -12,7 +12,7 @@ import { useAdminPending } from "./AdminPendingProvider";
 import { UnblockConfirmDialog } from "./UnblockConfirmDialog";
 import { StyledAcademyCell, StyledAcademyDot, StyledBlockedAccountsLayout, StyledBlockedName, StyledNoticeSlot, StyledTimeCell } from "./BlockedAccountsPage.styled";
 
-// W6 — 차단 직전 계정 상태(§6.10 `status_before_block`). 해제하면 이 값으로
+// 차단 직전 계정 상태(§6.10 `status_before_block`). 해제하면 이 값으로
 // 되돌아간다(§6.12 · Ruling 328) — 관리자가 "해제 후: 승인 대기" 를 누르기
 // 전에 미리 볼 수 있어야 한다(`UF-O-03`).
 const AfterStatusChip = ({ status }: { status: BlockedAccountItemResponseTypes["statusBeforeBlock"] }) => {
@@ -80,7 +80,7 @@ export const BlockedAccountsPage = () => {
     },
     { key: "failedAttempts", label: "실패", align: "right", render: (row) => `${row.failedAttempts}회` },
     { key: "reason", label: "사유" },
-    // W6 — 해제하면 이 값으로 돌아간다. 해제 단추를 누르기 전에 미리 보여준다.
+    // 해제하면 이 값으로 돌아간다. 해제 단추를 누르기 전에 미리 보여준다.
     { key: "statusBeforeBlock", label: "해제 후 상태", render: (row) => <AfterStatusChip status={row.statusBeforeBlock} /> },
     {
       key: "action",

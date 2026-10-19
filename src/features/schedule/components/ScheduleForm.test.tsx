@@ -61,7 +61,7 @@ describe("ScheduleForm — 등록 실패 갈래", () => {
   });
 });
 
-describe("ScheduleForm — F02-08 수정 반영 안내", () => {
+describe("ScheduleForm — 수정 반영 안내", () => {
   const busPage = {
     items: [{ id: "1", busNo: "1호차", plateNo: "12가3456", capacity: 20, studentCapacity: 18, operable: true, routeCount: 0, scheduleCount: 0, todayRuns: [] }],
     page: 0,
@@ -126,7 +126,7 @@ describe("ScheduleForm — 창 폭", () => {
   });
 });
 
-describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
+describe("ScheduleForm — 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {
@@ -161,8 +161,8 @@ describe("ScheduleForm — F02-13 차량 목록 조회 실패", () => {
   });
 });
 
-// F02-17 · Z-01(Ruling 390) — 선택 항목에 `null` 을 명시하면 서버가 지운다. 비운 소요시간은 키를 빼지 않고 null 로 보낸다.
-describe("ScheduleForm — F02-17 예상 소요시간 지우기", () => {
+// Z-01(Ruling 390) — 선택 항목에 `null` 을 명시하면 서버가 지운다. 비운 소요시간은 키를 빼지 않고 null 로 보낸다.
+describe("ScheduleForm — 예상 소요시간 지우기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("소요시간을 비우고 저장하면 estDurationMin 을 null 로 보내 서버 값을 지운다", async () => {

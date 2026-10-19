@@ -7,7 +7,7 @@ import { getAcademySettings, updateAcademySettings } from "../api";
 
 // §5.21 A-17 · API_SPEC §1.9 — "타임아웃·5xx 는 처리되지 않았습니다" 원칙의 화면
 // 쪽 고정. 저장이 서버에서 거부되면 화면이 조용히 넘어가지 않고 명시적 오류
-// 문구를 그려야 한다(팀리드가 관리자 콘솔에서 심어 본 "서버가 거부했는데 화면이
+// 문구를 그려야 한다(관리자 콘솔에서 심어 본 "서버가 거부했는데 화면이
 // 조용한" 결함이 이 화면에도 통하는지 검사한다).
 vi.mock("../api", () => ({
   getAcademySettings: vi.fn(),
