@@ -113,7 +113,7 @@ describe("ScheduleForm — F02-08 수정 반영 안내", () => {
   });
 });
 
-describe("ScheduleForm — R46-SCREEN 창 폭", () => {
+describe("ScheduleForm — 창 폭", () => {
   afterEach(() => vi.clearAllMocks());
 
   // 420px 기본 폭에서는 요일 7칸 중 '일'이 둘째 줄에 혼자 내려갔다(화면 확인 1440) — 노선 편성 등록 창(480px)과 같은 폭이면 한 줄에 들어간다.

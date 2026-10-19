@@ -95,7 +95,7 @@ describe("SignupStatusPanel — 학원 문의처(BR-301)", () => {
 });
 
 // 승인 상태 조회가 실패하면 화면에 다시 불러오기 수단을 둔다 — 새로고침 말고도 복구할 수 있어야 하기 때문이다.
-describe("SignupStatusPanel — 불러오기 실패(R32-W14)", () => {
+describe("SignupStatusPanel — 불러오기 실패", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

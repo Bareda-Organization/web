@@ -3,7 +3,7 @@ import { MARKER_SIZE_PX, buildMarkerIconHtml, busColorOf } from "./markerIcon";
 
 // 버스 아이콘이 한눈에 보여야 하고, 정차지·학생 마커와 크기로 구별돼야 한다.
 // 크기 관계(버스 > 정차지 > 학생)를 고정한다.
-describe("markerIcon — 종류별 크기 관계(R18-B 목표 1)", () => {
+describe("markerIcon — 종류별 크기 관계", () => {
   it("버스가 정차지보다 크고, 정차지가 학생보다 크다", () => {
     expect(MARKER_SIZE_PX.bus).toBeGreaterThan(MARKER_SIZE_PX.stop);
     expect(MARKER_SIZE_PX.stop).toBeGreaterThan(MARKER_SIZE_PX.student);
@@ -29,7 +29,7 @@ describe("markerIcon — 종류별 크기 관계(R18-B 목표 1)", () => {
 });
 
 // 고른 버스만 지도 위에서 다르게 보인다.
-describe("markerIcon — 선택 강조(R21-A 목표 1)", () => {
+describe("markerIcon — 선택 강조", () => {
   it("selected:true 인 버스는 흰 테두리(box-shadow)가 붙는다", () => {
     expect(buildMarkerIconHtml("bus", { selected: true })).toContain("box-shadow");
     expect(buildMarkerIconHtml("bus", { selected: false })).not.toContain("box-shadow");
@@ -51,7 +51,7 @@ describe("markerIcon — 선택 강조(R21-A 목표 1)", () => {
 });
 
 // 버스끼리 구별하려고 번호를 마커에 표기한다.
-describe("markerIcon — 버스 번호 표기(R21-A 목표 2)", () => {
+describe("markerIcon — 버스 번호 표기", () => {
   it("busNo 를 주면 그 번호 문자열이 아이콘 HTML 에 그대로 들어간다", () => {
     expect(buildMarkerIconHtml("bus", { busNo: "3호차" })).toContain("3호차");
   });
@@ -63,7 +63,7 @@ describe("markerIcon — 버스 번호 표기(R21-A 목표 2)", () => {
 
 // 버스마다 아이콘이 달라야 한다(전부 같은 파란 원이면 어느 버스인지 모른다).
 // 번호를 핀 안에 넣어 버스마다 아이콘 문자열이 다르게 만든다.
-describe("markerIcon — 버스마다 다른 아이콘(R22 목표 1)", () => {
+describe("markerIcon — 버스마다 다른 아이콘", () => {
   it("번호가 다른 두 버스는 아이콘 HTML 자체가 다르다", () => {
     const one = buildMarkerIconHtml("bus", { busNo: "1호차", direction: "to_academy" });
     const two = buildMarkerIconHtml("bus", { busNo: "2호차", direction: "to_academy" });
@@ -98,7 +98,7 @@ describe("markerIcon — 버스마다 다른 아이콘(R22 목표 1)", () => {
 });
 
 // 번호만으로는 한눈에 안 갈리므로 색도 버스마다 다르게 한다.
-describe("markerIcon — 버스마다 다른 색(R22 추가 지시)", () => {
+describe("markerIcon — 버스마다 다른 색", () => {
   it("번호가 다르면 색도 다르다 — 시드의 1·2호차가 실제로 갈린다", () => {
     expect(busColorOf("1호차")).not.toBe(busColorOf("2호차"));
     expect(buildMarkerIconHtml("bus", { busNo: "1호차" })).toContain(busColorOf("1호차"));
@@ -122,7 +122,7 @@ describe("markerIcon — 버스마다 다른 색(R22 추가 지시)", () => {
 });
 
 // 출발지·도착지 마커.
-describe("markerIcon — 출발지·도착지(R22 목표 2)", () => {
+describe("markerIcon — 출발지·도착지", () => {
   it("출발지·도착지는 글자로 서로 구별되고 정차지보다 크다", () => {
     expect(buildMarkerIconHtml("origin")).toContain("출발");
     expect(buildMarkerIconHtml("destination")).toContain("도착");
@@ -142,7 +142,7 @@ describe("markerIcon — 출발지·도착지(R22 목표 2)", () => {
 });
 
 // 같은 버스라도 등원·하원을 모양으로 구별한다(색은 C-09 4색 고정이라 못 쓴다).
-describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
+describe("markerIcon — 등원·하원 모양 구별", () => {
   it("등원(to_academy)과 하원(from_academy)은 서로 다른 아이콘 HTML 을 낸다", () => {
     const toAcademy = buildMarkerIconHtml("bus", { direction: "to_academy" });
     const fromAcademy = buildMarkerIconHtml("bus", { direction: "from_academy" });
@@ -156,7 +156,7 @@ describe("markerIcon — 등원·하원 모양 구별(R21-A 목표 3)", () => {
 
 // 마커는 제 좌표 **위에 가운데로** 놓여야 한다. SDK 의 HTML 아이콘은 size·anchor 없이는
 // 좌상단을 좌표에 맞추므로, 아이콘 절반만큼 되밀어 가운데를 좌표에 둔다.
-describe("markerIcon — 좌표 위에 가운데로(R25 목표 2)", () => {
+describe("markerIcon — 좌표 위에 가운데로", () => {
   it("정차지를 뺀 모든 종류가 제 크기의 절반만큼 되밀린 채로 나온다", () => {
     for (const kind of ["bus", "student", "origin", "destination"] as const) {
       expect(buildMarkerIconHtml(kind)).toContain("translate(-50%,-50%)");
@@ -242,7 +242,7 @@ describe("markerIcon — 비상 강조(W2-01)", () => {
 
 // Ruling 400 — 강제 경유 지점은 승하차지 핀과 모양이 다른 번호 없는 칩 + "경유" 글자이고, 미경유 승하차지는
 // 흐리게(불투명도 · 회색) + 번호 취소선이다. 색만으로 가르지 않는다(글자·모양·취소선이 수단).
-describe("markerIcon — 경유 지점 · 미경유 표기(R39 Ruling 400)", () => {
+describe("markerIcon — 경유 지점 · 미경유 표기(Ruling 400)", () => {
   it("경유 지점은 '경유' 글자가 있고 승하차지 핀(svg)이나 번호가 아니다", () => {
     const html = buildMarkerIconHtml("waypoint", { markerId: "waypoint-12", seq: 5 });
 

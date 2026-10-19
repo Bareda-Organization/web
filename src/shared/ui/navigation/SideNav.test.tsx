@@ -32,7 +32,7 @@ describe("SideNav — 링크", () => {
     expect(defaultPrevented).toBe(true);
   });
 
-  it("주소를 안 주면 예전처럼 버튼이다", () => {
+  it("주소를 안 주면 버튼이다", () => {
     render(<SideNav items={items} value="dashboard" />);
     expect(screen.getByRole("button", { name: /학생 관리/ })).toBeInTheDocument();
   });

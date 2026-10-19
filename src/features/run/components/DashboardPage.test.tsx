@@ -484,7 +484,7 @@ describe("DashboardPage — 실시간 이벤트 배선(Goal 7)", () => {
   });
 
   // 화면 값보다 오래된 위치(`received_at`)는 버린다.
-  it("R57 W-7: 화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
+  it("화면 값보다 오래된 position 이벤트는 현재 정류장을 되돌리지 않는다", async () => {
     mockGetDashboard.mockResolvedValue(baseDashboard);
     mockGetRunsLive.mockResolvedValue({ runs: [baseLiveRun] });
     render(<DashboardPage />);
@@ -634,7 +634,7 @@ describe("DashboardPage — WS 연결 상태와 무관한 목록(Goal 9 → C-12
 
 // 우측 버스 목록은 getDashboard(4종 상태 전부)로 채우고,
 // 버스를 고르면 §5.19 노선을 지도에 그린다(선택 해제·근사 경로 표시 포함).
-describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", () => {
+describe("DashboardPage — 버스 목록 4종 상태·노선 선택", () => {
   const fourStatusDashboard: DashboardResponseTypes = {
     metrics: baseDashboard.metrics,
     runs: [
@@ -844,7 +844,7 @@ describe("DashboardPage — 버스 목록 4종 상태·노선 선택(R15-T2)", (
 });
 
 // F01-01·F01-05·F01-09·C00-03 — 지표·표의 자동 갱신 · 늦은 노선 응답 차단 · 승인 요청 배너 처리 경로.
-describe("DashboardPage — 갱신·경합·승인 배너(2026-09-30 검사)", () => {
+describe("DashboardPage — 갱신·경합·승인 배너", () => {
   const runOf = (runId: string, overrides: Partial<DashboardResponseTypes["runs"][number]> = {}) => ({
     ...baseDashboard.runs[0],
     runId,

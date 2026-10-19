@@ -38,7 +38,7 @@ describe("AcademySettingsForm — 저장 실패 갈래", () => {
 });
 
 // 학원 설정 화면에도 이탈 경고가 있어야 한다 — 저장하지 않은 채 사이드바로 나가면 값이 조용히 사라진다.
-describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
+describe("AcademySettingsForm — 이탈 경고", () => {
   afterEach(() => {
     setLeaveWarning(null);
     vi.restoreAllMocks();
@@ -92,7 +92,7 @@ describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
 });
 
 // Ruling 820 · 827 — 정책 값은 응답에서 오고(화면에 숫자를 박지 않는다), 범위 밖 입력은 서버에 보내기 전에 화면이 막는다.
-describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", () => {
+describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사", () => {
   afterEach(() => vi.clearAllMocks());
 
   const policy = {

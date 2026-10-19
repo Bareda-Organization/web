@@ -47,7 +47,7 @@ describe("NotificationList — 조회 갈래", () => {
 });
 
 // 발송 시각은 서버의 ISO 원문이 아니라 한국 시간으로 보인다.
-describe("NotificationList — 시각 표기(R32-W9)", () => {
+describe("NotificationList — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("발송 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {

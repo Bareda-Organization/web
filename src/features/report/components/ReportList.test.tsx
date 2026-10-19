@@ -76,7 +76,7 @@ describe("ReportList — 조회 갈래", () => {
 });
 
 // 신고 시각은 서버의 ISO 원문이 아니라 사람이 읽는 형식으로 보여야 한다.
-describe("ReportList — 시각 표기(R32-W9)", () => {
+describe("ReportList — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("신고 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
@@ -256,7 +256,7 @@ describe("ReportList — 처리 완료로 표시(Ruling 814)", () => {
 
 // "미처리 N" 카드의 숫자는 서버 counts 이므로 보조 문구도 같은 counts 로 맞춘다.
 // 처리 필터를 "처리됨" 으로 둬도 "미처리 3건 / 미처리 신고가 없습니다" 처럼 모순되면 안 된다.
-describe("ReportList — 미처리 카드와 필터의 일관성(R53 A5)", () => {
+describe("ReportList — 미처리 카드와 필터의 일관성", () => {
   afterEach(() => vi.clearAllMocks());
 
   const base = {

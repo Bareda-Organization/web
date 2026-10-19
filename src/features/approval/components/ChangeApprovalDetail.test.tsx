@@ -364,7 +364,7 @@ describe("ChangeApprovalDetail — 승인/거절", () => {
 });
 
 // 처리 기한 옆에 남은 시간을 보여 준다(A-05). 시각만 있으면 관리자가 남은 시간을 머릿속으로 계산해야 한다.
-describe("ChangeApprovalDetail — 처리 기한 남은 시간(R32-W7)", () => {
+describe("ChangeApprovalDetail — 처리 기한 남은 시간", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -395,7 +395,7 @@ describe("ChangeApprovalDetail — 처리 기한 남은 시간(R32-W7)", () => {
 });
 
 // 서버는 처리 기한에 자동 거절한다(Ruling 306). 기한이 지난 대기 건은 [승인]·[거절] 을 끈다.
-describe("ChangeApprovalDetail — 기한이 지난 대기 건(R36-FE FE2)", () => {
+describe("ChangeApprovalDetail — 기한이 지난 대기 건", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -453,7 +453,7 @@ describe("ChangeApprovalDetail — 기한이 지난 대기 건(R36-FE FE2)", () 
 });
 
 // "새로고침 후 다시 확인" 안내 옆에 누를 버튼을 둔다. 불러오기 실패에도 재시도 버튼이 있어야 한다.
-describe("ChangeApprovalDetail — 다시 불러오기(R32-W8)", () => {
+describe("ChangeApprovalDetail — 다시 불러오기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("미리보기가 최신이 아니면 '다시 불러오기' 버튼이 상세를 다시 조회한다", async () => {

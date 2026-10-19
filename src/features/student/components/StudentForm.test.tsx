@@ -121,7 +121,7 @@ describe("StudentForm — 비밀번호 초기화 진입점", () => {
 });
 
 // 학생 등록·수정 폼도 저장하지 않은 채 앱 안에서 떠날 때 입력이 조용히 사라지지 않게 막는다.
-describe("StudentForm — 이탈 경고(R32-W13)", () => {
+describe("StudentForm — 이탈 경고", () => {
   afterEach(() => {
     setLeaveWarning(null);
     vi.restoreAllMocks();

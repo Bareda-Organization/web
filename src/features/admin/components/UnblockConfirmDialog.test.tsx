@@ -101,7 +101,7 @@ describe("UnblockConfirmDialog — 해제 뒤 상태 경고(Ruling 328)", () => 
     expect(screen.queryByText(/승인하기 전에는/)).not.toBeInTheDocument();
   });
 
-  it("해제에 성공하면 처리 완료 토스트에 돌아간 상태와 승인 주체를 적는다(S-04 · R50 M4)", async () => {
+  it("해제에 성공하면 처리 완료 토스트에 돌아간 상태와 승인 주체를 적는다(S-04)", async () => {
     mockUnblockAccount.mockResolvedValue({ accountStatus: "active", unblockedBy: "1", unblockedAt: "2026-09-12T00:00:00Z" });
     render(
       <ToastProvider>

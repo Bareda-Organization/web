@@ -548,7 +548,7 @@ describe("TodayRunPage — 버스 위치(§5.18)", () => {
 
 // 우측 버스 목록은 4종 상태 전부를 보이고, 선택된
 // 회차의 §5.19 노선을 지도에 그린다.
-describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", () => {
+describe("TodayRunPage — 버스 목록 4종 상태·노선 표시", () => {
   const fourStatusDashboard: DashboardResponseTypes = {
     metrics: baseDashboard.metrics,
     runs: [
@@ -713,7 +713,7 @@ describe("TodayRunPage — 버스 목록 4종 상태·노선 표시(R15-T2)", ()
 // 지도에서 승하차지를 누르면 그 자리에서 타고 내리는 학생만 "현재 위치" 아래에
 // 나온다. 명단은 승하차지를 이름 문자열로만 싣기 때문에, 지도 마커 id
 // (`stop-{stopId}`) → 노선 응답의 정차지 이름 → 명단의 `stopName` 순으로 이어야 한다.
-describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(R24)", () => {
+describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기", () => {
   const 두정차지_노선 = {
     roadPath: [
       { lat: 37.56, lng: 126.97 },
@@ -818,7 +818,7 @@ describe("TodayRunPage — 지도에서 고른 승하차지의 학생만 보기(
 });
 
 // C00-01·F01-03·F01-04·F01-05·C00-03·F01-14 — 선택 회차 유지 · 자동 갱신 · 요청 경합 · 노선 없음 안내.
-describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", () => {
+describe("TodayRunPage — 선택 유지·갱신·경합", () => {
   const runOf = (runId: string, runStatus: "idle" | "confirmed" | "moving" | "finished") => ({
     ...baseDashboard.runs[0],
     runId,
@@ -959,7 +959,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
     });
 
     // 화면 값보다 오래된 위치(`received_at`)는 버린다.
-    it("R57 W-7: 화면 값보다 오래된 position 방송은 버스 마커를 되돌리지 않는다", async () => {
+    it("화면 값보다 오래된 position 방송은 버스 마커를 되돌리지 않는다", async () => {
       mockGetRunRoster.mockResolvedValue(baseRoster);
       render(<TodayRunPage />);
       await waitFor(() => expect(mockMapSurface).toHaveBeenCalledWith(expect.objectContaining({ markers: [expect.objectContaining({ lat: 37.5 })] })));
@@ -1168,7 +1168,7 @@ describe("TodayRunPage — 선택 유지·갱신·경합(2026-09-30 검사)", ()
 });
 
 // 명단 비고 열(A-04 · RST-03)을 그리고, 사양 근거가 없던 이름 검색 · 승하차지 필터는 없다(Ruling 844).
-describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제(R50)", () => {
+describe("TodayRunPage — 명단 비고 열 · 검색 필터 삭제", () => {
   afterEach(() => {
     mockRunIdParam = null;
     vi.clearAllMocks();

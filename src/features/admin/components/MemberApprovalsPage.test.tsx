@@ -55,7 +55,7 @@ describe("MemberApprovalsPage — 목록 조회 실패", () => {
 });
 
 // O-02 · UF-O-06 "처리 대기 요청에 붙여 오래 기다린 요청을 구분". 신청 일시 옆에 서울 날짜 기준 N일째를 보인다(신청 당일 = 1일째).
-describe("MemberApprovalsPage — 대기 일수(R50 M6)", () => {
+describe("MemberApprovalsPage — 대기 일수", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();

@@ -47,7 +47,7 @@ describe("ScheduleList — 요일표", () => {
 });
 
 // 내일 날짜로 회차를 읽어 실제 건수를 보인다. "내일 회차도 생성 완료" 같은 조회 없는 고정 문구와 "노선 편성도 비활성" 같은 단정은 쓰지 않는다.
-describe("ScheduleList — 오늘 · 내일 회차 지표(R50)", () => {
+describe("ScheduleList — 오늘 · 내일 회차 지표", () => {
   const runOf = (id: string, over: Record<string, unknown> = {}) =>
     ({ id, busId: "3", busNo: "3호차", serviceDate: "x", direction: "to_academy", departTime: "08:00", canceledAt: null, assignments: [], ...over }) as never;
 

@@ -312,7 +312,7 @@ describe("EmergencyAlertStrip — 접기", () => {
 
 // 근무 중 관계자는 다른 창을 보는 것이 평상 사용이다. 숨은 탭에서도 비상 폴링이 멈추면 안 되고,
 // 연결이 끊겼다 돌아온 직후에는 끊긴 사이의 신고를 REST 로 한 번 받아 온다.
-describe("EmergencyAlertProvider — 숨은 탭·재연결 보충(R46-FIXCONN)", () => {
+describe("EmergencyAlertProvider — 숨은 탭·재연결 보충", () => {
   const setHidden = (hidden: boolean) => {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
     document.dispatchEvent(new Event("visibilitychange"));

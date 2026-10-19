@@ -26,7 +26,7 @@ describe("AcademiesPage — 목록 조회 실패", () => {
 });
 
 // 서버 `summary` 에는 주소 미등록 · 정원 찬 학원 값이 없어 지금 쪽(20곳)만 센다. 표기가 전체 합계처럼 읽히지 않게 "이 쪽" 을 밝힌다.
-describe("AcademiesPage — 쪽 단위 지표 표기(R50 M3)", () => {
+describe("AcademiesPage — 쪽 단위 지표 표기", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

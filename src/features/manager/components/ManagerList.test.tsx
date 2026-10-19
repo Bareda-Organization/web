@@ -55,7 +55,7 @@ describe("ManagerList — 탭 · 필터 쿼리", () => {
 });
 
 // MGR-01 계정 연결 여부 필터. 역할 탭 · 오늘 배치 필터와 함께 서버 쿼리(`linked`)로 간다.
-describe("ManagerList — 계정 연결 필터(R50)", () => {
+describe("ManagerList — 계정 연결 필터", () => {
   beforeEach(() => mockGetManagers.mockResolvedValue(page([manager("1", "김기사")])));
   afterEach(() => vi.clearAllMocks());
 

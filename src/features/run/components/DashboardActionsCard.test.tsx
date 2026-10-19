@@ -22,7 +22,7 @@ const runWithNoShow = (expiresAt: string) =>
 const approvals = { signupCount: 0, changeCount: 0, nextDeadlineAt: null, isReady: true };
 
 // 카운트다운이 끝난 뒤에는 '1분 안' 으로 붙잡지 않고 끝났다고 알린다. 운행 상세 띠(TodayRunAlerts)처럼 끝났다고 알린다.
-describe("DashboardActionsCard — 미승차 만료 문구(R53 A8)", () => {
+describe("DashboardActionsCard — 미승차 만료 문구", () => {
   it("만료 전에는 남은 분을 '분 안' 으로 보인다", () => {
     render(<DashboardActionsCard runs={[runWithNoShow("2026-10-01T08:03:00Z")]} unassignedManagers={0} approvals={approvals} nowMs={NOW} />);
 

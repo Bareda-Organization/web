@@ -91,7 +91,7 @@ describe("NaverMapSurface — 지도 생성이 늦을 때", () => {
 // 지도 키 인증이 실패하면(서비스 URL 미등록 주소) SDK 가 `window.naver.maps` 를 비운다.
 // 카메라·마커·선 effect 는 `window.naver` 만 확인하고 `.maps` 를 읽어 `LatLng` 에서 던지므로,
 // 그대로 두면 화면 전체가 죽는다. 대체 문구는 `onAuthFailed` 로 화면이 띄운다.
-describe("NaverMapSurface — 인증 실패로 SDK 지도 객체가 비워질 때(R35-W1)", () => {
+describe("NaverMapSurface — 인증 실패로 SDK 지도 객체가 비워질 때", () => {
   it("실패 신호 뒤 자료가 바뀌어도 예외 없이 인증 실패만 알린다", async () => {
     const releaseScript = heldScriptLoad();
     const onAuthFailed = vi.fn();
@@ -154,7 +154,7 @@ describe("NaverMapSurface — 화면이 사라질 때(K-6)", () => {
 // 사용자가 지도를 손으로 옮기거나 확대·축소해도, 버스 위치가 갱신될 때마다 카메라가 되돌아가면 안 된다.
 // "무엇에 포커스 됐는가"(선택된 버스 id)가 안 바뀌면 `setCenter`/`setZoom` 을 다시 부르지 않는다 —
 // 값이 아니라 "옮길 이유가 있는가"를 검사한다.
-describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위치 갱신에 덮이지 않는다, R21-A 추가지시 ①)", () => {
+describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위치 갱신에 덮이지 않는다)", () => {
   it("선택은 그대로인데 버스 위치만 바뀌면 setCenter 가 다시 불리지 않는다", async () => {
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
@@ -292,7 +292,7 @@ describe("NaverMapSurface — 카메라는 선택이 바뀔 때만 옮긴다(위
 
 // 지도 위 버스 아이콘을 눌러 고른다. SDK 의 마커 이벤트가 이 아이콘 형태에서 안 불려
 // 마커 HTML 의 `data-marker-id` 를 컨테이너에서 받는다 — 그래서 시험도 DOM 클릭으로 한다.
-describe("NaverMapSurface — 지도 마커 클릭(R23 목표 4)", () => {
+describe("NaverMapSurface — 지도 마커 클릭", () => {
   it("data-marker-id 가 붙은 요소를 누르면 그 id 를 넘긴다", async () => {
     const releaseScript = heldScriptLoad();
     const onMarkerClick = vi.fn();
@@ -339,7 +339,7 @@ describe("NaverMapSurface — 지도 마커 클릭(R23 목표 4)", () => {
 
 // 승하차지를 골라 `selected` 가 켜지면 지도에서도 아이콘이 바뀌어야 한다. 아이콘을 다시 굳히는 분기가
 // **버스에만** 걸려 있으면 승하차지는 선택해도 테두리가 그려지지 않는다.
-describe("NaverMapSurface — 선택 강조는 종류를 안 가린다(R25 목표 1)", () => {
+describe("NaverMapSurface — 선택 강조는 종류를 안 가린다", () => {
   it("승하차지 마커도 selected 가 켜지면 아이콘을 다시 굳힌다", async () => {
     const releaseScript = heldScriptLoad();
     const setIcon = vi.fn();
@@ -443,7 +443,7 @@ describe("NaverMapSurface — 비상 마커 강조(W2-01)", () => {
 
 // 버스를 고르면 그 버스가 정중앙에 온다. 노선 전체를 담는 배율은
 // 8km 노선에서 버스가 점만 해져 "어디 있는지" 를 읽을 수 없다.
-describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {
+describe("NaverMapSurface — 고른 버스는 정중앙", () => {
   it("고른 버스가 있으면 노선이 있어도 fitBounds 대신 그 좌표로 옮긴다", async () => {
     const releaseScript = heldScriptLoad();
     const setCenter = vi.fn();
@@ -484,7 +484,7 @@ describe("NaverMapSurface — 고른 버스는 정중앙(R25 목표 2)", () => {
 // 승하차지 자리는 **핀을 마우스로 끌어** 정한다. SDK 의 마커 이벤트는 이 아이콘
 // 형태에서 안 불리므로(마커 클릭과 같은 이유) 지도 영역에서 마우스 이벤트를 받아 직접 옮긴다. 시험 SDK 의 투영은
 // "화면 1px = 위도·경도 0.001" 로 단순화했다.
-describe("NaverMapSurface — 끌 수 있는 마커(2026-09-23)", () => {
+describe("NaverMapSurface — 끌 수 있는 마커", () => {
   const 투영 = {
     fromCoordToOffset: (coord: { lat: number; lng: number }) => ({ x: coord.lng * 1000, y: coord.lat * 1000 }),
     fromOffsetToCoord: (offset: { x: number; y: number }) => ({

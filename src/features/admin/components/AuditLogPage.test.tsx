@@ -89,7 +89,7 @@ describe("AuditLogPage — 기본 조회 조건은 비어 있다(Ruling 844)", (
 });
 
 // 감사·접속 이력의 시각은 서버 ISO 원문이 아니라 서울 날짜·시각 형식으로 보인다.
-describe("AuditLogPage — 시각 표기(R32-W9)", () => {
+describe("AuditLogPage — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("감사 이력 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
@@ -169,7 +169,7 @@ describe("AuditLogPage — 해제 행의 해제한 관리자(Ruling 846)", () =>
 });
 
 // 감사 화면(Ruling 446·447) — 행위자는 학원 선택 · 이름으로 찾고, 동작은 필터로 고른다.
-describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R46)", () => {
+describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터", () => {
   afterEach(() => vi.clearAllMocks());
 
   const academy = { id: "7", code: "A7", name: "바래다학원", region: "서울", staffCount: 1, userCount: 3, status: "active" } as never;

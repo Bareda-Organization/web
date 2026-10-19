@@ -38,7 +38,7 @@ const openInactiveConfirm = async () => {
 };
 
 // 학원을 비활성으로 바꿀 때 확인 창을 거친다 — 확인 없이 바로 저장하면 되돌릴 수 없는 실수가 난다(UF-O-04 는 확인 창을 요구).
-describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () => {
+describe("AcademyFormDialog — 비활성화 전 확인", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("운영 중 → 비활성으로 스위치를 누르면 소속 인원과 영향을 알리는 확인 창이 먼저 뜨고 요청은 나가지 않는다", async () => {
@@ -87,7 +87,7 @@ describe("AcademyFormDialog — 비활성화 전 확인(R32-W12 · R48 D5)", () 
 });
 
 // §6.3 `staff_accounts[]` 는 퇴사 이력까지 섞인 목록이라 첫 행이 퇴사자일 수 있다. 소속 관계자는 재직(`active`)만 보인다.
-describe("AcademyFormDialog — 소속 관계자는 재직자만(R50 M1)", () => {
+describe("AcademyFormDialog — 소속 관계자는 재직자만", () => {
   afterEach(() => vi.clearAllMocks());
 
   const staffRef = (accountId: string, name: string, status: "active" | "inactive") => ({

@@ -159,7 +159,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
 });
 
 // 신청 일시는 서버의 ISO 원문이 아니라 한국 시간으로 보인다.
-describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
+describe("SignupApprovalPage — 시각 표기", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("신청 일시를 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
@@ -353,7 +353,7 @@ describe("SignupApprovalPage — 처리 직후 사이드바 배지 갱신", () =
   });
 });
 
-describe("SignupApprovalPage — 오래 기다린 순 · 거절 대화상자(R48)", () => {
+describe("SignupApprovalPage — 오래 기다린 순 · 거절 대화상자", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
