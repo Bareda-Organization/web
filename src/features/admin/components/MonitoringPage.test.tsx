@@ -332,7 +332,7 @@ describe("MonitoringPage — 실시간 이벤트 배선(Goal 8)", () => {
     expect(await screen.findByText("비상 상황 발생 — 2호차 (사고)")).toBeInTheDocument();
   });
 
-  it("W3: emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
+  it("emergency_raised 뒤 emergency_canceled 를 받으면 알림이 취소 문구로 바뀐다", async () => {
     render(<MonitoringPage />);
     await screen.findByText("위치 확인 대기");
 
@@ -447,7 +447,7 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시", () => {
     await waitFor(() => expect(mockGetRunRoute).toHaveBeenCalledWith("run-a1"));
   });
 
-  // F03-07 — "위치" 열이 수신 시각·마지막 확인 시각을 ISO 원문(`…Z`)으로 그렸다.
+  // "위치" 열은 수신 시각·마지막 확인 시각을 ISO 원문(`…Z`)이 아니라 한국 시간으로 그린다.
   it("위치 열은 수신·마지막 확인 시각을 ISO 원문이 아니라 한국 시간으로 보여준다", async () => {
     mockGetRunsLive.mockResolvedValue({
       runs: [
@@ -734,8 +734,8 @@ const raised = (id: number, busNo: string, type = "accident", academyName?: stri
 const canceled = (id: number, busNo: string) =>
   envelope("emergency_canceled", { emergency_id: id, bus_no: busNo, canceled_at: "2026-09-13T00:01:00Z" });
 
-// F03-05 — 비상 배너가 한 줄짜리 상태라 나중 이벤트가 앞 이벤트를 덮었다.
-describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
+// 비상 배너는 목록이라 나중 이벤트가 앞 이벤트를 덮지 않는다.
+describe("MonitoringPage — 비상 배너 목록", () => {
   beforeEach(() => {
     mockConnectionState = "connected";
     capturedOnEnvelope = undefined;
@@ -790,7 +790,7 @@ describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
   });
 });
 
-// F03-05·F03-11 — 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
+// 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
 // 로 잇는다(payload 의 `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원의
 // 같은 이름 버스를 붉게 만든다).
 describe("MonitoringPage — 지도 마커 비상 강조", () => {
@@ -857,8 +857,8 @@ describe("MonitoringPage — 지도 마커 비상 강조", () => {
   });
 });
 
-// F03-10 — 전 학원 방송의 이벤트마다 선택 학원 회차를 재조회했다.
-describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
+// 전 학원 방송의 이벤트마다 선택 학원 회차를 재조회하지 않는다.
+describe("MonitoringPage — 방송 이벤트 재조회 범위", () => {
   beforeEach(() => {
     mockConnectionState = "connected";
     capturedOnEnvelope = undefined;
@@ -892,7 +892,7 @@ describe("MonitoringPage — 방송 이벤트 재조회 범위(F03-10)", () => {
 
 // 관제 회차 목록(`/admin/academies/{id}/runs/live`)은 가장 무거운 GET 이다. 실시간 연결이 살아 있으면 방송이
 // 갱신을 가져오므로 폴링은 안전망일 뿐이라 30초로 늦추고, 연결이 끊겼을 때(재연결 중·권한 거부)만 7초를 유지한다.
-describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른다(L3)", () => {
+describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른다", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockConnectionState = "connected";
@@ -1003,8 +1003,8 @@ describe("MonitoringPage — 폴링 간격은 실시간 연결 상태를 따른�
   });
 });
 
-// F03-09 — 겹친 요청에서 늦은 응답이 새 선택을 덮었다.
-describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음(F03-09)", () => {
+// 겹친 요청에서 늦은 응답이 새 선택을 덮지 않는다.
+describe("MonitoringPage — 늦은 응답이 새 선택을 덮지 않음", () => {
   const academyB = { id: "2", code: "B002", name: "둘째 학원", region: "서울", staffCount: 1, userCount: 1, status: "active" as const };
   beforeEach(() => {
     mockConnectionState = "connected";

@@ -61,8 +61,8 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 };
 
 // §5.3 GET /staff/dashboard(A-03) + §5.18 GET /staff/runs/live(A-14) — 관계자 웹
-// 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 F4-B 에서 실제 네이버 지도로
-// 대체됐고, 명단·진행률·지연은 그대로 표로 그린다.
+// 운행 관리 첫 화면(UF-M-05). 실시간 카드 안의 지도는 실제 네이버 지도이고,
+// 명단·진행률·지연은 표로 그린다.
 // `pendingSlot` — 시작 체크리스트 같은 위쪽 안내 자리. `approvals` — 처리 대기 건수(승인 대기 제공자의 값).
 // `run` 이 `approval`·`onboarding` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
 const NO_APPROVALS: PendingApprovals = { signupCount: 0, changeCount: 0, nextDeadlineAt: null, isReady: false };
@@ -234,7 +234,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
   );
 
   // 지도 위 마커 클릭. 버스 마커만 회차 선택으로 넘긴다 — 정차지·출발지·도착지는
-  // `stop-`·`origin-` 처럼 다른 kind 라 W1(식별자 문자열 흡수) 이후에도 kind 로 가른다
+  // `stop-`·`origin-` 처럼 다른 kind 라 식별자가 문자열이어도 kind 로 가른다
   // (숫자로 읽히는지로 가르면 서버가 숫자 아닌 문자열 id 를 보내는 순간 선택이 조용히 실패한다).
   const handleSelectMarker = useCallback(
     (markerId: string) => {
@@ -382,7 +382,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
       tone: "bad",
       detail: firstNoShow
         ? `${firstNoShow.busNo} ${DIRECTION_LABEL[firstNoShow.direction]} · ${firstNoShow.noShowCases[0].stopName} 통과 후 승차하지 않음`
-        : "정차지를 지나고도 타지 않은 학생",
+        : "승하차지를 지나고도 타지 않은 학생",
     },
     { label: "미등원", value: metrics?.absent ?? "-", unit: "명", detail: "학부모가 탑승을 미리 끈 학생(구간 변경 승인분 포함) · 명단에는 회색 행으로 남습니다" },
     {

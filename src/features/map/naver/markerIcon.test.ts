@@ -195,9 +195,9 @@ describe("정차지 핀 — 끝이 좌표를 가리킨다", () => {
   });
 });
 
-// F01-02 — 호차명(`bus_no`)은 관계자가 입력하는 문자열이고 SDK 는 이 HTML 을 그대로 DOM 에 넣는다.
+// 호차명(`bus_no`)은 관계자가 입력하는 문자열이고 SDK 는 이 HTML 을 그대로 DOM 에 넣는다.
 // 태그·속성 문자가 그대로 실리면 같은 학원 관계자 브라우저에서 임의 스크립트가 실행된다.
-describe("markerIcon — 사용자 입력 이스케이프(F01-02)", () => {
+describe("markerIcon — 사용자 입력 이스케이프", () => {
   it("호차명의 태그·따옴표는 텍스트로만 들어가고 태그로 살아나지 않는다", () => {
     const html = buildMarkerIconHtml("bus", { busNo: '<img src=x onerror="alert(1)">', direction: "to_academy" });
     expect(html).not.toContain("<img");
@@ -211,7 +211,7 @@ describe("markerIcon — 사용자 입력 이스케이프(F01-02)", () => {
   });
 });
 
-// F03-05·F03-11 — 관제 지도에서 비상 회차의 버스를 강조한다. 색은 C-09 회차 상태 4색을
+// 관제 지도에서 비상 회차의 버스를 강조한다. 색은 C-09 회차 상태 4색을
 // 새로 만들 수 없어 기존 버스 색은 그대로 두고 **테두리만** 붉게 바꾼다.
 describe("markerIcon — 비상 강조", () => {
   const EMERGENCY_BORDER = "border:3px solid #dc2626";

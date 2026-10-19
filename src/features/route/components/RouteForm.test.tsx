@@ -72,6 +72,18 @@ describe("RouteForm — 등록 뒤 이어가기", () => {
   });
 });
 
+describe("RouteForm — 등록 안내 문구", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("새로 만들 때 「승하차지는 만든 뒤에 넣습니다」 를 안내하고 「정차지」 글은 없다", async () => {
+    mockGetBuses.mockResolvedValue({ items: [], page: 0, size: 100, totalCount: 0, hasNext: false });
+    render(<RouteForm onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(await screen.findByText("승하차지는 만든 뒤에 넣습니다")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+});
+
 describe("RouteForm — F02-13 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 

@@ -143,7 +143,7 @@ export const RouteForm = ({ route, onClose, onDone, onBatchDone, initial, existi
         <Input label="편성 이름" maxLength={100} hint="비워 두면 이름 없이 만듭니다 · 최대 100자" value={name} onChange={(event) => setName(event.target.value)} />
         <Switch checked={active} onChange={(event) => setActive(event.target.checked)} label="활성" />
         {route ? null : (
-          <AlertBanner tone="info" title="정차지는 만든 뒤에 넣습니다">
+          <AlertBanner tone="info" title="승하차지는 만든 뒤에 넣습니다">
             요일 하나만 만들면 그 편성 상세로, 여러 개 만들면 요일표로 돌아옵니다. 같은 차량·요일·방향이 이미 있으면 그 요일만 표시하고 다시 시도하게 합니다.
           </AlertBanner>
         )}

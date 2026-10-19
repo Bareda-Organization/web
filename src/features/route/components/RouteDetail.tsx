@@ -117,7 +117,7 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
   const last = route.stops[route.stops.length - 1];
   const stopsDetail =
     route.stops.length === 0
-      ? "정차지를 넣어야 도는 길이 생깁니다"
+      ? "승하차지를 넣어야 도는 길이 생깁니다"
       : route.direction === "from_academy"
         ? `학원 → ${last.name} · 마지막 하차지가 종점`
         : `${first.name} → 학원 · 첫 승차지가 시점`;
@@ -127,7 +127,7 @@ export const RouteDetail = ({ routeId }: RouteDetailProps) => {
       label: "이용 학생",
       value: riders ? riders.total : "-",
       unit: riders ? "명" : undefined,
-      detail: riders ? `${WEEKDAY_LABEL[route.weekday]}요일 ${DIRECTION_LABEL[route.direction]} · 정차지당 ${riders.min}–${riders.max}명` : "정차지별 학생 수를 아직 받지 못했습니다",
+      detail: riders ? `${WEEKDAY_LABEL[route.weekday]}요일 ${DIRECTION_LABEL[route.direction]} · 승하차지당 ${riders.min}–${riders.max}명` : "승하차지별 학생 수를 아직 받지 못했습니다",
     },
     {
       label: "예상 소요",

@@ -49,20 +49,39 @@ beforeEach(() => {
 
 // 요일표 — 서버 목록 전량(size=500)에서 (차량 × 방향 × 요일) 칸을 만든다.
 describe("RouteList — 요일표", () => {
-  it("전량(size=500)을 읽어 칸에 정차지 수를 보이고, 비활성 · 0곳은 칸에서 따로 말한다", async () => {
+  it("전량(size=500)을 읽어 칸에 승하차지 수를 보이고, 비활성 · 0곳은 칸에서 따로 말한다", async () => {
     render(<RouteList />);
 
-    const filled = await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" });
+    const filled = await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
     expect(filled).toHaveTextContent("3곳");
-    expect(screen.getByRole("button", { name: "1호차 화요일 등원 편성 — 정차지 0곳" })).toHaveTextContent("정차지 없음");
-    expect(screen.getByRole("button", { name: "1호차 수요일 등원 편성 — 정차지 5곳 · 비활성" })).toHaveTextContent("비활성");
+    expect(screen.getByRole("button", { name: "1호차 화요일 등원 편성 — 승하차지 0곳" })).toHaveTextContent("승하차지 없음");
+    expect(screen.getByRole("button", { name: "1호차 수요일 등원 편성 — 승하차지 5곳 · 비활성" })).toHaveTextContent("비활성");
     expect(mockGetRoutes).toHaveBeenCalledWith(0, 500);
+  });
+
+  it("활성 편성이 모두 승하차지를 가졌으면 지표가 「모든 활성 편성에 승하차지가 있음」 이라고 말한다", async () => {
+    mockGetRoutes.mockResolvedValue({ items: [route("1", 3), route("3", 5, { weekday: "wed", active: false })], page: 0, size: 500, totalCount: 2, hasNext: false });
+    render(<RouteList />);
+    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
+
+    expect(screen.getByText("승하차지 0곳", { selector: "div" }).parentElement).toHaveTextContent("모든 활성 편성에 승하차지가 있음");
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
+  it("범례 · 지표 · 머리글은 「승하차지」 말로 말하고 「정차지」 는 없다", async () => {
+    render(<RouteList />);
+    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
+
+    expect(screen.getByText("활성 — 칸의 숫자는 승하차지 수")).toBeInTheDocument();
+    expect(screen.getByText("승하차지 0곳 (운행 노선이 비어 있음)")).toBeInTheDocument();
+    expect(screen.getByText("승하차지 0곳", { selector: "div" }).parentElement).toHaveTextContent("승하차지를 넣기 전엔 도는 길이 없음");
+    expect(document.body).not.toHaveTextContent("정차지");
   });
 
   it("칸을 누르면 그 편성 상세로 가고, 빈 칸을 누르면 그 칸의 차량 · 요일 · 방향으로 등록 창을 연다", async () => {
     render(<RouteList />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" }));
+    fireEvent.click(await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" }));
     expect(mockRouter.push).toHaveBeenCalledWith("/route/1");
 
     fireEvent.click(screen.getByRole("button", { name: "1호차 목요일 하원 편성 만들기" }));
@@ -76,26 +95,26 @@ describe("RouteList — 요일표", () => {
     expect(screen.getByText("운행 불가")).toBeInTheDocument();
   });
 
-  it("지표에 활성 · 비활성 · 정차지 0곳이 센 값으로 나온다", async () => {
+  it("지표에 활성 · 비활성 · 승하차지 0곳이 센 값으로 나온다", async () => {
     render(<RouteList />);
-    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" });
+    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
 
-    expect(screen.getByText("정차지 0곳", { selector: "div" }).parentElement).toHaveTextContent("1건");
+    expect(screen.getByText("승하차지 0곳", { selector: "div" }).parentElement).toHaveTextContent("1건");
     expect(screen.getByText("비활성", { selector: "div" }).parentElement).toHaveTextContent("1건");
   });
 });
 
-// 목록에 정차지 수 열이 있어 정차지를 아직 안 넣은 빈 편성을 구분할 수 있다. 목록 보기는 기존 표 그대로 남는다.
-describe("RouteList — 목록 보기 · 정차지 수 열", () => {
-  it("편성마다 정차지 수를 보이고 빈 편성은 0곳으로 보인다", async () => {
+// 목록에 승하차지 수 열이 있어 승하차지를 아직 안 넣은 빈 편성을 구분할 수 있다. 목록 보기는 기존 표 그대로 남는다.
+describe("RouteList — 목록 보기 · 승하차지 수 열", () => {
+  it("편성마다 승하차지 수를 보이고 빈 편성은 0곳으로 보인다", async () => {
     render(<RouteList />);
-    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" });
+    await screen.findByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" });
     fireEvent.click(screen.getByRole("tab", { name: "목록" }));
 
     const filled = (await screen.findByText("편성 1")).closest("tr") as HTMLElement;
     const empty = screen.getByText("편성 2").closest("tr") as HTMLElement;
 
-    expect(screen.getByRole("columnheader", { name: "정차지 수" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "승하차지 수" })).toBeInTheDocument();
     expect(within(filled).getByText("3곳")).toBeInTheDocument();
     expect(within(empty).getByText("0곳")).toBeInTheDocument();
   });
@@ -108,7 +127,7 @@ describe("RouteList — ?bus= 로 시작하는 차량 필터", () => {
     render(<RouteList />);
 
     expect(await screen.findByText("이 차량에는 편성이 없습니다")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "1호차 월요일 등원 편성 — 정차지 3곳" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "1호차 월요일 등원 편성 — 승하차지 3곳" })).not.toBeInTheDocument();
     window.history.replaceState({}, "", "/");
   });
 });

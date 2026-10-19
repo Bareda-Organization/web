@@ -29,7 +29,7 @@ describe("ScheduleList — 요일표", () => {
 
     const cell = await screen.findByRole("button", { name: "3호차 월요일 하원 17:30 스케줄" });
     expect(cell).toHaveTextContent("30분");
-    expect(screen.getByRole("button", { name: "3호차 일요일 하원 17:30 스케줄 · 노선 정차지 0곳" })).toHaveTextContent("정차지 0곳");
+    expect(screen.getByRole("button", { name: "3호차 일요일 하원 17:30 스케줄 · 노선 승하차지 0곳" })).toHaveTextContent("승하차지 0곳");
     expect(screen.getByRole("button", { name: "3호차 수요일 하원 17:30 스케줄 · 비활성" })).toHaveTextContent("비활성");
     expect(getSchedules).toHaveBeenCalledWith(0, 500);
 
@@ -37,12 +37,30 @@ describe("ScheduleList — 요일표", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent("수정 창 1");
   });
 
-  it("지표의 '노선이 비어 있는 스케줄' 은 활성이면서 편성 정차지가 0곳인 것만 센다", async () => {
+  it("지표의 '노선이 비어 있는 스케줄' 은 활성이면서 편성 승하차지가 0곳인 것만 센다", async () => {
     render(<ScheduleList />);
     await screen.findByRole("button", { name: "3호차 월요일 하원 17:30 스케줄" });
 
     expect(screen.getByText("노선이 비어 있는 스케줄").parentElement).toHaveTextContent("1건");
     expect(screen.getByText("비활성", { selector: "div" }).parentElement).toHaveTextContent("1건");
+  });
+
+  it("활성 스케줄의 편성이 모두 승하차지를 가졌으면 지표가 「모든 활성 스케줄의 편성에 승하차지가 있음」 이라고 말한다", async () => {
+    vi.mocked(getSchedules).mockResolvedValue({ items: [s("1", "mon"), s("3", "wed", { active: false, routeStopCount: 0 })], page: 0, size: 500, totalCount: 2, hasNext: false });
+    render(<ScheduleList />);
+    await screen.findByRole("button", { name: "3호차 월요일 하원 17:30 스케줄" });
+
+    expect(screen.getByText("노선이 비어 있는 스케줄").parentElement).toHaveTextContent("모든 활성 스케줄의 편성에 승하차지가 있음");
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
+  it("지표 · 범례의 글은 「승하차지」 말로 말하고 「정차지」 는 없다", async () => {
+    render(<ScheduleList />);
+    await screen.findByRole("button", { name: "3호차 월요일 하원 17:30 스케줄" });
+
+    expect(screen.getByText("노선이 비어 있는 스케줄").parentElement).toHaveTextContent("편성에 승하차지 0곳");
+    expect(screen.getByText("노선 편성의 승하차지가 0곳")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("정차지");
   });
 });
 

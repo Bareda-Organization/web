@@ -113,7 +113,7 @@ export const RouteList = () => {
     { key: "direction", label: "방향", render: (row) => DIRECTION_LABEL[row.direction] },
     { key: "name", label: "편성 이름", render: (row) => row.name ?? "-" },
     // 정차지를 아직 안 넣은 빈 편성(0곳)을 목록에서 가른다.
-    { key: "stopCount", label: "정차지 수", render: (row) => `${row.stopCount}곳` },
+    { key: "stopCount", label: "승하차지 수", render: (row) => `${row.stopCount}곳` },
     {
       key: "active",
       label: "상태",
@@ -136,7 +136,7 @@ export const RouteList = () => {
     { label: "활성", value: summary.active, unit: "건", detail: "출발 30분 전 확정 노선의 바탕이 되는 편성" },
     { label: "비활성", value: summary.inactive, unit: "건", detail: summary.inactive > 0 ? namesOf(summary.inactiveRoutes) : "이력으로만 남은 편성 없음" },
     {
-      label: "정차지 0곳",
+      label: "승하차지 0곳",
       value: summary.empty.length,
       unit: "건",
       tone: summary.empty.length > 0 ? "warn" : "neutral",
@@ -145,10 +145,10 @@ export const RouteList = () => {
           <>
             {namesOf(summary.empty)}
             <br />
-            정차지를 넣기 전엔 도는 길이 없음
+            승하차지를 넣기 전엔 도는 길이 없음
           </>
         ) : (
-          "모든 활성 편성에 정차지가 있음"
+          "모든 활성 편성에 승하차지가 있음"
         ),
     },
   ];
@@ -162,7 +162,7 @@ export const RouteList = () => {
     <StyledRouteLayout>
       <PageHeader
         title="고정 노선 편성"
-        description={error ? undefined : "차량 · 요일 · 방향별 정차 순서 — 칸을 누르면 그 편성의 정차지를 편집합니다"}
+        description={error ? undefined : "차량 · 요일 · 방향별 정차 순서 — 칸을 누르면 그 편성의 승하차지를 편집합니다"}
         actions={
           <Button variant="primary" icon="plus" onClick={() => setCreating({})}>
             편성 등록
@@ -245,7 +245,7 @@ export const RouteList = () => {
             <StyledGridLegend>
               <span>
                 <span data-swatch="normal" />
-                활성 — 칸의 숫자는 정차지 수
+                활성 — 칸의 숫자는 승하차지 수
               </span>
               <span>
                 <span data-swatch="off" />
@@ -253,9 +253,9 @@ export const RouteList = () => {
               </span>
               <span>
                 <span data-swatch="empty" />
-                정차지 0곳 (운행 노선이 비어 있음)
+                승하차지 0곳 (운행 노선이 비어 있음)
               </span>
-              <em>칸을 누르면 그 편성의 정차지를 편집합니다</em>
+              <em>칸을 누르면 그 편성의 승하차지를 편집합니다</em>
             </StyledGridLegend>
           </>
         )}
@@ -321,11 +321,11 @@ const GridBusRows = ({ row, today, onOpen, onAdd }: GridBusRowsProps) => (
                   <StyledRouteCell
                     type="button"
                     $kind={!route.active ? "off" : route.stopCount === 0 ? "empty" : "normal"}
-                    aria-label={`${label} 편성 — 정차지 ${route.stopCount}곳${route.active ? "" : " · 비활성"}`}
+                    aria-label={`${label} 편성 — 승하차지 ${route.stopCount}곳${route.active ? "" : " · 비활성"}`}
                     onClick={() => onOpen(route)}
                   >
                     {route.stopCount}곳
-                    {!route.active ? <small>비활성</small> : route.stopCount === 0 ? <small>정차지 없음</small> : null}
+                    {!route.active ? <small>비활성</small> : route.stopCount === 0 ? <small>승하차지 없음</small> : null}
                   </StyledRouteCell>
                 ) : (
                   <StyledRouteCell type="button" $kind="add" aria-label={`${label} 편성 만들기`} onClick={() => onAdd({ busId: row.bus.id, weekday: day, direction })}>

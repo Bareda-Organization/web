@@ -115,4 +115,21 @@ describe("RouteDetail — 지표 · 요일 탭", () => {
     expect(screen.getByText("연결된 스케줄").parentElement).toHaveTextContent("-");
     expect(screen.getByText("승하차지").parentElement).toHaveTextContent("2곳");
   });
+
+  it("승하차지가 없으면 넣으라고 안내하고, 학생 수는 「승하차지」 말로 말한다", async () => {
+    render(<RouteDetail routeId="1" />);
+
+    await screen.findByText("승하차지 패널");
+    expect(screen.getByText("승하차지를 넣어야 도는 길이 생깁니다")).toBeInTheDocument();
+    expect(screen.getByText("승하차지별 학생 수를 아직 받지 못했습니다")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
+  it("학생 수 범위는 「승하차지당 최소–최대명」 으로 보인다", async () => {
+    mockGetDetail.mockResolvedValue(withStops);
+    render(<RouteDetail routeId="1" />);
+
+    await screen.findByText("승하차지 패널");
+    expect(screen.getByText(/승하차지당 2–3명/)).toBeInTheDocument();
+  });
 });

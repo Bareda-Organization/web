@@ -42,6 +42,13 @@ describe("RouteCopyDialog", () => {
     ]);
   });
 
+  it("안내 문장이 담긴 승하차지 수를 「승하차지 N곳」 으로 말한다", () => {
+    render(<RouteCopyDialog route={source} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByText(/1호차 · 승하차지 2곳을 고른 요일에 같은 순서로 만듭니다\./)).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("정차지");
+  });
+
   it("원본 요일은 고를 수 없고, 한 요일이 이미 있으면 그 요일만 실패로 보인다", async () => {
     mockCreate.mockImplementation(async (request) => {
       if (request.weekday === "wed") throw new ApiError(409, "DUPLICATE_ROUTE", "이미 있는 편성입니다");
