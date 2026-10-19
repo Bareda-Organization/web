@@ -21,7 +21,7 @@ const MARKER_COLOR: Record<MapMarkerKind, string> = {
 
 // 세 종류의 크기 관계. 버스는 이 화면에서 유일하게 클릭해 고르는
 // 대상이자 움직이는 실체라 가장 먼저 눈에 띄어야 한다(28px). 정차지는 버스가
-// 들르는 고정 지점이라 버스보다 작지만 알아볼 크기(16px), 학생은 정차지 하나에
+// 들르는 고정 지점이라 버스보다 작지만 알아볼 크기(22px), 학생은 정차지 하나에
 // 여럿이 몰릴 수 있어 가장 촘촘히 찍히므로 화면이 덮이지 않게 가장 작게 둔다
 // (10px).
 //
@@ -92,7 +92,7 @@ const EMERGENCY_COLOR = "#dc2626";
 const EMERGENCY_GLOW = "rgba(220,38,38,0.35)";
 
 const BUS_COLORS = [
-  "#2563eb", // 파랑 — 첫 자리에 둬서 1호차가 기본 버스 파랑으로 보이게 한다.
+  "#2563eb", // 파랑
   "#7C3AED", // 보라
   "#0891B2", // 청록
   "#BE185D", // 자홍
@@ -117,7 +117,7 @@ export const busColorOf = (busNo: string): string => {
 export type MarkerIconOptions = {
   selected?: boolean;
   busNo?: string;
-  /** 정차지 순번(각 정차지 표기). 주면 원 핀 대신 숫자 칩을 그린다. */
+  /** 정차지 순번(각 정차지 표기). 주면 핀 머리 안에 그 숫자를 그린다. */
   seq?: number;
   /** Ruling 400 — 오늘 서지 않는 승하차지. 흐리게 + 회색 핀 + 번호 취소선(색만으로 가르지 않는다). */
   skipped?: boolean;

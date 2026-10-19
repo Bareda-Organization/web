@@ -4,8 +4,7 @@ import { MemberAccountsPage } from "./MemberAccountsPage";
 import { getAllAcademies, getStaffAccounts } from "../api";
 import { ApiError } from "@/shared/lib/http";
 
-// 계정 목록 조회 실패 시
-// 오류 문구가 뜨는지를 본다.
+// 계정 목록 조회 실패 시 오류 문구가 뜨는지를 본다.
 vi.mock("../api", () => ({
   getStaffAccounts: vi.fn(),
   getAllAcademies: vi.fn(),

@@ -71,7 +71,7 @@ export const NaverMapSurface = ({
   // 냈다(클로저 정의 시점과 호출 시점을 정적으로 구분하지 못함) — 즉 이 검사
   // 규칙이 애초에 "마운트 시 1회, 그 뒤 불변"이라는 이 패턴 자체를 지원하지
   // 않는다. 동작을 바꾸는 대안(매 렌더 재생성 등)은 "동작 변경 없음"
-  // 을 어기므로, 이 형태를 유지하고 이 한 줄만 억제한다(보고서 §1).
+  // 을 어기므로, 이 형태를 유지하고 이 한 줄만 억제한다.
   const animationControllerRef = useRef<MarkerAnimationController | null>(null);
   if (animationControllerRef.current == null) {
     // 지연 초기화라 안전하다(위 주석 참고). react.dev 문서가 이 형태를 직접 예시로 든다.
@@ -207,9 +207,9 @@ export const NaverMapSurface = ({
     fitToContentRef.current = fitToContent;
   });
 
-  // 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
-  // 노선 전체가 들어오는 배율로 맞춘다. 고정 15 는 시드 정차지 4곳(대각선 426m)을 보고
-  // 정한 값이라, 승차지→학원처럼 8km 를 넘는 실제 노선에서는 한쪽 끝이 지도 밖으로
+  // 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM`) 대신
+  // 노선 전체가 들어오는 배율로 맞춘다. 고정 배율은 한 지점을 가까이 보는 값(축척 바 100m)이라,
+  // 승차지→학원처럼 8km 를 넘는 실제 노선에서는 한쪽 끝이 지도 밖으로
   // 나간다 — 출발지·도착지를 마커로 찍어도 화면에 안 보이면 안 찍은 것과 같다.
   //
   // ⚠ `LatLngBounds`·`fitBounds` 가 없으면 고정 배율 방식으로 되돌린다. 없는 경우가 실제로
@@ -388,7 +388,7 @@ export const NaverMapSurface = ({
         const created = new naverMaps.Marker({
           map,
           position,
-          // 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
+          // 종류별 크기는 markerIcon.tsx 가 정한다(버스가 가장 크다).
           // 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
           icon: { content: iconContent },
         });

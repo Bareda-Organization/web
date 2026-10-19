@@ -1,6 +1,6 @@
-// `features/map` 의 계약 타입 — `COMMON-B1.md §2` 가 세 제품(웹 · Flutter 앱 2종)
-// 전체에 고정한 이름과 인자를 그대로 따른다. 화면(features/admin·features/run)은 이
-// 타입만 알고 SDK 타입(`naver.maps.*`)은 모른다 — `IMPLEMENTATION_PLAN.md §8.3.1`.
+// `features/map` 의 계약 타입 — 세 제품(웹 · Flutter 앱 2종)이 같은 이름과 인자를 쓴다.
+// 화면(features/admin·features/run)은 이 타입만 알고 SDK 타입(`naver.maps.*`)은 모른다 —
+// `docs/frontend/IMPLEMENTATION_PLAN.md §8.3.1`.
 // `origin`·`destination` 은 노선의 양 끝이다. 등원은 첫 승차지 → 학원, 하원은 학원 → 마지막 하차지이고(Ruling 190),
 // 학원 쪽 끝은 `stops[]` 에 없어 노선(road_path)의 양 끝에서 가져온다.
 // Ruling 400 — "waypoint" 는 강제 경유 지점(§5.15)이다. 승하차지와 모양이 다른 번호 없는 칩 +

@@ -129,7 +129,7 @@ describe("approval api — 실서버 계약", () => {
   // PREVIEW_STALE 재현(Ruling 299 → V12 마이그레이션). 이 시드에서 대기 중인 CR#1(run_id=2,
   // direction='from_academy')은 `route` 행이 direction='to_academy' 하나뿐이면 (academy, bus, weekday,
   // direction) 4중 일치 관문(`ApprovalQueryService.detail()`)을 못 넘어 ROUTE_NOT_CONFIGURED_FOR_RUN(422)으로 막힌다.
-  // `db/migration-local/V12` 가 같은 run 의 weekday·direction 에 맞는 route+route_stop 을 더해 이 관문을 연다 —
+  // `db/fixture/V12` 가 같은 run 의 weekday·direction 에 맞는 route+route_stop 을 더해 이 관문을 연다 —
   // GET 이 preview_token 을 담은 200 을 돌려준다. PREVIEW_STALE 자체는 그 뒤에 위조 토큰으로 decide 를 불러
   // 재현한다 — 진짜 토큰과 다르면 백엔드가 "미리보기 이후 변경됨"으로 판정한다.
   //

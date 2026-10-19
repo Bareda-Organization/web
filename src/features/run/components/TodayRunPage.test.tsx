@@ -62,9 +62,9 @@ vi.mock("@/shared/hooks/useRealtimeChannel", async (importOriginal) => ({
     return { connectionState: mockConnectionState };
   },
 }));
-// jsdom 은 <script src> 를 로드하지 않고(vitest.config.ts 에 `resources: "usable"`
+// jsdom 은 <script src> 를 로드하지 않고(vitest.config.mts 에 `resources: "usable"`
 // 미설정) NEXT_PUBLIC_NAVER_MAP_CLIENT_ID 도 시험 환경에 없어, 실제 NaverMapSurface 는
-// 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계, 보고서 §1). 그래서
+// 항상 키 누락 경로로 빠져 SDK 마커 생성까지 검증할 수 없다(한계). 그래서
 // `MapSurface` 자체를 목으로 바꿔 TodayRunPage 가 계산한 markers·camera 값이 그 컴포넌트에
 // 무엇으로 전달되는지만 검증한다 — SDK 렌더링이 아니라 "이 화면의 계산 로직"의 검증이다.
 const mockMapSurface = vi.fn<(props: MapSurfaceProps) => null>(() => null);

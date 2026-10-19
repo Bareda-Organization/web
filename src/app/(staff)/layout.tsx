@@ -1,7 +1,7 @@
 // 학원 관계자(A-01~17). (admin) 과 레이아웃·내비게이션을 공유하지 않는다 — 두 역할은
 // 권한 범위가 완전히 다르다(`docs/frontend/IMPLEMENTATION_PLAN.md` §1).
-// 사이드바 248 · 헤더 56 골격을 이 자리에 채운다(`§8.1`). 이 레이아웃을 쓰는 화면은 9개다 —
-// 학생·차량·매니저·노선·알림 로그·학원 설정·비상 알림·운행 리포트·운행 스케줄.
+// 사이드바 248 · 헤더 56 골격을 이 자리에 채운다(`docs/frontend/IMPLEMENTATION_PLAN.md §8.1`).
+// 관계자 화면 전체가 이 레이아웃을 쓴다 — 메뉴 구성은 아래 목록이 정한다.
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
