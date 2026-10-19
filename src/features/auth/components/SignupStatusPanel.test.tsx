@@ -132,7 +132,7 @@ const setupSession = (overrides: Partial<ReturnType<typeof useAuthSession>> = {}
   return value;
 };
 
-// UF-X-02:대기·거절 화면에서 [상태 다시 확인] 으로 승인 여부를 다시 묻는다.
+// UF-X-02: 대기·거절 화면에서 [상태 다시 확인] 으로 승인 여부를 다시 묻는다.
 describe("SignupStatusPanel — 상태 다시 확인", () => {
   afterEach(() => vi.clearAllMocks());
 

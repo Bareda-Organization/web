@@ -10,7 +10,7 @@ const manager = (id: number, role: string, accountId: number | null) => ({
   account_id: accountId,
 });
 
-// Z-02(Ruling 391) —서버가 role·linked 필터를 준다. 훑지 않고 필터를 붙여 한 번만 묻는다.
+// Z-02(Ruling 391) — 서버가 role·linked 필터를 준다. 훑지 않고 필터를 붙여 한 번만 묻는다.
 describe("searchManagerCandidates — 서버 필터로 연결 가능한 매니저만 받는다", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
