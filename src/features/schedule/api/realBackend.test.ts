@@ -7,7 +7,7 @@ import { cancelRun, createRun, createSchedule, deleteSchedule, getRuns, getSched
 import type { ScheduleWeekday } from "../types";
 
 // 운행 스케줄·일일 회차 화면(§5.10, SCH-01~03, A-09)이 부르는 엔드포인트를
-// 실제 F5-W1 전용 백엔드에 붙여 확인한다.
+// 실제 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
 let backendReachable = false;
@@ -22,7 +22,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("schedule api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 소속 정규 스케줄 4개(월요일).
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 소속 정규 스케줄 4개(월요일).
 
   it("getSchedules 는 staffA 학원의 정규 스케줄 목록을 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();
@@ -80,7 +80,7 @@ describe("schedule api — 실서버 계약", () => {
     expect(canceled?.canceledAt).not.toBeNull();
   });
 
-  // r11-t1 — createSchedule→updateSchedule→deleteSchedule(§5.10, SCH-01) 왕복.
+  // createSchedule→updateSchedule→deleteSchedule(§5.10, SCH-01) 왕복.
   // 시드는 "오늘 요일" 로만 스케줄을 채우므로(V2__seed_data.sql — extract(dow from now())),
   // weekday 를 내일 요일로 잡으면 (bus_id, weekday, direction) 조합이 시드와 절대 겹치지
   // 않는다 — 위 createRun/cancelRun 과 같은 자기완결형 왕복(자기가 만든 행을 자기가

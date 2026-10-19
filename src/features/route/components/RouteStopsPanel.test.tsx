@@ -299,7 +299,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
     expect(마커("origin")).toEqual([expect.objectContaining({ lat: 37.2, lng: 127.2 })]);
   });
 
-  // W9 — API_SPEC §5.9 운행 중 회차가 서는 승하차지의 좌표 수정은 403
+  // API_SPEC §5.9 운행 중 회차가 서는 승하차지의 좌표 수정은 403
   // CHANGE_WINDOW_CLOSED(이름은 허용, `Ruling 338` · BR-052). 서버 문구 "지금은
   // 변경할 수 없는 시간입니다"(`ErrorCode.java`)는 거부 이유가 안 드러나 이
   // 화면 전용 문구로 바꾼다.
@@ -318,7 +318,7 @@ describe("RouteStopsPanel — 최적화·지도 표기(지시 4·8)", () => {
   });
 });
 
-describe("RouteStopsPanel — F02-10 상세를 못 불러오면 편집을 열지 않는다", () => {
+describe("RouteStopsPanel — 상세를 못 불러오면 편집을 열지 않는다", () => {
   it("불러오기 실패 시 오류와 [다시 불러오기] 만 보이고 승하차지 추가·저장은 없다", async () => {
     mockGetDetail.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "서버 오류"));
     render(<RouteStopsPanel routeId="1" direction="to_academy" />);

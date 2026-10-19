@@ -28,7 +28,7 @@ import {
 
 // (admin) 9화면(academies·audit-log·blocked-accounts·emergency-alerts·
 // force-confirm·stale-runs·member-accounts·member-approvals·monitoring)이 쓰는 §6 엔드포인트
-// 전부를 F5-W2 전용 백엔드에 붙여 확인한다. 이 라우트 그룹은 전부 sysadmin
+// 전부를 전용 백엔드에 붙여 확인한다. 이 라우트 그룹은 전부 sysadmin
 // 전용이다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 

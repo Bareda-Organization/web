@@ -56,7 +56,7 @@ const renderStop = (stop: RouteStopPreviewResponseTypes) => (
 //
 // 값이 없는 두 원인을 구별한다 — ①옛 확정 노선(`route_version.est_duration_min` 컬럼
 // 도입 전)이라 소요시간 자체가 없는 경우(RunWaypointPanel.tsx 와 같은 문구),
-// ②`departTime` 이 아직 응답에 없는 경우(`r20-a` 미병합, api/changeApprovals.ts 주석).
+// ②`departTime` 이 아직 응답에 없는 경우(api/changeApprovals.ts 주석).
 // "-" 만 찍으면 결함인지 아직 안 채워진 값인지 화면에서 구별이 안 된다.
 const DURATION_MISSING_REASON = "- (예전 확정 노선이라 소요시간 정보가 없습니다)";
 const DISTANCE_MISSING_REASON = "- (거리 정보가 없습니다)";
@@ -156,7 +156,7 @@ const renderRouteMap = (path: RoutePathPointResponseTypes[], markers: MapMarker[
 };
 
 // §5.5 GET /staff/approvals/{id}(A-05) 상세 · §5.6 POST .../decide(A-05) — ②구간 변경
-// 승인 상세(UF-M-02). 노선 비교는 F4 지도가 아니라 §5.5 route_preview 의 정류장
+// 승인 상세(UF-M-02). 노선 비교는 지도가 아니라 §5.5 route_preview 의 정류장
 // 순번·ETA 목록이라 그대로 표로 그린다(지도 좌표 렌더는 하지 않는다).
 export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) => {
   const router = useRouter();
@@ -419,7 +419,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       {detail.routePreview ? (
         <Card>
           {/* 전/후를 나란히 두 열로 나눠 무엇이 달라지는지
-              바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간, 거리는 예상 거리(S7)를 낸다. */}
+              바로 보이게 한다. 시간은 전체 소요시간·출발시간·도착시간, 거리는 예상 거리를 낸다. */}
           <p>소요 시간</p>
           <StyledRouteGrid>
             <StyledRouteColumn>

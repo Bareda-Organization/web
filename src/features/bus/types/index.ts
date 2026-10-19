@@ -26,7 +26,7 @@ export type BusTodayRunTypes = {
   status: "idle" | "confirmed" | "moving" | "finished";
 };
 
-// W5 — PATCH 응답 전용 경고(§5.12 `warnings[]`, BR-116). 정원을 줄여 그 차량의
+// PATCH 응답 전용 경고(§5.12 `warnings[]`, BR-116). 정원을 줄여 그 차량의
 // 오늘 이후 · 미취소 · idle·confirmed 회차 중 배정 인원이 넘치는 회차마다 1건 —
 // 저장은 막지 않는다(§5.14 배치 경고와 같은 축).
 export type BusCapacityWarningResponseTypes = {
