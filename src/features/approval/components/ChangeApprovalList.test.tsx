@@ -149,7 +149,7 @@ describe("ChangeApprovalList — 자동 거절까지 남은 시간", () => {
   });
 });
 
-// R52 · Ruling 870 — 처리 기한(`deadline_at`)은 "운행 시작 또는 출발 10분 뒤 중 먼저 오는 시점" 이다. 출발 시각이 아니므로
+// Ruling 870 — 처리 기한(`deadline_at`)은 "운행 시작 또는 출발 10분 뒤 중 먼저 오는 시점" 이다. 출발 시각이 아니므로
 // 화면은 그 값을 "출발" 로 부르지 않고 서버 값 그대로 "처리 기한" 으로 보인다.
 describe("ChangeApprovalList — 처리 기한 표시(Ruling 870)", () => {
   afterEach(() => {

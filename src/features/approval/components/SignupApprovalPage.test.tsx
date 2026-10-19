@@ -79,7 +79,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
 
     expect(screen.getByRole("button", { name: "가입 거절" })).toBeDisabled();
   });
-  // R32-W3·W4 — 학생·기사·동승자 승인이 ID 직접 입력이라 목록에 ID 가 안 보이는 화면에서 사실상 승인이 불가능했다.
+  // 학생·기사·동승자 승인은 ID 를 직접 입력하지 않고 이름 검색 목록에서 고른다(목록에 ID 가 없어 직접 입력하면 승인할 수 없다).
   it("role=student 승인은 ID 입력칸 없이 이름 검색 목록에서 골라 그 학생 ID 로 decide 를 호출한다", async () => {
     mockGetSignupRequests.mockResolvedValue({
       ...baseList,
@@ -158,7 +158,7 @@ describe("SignupApprovalPage — 목록 + 승인/거절", () => {
   });
 });
 
-// R32-W9 — 신청 일시가 서버의 ISO 원문으로 보였다.
+// 신청 일시는 서버의 ISO 원문이 아니라 한국 시간으로 보인다.
 describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -172,7 +172,7 @@ describe("SignupApprovalPage — 시각 표기(R32-W9)", () => {
   });
 });
 
-// FE7(R36-FE) — 이미 다른 계정과 연결된 학생·매니저를 골라 승인하면 서버가 409 ALREADY_LINKED 로 거절한다.
+// 이미 다른 계정과 연결된 학생·매니저를 골라 승인하면 서버가 409 ALREADY_LINKED 로 거절한다.
 // 서버 원문 대신 역할에 맞는 쉬운 문구를 보이고, 대화상자는 열린 채 선택을 고칠 수 있어야 한다.
 describe("SignupApprovalPage — 이미 연결된 대상(ALREADY_LINKED)", () => {
   afterEach(() => vi.clearAllMocks());
@@ -288,7 +288,7 @@ describe("SignupApprovalPage — 승인 완료 탭 요청 값", () => {
   });
 });
 
-// F02-06 — 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 예전 목록에 그 요청이 남지 않게 닫으면서 목록을 새로 받는다.
+// 다른 관계자가 먼저 처리한 요청을 결정하면 서버가 거절한다. 그 요청이 목록에 남지 않게 닫으면서 목록을 새로 받는다.
 describe("SignupApprovalPage — F02-06 결정 실패 뒤 목록 새로 고침", () => {
   afterEach(() => {
     vi.clearAllMocks();

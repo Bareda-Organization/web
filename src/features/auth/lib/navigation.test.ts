@@ -39,7 +39,7 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect(session, "/dashboard")).toBeNull();
   });
 
-  // R48 Ruling 800 — 메인 관리자 첫 화면은 대시보드(/overview)다. 관계자의 /dashboard 와 같은 주소를 쓰면 두 라우트 그룹이 충돌한다.
+  // Ruling 800 — 메인 관리자 첫 화면은 대시보드(/overview)다. 관계자의 /dashboard 와 같은 주소를 쓰면 두 라우트 그룹이 충돌한다.
   it("active + system_admin 은 로그인·가입·대기 화면에서 /overview 로 보낸다", () => {
     const session = baseSession("active", "system_admin");
     expect(decideAuthRedirect(session, "/login")).toBe("/overview");

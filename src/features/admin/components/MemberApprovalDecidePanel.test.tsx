@@ -5,9 +5,8 @@ import { decideStaffSignupRequest } from "../api";
 import { ApiError } from "@/shared/lib/http";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 
-// A1 수정 라운드(조건 ②) — 조율자가 이 두 실패 갈래를 직접 심어 확인했을 때 기존 50개
-// 검사 중 어느 것도 잡지 못했다(50/50 통과). 이 파일은 그 공백을 메운다: 서버가 승인·거절을
-// 거부했을 때 오류 문구가 실제로 뜨는지, 그리고 onDone(목록 갱신+닫기)이 호출되지 않는지를 본다
+// 서버가 승인·거절을 거부했을 때 오류 문구가 실제로 뜨는지,
+// 그리고 onDone(목록 갱신+닫기)이 호출되지 않는지를 본다
 // — 조용히 넘어가면 관리자가 처리된 줄 알고 다음 요청으로 넘어가는 형태의 결함이 된다.
 vi.mock("../api", () => ({
   decideStaffSignupRequest: vi.fn(),
@@ -108,7 +107,7 @@ describe("MemberApprovalDecidePanel — 학원 정원이 찬 경우", () => {
   });
 });
 
-// R48 Ruling 807 — 승인이 막힌 이유(누가 재직 중인가)와 푸는 방법(그 사람 퇴사 처리)이 한 화면에 있어야 한다.
+// Ruling 807 — 승인이 막힌 이유(누가 재직 중인가)와 푸는 방법(그 사람 퇴사 처리)이 한 화면에 있어야 한다.
 describe("MemberApprovalDecidePanel — 재직 관계자 안내(Ruling 807)", () => {
   afterEach(() => vi.clearAllMocks());
 

@@ -24,7 +24,7 @@ const PAGE_SIZE = 20;
 
 // §6.6~§6.7 관계자 계정 관리(O-02). 목록에 소속 학원 열을 둔다 — 메인 관리자만
 // 여러 학원의 계정을 한 화면에서 다루므로 이 열이 없으면 어느 학원 소속인지 알 수 없다.
-// R48 시안: 재직 상태 탭(건수 = 서버 counts) · 이름/아이디 검색 · 학원 선택 · 행의 가입 대기 칩. `?academy=<학원 id>` 로 열면 그 학원이 골라져 있다(학원 상세의 [계정 관리]).
+// 재직 상태 탭(건수 = 서버 counts) · 이름/아이디 검색 · 학원 선택 · 행의 가입 대기 칩. `?academy=<학원 id>` 로 열면 그 학원이 골라져 있다(학원 상세의 [계정 관리]).
 export const MemberAccountsPage = () => {
   const initialAcademy = useSearchParams()?.get("academy") ?? "";
   const [target, setTarget] = useState<StaffAccountItemResponseTypes | null>(null);

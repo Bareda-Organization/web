@@ -37,7 +37,7 @@ describe("AcademySettingsForm — 저장 실패 갈래", () => {
   });
 });
 
-// R32-W13 — 이탈 경고가 노선 편집에만 있어, 학원 설정을 고치다 사이드바로 나가면 값이 조용히 사라졌다.
+// 학원 설정 화면에도 이탈 경고가 있어야 한다 — 저장하지 않은 채 사이드바로 나가면 값이 조용히 사라진다.
 describe("AcademySettingsForm — 이탈 경고(R32-W13)", () => {
   afterEach(() => {
     setLeaveWarning(null);
@@ -153,7 +153,7 @@ describe("AcademySettingsForm — 정책 읽기 전용 · 범위 검사(R48)", (
     expect(screen.getByRole("spinbutton")).toHaveValue(10);
   });
 
-  // R50 S5 · S17 — 입력칸 이름은 사양 용어(A-17 "미승차 대기 시간")이고, 사양에 없는 "비상 알림이 아니라 …" 문구는 지웠다(Ruling 844).
+  // 입력칸 이름은 사양 용어(A-17 "미승차 대기 시간")다. 사양에 없는 "비상 알림이 아니라 …" 문구는 두지 않는다(Ruling 844).
   it("입력칸 이름은 미승차 대기 시간이고, 진행 순서에 비상 알림 안내 문구가 없다", async () => {
     mockGet.mockResolvedValue({ noShowWaitMinutes: 3, academy: null, policy: null });
     render(<AcademySettingsForm />);

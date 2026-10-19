@@ -112,8 +112,8 @@ export type RoutePreviewResponseTypes = {
   stopsAfter: RouteStopPreviewResponseTypes[];
   reordered: RouteStopRefResponseTypes[];
   removed: RouteStopRefResponseTypes[];
-  // C` 목표 4(Ruling 319) — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
-  // 옛 확정 노선 버전(도로 좌표 컬럼 도입 전)이면 빈 배열이다 — null 이 아니다.
+  // Ruling 319 — 좌우 두 지도로 나란히 그릴 전/후 도로 좌표. 결정된 건이거나
+  // 도로 좌표 컬럼이 없던 옛 확정 노선 버전이면 빈 배열이다 — null 이 아니다.
   roadPathBefore: RoutePathPointResponseTypes[];
   roadPathAfter: RoutePathPointResponseTypes[];
 };
@@ -138,10 +138,9 @@ export type ChangeApprovalDetailResponseTypes = ChangeApprovalSummaryResponseTyp
   decidedByName: string | null;
   driverName: string | null;
   escortName: string | null;
-  // B` 목표 3(조율자 결정) — 회차 출발 예정 시각. 변경 전/후로 갈리지 않는다(재최적화가
-  // 출발 시각 자체를 옮기지 않는다). `r20-a` 가 이 필드를 추가하기 전에는 백엔드가 아예
-  // 내려주지 않으므로 `undefined` 를 `null` 로 흡수한다(api/changeApprovals.ts) — 값이
-  // 없으면 견디는 화면을 만든다는 목표 5 와 같은 이유다.
+  // 회차 출발 예정 시각. 변경 전/후로 갈리지 않는다(재최적화가
+  // 출발 시각 자체를 옮기지 않는다). 백엔드가 이 필드를 내려주지 않을 수 있으므로 `undefined` 를
+  // `null` 로 흡수한다(api/changeApprovals.ts) — 값이 없어도 화면이 깨지지 않게 하기 위해서다.
   departTime: string | null;
   estTimeBefore: string | null;
   estTimeAfter: string | null;

@@ -29,7 +29,7 @@ const LoginProbe = () => {
   );
 };
 
-// R32-W1 — 학부모·학생·기사·동승자 계정이 웹 로그인을 통과해 `/login` ↔ `/dashboard` 를 오갔다.
+// 학부모·학생·기사·동승자 계정은 웹 로그인을 통과하지 못한다(`/login` ↔ `/dashboard` 를 오가면 안 된다).
 describe("AuthSessionProvider — 앱 전용 역할 로그인", () => {
   it("관계자·메인 관리자가 아닌 역할은 세션을 비우고 서버 로그인도 취소하며 안내 오류를 던진다", async () => {
     render(

@@ -45,7 +45,7 @@ const Bars = ({ parts, label }: { parts: { value: number; color: string }[]; lab
 const nameList = (academies: AcademySummaryResponseTypes[]): string => academies.map((academy) => academy.name).join(" · ");
 
 // 지표 4칸 — 합계는 서버 `summary`(필터·쪽과 무관한 전체, Ruling 806)를 쓴다. 서버가 아직 안 주면 쪽 안의 값으로 세지 않고 칸을 비운다(21곳째부터 틀리므로).
-// `summary` 에 없는 값(주소 미등록 학원 · 정원 찬 학원 이름)은 지금 쪽(20곳)만 센다 — 라벨에 "이 쪽" 을 밝힌다(R50 M3).
+// `summary` 에 없는 값(주소 미등록 학원 · 정원 찬 학원 이름)은 지금 쪽(20곳)만 센다 — 라벨에 "이 쪽" 을 밝힌다.
 const buildStats = (summary: AcademiesSummaryTypes | null | undefined, items: AcademySummaryResponseTypes[], pendingSignups: number): StatStripItem[] => {
   const hasAddressKnown = items.some((academy) => academy.hasAddress !== undefined);
   const noAddress = items.filter((academy) => academy.hasAddress === false);

@@ -79,10 +79,10 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     );
   });
 
-  // A1 수정 라운드(조건 ③) — RUN_NOT_IDLE 과 달리 RUN_NOT_DUE 는 단위 검사가 하나도 없었다.
-  // 실제 백엔드(2026-09-12, schoolbus_a1 run id=1, confirm_at 이 아직 도래하지 않은 idle 회차)에
-  // curl 로 재현해 응답 형태(409 · code=RUN_NOT_DUE · message="아직 확정 시각이 되지 않았습니다")를
-  // 먼저 확인한 뒤 그 갈래에 맞춰 만들었다.
+  // RUN_NOT_DUE 도 RUN_NOT_IDLE 과 같이 단위 검사로 고정한다.
+  // 실제 백엔드에서 confirm_at 이 아직 도래하지 않은 idle 회차를 강제 확정하면 응답은
+  // 409 · code=RUN_NOT_DUE · message="아직 확정 시각이 되지 않았습니다" 이다.
+  // 이 응답 형태를 그대로 옮겨 화면이 그 갈래에 맞는 문구를 보이게 한다.
   it("RUN_NOT_DUE 오류는 확정 시각 전이라는 문구로 보여준다", async () => {
     mockForceConfirmRun.mockRejectedValue(new ApiError(409, "RUN_NOT_DUE", "아직 확정 시각이 되지 않았습니다"));
     render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);

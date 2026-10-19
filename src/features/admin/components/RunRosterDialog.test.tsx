@@ -32,7 +32,7 @@ describe("RunRosterDialog — 닫기와 긴 명단", () => {
     render(<RunRosterDialog runId="1" busNo="1호차" onClose={onClose} />);
     await waitFor(() => expect(screen.getByText("명단 조회 중 오류가 발생했습니다")).toBeInTheDocument());
 
-    // 머리의 × 와 아래 [닫기] 둘 다 닫는다(R48 시안 `monitoring--roster`).
+    // 머리의 × 와 아래 [닫기] 둘 다 닫는다.
     const closers = screen.getAllByRole("button", { name: "닫기" });
     expect(closers).toHaveLength(2);
     fireEvent.click(closers[1]);
@@ -57,7 +57,7 @@ describe("RunRosterDialog — 닫기와 긴 명단", () => {
   });
 });
 
-// R48 시안 `monitoring--roster` — 승하차지별 묶음 · 학생 / 학부모 연락처. 보호자가 없으면 번호 대신 –. 상태 막대와 건수는 Ruling 844 로 뺐다.
+// 승하차지별 묶음 · 학생 / 학부모 연락처. 보호자가 없으면 번호 대신 –. 상태 막대와 건수는 Ruling 844 에 따라 표시하지 않는다.
 describe("RunRosterDialog — 묶음 · 연락처 · 상태 칩", () => {
   afterEach(() => vi.clearAllMocks());
 

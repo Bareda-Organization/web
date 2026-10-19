@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { waitingDays } from "./waitingDays";
 
-// R50 M6 — 대기 "N일째" 는 24시간 단위가 아니라 서울 달력 날짜로 센다. 신청 당일 = 1일째(O-02 · UF-O-06).
+// 대기 "N일째" 는 24시간 단위가 아니라 서울 달력 날짜로 센다. 신청 당일 = 1일째(O-02 · UF-O-06).
 describe("waitingDays", () => {
   it("신청 당일은 몇 시간이 지났든 1일째다", () => {
     expect(waitingDays("2026-10-03T00:05:00+09:00", new Date("2026-10-03T23:50:00+09:00"))).toBe(1);

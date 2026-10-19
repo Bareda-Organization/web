@@ -94,8 +94,7 @@ describe("admin api — 실서버 계약", () => {
   });
 
   // request_id=1(시드 "박대기")은 academy_id=1 에 이미 재직 중인 staff 가 있어
-  // accept=true 를 줘도 상태를 바꾸지 않고 항상 409 로 거부된다(2026-09-14 curl
-  // 로 확인) — 시드를 훼손하지 않는 안전한 재현이다(판단 근거, 보고서 §1).
+  // accept=true 를 줘도 상태를 바꾸지 않고 항상 409 로 거부된다 — 시드를 훼손하지 않는 안전한 재현이다.
   it("STAFF_QUOTA_EXCEEDED — 학원당 staff 1명 정원을 넘기면 409 로 거부된다(§6.5)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -138,7 +137,7 @@ describe("admin api — 실서버 계약", () => {
     expect(result.runs.length).toBeGreaterThan(0);
   });
 
-  // R46-FUFEAT ④ — §6.15. 시드 상태에서 값이 얼마인지는 고정하지 않는다(문제 학원만 오므로 비어 있을 수 있다).
+  // §6.15. 시드 상태에서 값이 얼마인지는 고정하지 않는다(문제 학원만 오므로 비어 있을 수 있다).
   it("getRunAttention 은 학원별 오늘 지연·확정 실패 집계의 형태를 지킨다(§6.15 · Ruling 543)", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "sysadmin"));
@@ -154,7 +153,7 @@ describe("admin api — 실서버 계약", () => {
     }
   });
 
-  // R46-FUFEAT ① — 초기화 → 임시 비밀번호 로그인 표식 → 다른 API 403 → 본인 변경 → 표식 해제를 서버에 끝까지 붙인다.
+  // 초기화 → 임시 비밀번호 로그인 표식 → 다른 API 403 → 본인 변경 → 표식 해제를 서버에 끝까지 붙인다.
   // staffC(account_id=20)의 비밀번호를 초기화했다가 같은 시험 안에서 원래 값("password")으로 되돌린다.
   it("임시 비밀번호 강제 변경 — 초기화한 계정은 변경 전까지 다른 API 가 403 이고 변경하면 풀린다(§1.4·§6.7·§2.8 · Ruling 540)", async ({
     skip,
@@ -240,11 +239,11 @@ describe("admin api — 실서버 계약", () => {
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
-    // R47 Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
+    // Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
     expect(typeof result.items[0].occurredAt).toBe("string");
   });
 
-  // AUTH_ACCOUNT_BLOCKED(목표 14) 재현 — 2026-09-14 Ruling 282 수정 병합 후
+  // AUTH_ACCOUNT_BLOCKED 재현 — Ruling 282
   // auth 쪽 시험(features/auth/api/realBackend.test.ts)은 새로 만든 계정으로
   // 실패 5회 누적 차단을 직접 재현한다. 이 시험이 굳이 시드 계정
   // driverBlocked(account_id=15, failed_attempts=5)를 쓰는 이유는 그것과
@@ -346,7 +345,7 @@ describe("admin api — 실서버 계약", () => {
     });
   });
 
-  // R47 Ruling 724 — §6.16. 시드에는 운행일이 이틀 넘게 지난 이동 중 회차가 없어(회차는 전부 적용일 당일) 대개 빈 목록이다.
+  // Ruling 724 — §6.16. 시드에는 운행일이 이틀 넘게 지난 이동 중 회차가 없어(회차는 전부 적용일 당일) 대개 빈 목록이다.
   // 그래서 "비어 있어도 형태가 맞고, 있으면 항목 형태·정렬·상한이 맞는다" 만 고정한다(§6.15 와 같은 방식).
   it("getStaleMovingRuns 는 끝나지 않은 이동 중 회차 목록의 형태를 지킨다(§6.16 · Ruling 724)", async ({ skip }) => {
     if (!backendReachable) skip();

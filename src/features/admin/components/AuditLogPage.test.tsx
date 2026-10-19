@@ -61,7 +61,7 @@ describe("AuditLogPage — 기본 조회 조건은 비어 있다(Ruling 844)", (
     await waitFor(() => expect(mockGetAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ from: "2026-09-01" })));
   });
 
-  // R46-FIXCONN Ruling 632 — 서버는 from 을 안 주면 to(없으면 지금)로부터 30일 전부터만 돌려준다. 시작일을 비운다고 전체 기간이
+  // Ruling 632 — 서버는 from 을 안 주면 to(없으면 지금)로부터 30일 전부터만 돌려준다. 시작일을 비운다고 전체 기간이
   // 아니므로 화면이 그렇게 안내해야 하고, 시작일을 비우는 버튼도 "전체 기간" 이라 부르면 거짓이다.
   it("시작일 칸에 '비우면 최근 30일' 안내가 있고, 두 이력 탭 모두에서 보인다", async () => {
     mockGetAuditLogs.mockResolvedValue(emptyResponse);
@@ -88,7 +88,7 @@ describe("AuditLogPage — 기본 조회 조건은 비어 있다(Ruling 844)", (
   });
 });
 
-// R32-W9 — 감사·접속 이력의 시각이 서버의 ISO 원문으로 보였다.
+// 감사·접속 이력의 시각은 서버 ISO 원문이 아니라 서울 날짜·시각 형식으로 보인다.
 describe("AuditLogPage — 시각 표기(R32-W9)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -168,7 +168,7 @@ describe("AuditLogPage — 해제 행의 해제한 관리자(Ruling 846)", () =>
   });
 });
 
-// R46 감사 화면(Ruling 446·447) — 숫자 ID 입력을 학원 선택 · 이름으로 행위자 찾기 · 동작 필터로 바꿨다.
+// 감사 화면(Ruling 446·447) — 행위자는 학원 선택 · 이름으로 찾고, 동작은 필터로 고른다.
 describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R46)", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -226,7 +226,7 @@ describe("AuditLogPage — 학원 선택 · 행위자 찾기 · 동작 필터(R4
   });
 });
 
-// R48 Ruling 809 — 감사 로그에 행위자 이름 · 동작 구별(강제 확정 등) · 접속 IP 가 실린다. 개인정보 조회가 아닌 운영 조작은 대상에 한글 문구로 덧붙는다.
+// Ruling 809 — 감사 로그에 행위자 이름 · 동작 구별(강제 확정 등) · 접속 IP 가 실린다. 개인정보 조회가 아닌 운영 조작은 대상에 한글 문구로 덧붙는다.
 describe("AuditLogPage — 행위자 이름 · 대상 · IP(Ruling 809)", () => {
   afterEach(() => vi.clearAllMocks());
 

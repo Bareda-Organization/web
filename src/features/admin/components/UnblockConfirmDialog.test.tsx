@@ -60,11 +60,11 @@ describe("UnblockConfirmDialog — 차단 근거 노출 후 해제", () => {
   });
 });
 
-// R48 Ruling 328 — 해제는 로그인 차단만 푼다. 차단 직전 상태로 돌아가므로 "승인 대기" 계정은 해제해도 쓸 수 없다는 것을 확정 전에 말한다.
+// Ruling 328 — 해제는 로그인 차단만 푼다. 차단 직전 상태로 돌아가므로 "승인 대기" 계정은 해제해도 쓸 수 없다는 것을 확정 전에 말한다.
 describe("UnblockConfirmDialog — 해제 뒤 상태 경고(Ruling 328)", () => {
   afterEach(() => vi.clearAllMocks());
 
-  // R50 M4 — 관계자 가입은 같은 학원 관계자가 아니라 메인 관리자가 승인한다(AUTH-10 · O-02). 승인 주체를 역할로 가른다.
+  // 관계자 가입은 같은 학원 관계자가 아니라 메인 관리자가 승인한다(AUTH-10 · O-02). 승인 주체를 역할로 가른다.
   it("승인 대기로 돌아가는 관계자 계정은 로그인은 되지만 메인 관리자가 승인하기 전에는 대기 화면만 열린다고 알린다", () => {
     render(<UnblockConfirmDialog account={{ ...account, role: "staff", statusBeforeBlock: "pending" }} onClose={vi.fn()} onDone={vi.fn()} />);
 

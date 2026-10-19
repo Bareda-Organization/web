@@ -36,7 +36,7 @@ const { mockNotify } = vi.hoisted(() => ({ mockNotify: vi.fn() }));
 vi.mock("@/shared/lib/attention/attentionAlert", async (importOriginal) => ({ ...(await importOriginal<object>()), notifyAttention: mockNotify }));
 vi.mock("@/shared/lib/navigation/useBackNavigation", () => ({ useBackNavigation: () => ({ canGoBack: false, goBack: vi.fn() }) }));
 
-// R46-WEB A#6 · B1 #15 — 메인 관리자는 비상·가입 승인·차단이 모두 무표시였다.
+// 메인 관리자 화면에도 비상·가입 승인·차단 건수 표시가 있어야 한다.
 describe("(admin) 레이아웃 — 알림 인지", () => {
   it("사이드바 '가입 승인'·'차단 해제'·'비상 알림' 에 건수를 붙이고 탭 제목에 합계를 반영한다", () => {
     render(
@@ -133,7 +133,7 @@ describe("(admin) 레이아웃 — 본문 바로가기 없음", () => {
   });
 });
 
-// R46-FUWEB — 전체 관제 화면은 미확인 비상을 학원별 안내와 실시간 배너로 이미 보여 준다. 레이아웃 띠까지 얹으면 같은 신고가 두 번 보인다.
+// 전체 관제 화면은 미확인 비상을 학원별 안내와 실시간 배너로 이미 보여 준다. 레이아웃 띠까지 얹으면 같은 신고가 두 번 보인다.
 describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
   afterEach(() => {
     mockPathname = "/academies";
@@ -152,7 +152,7 @@ describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
     expect(document.title).toBe("(13) 비상 발생 · 바래다 메인 관리자 콘솔");
   });
 
-  // R46-FIXCONN C-12 — 전체 관제를 포함한 모든 관리자 화면에서 끊김이 보이게 연결 띠를 레이아웃에 한 번만 둔다.
+  // C-12 — 전체 관제를 포함한 모든 관리자 화면에서 끊김이 보이게 연결 띠를 레이아웃에 한 번만 둔다.
   it("연결 띠를 본문 앞에 그리고, 전체 관제 화면에서도 그린다", () => {
     mockPathname = "/monitoring";
     render(
@@ -167,8 +167,8 @@ describe("(admin) 레이아웃 — 전체 관제의 비상 표시", () => {
   });
 });
 
-// R48 G3 — 메인 관리자 사이드 메뉴는 시안(admin/dashboard)과 같은 묶음 · 순서다.
-// 기대값은 지시서의 메뉴 표에서 그대로 옮겼다(배지는 위 mock 의 건수: 가입 승인 11 · 차단 1 · 비상 1).
+// 메인 관리자 사이드 메뉴는 시안(admin/dashboard)과 같은 묶음 · 순서다.
+// 기대값은 시안의 메뉴 표와 같다(배지는 위 mock 의 건수: 가입 승인 11 · 차단 1 · 비상 1).
 describe("(admin) 레이아웃 — 사이드 메뉴 묶음", () => {
   const renderLayout = () =>
     render(
@@ -188,7 +188,7 @@ describe("(admin) 레이아웃 — 사이드 메뉴 묶음", () => {
       "학원 · 계정",
       "기록",
     ]);
-    // R48 Ruling 800 — 관계자 "오늘 현황"이 /dashboard 라서 메인 관리자 대시보드는 /overview 다.
+    // Ruling 800 — 관계자 "오늘 현황"이 /dashboard 라서 메인 관리자 대시보드는 /overview 다.
     expect(within(nav).getAllByRole("link")[0]).toHaveAttribute("href", "/overview");
     expect(within(nav).getAllByRole("link")[0]).toHaveAccessibleName("대시보드");
   });

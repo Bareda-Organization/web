@@ -1,6 +1,6 @@
 import type { AuthSession } from "../types";
 
-// 메인 관리자 첫 화면 — 대시보드다(R48 Ruling 800). 주소가 /dashboard 가 아닌 이유: (admin)·(staff) 라우트 그룹은 주소 공간을 공유하고
+// 메인 관리자 첫 화면 — 대시보드다(Ruling 800). 주소가 /dashboard 가 아닌 이유: (admin)·(staff) 라우트 그룹은 주소 공간을 공유하고
 // /dashboard 는 이미 관계자 "오늘 현황"이라, 같은 주소를 쓰면 두 그룹이 충돌한다.
 export const ADMIN_HOME = "/overview";
 

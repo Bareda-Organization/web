@@ -170,7 +170,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("민창민 · 새봄영어 — 정원 찼음 · 2일째")).toBeInTheDocument();
   });
 
-  // R50 M5 — §6.18 `change_requests` 는 고른 기간에 결정된 건수다. "누적" 이 아니라 그 기간을 적는다.
+  // §6.18 `change_requests` 는 고른 기간에 결정된 건수다. "누적" 이 아니라 그 기간을 적는다.
   it("처리 결과 건수는 '누적' 이 아니라 고른 기간으로 적는다", async () => {
     mockGetDashboard.mockResolvedValue(makeDashboard({ period: { from: "2026-10-03", to: "2026-10-03", days: 1 } }));
     render(<DashboardPage />);

@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-// R48: 화이트 셸 — 크롬(머리줄·사이드바)은 색이 아니라 얇은 선으로 본문과 가른다.
+// 화이트 셸 — 크롬(머리줄·사이드바)은 색이 아니라 얇은 선으로 본문과 가른다.
 export const StyledStaffShell = styled.div`
   display: flex;
   min-height: 100vh;
@@ -45,7 +45,7 @@ export const StyledStaffHeaderAcademy = styled.span`
   color: var(--text-primary);
 `;
 
-// 머리 양쪽 묶음 — 왼쪽은 뒤로 + 날짜·시각, 오른쪽은 학원 이름 + 알림 · 비밀번호 변경 · 로그아웃(2026-09-23).
+// 머리 양쪽 묶음 — 왼쪽은 뒤로 + 날짜·시각, 오른쪽은 학원 이름 + 알림 · 비밀번호 변경 · 로그아웃.
 export const StyledStaffHeaderSide = styled.div`
   display: flex;
   align-items: center;

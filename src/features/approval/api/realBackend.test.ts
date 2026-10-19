@@ -83,20 +83,17 @@ describe("approval api — 실서버 계약", () => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
 
-    // 시드 기준(2026-09-14 curl 실측) — pending 0건, approved 1건(approval_id=2).
+    // 시드 기준 — pending 0건, approved 1건(approval_id=2).
     const result = await getChangeApprovals("approved");
 
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items.length).toBeGreaterThan(0);
   });
 
-  // 이 시험이 실제 결함을 하나 잡았다(보고서 §1·§2) — 이미 결정된 건(approved)은
-  // 백엔드가 재최적화를 하지 않고 route_preview 등을 null 로 돌려주는데(백엔드
-  // `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다`
-  // 와 동일 계약), 처음 이 시험을 돌렸을 때 프런트 코드가 그 null 을 못 다뤄
-  // `TypeError: Cannot read properties of null (reading 'stops_before')` 로 죽었다.
-  // `changeApprovals.ts`·`approval/types/index.ts`·`ChangeApprovalDetail.tsx` 를
-  // null 을 다루도록 고친 뒤 이 단언을 추가했다.
+  // 이미 결정된 건(approved)은 백엔드가 재최적화를 하지 않고 route_preview 등을 null 로 돌려준다
+  // (백엔드 `StaffApprovalControllerTest#결정된_건의_상세_조회는_재최적화를_실행하지_않는다` 와 같은 계약).
+  // 프런트는 그 null 을 다뤄야 한다 — 못 다루면 `TypeError: Cannot read properties of null (reading 'stops_before')` 로 죽는다.
+  // `changeApprovals.ts`·`approval/types/index.ts`·`ChangeApprovalDetail.tsx` 가 null 을 다룬다.
   it("getChangeApprovalDetail 은 이미 승인된 건(approval_id=2)의 상세를 null 미리보기와 함께 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -111,11 +108,9 @@ describe("approval api — 실서버 계약", () => {
     expect(result.estTimeAfter).toBeNull();
   });
 
-  // 목표 4 — APPROVAL_ALREADY_DECIDED 실제 재현. approval_id=2 는 시드 상태로
-  // 이미 "approved" 다 — 이미 처리된 건을 다시 결정하면 무조건 이 오류로
-  // 단락되므로(백엔드가 이미결정 여부를 preview_token 검증보다 먼저 본다,
-  // 2026-09-14 curl 로 확인) 위조 토큰을 써도 상태를 바꾸지 않는 안전한
-  // 재현이다.
+  // APPROVAL_ALREADY_DECIDED 재현. approval_id=2 는 시드 상태로 이미 "approved" 다 — 이미 처리된 건을
+  // 다시 결정하면 이 오류로 단락되므로(백엔드가 이미결정 여부를 preview_token 검증보다 먼저 본다)
+  // 위조 토큰을 써도 상태를 바꾸지 않는 안전한 재현이다.
   it("APPROVAL_ALREADY_DECIDED — 이미 결정된 승인 건을 다시 결정하면 409 로 거부된다", async ({ skip }) => {
     if (!backendReachable) skip();
     setAccessToken(await rawRestLogin(API_BASE_URL, "staffA"));
@@ -131,23 +126,18 @@ describe("approval api — 실서버 계약", () => {
     });
   });
 
-  // PREVIEW_STALE 실제 재현(Ruling 299 → V12 마이그레이션). r7-t2 는 이 시드에서
-  // 불가능하다고 판정했다 — `route` 행이 direction='to_academy' 하나뿐이라 대기
-  // 중인 CR#1(run_id=2, direction='from_academy')이 (academy, bus, weekday,
-  // direction) 4중 일치 관문(`ApprovalQueryService.detail()`)을 못 넘어
-  // ROUTE_NOT_CONFIGURED_FOR_RUN(422)으로 막혔다. `db/migration-local/V12`가
-  // 같은 run 의 weekday·direction 에 맞는 route+route_stop 을 더해 이 관문을
-  // 열었다(curl 실측, 2026-09-17: GET 이 이제 preview_token 을 담은 200 을
-  // 돌려준다). PREVIEW_STALE 자체는 그 뒤에 위조 토큰으로 decide 를 불러
+  // PREVIEW_STALE 재현(Ruling 299 → V12 마이그레이션). 이 시드에서 대기 중인 CR#1(run_id=2,
+  // direction='from_academy')은 `route` 행이 direction='to_academy' 하나뿐이면 (academy, bus, weekday,
+  // direction) 4중 일치 관문(`ApprovalQueryService.detail()`)을 못 넘어 ROUTE_NOT_CONFIGURED_FOR_RUN(422)으로 막힌다.
+  // `db/migration-local/V12` 가 같은 run 의 weekday·direction 에 맞는 route+route_stop 을 더해 이 관문을 연다 —
+  // GET 이 preview_token 을 담은 200 을 돌려준다. PREVIEW_STALE 자체는 그 뒤에 위조 토큰으로 decide 를 불러
   // 재현한다 — 진짜 토큰과 다르면 백엔드가 "미리보기 이후 변경됨"으로 판정한다.
   //
-  // previewStale 값도 이제 단언한다(r9-t1, 목표 4) — r8-t1 은 "실행 순서에
-  // 좌우된다" 며 포기했으나, 원인은 `DevResetService.reset()` 이 인메모리 미리보기
-  // 캐시를 안 비운 것이었다(r9-t1 목표 1·2 로 고침, `DevResetServiceTest` 가
-  // 고정). 지금은 `vitest.globalSetup.ts` 의 실행당 1회 리셋이 캐시까지 비우고,
-  // 이 스위트 안에서 run_id=2(CR#1 이 속한 회차)의 명단·노선을 바꾸는 시험이
-  // 없어(`run/api` 는 run_id=6 만 바꾼다) approval_id=1 의 지문(fingerprint)이
-  // 이 실행 내내 변하지 않는다 — 몇 번째 조회든 첫 조회이거나 지문이 같아
+  // previewStale 값도 단언한다. 미리보기 캐시가 비워지지 않으면 실행 순서에 따라 결과가 갈리는데,
+  // `DevResetService.reset()` 이 인메모리 미리보기 캐시까지 비우도록 고정했다(`DevResetServiceTest`).
+  // `vitest.globalSetup.ts` 의 실행당 1회 리셋이 캐시까지 비우고,
+  // 이 스위트 안에서 run_id=2(CR#1 이 속한 회차)의 명단·노선을 바꾸는 시험은 없다(`run/api` 는 run_id=6 만 바꾼다).
+  // 그래서 approval_id=1 의 지문(fingerprint)이 이 실행 내내 변하지 않는다 — 몇 번째 조회든 첫 조회이거나 지문이 같아
   // `stale=false` 로 고정된다(`ApprovalPreviewResolver.resolvePreview` 참고).
   it("getChangeApprovalDetail(1) 은 대기 중인 건의 상세를 preview_token 과 함께 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();

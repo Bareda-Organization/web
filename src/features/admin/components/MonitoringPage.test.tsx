@@ -24,12 +24,11 @@ vi.mock("@/features/map", async (importOriginal) => {
   };
 });
 
-// 이 화면도 실패 갈래 검사가 없었다. 학원 목록 조회(진입점)가
-// 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
+// 학원 목록 조회(진입점)가 실패하면 오류 문구가 뜨고, 회차 조회(getAcademyRunsLive)로는 넘어가지 않는지를 본다
 // — academyId 가 정해지지 않은 채로 회차 조회를 시도하면 안 된다.
 //
-// FE-R2 W 목표 1 — 조회 실패 시 EmptyState("등록된 학원이 없습니다" · "지금 운행 중인
-// 회차가 없습니다")가 오류 배너와 동시에 뜨던 것을 고쳤다(MonitoringPage.tsx !error
+// 조회 실패 시 EmptyState("등록된 학원이 없습니다" · "지금 운행 중인
+// 회차가 없습니다")가 오류 배너와 동시에 뜨지 않아야 한다(MonitoringPage.tsx !error
 // 가드, 두 갈래 모두). 아래 두 검사가 그 가드를 고정한다 — 가드를 지우면 이 검사들만
 // 실패해야 한다.
 vi.mock("../api", () => ({
@@ -422,10 +421,10 @@ describe("MonitoringPage — 버스 목록 클릭·노선 표시(R15-T2)", () =>
     vi.clearAllMocks();
   });
 
-  // W1 목표 3 — 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
-  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. 옛 구현은
-  // `Number(markerId)` + `Number.isInteger` 로 "숫자로 읽히는 마커만 회차"로 골라
-  // 문자열 id 에서 조용히 선택 실패였다 — 이 검사가 그 회귀를 잡는다.
+  // 서버가 회차 식별자를 숫자 아닌 문자열로 보내도(§API_SPEC §1.1 전환 뒤 모습을
+  // 미리 흉내) 지도 위 버스 마커 클릭이 그 회차를 선택해야 한다. `Number(markerId)` +
+  // `Number.isInteger` 로 숫자로 읽히는 마커만 고르면 문자열 id 에서 선택이 조용히 실패한다
+  // — 이 검사가 그 회귀를 잡는다.
   it("회차 id 가 숫자로 안 읽히는 문자열이어도 지도 버스 마커 클릭이 그 회차를 선택한다", async () => {
     const stringIdRun: RunLiveItemResponseTypes = {
       ...baseLiveRun,
