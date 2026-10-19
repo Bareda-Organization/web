@@ -1,5 +1,5 @@
-// WebSocket 봉투·payload 의 식별자 흡수 — `frontend/packages/baraeda_core`(Dart, F4-A
-// CORE 단계) 의 `id/as_id_string.dart` 와 같은 문제를 웹에서 풀기 위한 대응물이다.
+// WebSocket 봉투·payload 의 식별자 흡수 — `frontend/packages/baraeda_core`(Dart) 의
+// `id/as_id_string.dart` 와 같은 문제를 웹에서 풀기 위한 대응물이다.
 // 그쪽을 그대로 import 할 수 없는 이유는 Flutter 패키지라서다(웹 번들에 못 들어간다) —
 // 로직 자체(`value.toString()`)가 한 줄이라 포트하는 데는 문제가 없다.
 //

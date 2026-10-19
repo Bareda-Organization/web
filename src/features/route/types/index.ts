@@ -11,7 +11,7 @@ export type RouteStop = {
   name: string;
   lat: number;
   lng: number;
-  // W7 — §4.3·§5.19 `is_destination`(등원 회차의 마지막 항목, 학원). RTE-01 편성
+  // §4.3·§5.19 `is_destination`(등원 회차의 마지막 항목, 학원). RTE-01 편성
   // 조회에는 이 필드가 없어(학원 자체를 정차지로 다루지 않는다) 기본값 false.
   isDestination?: boolean;
   // Ruling 400 — §4.3·§5.19 `is_waypoint`(강제 경유 지점 항목만 true). 편성 조회에는 없어 기본값 false.
@@ -67,7 +67,7 @@ export type LatLng = { lat: number; lng: number };
 // GET /staff/runs/{runId}/route(§5.19, RTE-02) — 지도에 그릴 도로 경로 좌표와 정차지 마커용 stops 를 쓴다. 응답에는 이 화면이 안 쓰는 필드(currentStop·ack 등)도
 // 더 있지만 여기서는 옮기지 않는다 — 필요해지면 그때 추가한다(YAGNI).
 // Ruling 321 — 확정 전(idle) 회차도 고정 노선 기반 "예정" 경로를 보여준다. 백엔드
-// (r20-a) 가 이 필드로 확정 여부를 알린다 — 화면은 "예정"과 "확정"을 반드시
+// 백엔드가 이 필드로 확정 여부를 알린다 — 화면은 "예정"과 "확정"을 반드시
 // 구별해 보여줘야 한다(예정은 확정 시점에 재계산돼 달라질 수 있다). 아직 이 필드를
 // 안 보내는 옛 백엔드와의 호환을 위해 파싱 쪽(features/route/api)에서 기본값 true 를 둔다.
 export type RunRouteResponseTypes = {

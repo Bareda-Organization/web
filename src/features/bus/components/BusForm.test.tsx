@@ -51,7 +51,7 @@ describe("BusForm — 등록 실패 갈래", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  // W5 — API_SPEC §5.12 "PATCH 응답의 warnings[]"(BR-116). 저장은 이미 됐으므로
+  // API_SPEC §5.12 "PATCH 응답의 warnings[]"(BR-116). 저장은 이미 됐으므로
   // (ManagerAssignmentDialog.tsx 와 같은 판단) onDone 을 즉시 부르지 않고 경고를
   // 먼저 보여준다.
   it("수정 응답에 CAPACITY_BELOW_ASSIGNED 경고가 있으면 저장 직후 onDone 을 부르지 않고 경고를 보여준다", async () => {
@@ -79,7 +79,7 @@ describe("BusForm — 등록 실패 갈래", () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
 
-  // F02-16 — 경고가 뜬 시점에 수정은 이미 저장됐다. 확인 버튼이 아니라 Esc(대화상자의 onClose)로 닫아도 목록이 갱신돼야 한다.
+  // 경고가 뜬 시점에 수정은 이미 저장됐다. 확인 버튼이 아니라 Esc(대화상자의 onClose)로 닫아도 목록이 갱신돼야 한다.
   it("경고 화면에서 [확인] 대신 Esc 로 닫아도 onDone(목록 갱신)을 부른다", async () => {
     mockUpdate.mockResolvedValue({
       ...existingBus,

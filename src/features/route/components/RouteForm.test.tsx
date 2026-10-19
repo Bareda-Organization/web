@@ -72,7 +72,7 @@ describe("RouteForm — 등록 뒤 이어가기", () => {
   });
 });
 
-describe("RouteForm — F02-13 차량 목록 조회 실패", () => {
+describe("RouteForm — 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {
@@ -107,8 +107,8 @@ describe("RouteForm — F02-13 차량 목록 조회 실패", () => {
   });
 });
 
-// F02-17 — PATCH 는 키가 없으면 그대로 둔다. 지운 편성 이름을 키째 빼면 저장은 성공하는데 이름이 남는다.
-describe("RouteForm — F02-17 편성 이름 지우기", () => {
+// PATCH 는 키가 없으면 그대로 둔다. 지운 편성 이름을 키째 빼면 저장은 성공하는데 이름이 남는다.
+describe("RouteForm — 편성 이름 지우기", () => {
   afterEach(() => vi.clearAllMocks());
 
   const route = { id: "5", busId: "1", busNo: "1호차", weekday: "mon" as const, direction: "to_academy" as const, name: "본선", active: true };

@@ -44,7 +44,7 @@ const renderProvider = async () => {
   await screen.findByText("로그인됨");
 };
 
-// F03-13 — /me 재확인이 네트워크 오류·5xx 로 한 번 실패했다고 인증이 풀린 것은 아니다.
+// /me 재확인이 네트워크 오류·5xx 로 한 번 실패했다고 인증이 풀린 것은 아니다.
 describe("AuthSessionProvider — 세션 재확인 실패", () => {
   afterEach(() => vi.clearAllMocks());
 

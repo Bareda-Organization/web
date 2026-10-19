@@ -13,7 +13,7 @@ import {
 } from "./index";
 
 // 가입 승인(§5.1·§5.2, A-02)·구간 변경 승인(§5.5·§5.6, A-05) 화면이 부르는
-// 엔드포인트를 실제 F5-W1 전용 백엔드에 붙여 확인한다.
+// 엔드포인트를 실제 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
 let backendReachable = false;
@@ -38,7 +38,7 @@ describe("approval api — 실서버 계약", () => {
     expect(typeof result.pendingCount).toBe("number");
   });
 
-  // r11-t1 — decideSignupRequest(§5.2, A-02) 실제 재현. request_id=2(role=parent,
+  // decideSignupRequest(§5.2, A-02) 실제 재현. request_id=2(role=parent,
   // academy_id=1)가 시드에서 유일하게 관계자가 결정할 수 있는 pending 건이다
   // (curl 실측). 승인은 학생 연결(link.studentIds)이 필요해 대상을 특정해야
   // 하므로, 거절(§5.2 의 다른 분기)로 결정한다 — 사유만 있으면 되고 학생 연결
