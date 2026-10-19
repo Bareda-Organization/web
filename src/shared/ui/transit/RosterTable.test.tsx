@@ -5,7 +5,7 @@ import { RosterTable } from "./RosterTable";
 type Row = { id: string; name: string };
 const columns = [{ key: "name", label: "이름" }];
 
-// R32-W10 — 목록 13곳이 0건이면 머리글만 남았고, 행은 키보드로 열 수 없었다.
+// 목록이 0건이면 머리글 아래에 빈 목록 문구가 있어야 하고, 행은 키보드로 열 수 있어야 한다.
 describe("RosterTable — 빈 목록과 키보드", () => {
   it("행이 0건이면 머리글 아래에 빈 목록 문구를 보여 준다", () => {
     render(<RosterTable<Row> columns={columns} rows={[]} />);
@@ -17,7 +17,7 @@ describe("RosterTable — 빈 목록과 키보드", () => {
     expect(screen.getByText("등록된 차량이 없습니다")).toBeInTheDocument();
   });
 
-  // R34-W2 — 목록을 불러오는 순간 "표시할 내용이 없습니다" 가 잠깐 보였다(K15).
+  // 목록을 불러오는 동안에는 "표시할 내용이 없습니다" 가 보이면 안 된다(K15).
   it("불러오는 중이면 빈 목록 문구 대신 불러오는 중 문구를 보여 준다", () => {
     render(<RosterTable<Row> columns={columns} rows={[]} loading />);
     expect(screen.getByText("불러오는 중입니다")).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("RosterTable — 조회 실패", () => {
   });
 });
 
-// R46-FUWEB B1 #11 — 목록을 못 읽었을 때 새로고침 말고는 되돌릴 길이 없었다.
+// 목록을 못 읽었을 때 새로고침 말고도 되돌릴 길(다시 시도 버튼)이 있어야 한다.
 describe("RosterTable — 다시 시도", () => {
   it("행이 없고 조회가 실패했으면 다시 시도 버튼이 있고, 누르면 재조회를 요청한다", () => {
     const onRetry = vi.fn();
@@ -105,7 +105,7 @@ describe("RosterTable — 다시 시도", () => {
   });
 });
 
-// R46-FUWEB B1 #12 — 빈 목록이 다음에 할 일을 알려 주지 않았다.
+// 빈 목록은 다음에 할 일을 알려 주는 행동 버튼을 함께 보여 준다.
 describe("RosterTable — 빈 상태 행동", () => {
   it("행이 0건이면 빈 목록 문구 아래에 행동 버튼을 보이고, 누르면 그 동작을 부른다", () => {
     const onClick = vi.fn();
@@ -130,7 +130,7 @@ describe("RosterTable — 빈 상태 행동", () => {
   });
 });
 
-// R46-FUWEB B1 #19 — 저장한 행이 어디에 있는지 알 수 없었다.
+// 저장한 행이 어디에 있는지 알 수 있게 그 행을 강조한다.
 describe("RosterTable — 저장한 행 강조", () => {
   it("highlightedKey 와 행 키가 같은 행만 강조 표시를 받는다", () => {
     const rows = [
