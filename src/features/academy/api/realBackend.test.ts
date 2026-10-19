@@ -5,7 +5,7 @@ import { requireRealBackendApiBaseUrl } from "@/shared/testing/realBackendTarget
 import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { getAcademySettings, updateAcademySettings } from "./index";
 
-// 학원 설정 화면(§5.21, A-17)이 부르는 조회·수정 엔드포인트를 실제 F5-W1
+// 학원 설정 화면(§5.21, A-17)이 부르는 조회·수정 엔드포인트를 실제
 // 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
@@ -21,7 +21,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("academy api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 학원의 noShowWaitMinutes 현재값 3.
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 학원의 noShowWaitMinutes 현재값 3.
 
   it("getAcademySettings 는 staffA 학원의 미승차 대기시간 설정을 돌려준다", async ({ skip }) => {
     if (!backendReachable) skip();

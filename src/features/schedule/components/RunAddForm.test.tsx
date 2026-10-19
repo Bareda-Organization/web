@@ -9,7 +9,7 @@ vi.mock("@/features/bus/api", () => ({ getBuses: vi.fn() }));
 
 const mockGetBuses = vi.mocked(getBuses);
 
-describe("RunAddForm — F02-13 차량 목록 조회 실패", () => {
+describe("RunAddForm — 차량 목록 조회 실패", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("조회가 실패하면 오류와 [다시 시도] 를 보이고, 다시 시도가 성공하면 차량을 고를 수 있다", async () => {

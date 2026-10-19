@@ -6,7 +6,7 @@ import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { resetRealBackendSeedIfConfigured } from "@/shared/testing/realBackendReset";
 import { ackEmergency, getEmergencies } from "./index";
 
-// 비상 신고 조회 화면(§5.16, EXC-04, A-16)이 부르는 엔드포인트를 실제 F5-W1
+// 비상 신고 조회 화면(§5.16, EXC-04, A-16)이 부르는 엔드포인트를 실제
 // 전용 백엔드에 붙여 확인한다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 
@@ -22,7 +22,7 @@ beforeAll(async () => {
 }, 10_000);
 
 describe("emergency api — 실서버 계약", () => {
-  // 시드(F5-W1 전용 DB) 기준 — staffA(academy_id=1) 학원에 비상 신고 1건
+  // 시드(전용 DB) 기준 — staffA(academy_id=1) 학원에 비상 신고 1건
   // (emergency_id=1, type=vehicle_fault, run_id=3, bus_no=2호차, acked=false).
 
   it("getEmergencies 는 staffA 학원의 비상 신고 목록과 unacked_count 를 함께 돌려준다", async ({

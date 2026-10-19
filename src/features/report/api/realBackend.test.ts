@@ -6,7 +6,7 @@ import { rawRestLogin } from "@/shared/testing/rawRestLogin";
 import { getReports } from "./index";
 
 // 예외 보고 조회 화면(§5.20, EXC-02·03, M-14)이 부르는 엔드포인트를 실제
-// F5-W1 전용 백엔드에 붙여 확인한다. 조회 전용 화면이며, 보고 생성은 기사·
+// 전용 백엔드에 붙여 확인한다. 조회 전용 화면이며, 보고 생성은 기사·
 // 동승자 쪽(§4.13) 몫이라 이 계약 시험 범위 밖이다.
 const API_BASE_URL = requireRealBackendApiBaseUrl();
 

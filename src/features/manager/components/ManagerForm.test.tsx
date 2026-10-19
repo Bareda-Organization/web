@@ -49,7 +49,7 @@ describe("ManagerForm — 등록 실패 갈래", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  // W8 — API_SPEC §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling
+  // API_SPEC §5.13 배치 중이면 역할 변경도 409 MANAGER_ASSIGNED(`Ruling
   // 339`, BR-022·023). 서버 문구가 삭제 전용이라(`ErrorCode.java:117`) 이 화면은
   // 수정 맥락에 맞는 전용 문구로 바꿔 보여준다(`ManagerDeleteDialog.tsx` 와 같은 판단).
   it("수정이 409 MANAGER_ASSIGNED 로 거부되면 배치 해제 안내 문구를 보여준다", async () => {
@@ -68,8 +68,8 @@ describe("ManagerForm — 등록 실패 갈래", () => {
   });
 });
 
-// F02-12 — 하루 두 구간을 가진 매니저를 수정할 때 첫 구간만 남기고 나머지를 지우면 배치 충돌 경고의 근거가 조용히 줄어든다.
-describe("ManagerForm — F02-12 근무 시간 편집", () => {
+// 하루 두 구간을 가진 매니저를 수정할 때 첫 구간만 남기고 나머지를 지우면 배치 충돌 경고의 근거가 조용히 줄어든다.
+describe("ManagerForm — 근무 시간 편집", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
