@@ -16,7 +16,7 @@ const bus = (id: string, busNo: string, over: Partial<BusItemResponseTypes> = {}
 });
 const run = (runId: string) => ({ runId, direction: "to_academy" as const, departTime: "2026-10-03T11:08:00+09:00", status: "idle" as const });
 
-// R48-WEB-STAFF 차량 관리 — 지표 4칸이 목록 응답(`today_runs[]` · `student_capacity`)에서 어떻게 나오는지.
+// 차량 관리 지표 4칸이 목록 응답(`today_runs[]` · `student_capacity`)에서 어떻게 나오는지.
 describe("summarizeBuses — 차량 지표", () => {
   const buses = [
     bus("1", "1호차", { todayRuns: [run("a"), run("b")] }),

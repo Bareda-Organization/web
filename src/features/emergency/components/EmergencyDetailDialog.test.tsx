@@ -25,7 +25,7 @@ const EMERGENCY = {
 
 // Ruling 541 — 확인할 때 조치 메모를 남기고(선택), 확인된 건은 확인자와 메모를 보여 준다.
 describe("EmergencyDetailDialog — 조치 메모", () => {
-  // R46-LAST Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
+  // Ruling 583 — 이 칸은 퇴원 파기 대상 밖이라 입력 단계에서 개인정보를 줄인다.
   it("조치 메모 칸 아래에 학생 이름·연락처를 적지 말라고 안내한다", () => {
     render(<EmergencyDetailDialog emergency={EMERGENCY} onClose={vi.fn()} onAck={vi.fn()} />);
 
@@ -97,7 +97,7 @@ describe("EmergencyDetailDialog — 연락처", () => {
   });
 });
 
-// R47 Ruling 744 — 단말이 누른 시각은 참고값이다. 접수(발생) 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.
+// Ruling 744 — 단말이 누른 시각은 참고값이다. 접수(발생) 시각과 1분 넘게 벌어졌을 때만 목록과 같은 문구로 덧붙인다.
 describe("EmergencyDetailDialog — 단말 기록 시각", () => {
   const RAISED = "2026-09-12T08:10:00+09:00";
 
@@ -149,7 +149,7 @@ describe("EmergencyDetailDialog — 발신 위치가 없는 건", () => {
   });
 });
 
-// R53 t5 A3 · Ruling 885 ① — 취소된 건은 타임라인에 "취소됨" 을 그리고 확인 대기로 보이지 않는다. [확인] 도 없다.
+// Ruling 885 ① — 취소된 건은 타임라인에 "취소됨" 을 그리고 확인 대기로 보이지 않는다. [확인] 도 없다.
 describe("EmergencyDetailDialog — 취소된 건", () => {
   it("타임라인 끝이 '취소됨' 이고 '학원 확인 대기' · [확인] 이 없다", () => {
     render(<EmergencyDetailDialog emergency={{ ...EMERGENCY, canceledAt: "2026-09-12T08:03:00" }} onClose={vi.fn()} onAck={vi.fn()} />);

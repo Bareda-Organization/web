@@ -38,11 +38,11 @@ describe("emergency api — 실서버 계약", () => {
     expect(typeof result.unackedCount).toBe("number");
     // 응답 식별자는 문자열이다(Ruling 332·357).
     expect(typeof result.items[0].emergencyId).toBe("string");
-    // R47 Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
+    // Ruling 744 — 단말이 누른 시각이 참고값으로 실려 온다.
     expect(typeof result.items[0].occurredAt).toBe("string");
   });
 
-  // r12-t1 목표1① — ackEmergency(§5.16, EXC-04, A-16) 실제 재현. emergency_id=1 은
+  // ackEmergency(§5.16, EXC-04, A-16) 실제 재현. emergency_id=1 은
   // 되돌릴 API(unack)가 없는 편도 전이다(ErrorCode.ALREADY_ACKED, api/index.ts 주석).
   // ⚠ vitest.globalSetup.ts 의 `/dev/reset` 은 매 `vitest run` 실행마다 무조건
   // 불려 DB 를 시드로 되돌린다(DevResetController "DB 를 시드 상태로 되돌리고" —
@@ -75,7 +75,7 @@ describe("emergency api — 실서버 계약", () => {
       const after = await getEmergencies({ status: "acked" });
       const updated = after.items.find((item) => item.emergencyId === "1");
       expect(updated?.acked).toBe(true);
-      // R46-FUFEAT ② — 확인할 때 남긴 조치 메모가 acked_by.memo 로 돌아온다(§5.16 · Ruling 541).
+      // 확인할 때 남긴 조치 메모가 acked_by.memo 로 돌아온다(§5.16 · Ruling 541).
       expect(updated?.ackedBy?.memo).toBe("현장 확인 완료 — 학부모 연락함");
     }
 
@@ -93,8 +93,7 @@ describe("emergency api — 실서버 계약", () => {
 
 // 이 파일은 시드의 유일한 비상 신고(emergency_id=1)를 확인 처리(ack)해 **되돌릴 API 가 부재**하다
 // (재확인 해제 엔드포인트가 없다). 그대로 두면 뒤에 도는 파일이 `getEmergencies` 를 불렀을 때
-// 미확인 건이 0개가 되어, 코드 결함이 아닌데도 실패한다 — 2026-09-19 R15 병합 검증에서
-// `features/admin/api/realBackend.test.ts` 의 §6.11 시험이 실제로 그렇게 깨졌다(단독 실행은 통과).
+// 미확인 건이 0개가 되어, 코드 결함이 아닌데도 `features/admin/api/realBackend.test.ts` 의 §6.11 시험이 실패한다.
 // 유일한 되돌림 수단은 시드 전체 재구성(`POST /dev/reset`)뿐이라 이 파일이 끝난 뒤 무조건 돌린다
 // — `run/api/realBackend.test.ts` 와 같은 근거이며 같은 헬퍼를 그대로 재사용한다.
 afterAll(async () => {

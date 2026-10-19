@@ -17,7 +17,7 @@ export type NaverMapSurfaceProps = {
   camera: MapCamera;
   markers: MapMarker[];
   polylines?: MapPolyline[];
-  // R23 목표 4 — 지도 위 버스 아이콘을 눌러 고른다(사용자 지시). 인자는 `MapMarker.id` 이고,
+  // 지도 위 버스 아이콘을 눌러 고른다. 인자는 `MapMarker.id` 이고,
   // 버스 마커의 id 는 회차 id 문자열이다(세 화면이 그렇게 만든다).
   onMarkerClick?: (markerId: string) => void;
   onMapClick?: (point: { lat: number; lng: number }) => void;
@@ -44,20 +44,20 @@ export const NaverMapSurface = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markerRefs = useRef<Map<string, naver.maps.Marker>>(new Map());
-  // R15-T2 — 선택된 노선. 마커와 달리 보간 대상이 아니다(경로는 한 번에 통째로 그린다).
+  // 선택된 노선. 마커와 달리 보간 대상이 아니다(경로는 한 번에 통째로 그린다).
   const polylineRefs = useRef<Map<string, naver.maps.Polyline>>(new Map());
   // ⚠ 지도 생성은 SDK 적재를 기다리는 **비동기**라, 마운트 직후에는 `mapRef.current` 가
   // 아직 `null` 이다. 아래 세 effect(카메라·마커·노선)는 그때 일찍 반환하는데,
   // 그 뒤 의존성이 안 바뀌면 **다시 실행되지 않는다.** 자료를 비동기로 받는 화면은
   // 상태가 뒤늦게 바뀌어 우연히 동작했지만, **자료를 이미 들고 마운트하는 화면**
   // (구간변경 승인 상세)은 그 한 번의 이른 실행이 전부여서 지도 타일만 뜨고
-  // 경로 선이 영영 안 그려졌다(2026-09-19 사용자 지적 → 실제 브라우저로 재현).
+  // 경로 선은 그려지지 않는다.
   // ⇒ **지도가 생긴 사실 자체를 신호로 만들어** 세 effect 가 다시 돌게 한다.
   const [mapReady, setMapReady] = useState(false);
   // 마커별로 "지금 실제 화면에 반영된 좌표" — 애니메이션 진행 중에는 목표 좌표가
   // 아니라 이 값이 다음 보간의 출발점이 된다(이어붙이기, COMMON-B2 §2).
   const displayedPositions = useRef<Map<string, LatLng>>(new Map());
-  // R25 목표 1 — 마커별로 "지금 화면에 반영된 아이콘 HTML". 달라졌을 때만 다시 굳힌다.
+  // 마커별로 "지금 화면에 반영된 아이콘 HTML". 달라졌을 때만 다시 굳힌다.
   const renderedIcons = useRef<Map<string, string>>(new Map());
   // 보간 스케줄링 — SDK 를 모르는 순수 컨트롤러라 여기서만 `naver.maps.LatLng` 로
   // 감싸 실제 마커에 반영한다. 마커를 움직이는 것이지 카메라를 움직이는 것이
@@ -70,8 +70,8 @@ export const NaverMapSurface = ({
   // 클로저를 만든다는 이유로 `react-hooks/refs` 가 여전히 같은 성질의 오류를
   // 냈다(클로저 정의 시점과 호출 시점을 정적으로 구분하지 못함) — 즉 이 검사
   // 규칙이 애초에 "마운트 시 1회, 그 뒤 불변"이라는 이 패턴 자체를 지원하지
-  // 않는다. 동작을 바꾸는 대안(매 렌더 재생성 등)은 목표 5의 "동작 변경 없음"
-  // 을 어기므로, 원래 형태를 유지하고 이 한 줄만 억제한다(보고서 §1).
+  // 않는다. 동작을 바꾸는 대안(매 렌더 재생성 등)은 "동작 변경 없음"
+  // 을 어기므로, 이 형태를 유지하고 이 한 줄만 억제한다(보고서 §1).
   const animationControllerRef = useRef<MarkerAnimationController | null>(null);
   if (animationControllerRef.current == null) {
     // 지연 초기화라 안전하다(위 주석 참고). react.dev 문서가 이 형태를 직접 예시로 든다.
@@ -151,7 +151,7 @@ export const NaverMapSurface = ({
       markerRefsAtMount.clear();
       polylineRefsAtMount.forEach((line) => line.setMap(null));
       polylineRefsAtMount.clear();
-      // 마커·선을 떼어 낸 뒤 지도 객체 자체를 해제한다 — 안 하면 화면을 오갈 때마다 SDK 안에 지도와 타일 DOM 이 남는다(K-6).
+      // 마커·선을 떼어 낸 뒤 지도 객체 자체를 해제한다 — 안 하면 화면을 오갈 때마다 SDK 안에 지도와 타일 DOM 이 남는다.
       mapRef.current?.destroy();
       mapRef.current = null;
       setMapReady(false);
@@ -159,24 +159,22 @@ export const NaverMapSurface = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // R21-A 추가 지시 ① — 예전엔 `camera` 좌표가 바뀔 때마다(버스 위치가 갱신될
-  // 때마다) 이 effect 가 다시 돌아 `setCenter`/`setZoom` 을 불렀다 — 사용자가
-  // 이미 지도를 손으로 옮기거나 확대·축소해 둔 상태를 위치 갱신이 덮어써
-  // "간헐적으로 리셋된다"는 신고로 이어졌다(운행 중 회차만 위치가 계속 들어와
-  // 간헐적으로 보였다). `camera` 값 자체를 비교해 막으면 같은 좌표로 다시 와도
+  // `camera` 좌표가 바뀔 때마다(버스 위치가 갱신될 때마다) 이 effect 가 다시 돌아
+  // `setCenter`/`setZoom` 을 부르면, 사용자가 손으로 옮기거나 확대·축소해 둔 지도 상태를
+  // 위치 갱신이 덮어써 "간헐적으로 리셋되는" 현상이 생긴다(운행 중 회차만 위치가 계속 들어와
+  // 간헐적으로 보인다). `camera` 값 자체를 비교해 막으면 같은 좌표로 다시 와도
   // 되돌아가는 문제가 남으므로, **무엇 때문에 카메라를 옮기려는가**(선택된 버스
   // id, 또는 선택 없음)를 신호로 삼는다 — 이 값은 위치가 갱신돼도 안 바뀐다.
-  // R22 목표 2 — 노선도 포커스 대상이다. 예전엔 "선택된 버스 마커" 하나만 신호라,
-  // 실시간 위치가 없는 회차(대기·확정·종료)를 고르면 버스 마커 자체가 없어 focusKey 가
-  // "none" 에 머물렀다 — 화면이 계산해 넘긴 카메라(`anchorForSelection`, R21-A 목표 4)가
-  // 있어도 이 effect 가 다시 안 돌아 지도가 기본 좌표에 그대로 있었고, 노선과 출발지·
-  // 도착지가 지도 영역 밖에 그려졌다(2026-09-20 눈 확인 — "도착" 이 지도 아래로 잘림).
-  // R23 목표 3 — 아무것도 안 고른 상태에서도 버스가 전부 보여야 한다(사용자 지시). 마커가
-  // 처음 도착하는 순간(빈 배열 → 여러 대)에 한 번 포커스 신호가 바뀌게 해서 그때 전체를
-  // 담는 배율로 맞춘다. 그 뒤 위치가 갱신돼도 이 값은 `"all-markers"` 로 고정이라 카메라가
-  // 되돌아가지 않는다 — R21-A 가 막은 "지도가 간헐적으로 리셋된다" 를 그대로 지킨다.
+  // 노선도 포커스 대상이다. 선택된 버스 마커 하나만 신호로 보면, 실시간 위치가 없는 회차
+  // (대기·확정·종료)는 버스 마커 자체가 없어 focusKey 가 "none" 에 머문다. 그러면 화면이
+  // 계산해 넘긴 카메라(`anchorForSelection`)가 있어도 이 effect 가 다시 돌지 않아,
+  // 노선과 출발지·도착지가 지도 영역 밖에 그려진다(도착지 글자가 지도 아래로 잘린다).
+  // 아무것도 안 고른 상태에서도 버스가 전부 보여야 한다. 마커가 처음 도착하는 순간
+  // (빈 배열 → 여러 대)에 포커스 신호가 한 번 바뀌어, 그때 전체를 담는 배율로 맞춘다. 그 뒤
+  // 위치가 갱신돼도 이 값은 `"all-markers"` 로 고정이라 카메라가 되돌아가지 않는다 —
+  // 지도가 간헐적으로 리셋되지 않게 지킨다.
   const focusKey = useMemo(() => {
-    // 2026-09-22 — 내용 맞춤을 끈 동안(정차지 위치 고르기)은 **넘어온 좌표 자체**가 포커스다.
+    // 내용 맞춤을 끈 동안(정차지 위치 고르기)은 **넘어온 좌표 자체**가 포커스다.
     // 안 넣으면 검색·이동으로 좌표만 바뀔 때 이 값이 그대로라 카메라가 안 따라간다.
     if (!fitToContent) return `camera:${camera.lat},${camera.lng},${camera.zoom}`;
     const selectedBusId = markers.find((marker) => marker.kind === "bus" && marker.selected)?.id;
@@ -209,12 +207,12 @@ export const NaverMapSurface = ({
     fitToContentRef.current = fitToContent;
   });
 
-  // R22 목표 2 — 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
+  // 노선이 그려져 있으면 고정 배율(`SELECTED_BUS_MAP_ZOOM` = 15) 대신
   // 노선 전체가 들어오는 배율로 맞춘다. 고정 15 는 시드 정차지 4곳(대각선 426m)을 보고
   // 정한 값이라, 승차지→학원처럼 8km 를 넘는 실제 노선에서는 한쪽 끝이 지도 밖으로
   // 나간다 — 출발지·도착지를 마커로 찍어도 화면에 안 보이면 안 찍은 것과 같다.
   //
-  // ⚠ `LatLngBounds`·`fitBounds` 가 없으면 예전 방식으로 되돌린다. 없는 경우가 실제로
+  // ⚠ `LatLngBounds`·`fitBounds` 가 없으면 고정 배율 방식으로 되돌린다. 없는 경우가 실제로
   // 있다 — 이 파일의 시험이 SDK 를 "이 컴포넌트가 부르는 것만" 흉내 내기 때문이다.
   // 던지면 뒤따르는 마커·노선 effect 까지 멈춘다(위 Map 모의 주석과 같은 사고).
   const fitToPoints = (map: naver.maps.Map, points: { lat: number; lng: number }[]): boolean => {
@@ -231,11 +229,10 @@ export const NaverMapSurface = ({
     return true;
   };
 
-  // R23 목표 4 — 지도 위 마커 클릭. **SDK 의 마커 이벤트를 쓰지 않는다.**
-  // `naver.maps.Event.addListener(marker, "click", …)` 를 먼저 썼으나 이 아이콘 형태
-  // (`icon.content` 만 주고 `size` 는 생략한 HTML 아이콘)에서는 한 번도 안 불렸다
-  // (2026-09-20 실측 — 실제 마우스 클릭·합성 이벤트 전부). 마커 HTML 에 직접 박은
-  // `data-marker-id` 를 컨테이너에서 받는 편이 SDK 판정에 기대지 않아 확실하다.
+  // 지도 위 마커 클릭. **SDK 의 마커 이벤트를 쓰지 않는다.**
+  // `naver.maps.Event.addListener(marker, "click", …)` 는 이 아이콘 형태
+  // (`icon.content` 만 주고 `size` 는 생략한 HTML 아이콘)에서는 실제 마우스 클릭·합성 이벤트 모두 불리지 않는다.
+  // 마커 HTML 에 직접 박은 `data-marker-id` 를 컨테이너에서 받는 편이 SDK 판정에 기대지 않아 확실하다.
   //
   // 갈무리 단계(capture)에서 받는 이유 — 지도 자신의 드래그·클릭 처리가 이벤트를
   // 먼저 삼킬 수 있다. 마커를 눌렀는지만 보고 나머지는 그대로 흘려보낸다.
@@ -254,7 +251,7 @@ export const NaverMapSurface = ({
         onMarkerClickRef.current?.(markerId);
         return;
       }
-      // 2026-09-22 — 마커가 아닌 자리를 누르면 그 **좌표**를 알린다. 화면 픽셀을 좌표로 옮기는
+      // 마커가 아닌 자리를 누르면 그 **좌표**를 알린다. 화면 픽셀을 좌표로 옮기는
       // 일은 SDK 만 할 수 있어(투영은 배율·중심에 달렸다) 여기서 `getProjection` 을 쓴다.
       // 마커 클릭과 같은 갈무리 단계에서 받되, 마커를 눌렀으면 위에서 이미 돌아간다.
       const map = mapRef.current;
@@ -271,7 +268,7 @@ export const NaverMapSurface = ({
     return () => container.removeEventListener("click", handleClick, true);
   }, []);
 
-  // 2026-09-23 사용자 지시 — `draggable` 마커를 마우스로 끌어 자리를 정한다. SDK 의 `draggable` 옵션은
+  // `draggable` 마커를 마우스로 끌어 자리를 정한다. SDK 의 `draggable` 옵션은
   // 마커 이벤트와 같은 경로라 이 아이콘 형태에서 믿을 수 없어(위 클릭 주석) 직접 옮긴다.
   //
   // **잡은 자리가 아니라 핀 끝을 옮긴다.** 핀 머리를 잡고 끄는데 마우스 좌표를 그대로 쓰면, 놓는 순간
@@ -333,14 +330,14 @@ export const NaverMapSurface = ({
     const map = mapRef.current;
     const naverMaps = window.naver?.maps;
     if (!map || !naverMaps) return;
-    // R25 목표 2 — **버스를 고르면 그 버스를 정중앙에 놓는다**(사용자 지시). 노선 전체를
-    // 담는 배율(R22 목표 2)은 고른 버스가 화면 어디에 있는지 알기 어려웠다 — 노선이 8km 를
+    // **버스를 고르면 그 버스를 정중앙에 놓는다.** 노선 전체를
+    // 담는 배율은 고른 버스가 화면 어디에 있는지 알기 어렵다 — 노선이 8km 를
     // 넘으면 버스가 점만 해진다. 고른 버스가 있으면 화면이 넘긴 `camera`(그 버스 좌표 +
     // `SELECTED_BUS_MAP_ZOOM`)를 그대로 쓰고 아래 fitBounds 를 건너뛴다.
     //
-    // 실시간 위치가 없는 회차(대기·확정·종료)는 버스 마커 자체가 없다 — 그때는 예전처럼
-    // 노선 전체를 담아야 출발지·도착지가 화면 안에 들어온다(R22 가 고친 그 결함).
-    // 2026-09-22 — 화면이 "이 좌표를 보여 달라" 고 못박은 경우(정차지 위치 고르기)는 내용에 맞추지
+    // 실시간 위치가 없는 회차(대기·확정·종료)는 버스 마커 자체가 없다 — 이때는 노선 전체를
+    // 담아야 출발지·도착지가 화면 안에 들어온다.
+    // 화면이 "이 좌표를 보여 달라" 고 못박은 경우(정차지 위치 고르기)는 내용에 맞추지
     // 않는다. 노선 전체를 담는 배율(3km)에서는 블록 모퉁이·도로가를 찍을 수 없다.
     const hasSelectedBus = markers.some((marker) => marker.kind === "bus" && marker.selected);
     if (!hasSelectedBus && fitToContentRef.current) {
@@ -391,8 +388,8 @@ export const NaverMapSurface = ({
         const created = new naverMaps.Marker({
           map,
           position,
-          // R18-B 목표 1 — 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
-          // R21-A 목표 1~3 — 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
+          // 종류별 크기는 markerIcon.ts 가 정한다(버스가 가장 크다).
+          // 선택 강조·번호·등원하원 모양도 같은 함수가 정한다.
           icon: { content: iconContent },
         });
         existing.set(markerData.id, created);
@@ -400,10 +397,8 @@ export const NaverMapSurface = ({
         displayedPositions.current.set(markerData.id, { lat: markerData.lat, lng: markerData.lng });
         continue;
       }
-      // R25 목표 1 — **종류를 가리지 않고** 아이콘을 다시 굳힌다. 예전엔 버스만 갱신해서
-      // (R21-A 가 버스 선택 강조만 보고 고친 자리), 승하차지를 골라 `selected` 를 켜도
-      // 생성 시점의 아이콘이 그대로 남아 지도에서는 아무 변화가 없었다(2026-09-20 실측 —
-      // 누르기 전·후 둘 다 `box-shadow` 부재).
+      // **종류를 가리지 않고** 아이콘을 다시 굳힌다. 버스만 갱신하면 승하차지를 골라
+      // `selected` 를 켜도 생성 시점의 아이콘이 그대로 남아 지도에 강조가 나타나지 않는다.
       //
       // 매번 `setIcon` 하지 않고 **내용이 달라졌을 때만** 부른다 — 버스 위치가 2초마다
       // 들어오면 이 effect 도 2초마다 도는데, 그때마다 승하차지 수십 개의 DOM 을 새로
@@ -449,7 +444,7 @@ export const NaverMapSurface = ({
 
     for (const polylineData of polylines) {
       const path = polylineData.points.map((point) => new naverMaps.LatLng(point.lat, point.lng));
-      // R20-C 목표 3·5 — 상태별 색(routeColor.ts)과, 근사 경로(직선 보간)는 대시
+      // 상태별 색(routeColor.ts)과, 근사 경로(직선 보간)는 대시
       // 선으로 선 자체가 알린다(안내문을 지도 밖 아래에 작게 두면 못 본다).
       const strokeColor = routeColorFor(polylineData.kind);
       const strokeStyle: naver.maps.StrokeStyleType = polylineData.approximate ? "shortdash" : "solid";
