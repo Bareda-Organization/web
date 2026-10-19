@@ -790,10 +790,10 @@ describe("MonitoringPage — 비상 배너 목록(F03-05)", () => {
   });
 });
 
-// W2-01(F03-05·F03-11) — 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
+// F03-05·F03-11 — 관제 지도에서 비상 회차의 버스를 강조한다. 회차는 WS 봉투의 `run_id`
 // 로 잇는다(payload 의 `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원의
 // 같은 이름 버스를 붉게 만든다).
-describe("MonitoringPage — 지도 마커 비상 강조(W2-01)", () => {
+describe("MonitoringPage — 지도 마커 비상 강조", () => {
   const at = { lat: 37.5, lng: 127.0, receivedAt: "2026-09-13T00:00:00Z" };
   const liveRuns = [
     { ...baseLiveRun, runId: "11", busNo: "3호차", position: at },

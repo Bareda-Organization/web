@@ -404,7 +404,7 @@ describe("NaverMapSurface — 선택 강조는 종류를 안 가린다", () => {
 
 // 관제 지도의 비상 강조. 비상은 버스가 이미 지도에 떠 있는 동안 WS 로 들어오므로
 // "이미 있는 마커의 아이콘이 바뀐다" 가 주된 경로이고, 비상 중에 화면을 연 경우가 생성 경로다.
-describe("NaverMapSurface — 비상 마커 강조(W2-01)", () => {
+describe("NaverMapSurface — 비상 마커 강조", () => {
   const busMarker = { id: "11", lat: 37.5, lng: 127, kind: "bus" as const, busNo: "3호차" };
 
   it("이미 떠 있던 버스에 emergency 가 켜지면 아이콘을 붉은 테두리로 다시 굳힌다", async () => {

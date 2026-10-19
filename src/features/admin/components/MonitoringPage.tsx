@@ -112,7 +112,7 @@ export const MonitoringPage = () => {
   // 지금 보이는 회차들이 화면 안에 들어오게 하고, 하나도 없으면 기본 좌표를 쓴다.
   // 고른 버스만 강조(selected)하고, 번호(busNo)·등원하원
   // (direction)을 마커에 실어 버스끼리·같은 버스의 구간끼리 구별한다.
-  // W2-01 — 진행 중인 비상(`raised`)을 발신한 회차. 회차는 WS 봉투의 `run_id` 로 잇는다 — payload 의
+  // 진행 중인 비상(`raised`)을 발신한 회차. 회차는 WS 봉투의 `run_id` 로 잇는다 — payload 의
   // `bus_no` 는 학원마다 같은 "1호차" 가 있어 다른 학원의 비상이 이 학원 버스를 붉게 만든다.
   const emergencyRunIds = useMemo(
     () => new Set(liveAlerts.filter((alert) => alert.state === "raised").map((alert) => alert.runId)),
