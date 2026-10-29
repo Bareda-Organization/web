@@ -67,7 +67,8 @@ describe("auth api — 실서버 계약", () => {
   // AUTH_PENDING·AUTH_REJECTED 두 코드를 계정 하나로 재현한다.
   const suffix = Date.now().toString().slice(-8);
   const throwawayLoginId = `f5w2a${suffix}`;
-  const throwawayPhone = `010-9${suffix}`;
+  // 휴대전화는 숫자 9~11자리만 받는다(§2.2) — 010 + 구분 숫자 1 + 끝 7자리 = 11자리.
+  const throwawayPhone = `010-9${suffix.slice(-7)}`;
   const throwawayName = `F5W2가입시험${suffix}`;
   let pendingAccessToken = "";
   let rejectedAccessToken = "";
@@ -255,7 +256,7 @@ describe("auth api — 실서버 계약", () => {
       loginId: blockLoginId,
       password: "password",
       name: `F5W2차단시험${blockSuffix}`,
-      phone: `010-8${blockSuffix}`,
+      phone: `010-8${blockSuffix.slice(-7)}`,
       academyId: "1",
     });
 
