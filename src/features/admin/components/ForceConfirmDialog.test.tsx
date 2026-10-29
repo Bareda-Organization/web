@@ -110,4 +110,18 @@ describe("ForceConfirmDialog — 되돌릴 수 없는 동작의 확인·결과 �
     await waitFor(() => expect(screen.getByText("임시 취소된 회차라 강제 확정할 수 없습니다.")).toBeInTheDocument());
     expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
   });
+
+  // §6.14 — 확정을 저장하는 사이 명단이 바뀌면 409 RUN_CONFIRM_INPUTS_CHANGED 이고 아무것도 쓰이지 않는다(Ruling 937 R).
+  it("RUN_CONFIRM_INPUTS_CHANGED 오류는 명단이 바뀌어 다시 시도하라는 문구로 보여준다", async () => {
+    mockForceConfirmRun.mockRejectedValue(new ApiError(409, "RUN_CONFIRM_INPUTS_CHANGED", "서버 원문"));
+    render(<ForceConfirmDialog run={run} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("강제 확정 사유"), { target: { value: "사유" } });
+    fireEvent.click(screen.getByRole("button", { name: "강제 확정" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("확정하는 동안 명단이 바뀌었습니다 — 다시 시도하세요.")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("서버 원문")).not.toBeInTheDocument();
+  });
 });
