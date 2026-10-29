@@ -27,6 +27,7 @@ const FAILURE_BY_CODE: Record<string, string> = {
   RUN_NOT_IDLE: "이미 확정되었거나 대기 상태가 아닌 회차입니다 — 새로고침 후 다시 확인하세요.",
   RUN_NOT_DUE: "아직 확정 예정 시각 전이라 강제 확정할 수 없습니다.",
   RUN_CANCELED: "임시 취소된 회차라 강제 확정할 수 없습니다.",
+  RUN_CONFIRM_INPUTS_CHANGED: "확정하는 동안 명단이 바뀌었습니다 — 다시 시도하세요.",
 };
 
 // §6.14 — 확인 단계와 그 결과 표시가 이 화면의 본체다. 되돌릴 수 없는
