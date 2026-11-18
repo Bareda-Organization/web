@@ -1,5 +1,7 @@
 "use client";
 
+import { StyledQuickLoginButton, StyledQuickLoginRow } from "./QuickLogin.styled";
+
 // 배포 시험 빌드에서만 — Ruling 877. 역할별 빠른 로그인 단추 2개를 그린다.
 // 비밀번호 환경변수(`NEXT_PUBLIC_QUICK_LOGIN_PASSWORD`)가 비어 있으면 아무것도 그리지 않는다.
 // 단추는 아이디·비밀번호를 넘길 뿐 인증을 건너뛰지 않는다 — 제출은 호출부의 기존 로그인 함수가 한다.
@@ -20,19 +22,18 @@ export const QuickLogin = ({ onPick, disabled }: Props) => {
   if (!password) return null;
 
   return (
-    <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8 }}>
+    <StyledQuickLoginRow>
       {ACCOUNTS.map((account) => (
-        <button
+        <StyledQuickLoginButton
           key={account.loginId}
           type="button"
           data-testid={`quick-login-${account.loginId}`}
           disabled={disabled}
           onClick={() => onPick(account.loginId, password)}
-          style={{ fontSize: 12, padding: "6px 10px", cursor: "pointer" }}
         >
           {account.label} · {account.loginId}
-        </button>
+        </StyledQuickLoginButton>
       ))}
-    </div>
+    </StyledQuickLoginRow>
   );
 };

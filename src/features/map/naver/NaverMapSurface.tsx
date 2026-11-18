@@ -12,6 +12,7 @@ import { MarkerAnimationController } from "./markerAnimationController";
 import { buildMarkerIconHtml } from "./markerIcon";
 import type { LatLng } from "./markerInterpolation";
 import { routeColorFor } from "./routeColor";
+import { StyledMapContainer } from "./NaverMapSurface.styled";
 
 export type NaverMapSurfaceProps = {
   camera: MapCamera;
@@ -469,5 +470,5 @@ export const NaverMapSurface = ({
     }
   }, [polylines, mapReady]);
 
-  return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
+  return <StyledMapContainer ref={containerRef} className={className} />;
 };

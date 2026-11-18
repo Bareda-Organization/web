@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import { css } from "@emotion/react";
+import { FilterBar, PageHeader } from "@/shared/ui";
 
 // 대시보드(`admin/dashboard` 시안) 전용 배치 — 카드 · 표 · 막대 · 선 그래프. 색은 전부 토큰이다.
 
@@ -81,6 +82,11 @@ export const StyledCardHeading = styled.h3`
   & > :last-child:not(small) {
     margin-left: auto;
   }
+`;
+
+// 카드 제목 — 위쪽 여백 16px 추가
+export const StyledCardHeadingSpaced = styled(StyledCardHeading)`
+  margin-top: 16px;
 `;
 
 export const StyledRowLink = styled.span`
@@ -280,6 +286,14 @@ export const StyledFeed = styled.ul`
   & > li:last-of-type {
     border-bottom: 0;
   }
+`;
+
+export const StyledSpacedPageHeader = styled(PageHeader)`
+  margin-bottom: 20px;
+`;
+
+export const StyledSpacedFilterBar = styled(FilterBar)`
+  margin-bottom: 16px;
 `;
 
 export const StyledFeedTime = styled.span`

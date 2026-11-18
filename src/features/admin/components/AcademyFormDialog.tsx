@@ -14,6 +14,7 @@ import {
   StyledCodeLine,
   StyledDialogForm,
   StyledDialogFormRow,
+  StyledDialogText,
   StyledSection,
   StyledSectionTitle,
   StyledStaffName,
@@ -342,9 +343,9 @@ export const AcademyFormDialog = ({ academyId, onClose, onDone, onChanged }: Aca
           }
         >
           <StyledDialogForm>
-            <p style={{ margin: 0 }}>
+            <StyledDialogText>
               <b>{detail.name}</b>을 비활성화할까요?
-            </p>
+            </StyledDialogText>
             <DefinitionList
               items={[
                 { term: "소속 사용자", value: `${detail.userCount}명 · 관계자 ${detail.staffCount}명` },

@@ -1,5 +1,7 @@
 import styled from "@emotion/styled";
 
+import { PageHeader } from "@/shared/ui";
+
 export const StyledAuditLogLayout = styled.div`
   display: flex;
   flex-direction: column;
@@ -77,4 +79,9 @@ export const StyledCellDot = styled.i<{ $color: string }>`
   margin-right: 8px;
   border-radius: 2px;
   background: ${({ $color }) => $color};
+`;
+
+// 페이지 제목 — 아래 여백 20px
+export const StyledPageHeaderSpaced = styled(PageHeader)`
+  margin-bottom: 20px;
 `;

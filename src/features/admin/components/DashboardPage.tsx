@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import { AlertBanner, Button, EmptyState, FilterBar, FilterGroup, PageHeader, SegmentedControl } from "@/shared/ui";
+import { AlertBanner, Button, EmptyState, FilterGroup, SegmentedControl } from "@/shared/ui";
 import { useDashboard } from "../lib/useDashboard";
 import type { DashboardDays } from "../types/dashboard";
 import { MetricsCard, RecentEventsCard, TodayRunsCard } from "./DashboardBottom";
 import type { StampTone } from "./DashboardPage.styled";
-import { StyledBannerSlot, StyledDashboardPage, StyledGridThree, StyledGridTwo, StyledStack, StyledStamp, StyledStampDot } from "./DashboardPage.styled";
+import { StyledBannerSlot, StyledDashboardPage, StyledGridThree, StyledGridTwo, StyledSpacedFilterBar, StyledSpacedPageHeader, StyledStack, StyledStamp, StyledStampDot } from "./DashboardPage.styled";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { AttentionCard, DailyCard, DashboardStats, ResultCard } from "./DashboardTop";
 
@@ -32,8 +32,7 @@ export const DashboardPage = () => {
 
   return (
     <StyledDashboardPage>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledSpacedPageHeader
         title="대시보드"
         description="전체 학원의 운행 · 변경 요청 · 로그인 현황 — 기간과 학원을 바꿔 가며 본다"
         actions={
@@ -60,14 +59,14 @@ export const DashboardPage = () => {
         </StyledBannerSlot>
       ) : null}
 
-      <FilterBar style={{ marginBottom: 16 }}>
+      <StyledSpacedFilterBar>
         <FilterGroup label="기간">
           <SegmentedControl options={DAYS_OPTIONS} value={String(days)} onChange={(value) => setDays(Number(value) as DashboardDays)} aria-label="기간" />
         </FilterGroup>
         <FilterGroup label="학원">
           <SegmentedControl options={academyChoices} value={academy} onChange={setAcademy} aria-label="학원" />
         </FilterGroup>
-      </FilterBar>
+      </StyledSpacedFilterBar>
 
       {data ? (
         <>

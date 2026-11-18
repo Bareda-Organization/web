@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeApiError } from "@/shared/lib/http";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademyRunsLive, getAllAcademies, getRunAttention } from "../api";
 import { untilText } from "../lib/relativeTime";
 import type { AcademySummaryResponseTypes, RunAttentionItemTypes, RunLiveItemResponseTypes } from "../types";
 import { ForceConfirmDialog } from "./ForceConfirmDialog";
-import { StyledBandSlot, StyledBusCell, StyledChipRow, StyledForceConfirmLayout, StyledTwoLine } from "./ForceConfirmPage.styled";
+import { StyledBandSlot, StyledBusCell, StyledChipRow, StyledForceConfirmHeader, StyledForceConfirmLayout, StyledMutedText, StyledTwoLine } from "./ForceConfirmPage.styled";
 
 const DUE_GROUP = "강제 확정 대상";
 const WAITING_GROUP = "확정 예정 전 대기 회차";
@@ -150,7 +150,7 @@ export const ForceConfirmPage = () => {
       key: "consecutiveFailures",
       label: "확정 시도",
       render: (row) =>
-        row.consecutiveFailures > 0 ? <StatusChip tone="bad">확정 {row.consecutiveFailures}회 연속 실패</StatusChip> : <span style={{ color: "var(--text-secondary)" }}>{isDue(row, nowMs) ? "시도 중" : "시도 전"}</span>,
+        row.consecutiveFailures > 0 ? <StatusChip tone="bad">확정 {row.consecutiveFailures}회 연속 실패</StatusChip> : <StyledMutedText>{isDue(row, nowMs) ? "시도 중" : "시도 전"}</StyledMutedText>,
     },
     {
       key: "action",
@@ -171,7 +171,7 @@ export const ForceConfirmPage = () => {
 
   return (
     <StyledForceConfirmLayout>
-      <PageHeader style={{ marginBottom: 20 }} title="회차 강제 확정" description="확정이 계속 실패하는 회차를 직선거리 계산으로 확정합니다 · 사유 입력 필수 · 되돌릴 수 없음" />
+      <StyledForceConfirmHeader title="회차 강제 확정" description="확정이 계속 실패하는 회차를 직선거리 계산으로 확정합니다 · 사유 입력 필수 · 되돌릴 수 없음" />
 
       {error ? (
         <StyledBandSlot>

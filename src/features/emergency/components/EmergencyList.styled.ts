@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { Button } from "@/shared/ui";
 
 export const StyledEmergencyLayout = styled.div`
   display: flex;
@@ -60,4 +61,8 @@ export const StyledSubLine = styled.small`
   display: block;
   font-size: var(--fs-xs);
   color: var(--text-secondary);
+`;
+
+export const StyledHistoryMoreButton = styled(Button)`
+  margin-left: auto;
 `;

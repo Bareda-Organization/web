@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Button, Card, EmptyState, Input, PageHeader, Pagination, RosterTable, SearchField, SegmentedControl, Select, StatusChip, Tabs } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, Input, Pagination, RosterTable, SearchField, SegmentedControl, Select, StatusChip, Tabs } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAllAcademies, getAuditActors, getAuditLogs, getLoginHistory } from "../api";
 import type {
@@ -24,6 +24,7 @@ import {
   StyledFilterHint,
   StyledFilterPanel,
   StyledFilterRow,
+  StyledPageHeaderSpaced,
   StyledTwoLine,
 } from "./AuditLogPage.styled";
 import { stampText, targetText } from "../lib/auditView";
@@ -192,7 +193,7 @@ export const AuditLogPage = () => {
 
   return (
     <StyledAuditLogLayout>
-      <PageHeader style={{ marginBottom: 20 }} title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 최근 30일" />
+      <StyledPageHeaderSpaced title="감사 · 접속 이력" description="개인정보 조회 · 수정과 로그인 · 차단 기록 — 기록은 2년 보관 · 기본 조회는 최근 30일" />
 
       {error ? <AlertBanner tone="missed" title={error} /> : null}
       {filterError ? <AlertBanner tone="missed" title={filterError} /> : null}

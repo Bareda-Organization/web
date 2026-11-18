@@ -22,6 +22,7 @@ import {
   StyledEmergencyLayout,
   StyledEmergencyPosition,
   StyledEmergencyStack,
+  StyledHistoryMoreButton,
   StyledSubLine,
 } from "./EmergencyList.styled";
 import { RECENT_LIST_CAP } from "@/shared/lib/format/listCap";
@@ -265,9 +266,9 @@ export const EmergencyList = () => {
               <StyledEmergencyCardHead>
                 <h2>오늘 처리한 비상 알림</h2>
                 <span>누가 · 언제 · 무엇을 했는지</span>
-                <Button variant="ghost" size="sm" iconEnd="arrow-right" onClick={() => setStatus("acked")} style={{ marginLeft: "auto" }}>
+                <StyledHistoryMoreButton variant="ghost" size="sm" iconEnd="arrow-right" onClick={() => setStatus("acked")}>
                   확인됨 탭에서 모두 보기
-                </Button>
+                </StyledHistoryMoreButton>
               </StyledEmergencyCardHead>
               <RosterTable
                 columns={[

@@ -46,7 +46,7 @@ import {
   StyledMapPane,
   StyledMapSurface,
   StyledMapTab,
-  StyledMapTabs,
+  StyledMapTabsEnd,
   StyledRunRiderBlock,
   StyledSegmentBar,
 } from "./DashboardPage.styled";
@@ -479,7 +479,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
               <StyledBoardCardHead>
                 <h2>실시간 버스</h2>
                 <p>마지막 수신 {lastPositionAt ? formatClockTimeWithSeconds(lastPositionAt) : "-"}</p>
-                <StyledMapTabs style={{ marginLeft: "auto" }}>
+                <StyledMapTabsEnd>
                   <StyledMapTab type="button" $active={selectedRunId === null} aria-pressed={selectedRunId === null} onClick={() => selectedRunId !== null && handleSelectBus(selectedRunId)}>
                     전체
                   </StyledMapTab>
@@ -494,7 +494,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
                       {run.busNo} {DIRECTION_LABEL[run.direction]}
                     </StyledMapTab>
                   ))}
-                </StyledMapTabs>
+                </StyledMapTabsEnd>
               </StyledBoardCardHead>
               <StyledMapPane>
                 <StyledMapSurface>

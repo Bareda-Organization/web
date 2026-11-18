@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Button, EmptyState, FilterBar, PageHeader, Pagination, RosterTable, SearchField, StatStrip, StatusChip, Tabs } from "@/shared/ui";
+import { AlertBanner, Button, EmptyState, Pagination, RosterTable, SearchField, StatStrip, StatusChip, Tabs } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAcademies } from "../api";
@@ -17,6 +17,8 @@ import {
   StyledAcademyName,
   StyledCardBars,
   StyledCodeChip,
+  StyledSpacedFilterBar,
+  StyledSpacedPageHeader,
   StyledStaffCount,
   StyledStatusCell,
 } from "./AcademiesPage.styled";
@@ -213,8 +215,7 @@ export const AcademiesPage = () => {
 
   return (
     <StyledAcademiesLayout>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledSpacedPageHeader
         title="학원 관리"
         description={error ? undefined : `학원 ${summary ? summary.total : totalCount}곳 · 학원 코드는 등록하면 서버가 자동으로 만들어 줍니다`}
         actions={
@@ -228,7 +229,7 @@ export const AcademiesPage = () => {
 
       <Tabs items={tabs} value={statusFilter} onChange={setStatusFilter} aria-label="운영 상태" />
 
-      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 학원 · 이름 순`}>
+      <StyledSpacedFilterBar summary={error ? undefined : `총 ${totalCount}개 학원 · 이름 순`}>
         <SearchField
           placeholder="학원명 · 코드로 검색"
           value={query}
@@ -238,7 +239,7 @@ export const AcademiesPage = () => {
             setAppliedQuery(value);
           }}
         />
-      </FilterBar>
+      </StyledSpacedFilterBar>
 
       {error || loading || academies.length > 0 ? (
         <RosterTable

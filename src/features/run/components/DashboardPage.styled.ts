@@ -313,3 +313,8 @@ export const StyledLiveLines = styled.ul`
     color: var(--text-secondary);
   }
 `;
+
+// 지도 탭 묶음 — 오른쪽 끝으로 민다
+export const StyledMapTabsEnd = styled(StyledMapTabs)`
+  margin-left: auto;
+`;

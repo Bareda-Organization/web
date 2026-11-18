@@ -81,3 +81,7 @@ export const StyledSubLine = styled.div`
   font-size: var(--fs-xs);
   color: var(--text-secondary);
 `;
+
+export const StyledDialogText = styled.p`
+  margin: 0;
+`;

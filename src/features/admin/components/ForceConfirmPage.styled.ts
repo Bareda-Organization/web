@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { PageHeader } from "@/shared/ui";
 
 export const StyledForceConfirmLayout = styled.div`
   display: flex;
@@ -48,4 +49,12 @@ export const StyledTwoLine = styled.div`
     font-size: var(--fs-xs);
     color: var(--text-secondary);
   }
+`;
+
+export const StyledForceConfirmHeader = styled(PageHeader)`
+  margin-bottom: 20px;
+`;
+
+export const StyledMutedText = styled.span`
+  color: var(--text-secondary);
 `;

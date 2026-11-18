@@ -10,6 +10,7 @@ import { DefinitionList } from "@/shared/ui/display";
 import { forceConfirmRun } from "../api";
 import { untilText } from "../lib/relativeTime";
 import type { ForceConfirmResponseTypes, RunLiveItemResponseTypes } from "../types";
+import { StyledConfirmForm } from "./ForceConfirmDialog.styled";
 import { StyledResultList } from "./ForceConfirmPage.styled";
 
 type ForceConfirmDialogProps = {
@@ -89,7 +90,7 @@ export const ForceConfirmDialog = ({ run, academyName, onClose, onDone }: ForceC
         </>
       }
     >
-      <div style={{ display: "grid", gap: 16 }}>
+      <StyledConfirmForm>
         <AlertBanner tone="missed" title="되돌릴 수 없는 동작입니다">
           직선거리 폴백 계산으로 바로 확정되고, 관계자 · 기사 · 동승자 통지가 곧바로 나갑니다.
         </AlertBanner>
@@ -112,7 +113,7 @@ export const ForceConfirmDialog = ({ run, academyName, onClose, onDone }: ForceC
           onChange={(event) => setReason(event.target.value)}
         />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
-      </div>
+      </StyledConfirmForm>
     </Dialog>
   );
 };

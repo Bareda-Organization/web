@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { FilterBar, PageHeader } from "@/shared/ui";
 
 export const StyledAcademiesLayout = styled.div`
   display: flex;
@@ -72,4 +73,12 @@ export const StyledCardBars = styled.div`
     border-radius: 4px;
     min-width: 3px;
   }
+`;
+
+export const StyledSpacedPageHeader = styled(PageHeader)`
+  margin-bottom: 20px;
+`;
+
+export const StyledSpacedFilterBar = styled(FilterBar)`
+  margin: 16px 0;
 `;

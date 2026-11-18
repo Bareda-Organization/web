@@ -8,6 +8,7 @@ import { unblockAccount } from "../api";
 import { academyDotColor, eventTimeCell } from "../lib/relativeTime";
 import type { BlockedAccountItemResponseTypes } from "../types";
 import { StyledAcademyCell, StyledAcademyDot } from "./BlockedAccountsPage.styled";
+import { StyledErrorBlock, StyledNoticeBlock, StyledSubText } from "./UnblockConfirmDialog.styled";
 
 type UnblockConfirmDialogProps = {
   account: BlockedAccountItemResponseTypes;
@@ -85,7 +86,7 @@ export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfir
             term: "계정",
             value: (
               <>
-                <b>{account.name}</b> <small style={{ fontWeight: 400 }}>{account.loginId} · {formatRole(account.role)}</small>
+                <b>{account.name}</b> <StyledSubText>{account.loginId} · {formatRole(account.role)}</StyledSubText>
               </>
             ),
           },
@@ -102,7 +103,7 @@ export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfir
             term: "차단 시각",
             value: (
               <>
-                {time.main} <small style={{ fontWeight: 400 }}>({time.sub})</small>
+                {time.main} <StyledSubText>({time.sub})</StyledSubText>
               </>
             ),
           },
@@ -110,15 +111,15 @@ export const UnblockConfirmDialog = ({ account, onClose, onDone }: UnblockConfir
           { term: "차단 사유", value: account.reason },
         ]}
       />
-      <div style={{ marginTop: 16 }}>
+      <StyledNoticeBlock>
         <AlertBanner tone={notice.tone} title={`해제 뒤 상태 — ${STATUS_LABEL[account.statusBeforeBlock]}`}>
           {notice.body}
         </AlertBanner>
-      </div>
+      </StyledNoticeBlock>
       {error ? (
-        <div style={{ marginTop: 12 }}>
+        <StyledErrorBlock>
           <AlertBanner tone="missed" title={error} />
-        </div>
+        </StyledErrorBlock>
       ) : null}
     </Dialog>
   );

@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { PageHeader } from "@/shared/ui";
 
 export const StyledCardHeading = styled.h3`
   margin: 0;
@@ -35,4 +36,12 @@ export const StyledActionPair = styled.div`
   display: inline-flex;
   justify-content: flex-end;
   gap: var(--s2);
+`;
+
+export const StyledMutedText = styled.span`
+  color: var(--text-secondary);
+`;
+
+export const StyledSpacedPageHeader = styled(PageHeader)`
+  margin-bottom: 20px;
 `;

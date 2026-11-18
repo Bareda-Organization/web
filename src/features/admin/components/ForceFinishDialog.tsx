@@ -9,6 +9,7 @@ import { DefinitionList } from "@/shared/ui/display";
 import { forceFinishRun } from "../api";
 import { serviceDateLabel } from "../lib/staleRuns";
 import type { ForceFinishResponseTypes, StaleMovingRunItemResponseTypes } from "../types";
+import { StyledDialogBody } from "./ForceFinishDialog.styled";
 
 type ForceFinishDialogProps = {
   run: StaleMovingRunItemResponseTypes;
@@ -63,7 +64,7 @@ export const ForceFinishDialog = ({ run, onClose, onDone }: ForceFinishDialogPro
         </>
       }
     >
-      <div style={{ display: "grid", gap: 16 }}>
+      <StyledDialogBody>
         <AlertBanner tone="missed" title="되돌릴 수 없는 동작입니다">
           {run.boardedCount > 0
             ? `아직 탑승 중인 ${run.boardedCount}명은 하차 처리 없이 그대로 남고 회차만 종료됩니다. `
@@ -89,7 +90,7 @@ export const ForceFinishDialog = ({ run, onClose, onDone }: ForceFinishDialogPro
           onChange={(event) => setReason(event.target.value)}
         />
         {error ? <AlertBanner tone="missed" title={error} /> : null}
-      </div>
+      </StyledDialogBody>
     </Dialog>
   );
 };

@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { usePagedList } from "@/shared/hooks";
 import { formatRole } from "@/shared/lib/format/roleLabel";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, Pagination, RosterTable, StatusChip } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, Pagination, RosterTable, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getBlockedAccounts } from "../api";
 import { academyDotColor, eventTimeCell } from "../lib/relativeTime";
 import type { BlockedAccountItemResponseTypes } from "../types";
 import { useAdminPending } from "./AdminPendingProvider";
 import { UnblockConfirmDialog } from "./UnblockConfirmDialog";
-import { StyledAcademyCell, StyledAcademyDot, StyledBlockedAccountsLayout, StyledBlockedName, StyledNoticeSlot, StyledTimeCell } from "./BlockedAccountsPage.styled";
+import { StyledAcademyCell, StyledAcademyDot, StyledBlockedAccountsLayout, StyledBlockedName, StyledNoticeSlot, StyledSpacedPageHeader, StyledTimeCell } from "./BlockedAccountsPage.styled";
 
 // 차단 직전 계정 상태(§6.10 `status_before_block`). 해제하면 이 값으로
 // 되돌아간다(§6.12 · Ruling 328) — 관리자가 "해제 후: 승인 대기" 를 누르기
@@ -96,8 +96,7 @@ export const BlockedAccountsPage = () => {
 
   return (
     <StyledBlockedAccountsLayout>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledSpacedPageHeader
         title="차단 해제"
         description={error ? undefined : `로그인 5회 실패로 차단된 계정 ${totalCount}건 · 해제는 메인 관리자만 할 수 있습니다`}
       />

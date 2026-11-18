@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 
 import { MAP_SURFACE_HEIGHT } from "@/features/map";
+import { StatStrip } from "@/shared/ui";
 
 export const StyledDetailLayout = styled.div`
   display: flex;
@@ -67,4 +68,9 @@ export const StyledBreadcrumb = styled.nav`
     color: var(--text-primary);
     text-decoration: underline;
   }
+`;
+
+// 요약 지표 줄 — 값의 줄바꿈을 그대로 보인다
+export const StyledSummaryStrip = styled(StatStrip)`
+  white-space: pre-line;
 `;

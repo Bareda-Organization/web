@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { describeApiError } from "@/shared/lib/http";
-import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, RejectReasonDialog, StatStrip, StatusChip, useToast } from "@/shared/ui";
+import { AlertBanner, Badge, Button, Card, Dialog, PageHeader, RejectReasonDialog, StatusChip, useToast } from "@/shared/ui";
 import type { StatStripItem } from "@/shared/ui";
 import { MapSurface, type MapCamera, type MapMarker, type MapPolyline } from "@/features/map";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -28,6 +28,7 @@ import {
   StyledInfoLabel,
   StyledBreadcrumb,
   StyledMapSurface,
+  StyledSummaryStrip,
 } from "./ChangeApprovalDetail.styled";
 
 type ChangeApprovalDetailProps = {
@@ -368,7 +369,7 @@ export const ChangeApprovalDetail = ({ approvalId }: ChangeApprovalDetailProps) 
       ) : null}
       {decideError ? <AlertBanner tone="missed" title={decideError} /> : null}
 
-      {summaryItems.length > 0 ? <StatStrip items={summaryItems} style={{ whiteSpace: "pre-line" }} /> : null}
+      {summaryItems.length > 0 ? <StyledSummaryStrip items={summaryItems} /> : null}
 
       <Card>
         <p>요청 내용</p>

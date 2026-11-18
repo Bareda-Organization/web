@@ -7,7 +7,7 @@ import { directionLabel, loginGrowthText, onTimeText, periodLabel, runsDeltaText
 import { waitingDays } from "../lib/waitingDays";
 import type { DashboardDays, DashboardResponseTypes } from "../types/dashboard";
 import { DailyBarChart, DailyLineChart } from "./DashboardCharts";
-import { StyledCardBody, StyledCardHeading, StyledFaint, StyledFill, StyledHBar, StyledOkTitle, StyledRowLink, StyledTrack, StyledWarnText } from "./DashboardPage.styled";
+import { StyledCardBody, StyledCardHeading, StyledCardHeadingSpaced, StyledFaint, StyledFill, StyledHBar, StyledOkTitle, StyledRowLink, StyledTrack, StyledWarnText } from "./DashboardPage.styled";
 
 // ── 지표 6칸 ──────────────────────────────────────────────────────────────
 const StackedBar = ({ data }: { data: DashboardResponseTypes["changeRequests"] }) => {
@@ -261,9 +261,9 @@ export const ResultCard = ({ data }: { data: DashboardResponseTypes }) => {
             {directionLabel(attention.expiringChangeRequests[0].direction)})
           </StyledFaint>
         ) : null}
-        <StyledCardHeading as="h3" style={{ marginTop: 16 }}>
+        <StyledCardHeadingSpaced as="h3">
           로그인 일별 실패 <small>최근 {daily.length}일</small>
-        </StyledCardHeading>
+        </StyledCardHeadingSpaced>
         <DailyBarChart points={daily.map((day) => ({ date: day.date, value: day.loginFail }))} name="로그인 실패" color="var(--c-bad)" />
       </StyledCardBody>
     </Card>

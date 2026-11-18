@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePagedList, useRealtimeConnection } from "@/shared/hooks";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatusChip, Tabs } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, RosterTable, StatusChip, Tabs } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
 import type { RosterColumn } from "@/shared/types";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
@@ -16,12 +16,14 @@ import { EmergencyDetailPanel, raisedClock } from "./EmergencyDetailPanel";
 import {
   StyledAcademyDot,
   StyledAcademyLine,
+  StyledAlertsHeader,
   StyledBandActions,
   StyledBandSlot,
   StyledElapsed,
   StyledEmergencyGrid,
   StyledEmergencyLeft,
   StyledEmergencyAlertsLayout,
+  StyledEmptyCard,
   StyledFootNote,
   StyledStamp,
   StyledStampDot,
@@ -165,8 +167,7 @@ export const EmergencyAlertsPage = () => {
 
   return (
     <StyledEmergencyAlertsLayout>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledAlertsHeader
         title="비상 알림"
         description="전 학원의 비상 알림을 학원 관계자와 동시에 받습니다 · 5초마다 갱신"
         actions={
@@ -217,7 +218,7 @@ export const EmergencyAlertsPage = () => {
       <Tabs items={tabs} value={tab} onChange={(value) => { setTab(value as StatusTab); setSelectedId(null); }} aria-label="비상 알림 상태" />
 
       {!loading && !error && emergencies.length === 0 ? (
-        <Card padding={0} style={{ marginTop: 16 }}>
+        <StyledEmptyCard padding={0}>
           <EmptyState
             icon="triangle-alert"
             title="해당 상태의 비상 알림이 없습니다"
@@ -231,7 +232,7 @@ export const EmergencyAlertsPage = () => {
           >
             지난 알림은 ‘확인됨’ · ‘취소됨’ 탭에서 볼 수 있습니다.
           </EmptyState>
-        </Card>
+        </StyledEmptyCard>
       ) : (
         <StyledEmergencyGrid>
           <StyledEmergencyLeft>

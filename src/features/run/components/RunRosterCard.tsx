@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { BoardingStatusChip, Button, FilterBar, FilterGroup, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
+import { BoardingStatusChip, Button, FilterGroup, RosterTable, SegmentedControl, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import type { RosterItemResponseTypes } from "../types";
 import { filterRoster, rosterCounts, rosterStopKey, stopPassage, UNASSIGNED_STOP, type RosterStatusFilter } from "../lib/rosterBoard";
 import { PhoneLink } from "./PhoneLink";
+import { StyledRosterFilterBar } from "./RunRosterCard.styled";
 import { StyledGroupLabel, StyledRosterCard, StyledRosterCardHead, StyledRosterFootnote, StyledRosterScroll } from "./TodayRunPage.styled";
 
 type RouteStopRef = { stopId: string; name: string };
@@ -103,11 +104,11 @@ export const RunRosterCard = ({
         <h2>탑승 명단 {roster.length}명</h2>
         <p>{isIdle ? "승하차지 순" : "승하차지 순 · 위쪽이 이미 지난 승하차지"}</p>
       </StyledRosterCardHead>
-      <FilterBar style={{ marginBottom: 16 }}>
+      <StyledRosterFilterBar>
         <FilterGroup label="상태">
           <SegmentedControl aria-label="상태 필터" options={statusOptions} value={statusFilter} onChange={(value) => onStatusFilterChange(value as RosterStatusFilter)} />
         </FilterGroup>
-      </FilterBar>
+      </StyledRosterFilterBar>
       <StyledRosterScroll>
         <RosterTable
           columns={columns}

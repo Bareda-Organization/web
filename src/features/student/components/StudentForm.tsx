@@ -24,6 +24,7 @@ import {
   StyledGuardianEmpty,
   StyledGuardianSection,
   StyledGuardianTitle,
+  StyledWithdrawButton,
 } from "./StudentForm.styled";
 import { WeeklyAddressSection } from "./WeeklyAddressSection";
 
@@ -220,9 +221,9 @@ export const StudentForm = ({
         footer={
           <>
             {studentId && onWithdraw ? (
-              <Button variant="dangerQuiet" icon="trash-2" onClick={onWithdraw} disabled={submitting} style={{ marginRight: "auto" }}>
+              <StyledWithdrawButton variant="dangerQuiet" icon="trash-2" onClick={onWithdraw} disabled={submitting}>
                 퇴원 처리
-              </Button>
+              </StyledWithdrawButton>
             ) : null}
             <Button variant="ghost" onClick={requestClose} disabled={submitting}>
               취소

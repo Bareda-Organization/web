@@ -21,6 +21,7 @@ import {
   StyledTrack,
   StyledWarnText,
 } from "./DashboardPage.styled";
+import { StyledProgressCell } from "./DashboardBottom.styled";
 
 const RUN_FILL: Record<string, string> = { finished: "var(--c-end)", moving: "var(--c-move)" };
 
@@ -100,9 +101,9 @@ export const TodayRunsCard = ({ data }: { data: DashboardResponseTypes;  }) => {
                       <td>
                         <RunStatusChip status={run.runStatus} />
                       </td>
-                      <td style={{ width: 150 }}>
+                      <StyledProgressCell>
                         <ProgressCell run={run} nowMs={nowMs} />
-                      </td>
+                      </StyledProgressCell>
                       <td>
                         {runMemo(run).map((memo, index) => (
                           <span key={memo.text}>

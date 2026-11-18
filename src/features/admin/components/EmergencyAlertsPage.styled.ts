@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { Card, PageHeader } from "@/shared/ui";
 
 export const StyledEmergencyAlertsLayout = styled.div`
   display: flex;
@@ -184,4 +185,12 @@ export const StyledAckLine = styled.span`
   gap: 8px;
   font-weight: var(--fw-regular);
   color: var(--text-secondary);
+`;
+
+export const StyledAlertsHeader = styled(PageHeader)`
+  margin-bottom: 20px;
+`;
+
+export const StyledEmptyCard = styled(Card)`
+  margin-top: 16px;
 `;

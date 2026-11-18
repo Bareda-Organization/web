@@ -6,6 +6,7 @@ import type { AcademySummaryResponseTypes, RunAttentionTodayItemTypes, RunLiveIt
 import { barGeometry, nowPercent, runStatusNote, sortAcademiesByAttention } from "../lib/monitoringView";
 import type { Axis, TodaySummary } from "../lib/monitoringView";
 import { academyDotColor, untilText } from "../lib/relativeTime";
+import { StyledCountBar } from "./MonitoringParts.styled";
 import {
   StyledDetailCard,
   StyledDetailChips,
@@ -37,11 +38,11 @@ const StatusBar = ({ counts }: { counts: Record<RunStatus, number> }) => {
   const total = STATUS_ORDER.reduce((sum, item) => sum + counts[item.key], 0);
   if (total === 0) return null;
   return (
-    <div role="img" aria-label={STATUS_ORDER.map((item) => `${item.label} ${counts[item.key]}`).join(" · ")} style={{ display: "flex", gap: 2, height: 8, marginTop: 10 }}>
+    <StyledCountBar role="img" aria-label={STATUS_ORDER.map((item) => `${item.label} ${counts[item.key]}`).join(" · ")}>
       {STATUS_ORDER.filter((item) => counts[item.key] > 0).map((item) => (
         <i key={item.key} style={{ flex: counts[item.key], background: BAR_COLOR[item.key], borderRadius: 4, display: "block" }} />
       ))}
-    </div>
+    </StyledCountBar>
   );
 };
 

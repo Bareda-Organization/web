@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 
 import { MAP_SURFACE_HEIGHT } from "@/features/map";
+import { PageHeader } from "@/shared/ui";
 
 export const StyledMonitoringLayout = styled.div`
   display: flex;
@@ -371,4 +372,8 @@ export const StyledRosterNote = styled.p`
   margin: var(--s3) 0 0;
   font-size: var(--fs-xs);
   color: var(--text-secondary);
+`;
+
+export const StyledMonitoringHeader = styled(PageHeader)`
+  margin-bottom: 20px;
 `;

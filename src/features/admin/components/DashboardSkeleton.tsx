@@ -1,20 +1,21 @@
 import { Card, Skeleton, SkeletonGroup, SkeletonRow } from "@/shared/ui";
 import { StyledCardBody, StyledGridThree, StyledGridTwo, StyledSkeletonGrid } from "./DashboardPage.styled";
+import { StyledSkeletonMetricCell, StyledSkeletonMetricGrid, StyledSkeletonSummaryCard } from "./DashboardSkeleton.styled";
 
 // 불러오는 중 뼈대 — 최종 화면과 같은 칸 배치(지표 6칸 · 3칸 카드 · 표 + 옆 카드)라 데이터가 와도 자리가 밀리지 않는다. 제목·필터·기간은 이미 아는 값이라 뼈대 밖에 둔다.
 export const DashboardSkeleton = () => (
   <SkeletonGroup>
-    <Card padding={0} style={{ marginBottom: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)" }}>
+    <StyledSkeletonSummaryCard padding={0}>
+      <StyledSkeletonMetricGrid>
         {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} style={{ padding: "16px 20px", display: "grid", gap: 8 }}>
+          <StyledSkeletonMetricCell key={index}>
             <Skeleton variant="text" width="60%" />
             <Skeleton variant="value" width="50%" />
             <Skeleton variant="detail" width="90%" />
-          </div>
+          </StyledSkeletonMetricCell>
         ))}
-      </div>
-    </Card>
+      </StyledSkeletonMetricGrid>
+    </StyledSkeletonSummaryCard>
     <StyledGridThree>
       {[0, 1, 2].map((index) => (
         <Card key={index} padding={0}>

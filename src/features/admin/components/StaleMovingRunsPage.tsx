@@ -5,7 +5,7 @@ import { useSavedNotice } from "@/shared/hooks";
 import { formatClockTime } from "@/shared/lib/format/clockTime";
 import { describeApiError } from "@/shared/lib/http";
 import type { RosterColumn } from "@/shared/types";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatStrip, StatusChip } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, RosterTable, StatStrip, StatusChip } from "@/shared/ui";
 import { LinkButton } from "@/shared/ui/display";
 import { getStaleMovingRuns } from "../api";
 import { academyDotColor } from "../lib/relativeTime";
@@ -13,7 +13,7 @@ import { serviceDateLabel } from "../lib/staleRuns";
 import type { StaleMovingRunItemResponseTypes } from "../types";
 import { ForceFinishDialog } from "./ForceFinishDialog";
 import { StyledBandSlot, StyledBusCell, StyledForceConfirmLayout, StyledTwoLine } from "./ForceConfirmPage.styled";
-import { StyledAcademyDot, StyledActionPair, StyledAcademyName, StyledCardHeading } from "./StaleMovingRunsPage.styled";
+import { StyledAcademyDot, StyledActionPair, StyledAcademyName, StyledCardHeading, StyledMutedText, StyledSpacedPageHeader } from "./StaleMovingRunsPage.styled";
 
 // §6.16 서버가 한 번에 주는 최대 건수 — 이만큼 오면 더 있을 수 있다(오래된 회차부터 자른다).
 const STALE_MOVING_RUN_LIMIT = 200;
@@ -92,7 +92,7 @@ export const StaleMovingRunsPage = () => {
       label: "탑승 중",
       render: (row) => (
         <>
-          {row.boardedCount > 0 ? <StatusChip tone="bad">{row.boardedCount}명 미하차</StatusChip> : <span style={{ color: "var(--text-secondary)" }}>없음</span>}
+          {row.boardedCount > 0 ? <StatusChip tone="bad">{row.boardedCount}명 미하차</StatusChip> : <StyledMutedText>없음</StyledMutedText>}
           {row.finishPending ? (
             <>
               {" "}
@@ -125,7 +125,7 @@ export const StaleMovingRunsPage = () => {
 
   return (
     <StyledForceConfirmLayout>
-      <PageHeader style={{ marginBottom: 20 }} title="끝나지 않은 회차" description="운행일이 지났는데 ‘운행 중’으로 남은 회차 — 학원에 먼저 확인한 뒤 종료합니다" />
+      <StyledSpacedPageHeader title="끝나지 않은 회차" description="운행일이 지났는데 ‘운행 중’으로 남은 회차 — 학원에 먼저 확인한 뒤 종료합니다" />
 
       {notice ? (
         <StyledBandSlot>

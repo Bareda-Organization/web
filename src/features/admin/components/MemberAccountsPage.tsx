@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePagedList } from "@/shared/hooks";
-import { AlertBanner, Button, FilterBar, PageHeader, Pagination, RosterTable, SearchField, Select, StatusChip, Tabs } from "@/shared/ui";
+import { AlertBanner, Button, Pagination, RosterTable, SearchField, Select, StatusChip, Tabs } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import { getAllAcademies, getStaffAccounts } from "../api";
 import { lastLoginCell } from "../lib/lastLogin";
@@ -18,6 +18,8 @@ import {
   StyledFilterLabel,
   StyledLoginCell,
   StyledMemberAccountsLayout,
+  StyledSpacedFilterBar,
+  StyledSpacedPageHeader,
 } from "./MemberAccountsPage.styled";
 
 const PAGE_SIZE = 20;
@@ -134,8 +136,7 @@ export const MemberAccountsPage = () => {
 
   return (
     <StyledMemberAccountsLayout>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledSpacedPageHeader
         title="계정 관리"
         description={error ? undefined : `학원 관계자 계정 ${counts ? counts.active + counts.inactive : totalCount}개 · 학원당 1명 · 퇴사 처리하면 즉시 로그인이 막힙니다`}
       />
@@ -144,7 +145,7 @@ export const MemberAccountsPage = () => {
 
       <Tabs items={tabs} value={statusTab} onChange={(value) => setStatusTab(value as StaffAccountStatus)} aria-label="재직 상태" />
 
-      <FilterBar style={{ margin: "16px 0" }} summary={error ? undefined : `총 ${totalCount}개 계정`}>
+      <StyledSpacedFilterBar summary={error ? undefined : `총 ${totalCount}개 계정`}>
         <SearchField
           placeholder="이름 · 아이디로 검색"
           value={query}
@@ -158,7 +159,7 @@ export const MemberAccountsPage = () => {
           <span aria-hidden="true">학원</span>
           <Select aria-label="학원" value={academyId} onChange={(event) => setAcademyId(event.target.value)} options={academyOptions} />
         </StyledFilterLabel>
-      </FilterBar>
+      </StyledSpacedFilterBar>
 
       <RosterTable
         hasError={Boolean(error)}

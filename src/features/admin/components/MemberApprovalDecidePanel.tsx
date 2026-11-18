@@ -13,6 +13,7 @@ import { isStaffQuotaFull } from "../lib/staffQuota";
 import { waitingDays } from "../lib/waitingDays";
 import type { StaffSignupRequestItemResponseTypes } from "../types";
 import { StyledAcademyDot, StyledPanelActions, StyledPanelBody, StyledPanelHeader, StyledPanelNote, StyledStaffSub, StyledSteps } from "./MemberApprovalsPage.styled";
+import { StyledDecideIntro } from "./MemberApprovalDecidePanel.styled";
 
 type MemberApprovalDecidePanelProps = {
   request: StaffSignupRequestItemResponseTypes;
@@ -124,9 +125,9 @@ export const MemberApprovalDecidePanel = ({ request, onDone }: MemberApprovalDec
         title={`${request.name} 가입 요청 거절`}
         confirmLabel="가입 거절"
         intro={
-          <p style={{ margin: 0 }}>
+          <StyledDecideIntro>
             {request.academy.name} · {request.phone} · 거절하면 신청자에게 사유가 안내됩니다.
-          </p>
+          </StyledDecideIntro>
         }
         reason={rejectReason}
         onReasonChange={setRejectReason}

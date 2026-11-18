@@ -1,9 +1,14 @@
 import styled from "@emotion/styled";
+import { PageHeader } from "@/shared/ui";
 
 export const StyledBlockedAccountsLayout = styled.div`
   display: flex;
   flex-direction: column;
   padding: 0 var(--s5) var(--s5);
+`;
+
+export const StyledSpacedPageHeader = styled(PageHeader)`
+  margin-bottom: 20px;
 `;
 
 export const StyledNoticeSlot = styled.div`

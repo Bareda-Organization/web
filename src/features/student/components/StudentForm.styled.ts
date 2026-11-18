@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { Button } from "@/shared/ui";
 
 // 보호자 연락처 칸 — 학생 정보와 다른 사람의 값이라 선으로 갈라 둔다(Ruling 326).
 export const StyledGuardianSection = styled.section`
@@ -34,4 +35,8 @@ export const StyledWeeklyAddressList = styled.ul`
 export const StyledWeekdayLabel = styled.strong`
   display: inline-block;
   min-width: 2em;
+`;
+
+export const StyledWithdrawButton = styled(Button)`
+  margin-right: auto;
 `;

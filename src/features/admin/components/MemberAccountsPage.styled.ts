@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { FilterBar, PageHeader } from "@/shared/ui";
 
 export const StyledMemberAccountsLayout = styled.div`
   display: flex;
@@ -71,6 +72,14 @@ export const StyledFilterLabel = styled.label`
   gap: 8px;
   font: var(--fw-bold) var(--fs-xs) / 1.4 var(--font-sans);
   color: var(--text-secondary);
+`;
+
+export const StyledSpacedPageHeader = styled(PageHeader)`
+  margin-bottom: 20px;
+`;
+
+export const StyledSpacedFilterBar = styled(FilterBar)`
+  margin: 16px 0;
 `;
 
 // 옆 패널 안의 동작 카드 — 이름 + 설명 + 오른쪽 단추

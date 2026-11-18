@@ -11,7 +11,7 @@ import {
   parseWsPositionPayload,
 } from "@/shared/lib/ws";
 import { LIVE_POLL_CONNECTED_INTERVAL_MS, LIVE_POLL_INTERVAL_MS, useLiveRefresh, usePolling } from "@/shared/hooks";
-import { AlertBanner, Button, Card, EmptyState, PageHeader, RosterTable, StatusChip } from "@/shared/ui";
+import { AlertBanner, Button, Card, EmptyState, RosterTable, StatusChip } from "@/shared/ui";
 import type { RosterColumn } from "@/shared/types";
 import {
   MapSurface,
@@ -39,6 +39,7 @@ import {
   StyledMapLegend,
   StyledMapOverlayNotice,
   StyledMapSurface,
+  StyledMonitoringHeader,
   StyledMonitoringLayout,
   StyledRunButton,
   StyledTableHeading,
@@ -497,8 +498,7 @@ export const MonitoringPage = () => {
 
   return (
     <StyledMonitoringLayout>
-      <PageHeader
-        style={{ marginBottom: 20 }}
+      <StyledMonitoringHeader
         title="전체 관제"
         description={`학원을 고르면 그 학원의 오늘 회차를 지도 · 표 · 승하차지로 봅니다 · ${
           connected

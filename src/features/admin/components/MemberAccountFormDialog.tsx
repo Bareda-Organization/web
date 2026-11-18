@@ -7,6 +7,7 @@ import { updateStaffAccount } from "../api";
 import type { StaffAccountItemResponseTypes } from "../types";
 import { StyledDialogForm, StyledDialogFormRow, StyledSection, StyledSectionTitle, StyledCodeLine } from "./AcademyFormDialog.styled";
 import { StyledActionCard } from "./MemberAccountsPage.styled";
+import { StyledConfirmText, StyledSaveRow } from "./MemberAccountFormDialog.styled";
 
 // §1.9 — 서버 2xx 확인 뒤에만 "처리되었습니다" 를 보인다.
 const DONE_NOTICE = "처리되었습니다";
@@ -119,11 +120,11 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
               <Input label="연락처" value={phone} onChange={(event) => setPhone(event.target.value)} />
             </StyledDialogFormRow>
             <Input label="이메일" placeholder="변경할 때만 입력" value={email} onChange={(event) => setEmail(event.target.value)} />
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <StyledSaveRow>
               <Button variant="primary" onClick={handleSaveInfo} disabled={submitting !== null || !canSaveInfo}>
                 {submitting === "info" ? "저장 중..." : "정보 저장"}
               </Button>
-            </div>
+            </StyledSaveRow>
           </StyledSection>
 
           <StyledSection>
@@ -187,7 +188,7 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
           }
         >
           <StyledDialogForm>
-            <p style={{ margin: 0 }}>
+            <StyledConfirmText>
               {isStatusConfirm ? (
                 <>
                   <b>{account.name}</b> ({account.loginId}) 님은 지금부터 로그인할 수 없게 됩니다. 다시 재직으로 전환하기 전까지 유지됩니다.
@@ -195,7 +196,7 @@ export const MemberAccountFormDialog = ({ account, onClose, onDone }: MemberAcco
               ) : (
                 `${account.name} 님의 비밀번호가 임시 비밀번호로 바뀝니다. 임시 비밀번호는 이 창을 닫으면 다시 볼 수 없습니다.`
               )}
-            </p>
+            </StyledConfirmText>
             {isStatusConfirm ? (
               <AlertBanner tone="info" title="이 학원의 관계자 자리가 비게 됩니다">
                 {pending && pending > 0
