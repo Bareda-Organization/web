@@ -20,7 +20,7 @@ describe("apiFetch — 성공 응답 봉투 검사", () => {
   });
 
   it("본문이 JSON 이 아니면 MalformedResponseError 를 던진다", async () => {
-    const notJson = { ok: true, status: 200, json: async () => Promise.reject(new SyntaxError("Unexpected token <")) } as Response;
+    const notJson = { ok: true, status: 200, json: async () => Promise.reject(new SyntaxError("Unexpected token <")) } as unknown as Response;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(notJson));
 
     await expect(apiFetch("/staff/dashboard")).rejects.toBeInstanceOf(MalformedResponseError);

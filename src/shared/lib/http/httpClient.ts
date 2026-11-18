@@ -3,7 +3,7 @@ import { ApiError, NetworkError, parseApiError } from "./apiError";
 import { getAccessToken } from "./accessTokenStore";
 import { refreshAccessToken } from "./refreshClient";
 import { notifyAuthGate } from "./authGate";
-import type { SuccessEnvelope } from "./envelope";
+import { readEnvelopeData } from "./envelope";
 import { camelizeKeys } from "./camelizeKeys";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -108,8 +108,7 @@ const isAccountGateCode = (code: string): boolean =>
 const readEnvelope = async <T>(response: Response): Promise<T> => {
   // §1.1.1 — 성공 응답은 항상 `{success,data,message}` 로 온다. API_SPEC 각 절이
   // 서술하는 필드는 전부 `data` 안에 있다. 이 봉투를 벗기고 키를 camelCase 로 바꾸는 자리는 여기 한 곳뿐이다.
-  const envelope = (await response.json()) as SuccessEnvelope<T>;
-  return camelizeKeys(envelope.data) as T;
+  return camelizeKeys(await readEnvelopeData(response)) as T;
 };
 
 const handleResponse = async <T>(

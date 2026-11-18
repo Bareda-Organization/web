@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "./config";
-import { parseApiError } from "./apiError";
+import { MalformedResponseError, parseApiError } from "./apiError";
 import { setAccessToken } from "./accessTokenStore";
-import type { SuccessEnvelope } from "./envelope";
+import { isRecord, readEnvelopeData } from "./envelope";
 
 type RefreshResponseTypes = {
   accessToken: string;
@@ -25,8 +25,11 @@ const requestRefresh = async (): Promise<string> => {
   }
 
   // §1.1.1 — 이 응답도 봉투에 싸여 온다. `data.access_token` 을 벗겨야 한다.
-  const envelope = (await response.json()) as SuccessEnvelope<{ access_token: string }>;
-  const responseTypes: RefreshResponseTypes = { accessToken: envelope.data.access_token };
+  const data = await readEnvelopeData(response);
+  if (!isRecord(data) || typeof data.access_token !== "string" || data.access_token === "") {
+    throw new MalformedResponseError();
+  }
+  const responseTypes: RefreshResponseTypes = { accessToken: data.access_token };
   setAccessToken(responseTypes.accessToken);
   return responseTypes.accessToken;
 };

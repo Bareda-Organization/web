@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/shared/ui/core";
-import { EmptyState } from "@/shared/ui/feedback";
+import { Button, EmptyState } from "@/shared/ui";
 
 // 라우트 안 화면이 렌더링 중 던졌을 때 콘솔 전체가 백지가 되지 않게 받는 경계 — 같은 오류가 이어지는지 사용자가 다시 시도로 확인한다.
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {

@@ -50,3 +50,13 @@ export const parseApiError = async (response: Response): Promise<ApiError> => {
     return new ApiError(response.status, "UNKNOWN", response.statusText || "알 수 없는 오류");
   }
 };
+
+// 성공(2xx)으로 왔지만 문서의 봉투(§1.1.1)나 그 안의 필드 모양이 아닌 응답 — 프록시가 바꿔 놓은 본문, 서버·클라이언트 사양 어긋남 등.
+// 호출부에서 필드가 undefined 로 터지기 전에 http 계층에서 끊는다. 서버가 처리했을 수 있어 네트워크 단절과는 갈래를 나눈다.
+export class MalformedResponseError extends Error {
+  constructor(cause?: unknown) {
+    super("서버 응답 형식이 올바르지 않습니다");
+    this.name = "MalformedResponseError";
+    this.cause = cause;
+  }
+}

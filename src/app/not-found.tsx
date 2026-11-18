@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EmptyState } from "@/shared/ui/feedback";
+import { EmptyState } from "@/shared/ui";
 
 // 없는 주소로 들어왔을 때 — 루트 화면은 로그인 판정으로 이어지므로 처음으로 보낸다.
 export default function NotFound() {
