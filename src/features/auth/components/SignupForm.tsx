@@ -6,6 +6,7 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, EmptyState, Input, SearchField } from "@/shared/ui";
 import { searchAcademies, signup } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { isPasswordTooShort, PASSWORD_TOO_SHORT_MESSAGE } from "../lib/passwordRule";
 import type { AcademySummaryResponseTypes } from "../types";
 import { ACADEMY_SEARCH_ERROR, AcademyResultList } from "./AcademyResultList";
 import { StyledMissingFields, StyledSelectedAcademy } from "./SignupForm.styled";
@@ -33,6 +34,7 @@ const validate = (name: string, phone: string, loginId: string, password: string
   if (name.trim() === "" || phone.trim() === "") return "이름과 연락처를 입력해 주세요.";
   if (loginId.trim() === "" || password === "") return "아이디와 비밀번호를 입력해 주세요.";
   if (loginId.length > LOGIN_ID_MAX_LENGTH) return `아이디는 ${LOGIN_ID_MAX_LENGTH}자 이하로 입력해 주세요.`;
+  if (isPasswordTooShort(password)) return PASSWORD_TOO_SHORT_MESSAGE;
   if (new TextEncoder().encode(password).length > PASSWORD_MAX_BYTES) return "비밀번호는 한글 24자(영문·숫자 72자) 이하로 입력해 주세요.";
   return null;
 };
@@ -169,6 +171,7 @@ export const SignupForm = () => {
               type="password"
               required
               autoComplete="new-password"
+              hint="8자 이상 · 한글 24자(영문·숫자 72자) 이하"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />

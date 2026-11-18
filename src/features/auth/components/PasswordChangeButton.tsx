@@ -6,12 +6,14 @@ import { ApiError } from "@/shared/lib/http";
 import { AlertBanner, Button, Dialog, Input } from "@/shared/ui";
 import { changePassword } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
+import { isPasswordTooShort, PASSWORD_TOO_SHORT_MESSAGE } from "../lib/passwordRule";
 
 // §2.2 — 비밀번호는 UTF-8 72바이트 이하(BCrypt 한도, 한글 24자). 서버도 같은 기준으로 422 를 낸다.
 const PASSWORD_MAX_BYTES = 72;
 
 const validate = (currentPassword: string, newPassword: string, confirmPassword: string): string | null => {
   if (currentPassword === "" || newPassword === "") return "현재 비밀번호와 새 비밀번호를 입력해 주세요.";
+  if (isPasswordTooShort(newPassword)) return PASSWORD_TOO_SHORT_MESSAGE;
   if (new TextEncoder().encode(newPassword).length > PASSWORD_MAX_BYTES) {
     return "새 비밀번호는 한글 24자(영문·숫자 72자) 이하로 입력해 주세요.";
   }
@@ -95,7 +97,7 @@ export const PasswordChangeDialog = ({ onClose, forced = false }: PasswordChange
             required
             type="password"
             autoComplete="new-password"
-            hint="한글 24자(영문·숫자 72자) 이하"
+            hint="8자 이상 · 한글 24자(영문·숫자 72자) 이하"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
           />
