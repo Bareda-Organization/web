@@ -41,6 +41,16 @@ export class NetworkError extends Error {
   }
 }
 
+// 시간 제한 안에 응답 헤더를 받지 못해 끊은 경우 — `NetworkError` 로도 잡히지만, 끊긴 쓰기는 서버가 이미 처리했을 수 있어
+// 호출부가 "다시 보내기" 대신 "처리됐는지 확인" 으로 안내하도록 따로 구별한다.
+export class RequestTimeoutError extends NetworkError {
+  constructor(cause: unknown) {
+    super(cause);
+    this.name = "RequestTimeoutError";
+    this.message = "서버 응답이 없어 요청을 끊었습니다";
+  }
+}
+
 export const parseApiError = async (response: Response): Promise<ApiError> => {
   try {
     const body = (await response.json()) as ApiErrorEnvelope;

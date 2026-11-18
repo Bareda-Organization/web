@@ -1,5 +1,5 @@
 import { API_BASE_URL, TUNNEL_HEADERS } from "./config";
-import { ApiError, NetworkError, parseApiError } from "./apiError";
+import { ApiError, NetworkError, parseApiError, RequestTimeoutError } from "./apiError";
 import { getAccessToken } from "./accessTokenStore";
 import { refreshAccessToken } from "./refreshClient";
 import { notifyAuthGate } from "./authGate";
@@ -62,11 +62,21 @@ const buildHeaders = (hasBody: boolean): HeadersInit => {
   return headers;
 };
 
-// 조회(GET)가 응답 헤더를 기다리는 한도 — 서버가 연결은 받고 응답을 안 주는 상태(DB 풀 고갈 뒤 대기 · 반쯤 죽은 TCP)에서 브라우저가
-// 포기할 때까지(수 분) 폴링이 매달려 그 화면 갱신이 멈추는 것을 막는다. 넘으면 `NetworkError` 로 끊어 폴링의 실패 백오프가 이어받는다
-// 쓰기(POST·PATCH·PUT·DELETE)는 서버가 이미 처리를 시작했을 수 있어 끊지 않는다.
+// 요청이 응답 헤더를 기다리는 한도 — 서버가 연결은 받고 응답을 안 주는 상태(DB 풀 고갈 뒤 대기 · 반쯤 죽은 TCP)에서 브라우저가
+// 포기할 때까지(수 분) 폴링이 매달리거나 저장 버튼이 눌린 채 멈추는 것을 막는다. 넘으면 `RequestTimeoutError`(= `NetworkError`)로 끊는다.
+// 조회는 15초. 쓰기는 서버가 DB 커밋까지 하는 시간이 더 걸릴 수 있어 30초, 파일 업로드는 전송 시간이 들어가 60초로 둔다.
+// 끊긴 쓰기는 서버가 이미 처리했을 수 있다 — 오류 종류로 호출부가 구별하고, 멱등키가 있는 쓰기만 안전하게 다시 보낼 수 있다.
 // ponytail: 본문을 다 읽기까지의 한도는 아님(헤더 도착까지) — 본문이 멈추는 경우가 실측되면 읽기 단계에도 같은 타이머를 건다.
 const GET_TIMEOUT_MS = 15000;
+const WRITE_TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 60000;
+
+// 호출부의 중단 신호와 시간 제한을 하나로 묶는다 — 둘 중 어느 쪽이든 먼저 오면 요청을 끊는다. `timedOut` 으로 어느 쪽이었는지 가른다.
+const withTimeout = (timeoutMs: number, callerSignal?: AbortSignal) => {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
+  return { signal, timedOut: () => timeoutSignal.aborted && !callerSignal?.aborted };
+};
 
 const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Response> => {
   const body =
@@ -75,9 +85,7 @@ const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Respons
       : options.body;
   const method = options.method ?? "GET";
 
-  // 호출부의 중단 신호와 시간 제한을 하나로 묶는다 — 둘 중 어느 쪽이든 먼저 오면 요청을 끊는다.
-  const timeoutSignal = method === "GET" ? AbortSignal.timeout(GET_TIMEOUT_MS) : undefined;
-  const signal = timeoutSignal && options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : (timeoutSignal ?? options.signal);
+  const { signal, timedOut } = withTimeout(method === "GET" ? GET_TIMEOUT_MS : WRITE_TIMEOUT_MS, options.signal);
 
   try {
     return await fetch(buildUrl(path, options.query), {
@@ -90,7 +98,7 @@ const rawFetch = async (path: string, options: ApiFetchOptions): Promise<Respons
     });
   } catch (cause) {
     // fetch 가 reject 하는 것은 응답을 아예 못 받은 경우(오프라인·DNS·CORS 차단·시간 제한 등)뿐이다.
-    throw new NetworkError(cause);
+    throw timedOut() ? new RequestTimeoutError(cause) : new NetworkError(cause);
   }
 };
 
@@ -185,16 +193,17 @@ const buildFormData = (options: ApiFetchMultipartOptions): FormData => {
 };
 
 const rawFetchMultipart = async (path: string, options: ApiFetchMultipartOptions): Promise<Response> => {
+  const { signal, timedOut } = withTimeout(UPLOAD_TIMEOUT_MS, options.signal);
   try {
     return await fetch(buildUrl(path, options.query), {
       method: options.method ?? "POST",
       headers: buildMultipartHeaders(),
       credentials: "include",
       body: buildFormData(options),
-      signal: options.signal,
+      signal,
     });
   } catch (cause) {
-    throw new NetworkError(cause);
+    throw timedOut() ? new RequestTimeoutError(cause) : new NetworkError(cause);
   }
 };
 
