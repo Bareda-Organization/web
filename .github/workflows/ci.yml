@@ -1,4 +1,4 @@
-# PR·main 검증: 타입 · lint · 단위 시험. 배포는 Vercel 이 이 저장소를 직접 빌드한다 — 이 워크플로는 아무것도 배포하지 않는다.
+# PR·main 검증: 타입 · lint · 단위 시험 · 프로덕션 빌드. 배포는 Vercel 이 이 저장소를 직접 빌드한다 — 이 워크플로는 아무것도 배포하지 않는다.
 # 실서버 계약 시험(realBackend)은 돌지 않는다(백엔드 부재). 로컬 재현은 scripts/verify.sh.
 name: ci
 
@@ -40,3 +40,9 @@ jobs:
         env:
           API_SPEC_PATH: .workspace-docs/docs/planning/API_SPEC.md
         run: scripts/verify.sh
+
+      # 타입·시험이 못 보는 빌드 단계 오류(서버 컴포넌트 경계 · 라우트 설정 · 번들)를 PR 에서 잡는다. 빌드는 API 서버에 접속하지 않는다.
+      - name: 프로덕션 빌드
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+        run: npx next build
