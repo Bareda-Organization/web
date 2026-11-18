@@ -4,6 +4,7 @@
 // `./naver/NaverMapSurface` 뒤에 숨어 있고, 지도 공급자를 나중에 바꾸더라도
 // (`IMPLEMENTATION_PLAN.md §8.3.1` 이 언급하는 Tmap 전환 가능성) 이 파일의 이름과
 // props 는 그대로 두고 내부 구현만 교체하면 된다.
+import { PanelErrorBoundary } from "@/shared/ui/feedback";
 import { NaverMapSurface } from "./naver/NaverMapSurface";
 import type { MapCamera, MapMarker, MapPolyline } from "./types";
 
@@ -26,6 +27,11 @@ export type MapSurfaceProps = {
   className?: string;
 };
 
+// 지도 SDK 가 렌더링 중 던져도 지도 자리만 대체 문구가 된다.
 export const MapSurface = (props: MapSurfaceProps) => {
-  return <NaverMapSurface {...props} />;
+  return (
+    <PanelErrorBoundary title="지도를 표시하지 못했습니다">
+      <NaverMapSurface {...props} />
+    </PanelErrorBoundary>
+  );
 };

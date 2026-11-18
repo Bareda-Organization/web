@@ -17,7 +17,7 @@ describe("MapSurface — 렌더링 오류 격리", () => {
     render(
       <div>
         <p>옆 화면</p>
-        <MapSurface camera={{ center: { lat: 37, lng: 127 }, zoom: 12 }} markers={[]} />
+        <MapSurface camera={{ lat: 37, lng: 127, zoom: 12 }} markers={[]} />
       </div>,
     );
 

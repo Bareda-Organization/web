@@ -18,3 +18,5 @@ export type { ToastInput } from "./Toast";
 
 export { RejectReasonDialog } from "./RejectReasonDialog";
 export type { RejectReasonDialogProps } from "./RejectReasonDialog";
+
+export { PanelErrorBoundary } from "./PanelErrorBoundary";
