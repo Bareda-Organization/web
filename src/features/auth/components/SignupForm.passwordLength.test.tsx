@@ -4,7 +4,8 @@ import { SignupForm } from "./SignupForm";
 import { searchAcademies, signup } from "../api";
 import { useAuthSession } from "../hooks/useAuthSession";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
+const mockRouter = { replace: vi.fn() };
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("../api", () => ({ searchAcademies: vi.fn(), signup: vi.fn() }));
 vi.mock("../hooks/useAuthSession", () => ({ useAuthSession: vi.fn() }));
 
