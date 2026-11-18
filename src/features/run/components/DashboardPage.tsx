@@ -67,7 +67,8 @@ const DIRECTION_LABEL: Record<DashboardRunResponseTypes["direction"], string> = 
 // `run` 이 `approval`·`onboarding` 을 직접 읽지 않게 라우트 페이지가 채워 넣는다.
 const NO_APPROVALS: PendingApprovals = { signupCount: 0, changeCount: 0, nextDeadlineAt: null, isReady: false };
 
-const mockableConnectionLabel = (state: string): string => (state === "connected" ? "실시간 연결" : "주기 갱신 중");
+// 머리줄 갱신 방식 표기 — 실시간 구독이 살아 있을 때만 "실시간 연결", 그 밖에는 주기 갱신으로 보인다.
+const connectionLabel = (state: string): string => (state === "connected" ? "실시간 연결" : "주기 갱신 중");
 
 export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendingSlot?: React.ReactNode; approvals?: PendingApprovals }) => {
   const router = useRouter();
@@ -405,7 +406,7 @@ export const DashboardPage = ({ pendingSlot, approvals = NO_APPROVALS }: { pendi
         description={`${formatHeaderDate()} · ${session?.academy?.name ?? ""} — 지금 급한 것부터, 오늘 운행 순서대로`}
         actions={
           <StyledLiveStatus>
-            {formatClockTime(new Date(nowMs).toISOString())} 기준 · {mockableConnectionLabel(connectionState)}
+            {formatClockTime(new Date(nowMs).toISOString())} 기준 · {connectionLabel(connectionState)}
           </StyledLiveStatus>
         }
       />
